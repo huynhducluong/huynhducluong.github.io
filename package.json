@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "setup:git": "node scripts/setup-git.mjs",
     "dev": "vite",
     "check": "tsc --noEmit",
     "build": "tsc && vite build",
