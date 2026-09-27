@@ -6,10 +6,14 @@ import "./styles/home.css";
 import { profile } from "./data/profile";
 import { experiences } from "./data/experience";
 import { projects } from "./data/projects";
+import { skillGroups } from "./data/skills";
 import { automationTools } from "./data/tools";
-import type { LocalizedText } from "./types/career";
-
-type Language = keyof LocalizedText;
+import {
+  escapeHtml,
+  formatDate,
+  localize,
+  type Language,
+} from "./shared/format";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -25,6 +29,7 @@ const copy = {
     professionalOverview: "Professional overview",
     eyebrow: "BIM · Infrastructure · Automation",
     viewProjects: "View projects",
+    viewCv: "View CV",
     contact: "Contact me",
     location: "Based in",
     focus: "Professional focus",
@@ -57,6 +62,7 @@ const copy = {
     professionalOverview: "Tổng quan chuyên môn",
     eyebrow: "BIM · Hạ tầng · Tự động hóa",
     viewProjects: "Xem dự án",
+    viewCv: "Xem CV",
     contact: "Liên hệ",
     location: "Địa điểm",
     focus: "Định hướng chuyên môn",
@@ -84,43 +90,15 @@ const copy = {
   },
 } as const;
 
-const escapeHtml = (value: string): string =>
-  value.replace(
-    /[&<>'"]/g,
-    (character) =>
-      ({
-        "&": "&amp;",
-        "<": "&lt;",
-        ">": "&gt;",
-        "'": "&#39;",
-        '"': "&quot;",
-      })[character] ?? character,
-  );
-
-const localize = (value: LocalizedText, language: Language): string =>
-  escapeHtml(value[language]);
-
 const renderTags = (items: string[]): string =>
   items.map((item) => `<li class="tag">${escapeHtml(item)}</li>`).join("");
 
-const formatDate = (date: string, language: Language): string => {
-  const [year, month] = date.split("-").map(Number);
-
-  if (!year || !month) {
-    return escapeHtml(date);
-  }
-
-  return new Intl.DateTimeFormat(language === "vi" ? "vi-VN" : "en-US", {
-    month: "short",
-    year: "numeric",
-  }).format(new Date(Date.UTC(year, month - 1)));
-};
-
 const renderPage = (language: Language): void => {
   const text = copy[language];
-  const sortedProjects = [...projects].sort(
-    (first, second) => first.displayOrder - second.displayOrder,
-  );
+  const sortedProjects = projects
+    .filter((project) => project.featured)
+    .sort((first, second) => first.displayOrder - second.displayOrder);
+  const homeSkills = skillGroups.flatMap((group) => group.items);
 
   document.documentElement.lang = language;
   document.title = `${profile.name} | ${profile.professionalTitle[language]}`;
@@ -165,6 +143,9 @@ const renderPage = (language: Language): void => {
 
             <div class="hero__actions">
               <a class="button" href="#projects">${text.viewProjects}</a>
+              <a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/">
+                ${text.viewCv}
+              </a>
               <a class="button button--secondary" href="mailto:${escapeHtml(profile.email)}">
                 ${text.contact}
               </a>
@@ -196,12 +177,12 @@ const renderPage = (language: Language): void => {
           </div>
 
           <div class="expertise-grid">
-            ${profile.coreSkills
+            ${homeSkills
               .map(
                 (skill, index) => `
                   <article class="expertise-card">
                     <span class="expertise-card__number">${String(index + 1).padStart(2, "0")}</span>
-                    <h3 class="expertise-card__title">${escapeHtml(skill)}</h3>
+                    <h3 class="expertise-card__title">${localize(skill.label, language)}</h3>
                   </article>
                 `,
               )
@@ -234,7 +215,7 @@ const renderPage = (language: Language): void => {
                       <p class="timeline-card__location">${localize(experience.location, language)}</p>
                       <ul class="responsibility-list">
                         ${experience.responsibilities
-                          .map((item) => `<li>${localize(item, language)}</li>`)
+                          .map((item) => `<li>${localize(item.text, language)}</li>`)
                           .join("")}
                       </ul>
                       <ul class="tag-list" aria-label="${text.technologies}">
@@ -266,9 +247,9 @@ const renderPage = (language: Language): void => {
                     </span>
                     <h3 class="project-card__title">${localize(project.name, language)}</h3>
                     <p class="project-card__meta">
-                      ${localize(project.role, language)} · ${localize(project.location, language)}
+                      ${project.role ? localize(project.role, language) : ""} · ${localize(project.location, language)}
                     </p>
-                    <p class="project-card__summary">${localize(project.summary, language)}</p>
+                    ${project.summary ? `<p class="project-card__summary">${localize(project.summary, language)}</p>` : ""}
                     <ul class="tag-list" aria-label="${text.technologies}">
                       ${renderTags(project.technologies)}
                     </ul>
