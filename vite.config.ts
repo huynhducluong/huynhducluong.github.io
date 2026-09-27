@@ -13,6 +13,7 @@ export default defineConfig({
         tools: fileURLToPath(new URL("./tools/index.html", import.meta.url)),
         tool: fileURLToPath(new URL("./tool/index.html", import.meta.url)),
         admin: fileURLToPath(new URL("./admin/index.html", import.meta.url)),
+        portfolio: fileURLToPath(new URL("./portfolio/index.html", import.meta.url)),
       },
     },
   },
