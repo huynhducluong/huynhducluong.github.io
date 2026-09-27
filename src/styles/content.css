@@ -19,6 +19,9 @@
 .page-nav { gap: var(--space-5); }
 .page-nav a { color: var(--color-text-muted); font-size: var(--font-size-sm); font-weight: 750; text-decoration: none; }
 .page-nav a:hover, .page-nav a[aria-current="page"] { color: var(--color-primary); }
+.page-nav .page-nav__admin { display: inline-flex; min-height: 2.25rem; align-items: center; gap: .45rem; padding: .4rem .75rem; border: 1px solid var(--color-border); border-radius: 999px; color: var(--color-primary-dark); }
+.page-nav .page-nav__admin span { width: .42rem; height: .42rem; border-radius: 50%; background: var(--color-accent); box-shadow: 0 0 0 3px rgb(246 183 60 / 18%); }
+.page-nav .page-nav__admin:hover { border-color: var(--color-primary); background: var(--color-primary-light); color: var(--color-primary-dark); }
 
 .page-hero,
 .detail-hero { padding-block: clamp(5rem, 11vw, 9rem); background: var(--color-dark); color: #fff; }

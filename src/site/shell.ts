@@ -14,6 +14,9 @@ export const siteHeader = (active?: string): string => `
         <a ${active === "tools" ? 'aria-current="page"' : ""} href="${rootUrl("tools/")}">Tools</a>
         <a href="${rootUrl("cv/")}">CV</a>
         <a href="${rootUrl("portfolio/")}">Portfolio PDF</a>
+        <a class="page-nav__admin" href="${rootUrl("admin/")}">
+          <span aria-hidden="true"></span>Admin
+        </a>
       </nav>
     </div>
   </header>

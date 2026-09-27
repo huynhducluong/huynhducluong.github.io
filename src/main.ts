@@ -26,6 +26,7 @@ const copy = {
     nav: ["Expertise", "Experience", "Projects", "Automation"],
     skip: "Skip to content",
     primaryNavigation: "Primary navigation",
+    adminLabel: "Open Portfolio administration",
     professionalOverview: "Professional overview",
     eyebrow: "BIM · Infrastructure · Automation",
     viewProjects: "View projects",
@@ -62,6 +63,7 @@ const copy = {
     nav: ["Chuyên môn", "Kinh nghiệm", "Dự án", "Tự động hóa"],
     skip: "Đi đến nội dung chính",
     primaryNavigation: "Điều hướng chính",
+    adminLabel: "Mở trang quản trị Portfolio",
     professionalOverview: "Tổng quan chuyên môn",
     eyebrow: "BIM · Hạ tầng · Tự động hóa",
     viewProjects: "Xem dự án",
@@ -138,6 +140,15 @@ const renderPage = (language: Language): void => {
           >
             ${language === "en" ? "VI" : "EN"}
           </button>
+
+          <a
+            class="admin-link"
+            href="${import.meta.env.BASE_URL}admin/"
+            aria-label="${text.adminLabel}"
+          >
+            <span class="admin-link__status" aria-hidden="true"></span>
+            Admin
+          </a>
         </nav>
       </div>
     </header>
