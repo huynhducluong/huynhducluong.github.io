@@ -12,6 +12,7 @@ export default defineConfig({
         project: fileURLToPath(new URL("./project/index.html", import.meta.url)),
         tools: fileURLToPath(new URL("./tools/index.html", import.meta.url)),
         tool: fileURLToPath(new URL("./tool/index.html", import.meta.url)),
+        admin: fileURLToPath(new URL("./admin/index.html", import.meta.url)),
       },
     },
   },

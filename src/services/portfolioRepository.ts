@@ -4,6 +4,7 @@ import type {
   PortfolioRepository,
   PortfolioTool,
 } from "../types/portfolio";
+import { supabasePortfolioRepository } from "./supabasePortfolioRepository";
 
 const byDisplayOrder = <T extends { displayOrder: number }>(items: T[]): T[] =>
   [...items].sort((a, b) => a.displayOrder - b.displayOrder);
@@ -38,4 +39,37 @@ export const localPortfolioRepository: PortfolioRepository = {
   },
 };
 
-export const portfolioRepository: PortfolioRepository = localPortfolioRepository;
+const withFallback = async <T>(
+  remote: () => Promise<T>,
+  local: () => Promise<T>,
+): Promise<T> => {
+  try {
+    return await remote();
+  } catch (error) {
+    console.warn("Supabase is unavailable; using local portfolio data.", error);
+    return local();
+  }
+};
+
+export const portfolioRepository: PortfolioRepository = {
+  listPublishedProjects: () =>
+    withFallback(
+      () => supabasePortfolioRepository.listPublishedProjects(),
+      () => localPortfolioRepository.listPublishedProjects(),
+    ),
+  getPublishedProject: (slug) =>
+    withFallback(
+      () => supabasePortfolioRepository.getPublishedProject(slug),
+      () => localPortfolioRepository.getPublishedProject(slug),
+    ),
+  listPublishedTools: () =>
+    withFallback(
+      () => supabasePortfolioRepository.listPublishedTools(),
+      () => localPortfolioRepository.listPublishedTools(),
+    ),
+  getPublishedTool: (slug) =>
+    withFallback(
+      () => supabasePortfolioRepository.getPublishedTool(slug),
+      () => localPortfolioRepository.getPublishedTool(slug),
+    ),
+};
