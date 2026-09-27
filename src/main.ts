@@ -5,9 +5,9 @@ import "./styles/home.css";
 
 import { profile } from "./data/profile";
 import { experiences } from "./data/experience";
-import { projects } from "./data/projects";
 import { skillGroups } from "./data/skills";
-import { automationTools } from "./data/tools";
+import { portfolioRepository } from "./services/portfolioRepository";
+import type { PortfolioProject, PortfolioTool } from "./types/portfolio";
 import {
   escapeHtml,
   formatDate,
@@ -30,6 +30,9 @@ const copy = {
     eyebrow: "BIM · Infrastructure · Automation",
     viewProjects: "View projects",
     viewCv: "View CV",
+    viewPortfolio: "Portfolio PDF",
+    allProjects: "Explore all published projects",
+    allTools: "Explore all published tools",
     contact: "Contact me",
     location: "Based in",
     focus: "Professional focus",
@@ -63,6 +66,9 @@ const copy = {
     eyebrow: "BIM · Hạ tầng · Tự động hóa",
     viewProjects: "Xem dự án",
     viewCv: "Xem CV",
+    viewPortfolio: "Portfolio PDF",
+    allProjects: "Xem tất cả dự án đã xuất bản",
+    allTools: "Xem tất cả công cụ đã xuất bản",
     contact: "Liên hệ",
     location: "Địa điểm",
     focus: "Định hướng chuyên môn",
@@ -90,12 +96,16 @@ const copy = {
   },
 } as const;
 
+let publicProjects: PortfolioProject[] = [];
+let publicTools: PortfolioTool[] = [];
+let currentLanguage: Language = "en";
+
 const renderTags = (items: string[]): string =>
   items.map((item) => `<li class="tag">${escapeHtml(item)}</li>`).join("");
 
 const renderPage = (language: Language): void => {
   const text = copy[language];
-  const sortedProjects = projects
+  const sortedProjects = publicProjects
     .filter((project) => project.featured)
     .sort((first, second) => first.displayOrder - second.displayOrder);
   const homeSkills = skillGroups.flatMap((group) => group.items);
@@ -145,6 +155,9 @@ const renderPage = (language: Language): void => {
               <a class="button" href="#projects">${text.viewProjects}</a>
               <a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/">
                 ${text.viewCv}
+              </a>
+              <a class="button button--secondary" href="${import.meta.env.BASE_URL}portfolio/">
+                ${text.viewPortfolio}
               </a>
               <a class="button button--secondary" href="mailto:${escapeHtml(profile.email)}">
                 ${text.contact}
@@ -258,6 +271,7 @@ const renderPage = (language: Language): void => {
               )
               .join("")}
           </div>
+          <a class="section-more" href="${import.meta.env.BASE_URL}projects/">${text.allProjects} →</a>
         </div>
       </section>
 
@@ -269,7 +283,7 @@ const renderPage = (language: Language): void => {
           </div>
 
           <div class="tool-grid">
-            ${automationTools
+            ${publicTools
               .map(
                 (tool) => `
                   <article class="tool-card">
@@ -290,6 +304,7 @@ const renderPage = (language: Language): void => {
               )
               .join("")}
           </div>
+          <a class="section-more" href="${import.meta.env.BASE_URL}tools/">${text.allTools} →</a>
         </div>
       </section>
 
@@ -317,8 +332,20 @@ const renderPage = (language: Language): void => {
 
   app.querySelector<HTMLButtonElement>("[data-language-toggle]")?.addEventListener(
     "click",
-    () => renderPage(language === "en" ? "vi" : "en"),
+    () => {
+      currentLanguage = language === "en" ? "vi" : "en";
+      renderPage(currentLanguage);
+    },
   );
 };
 
-renderPage("en");
+const initialize = async (): Promise<void> => {
+  [publicProjects, publicTools] = await Promise.all([
+    portfolioRepository.listPublishedProjects(),
+    portfolioRepository.listPublishedTools(),
+  ]);
+  renderPage(currentLanguage);
+};
+
+renderPage(currentLanguage);
+void initialize();

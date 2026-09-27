@@ -245,6 +245,19 @@
   gap: var(--space-5);
 }
 
+.section-more {
+  display: inline-block;
+  margin-top: var(--space-8);
+  color: var(--color-primary-dark);
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.section-more:hover {
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+
 .project-card,
 .tool-card {
   display: flex;
