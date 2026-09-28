@@ -309,10 +309,10 @@ const editor = (project: AdminProjectRow): string => `
     <div class="admin-actions"><button class="button" type="submit">Save as ${project.status}</button><button class="button button--secondary" type="button" data-cancel>Edit another project</button></div>
   </form>
   <form class="admin-upload" data-upload-form>
-    <div><p class="section-kicker">Project media</p><h2>Upload a sanitized image</h2><p>JPEG, PNG, WebP or AVIF, maximum 5 MB. Uploading never changes project status.</p></div>
-    <label>Alt text (English)<input name="alt" required value="${escapeHtml(project.name.en)}"></label>
-    <label>Image<input name="image" type="file" accept="image/jpeg,image/png,image/webp,image/avif" required></label>
-    <button class="button button--secondary" type="submit">Upload image</button>
+    <div><p class="section-kicker">Project media</p><h2>Upload sanitized images</h2><p>Select one or more JPEG, PNG, WebP or AVIF images, maximum 5 MB each. Uploading never changes project status.</p></div>
+    <label>Alt text (English)<input name="alt" required value="${escapeHtml(project.name.en)}"><small>The same alt text will be applied to every selected image.</small></label>
+    <label>Images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple required></label>
+    <button class="button button--secondary" type="submit" data-upload-submit>Upload images</button>
   </form>`;
 
 const dashboardView = (): void => {
@@ -386,32 +386,68 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
   message("Project saved. Status was not changed.", "success");
 };
 
-const uploadImage = async (formElement: HTMLFormElement): Promise<void> => {
+const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
   if (!selectedProject) throw new Error("Save or select a project before uploading.");
   const form = new FormData(formElement);
-  const file = form.get("image");
-  if (!(file instanceof File) || !file.size) throw new Error("Choose an image.");
+  const fileInput = formElement.elements.namedItem("images");
+  if (!(fileInput instanceof HTMLInputElement) || fileInput.type !== "file") throw new Error("Image picker is unavailable.");
+  const files = Array.from(fileInput.files ?? []);
+  if (!files.length) throw new Error("Choose one or more images.");
   const allowed = ["image/jpeg", "image/png", "image/webp", "image/avif"];
-  if (!allowed.includes(file.type) || file.size > 5 * 1024 * 1024) throw new Error("Use a supported image smaller than 5 MB.");
-  const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-  const path = `projects/${selectedProject.id}/${crypto.randomUUID()}.${extension}`;
-  const { error: uploadError } = await supabase.storage.from(supabaseConfig.storageBucket).upload(path, file, { contentType: file.type, upsert: false });
-  if (uploadError) throw uploadError;
-  const { error: metadataError } = await supabase.from("project_images").insert({
-    project_id: selectedProject.id,
-    storage_path: path,
-    alt: { en: String(form.get("alt") ?? "").trim(), vi: "" },
-    kind: "gallery",
-    display_order: 100,
-    mime_type: file.type,
-    file_size: file.size,
-  });
-  if (metadataError) {
-    await supabase.storage.from(supabaseConfig.storageBucket).remove([path]);
-    throw metadataError;
+  const invalidFile = files.find((file) => !allowed.includes(file.type) || file.size > 5 * 1024 * 1024);
+  if (invalidFile) throw new Error(`Use JPEG, PNG, WebP or AVIF files smaller than 5 MB. Check "${invalidFile.name}".`);
+
+  const alt = String(form.get("alt") ?? "").trim();
+  const submitButton = formElement.querySelector<HTMLButtonElement>("[data-upload-submit]");
+  const failures: Array<{ name: string; reason: string }> = [];
+  let uploaded = 0;
+
+  if (submitButton) submitButton.disabled = true;
+  try {
+    for (const [index, file] of files.entries()) {
+      if (submitButton) submitButton.textContent = `Uploading ${index + 1} of ${files.length}...`;
+      message(`Uploading image ${index + 1} of ${files.length}...`);
+
+      try {
+        const extension = file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+        const path = `projects/${selectedProject.id}/${crypto.randomUUID()}.${extension}`;
+        const { error: uploadError } = await supabase.storage.from(supabaseConfig.storageBucket).upload(path, file, { contentType: file.type, upsert: false });
+        if (uploadError) throw uploadError;
+
+        const { error: metadataError } = await supabase.from("project_images").insert({
+          project_id: selectedProject.id,
+          storage_path: path,
+          alt: { en: alt, vi: "" },
+          kind: "gallery",
+          display_order: 100 + index,
+          mime_type: file.type,
+          file_size: file.size,
+        });
+        if (metadataError) {
+          await supabase.storage.from(supabaseConfig.storageBucket).remove([path]);
+          throw metadataError;
+        }
+        uploaded += 1;
+      } catch (error) {
+        failures.push({
+          name: file.name,
+          reason: error instanceof Error ? error.message : "Upload failed.",
+        });
+      }
+    }
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = "Upload images";
+    }
   }
+
   formElement.reset();
-  message("Image uploaded. Project publication status was not changed.", "success");
+  if (failures.length) {
+    const details = failures.map((failure) => `${failure.name}: ${failure.reason}`).join("; ");
+    throw new Error(`${uploaded} of ${files.length} images uploaded. Failed: ${details}`);
+  }
+  message(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded. Project publication status was not changed.`, "success");
 };
 
 const bindDashboard = (): void => {
@@ -486,7 +522,7 @@ const bindDashboard = (): void => {
     await loadProjects(); dashboardView(); message("Starter projects imported as drafts.", "success");
   });
   app.querySelector<HTMLFormElement>("[data-project-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
-  app.querySelector<HTMLFormElement>("[data-upload-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void uploadImage(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
+  app.querySelector<HTMLFormElement>("[data-upload-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void uploadImages(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
 };
 
 const initialize = async (): Promise<void> => {
