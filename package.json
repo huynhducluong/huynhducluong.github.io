@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "setup:git": "node scripts/setup-git.mjs",
+    "setup:admin-password": "node scripts/set-admin-password.mjs",
     "dev": "vite",
     "check": "tsc --noEmit",
     "build": "tsc && vite build",
