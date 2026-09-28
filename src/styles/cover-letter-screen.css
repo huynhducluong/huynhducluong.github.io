@@ -1,0 +1,19 @@
+.cover-letter-page { box-sizing: border-box; width: 210mm; height: 297mm; overflow: hidden; padding: 20mm 19mm 18mm; background: var(--document-surface, #fff); color: var(--document-text, #111820); font-family: Aptos, "Segoe UI", Arial, sans-serif; font-size: 10.5pt; line-height: 1.48; }
+.cover-letter-page *, .cover-letter-page *::before, .cover-letter-page *::after { box-sizing: border-box; }
+.cover-letter-page__header { display: grid; grid-template-columns: 1.3fr 1fr; gap: 12mm; align-items: end; }
+.cover-letter-page__identity h1 { margin: 0; color: var(--document-primary-strong, #075b83); font-family: "Arial Narrow", "Roboto Condensed", Arial, sans-serif; font-size: 26pt; font-weight: 800; letter-spacing: .055em; line-height: .98; }
+.cover-letter-page__identity p { margin: 3mm 0 0; color: var(--document-primary, #087fb6); font-size: 10.5pt; font-weight: 800; }
+.cover-letter-page address { font-style: normal; }
+.cover-letter-page__contact { display: grid; justify-items: end; gap: 1mm; color: var(--document-text-muted, #4c5d67); font-size: 9pt; line-height: 1.35; text-align: right; }
+.cover-letter-page__contact a { color: inherit; text-decoration: none; }
+.cover-letter-page__rule { height: .8mm; margin-block: 7mm 10mm; background: linear-gradient(90deg, var(--document-primary, #087fb6), var(--document-accent, #14a8d6)); }
+.cover-letter-page__date { margin-bottom: 10mm; text-align: right; }
+.cover-letter-page__recipient { min-height: 25mm; color: var(--document-text-muted, #4c5d67); line-height: 1.5; }
+.cover-letter-page__body { margin-top: 8mm; }
+.cover-letter-page__body p { margin: 0 0 5mm; text-align: left; }
+.cover-letter-page__body .cover-letter-page__salutation { margin-bottom: 6mm; font-weight: 700; }
+.cover-letter-page__signoff { margin-top: 9mm; }
+.cover-letter-page__signoff p { margin: 0 0 11mm; }
+.cover-letter-page__signoff strong { color: var(--document-primary-strong, #075b83); letter-spacing: .035em; }
+[data-preview] { width: 210mm; }
+.cover-letter-preview-scroll .cover-letter-page { box-shadow: 0 12px 34px rgb(16 45 59 / 18%); }

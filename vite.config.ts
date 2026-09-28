@@ -13,6 +13,8 @@ export default defineConfig({
         tools: fileURLToPath(new URL("./tools/index.html", import.meta.url)),
         tool: fileURLToPath(new URL("./tool/index.html", import.meta.url)),
         admin: fileURLToPath(new URL("./admin/index.html", import.meta.url)),
+        coverLetterAdmin: fileURLToPath(new URL("./admin/cover-letter/index.html", import.meta.url)),
+        coverLettersAdmin: fileURLToPath(new URL("./admin/cover-letters/index.html", import.meta.url)),
         portfolio: fileURLToPath(new URL("./portfolio/index.html", import.meta.url)),
       },
     },
