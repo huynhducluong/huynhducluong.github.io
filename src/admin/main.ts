@@ -34,6 +34,35 @@ if (!app) throw new Error("App container was not found.");
 let projects: AdminProjectRow[] = [];
 let tools: Array<{ id: string; name: string; status: PublicationStatus }> = [];
 let selectedProject: AdminProjectRow | null = null;
+let magicLinkCooldown: number | undefined;
+
+const resetMagicLinkButton = (button: HTMLButtonElement): void => {
+  button.disabled = false;
+  button.textContent = "Send magic link";
+};
+
+const startMagicLinkCooldown = (button: HTMLButtonElement): void => {
+  if (magicLinkCooldown !== undefined) {
+    window.clearInterval(magicLinkCooldown);
+  }
+
+  let secondsRemaining = 60;
+  button.disabled = true;
+  button.textContent = `Send again in ${secondsRemaining}s`;
+
+  magicLinkCooldown = window.setInterval(() => {
+    secondsRemaining -= 1;
+
+    if (secondsRemaining <= 0) {
+      window.clearInterval(magicLinkCooldown);
+      magicLinkCooldown = undefined;
+      resetMagicLinkButton(button);
+      return;
+    }
+
+    button.textContent = `Send again in ${secondsRemaining}s`;
+  }, 1000);
+};
 
 const message = (text: string, kind: "info" | "error" | "success" = "info"): void => {
   const target = document.querySelector<HTMLElement>("[data-admin-message]");
@@ -91,6 +120,11 @@ const blankProject = (): AdminProjectRow => ({
 });
 
 const loginView = (): void => {
+  if (magicLinkCooldown !== undefined) {
+    window.clearInterval(magicLinkCooldown);
+    magicLinkCooldown = undefined;
+  }
+
   app.innerHTML = `
     <main class="admin-login">
       <section class="admin-login__card">
@@ -98,9 +132,10 @@ const loginView = (): void => {
         <h1>Portfolio administration</h1>
         <p>Sign in with the approved email. Supabase will send a one-time magic link.</p>
         <form data-login-form>
-          <label>Email<input name="email" type="email" value="${escapeHtml(supabaseConfig.adminEmail)}" required></label>
-          <button class="button" type="submit">Send magic link</button>
+          <label>Email<input name="email" type="email" autocomplete="email" value="${escapeHtml(supabaseConfig.adminEmail)}" readonly required></label>
+          <button class="button" type="submit" data-magic-link-submit>Send magic link</button>
         </form>
+        <p class="admin-login__help">After requesting a link, allow a few minutes for delivery and check Spam or Promotions. The button is limited to one request per minute.</p>
         <p class="admin-message" data-admin-message role="status"></p>
         <a href="${import.meta.env.BASE_URL}">← Return to website</a>
       </section>
@@ -108,8 +143,15 @@ const loginView = (): void => {
 
   app.querySelector<HTMLFormElement>("[data-login-form]")?.addEventListener("submit", async (event) => {
     event.preventDefault();
-    const form = new FormData(event.currentTarget as HTMLFormElement);
+    const formElement = event.currentTarget as HTMLFormElement;
+    const form = new FormData(formElement);
     const email = String(form.get("email") ?? "").trim();
+    const submitButton = formElement.querySelector<HTMLButtonElement>("[data-magic-link-submit]");
+
+    if (!submitButton) return;
+
+    submitButton.disabled = true;
+    submitButton.textContent = "Sending…";
     message("Sending magic link…");
     const { error } = await supabase.auth.signInWithOtp({
       email,
@@ -118,7 +160,23 @@ const loginView = (): void => {
         emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}admin/`,
       },
     });
-    message(error ? error.message : "Magic link sent. Check your email.", error ? "error" : "success");
+
+    if (error) {
+      resetMagicLinkButton(submitButton);
+      message(
+        error.status === 429
+          ? "Too many requests. Wait before requesting another Magic Link."
+          : error.message,
+        "error",
+      );
+      return;
+    }
+
+    message(
+      "Request accepted by Supabase. Check Inbox, Spam, and Promotions. Delivery may take a few minutes.",
+      "success",
+    );
+    startMagicLinkCooldown(submitButton);
   });
 };
 

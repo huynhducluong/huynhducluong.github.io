@@ -3,6 +3,9 @@ body { min-width: 320px; background: var(--color-background); }
 .admin-login__card { width: min(100%, 32rem); padding: var(--space-10); border-radius: var(--radius-lg); background: #fff; box-shadow: var(--shadow-card); }
 .admin-login__card h1 { margin-block: var(--space-4); font-size: var(--font-size-2xl); }
 .admin-login__card > p { color: var(--color-text-muted); }
+.admin-login__card .admin-login__help { margin: calc(var(--space-4) * -1) 0 var(--space-6); font-size: var(--font-size-xs); line-height: 1.5; }
+.admin-login input[readonly] { background: var(--color-surface-strong); color: var(--color-text); cursor: not-allowed; }
+.admin-login button:disabled { cursor: wait; opacity: .65; transform: none; }
 .admin-login form { display: grid; gap: var(--space-4); margin-block: var(--space-8); }
 .admin-header { display: flex; min-height: 4.5rem; align-items: center; justify-content: space-between; gap: var(--space-5); padding: var(--space-3) var(--space-6); background: var(--color-dark); color: #fff; }
 .admin-header > div:last-child { display: flex; gap: var(--space-4); align-items: center; }
