@@ -3,6 +3,7 @@ import "../styles/tokens.css";
 import "../styles/global.css";
 import "../styles/admin.css";
 import { supabaseConfig } from "../config/supabase";
+import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import { portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
 import { escapeHtml } from "../shared/format";
 import { supabase } from "../services/supabaseClient";
@@ -235,7 +236,7 @@ const loginView = (): void => {
       email: supabaseConfig.adminEmail,
       options: {
         shouldCreateUser: false,
-        emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}admin/`,
+        emailRedirectTo: magicLinkRedirectUrl(),
       },
     });
 
@@ -316,7 +317,7 @@ const editor = (project: AdminProjectRow): string => `
 
 const dashboardView = (): void => {
   app.innerHTML = `
-    <header class="admin-header"><div><p>HDL Portfolio CMS</p><small>Supabase · Singapore region</small></div><div><a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div></header>
+    <header class="admin-header"><div><p>HDL Portfolio CMS</p><small>Supabase · Singapore region</small></div><div><a href="${import.meta.env.BASE_URL}admin/cover-letters/">Cover letters</a><a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div></header>
     <main class="admin-layout">
       <aside class="admin-sidebar">
         <div class="admin-sidebar__actions"><button class="button" type="button" data-new-project>New project</button><button class="button button--secondary" type="button" data-import>Import starter drafts</button></div>
@@ -489,15 +490,21 @@ const bindDashboard = (): void => {
 };
 
 const initialize = async (): Promise<void> => {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return loginView();
-  const { data, error } = await supabase.rpc("is_portfolio_admin");
-  if (error || data !== true) {
+  const access = await getAdminAccess();
+  if (access === "signed-out") return loginView();
+  if (access === "forbidden") {
     await supabase.auth.signOut();
     loginView();
     message("This account is not in the Portfolio admin allowlist.", "error");
     return;
   }
+
+  const returnTo = safeReturnTo();
+  if (returnTo) {
+    window.location.replace(returnTo);
+    return;
+  }
+
   try {
     await loadProjects();
     dashboardView();
