@@ -1,6 +1,8 @@
 # Custom SMTP for Portfolio Admin
 
-The Portfolio Admin uses Supabase Magic Link authentication. SMTP credentials belong only in the Supabase Dashboard and must never be committed to this repository.
+The Portfolio Admin supports Supabase password sign-in with Magic Link as an optional backup. SMTP credentials belong only in the Supabase Dashboard and must never be committed to this repository.
+
+Custom SMTP is optional when the Admin account uses password sign-in. It is still required for reliable Magic Link delivery and email-based password recovery.
 
 ## Gmail SMTP for the single Admin account
 

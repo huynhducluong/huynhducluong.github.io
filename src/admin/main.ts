@@ -130,22 +130,100 @@ const loginView = (): void => {
       <section class="admin-login__card">
         <p class="section-kicker">Private CMS</p>
         <h1>Portfolio administration</h1>
-        <p>Sign in with the approved email. Supabase will send a one-time magic link.</p>
-        <form data-login-form>
-          <label>Email<input name="email" type="email" autocomplete="email" value="${escapeHtml(supabaseConfig.adminEmail)}" readonly required></label>
+        <p>Sign in with your password, or use a one-time Magic Link as a backup.</p>
+        <label class="admin-login__email">Email<input type="email" autocomplete="username" value="${escapeHtml(supabaseConfig.adminEmail)}" readonly></label>
+        <div class="admin-auth-tabs" role="tablist" aria-label="Sign-in method">
+          <button class="admin-auth-tabs__button is-active" type="button" role="tab" aria-selected="true" aria-controls="password-panel" data-auth-mode="password">Password</button>
+          <button class="admin-auth-tabs__button" type="button" role="tab" aria-selected="false" aria-controls="magic-link-panel" data-auth-mode="magic-link">Magic Link</button>
+        </div>
+        <form id="password-panel" role="tabpanel" data-password-login-form>
+          <label>Password
+            <span class="admin-password-field">
+              <input name="password" type="password" autocomplete="current-password" required autofocus>
+              <button type="button" data-password-visibility aria-label="Show password">Show</button>
+            </span>
+          </label>
+          <button class="button" type="submit" data-password-submit>Sign in</button>
+        </form>
+        <form id="magic-link-panel" role="tabpanel" data-magic-link-form hidden>
           <button class="button" type="submit" data-magic-link-submit>Send magic link</button>
         </form>
-        <p class="admin-login__help">After requesting a link, allow a few minutes for delivery and check Spam or Promotions. The button is limited to one request per minute.</p>
+        <p class="admin-login__help" data-login-help>Password sign-in does not require email delivery.</p>
         <p class="admin-message" data-admin-message role="status"></p>
         <a href="${import.meta.env.BASE_URL}">← Return to website</a>
       </section>
     </main>`;
 
-  app.querySelector<HTMLFormElement>("[data-login-form]")?.addEventListener("submit", async (event) => {
+  const passwordPanel = app.querySelector<HTMLFormElement>("[data-password-login-form]");
+  const magicLinkPanel = app.querySelector<HTMLFormElement>("[data-magic-link-form]");
+  const loginHelp = app.querySelector<HTMLElement>("[data-login-help]");
+
+  app.querySelectorAll<HTMLButtonElement>("[data-auth-mode]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const passwordMode = tab.dataset.authMode === "password";
+      app.querySelectorAll<HTMLButtonElement>("[data-auth-mode]").forEach((item) => {
+        const selected = item === tab;
+        item.classList.toggle("is-active", selected);
+        item.setAttribute("aria-selected", String(selected));
+      });
+      if (passwordPanel) passwordPanel.hidden = !passwordMode;
+      if (magicLinkPanel) magicLinkPanel.hidden = passwordMode;
+      if (loginHelp) {
+        loginHelp.textContent = passwordMode
+          ? "Password sign-in does not require email delivery."
+          : "Allow a few minutes for delivery and check Spam or Promotions. Requests are limited to one per minute.";
+      }
+      message("");
+      if (passwordMode) {
+        passwordPanel?.querySelector<HTMLInputElement>("input[name='password']")?.focus();
+      } else {
+        magicLinkPanel?.querySelector<HTMLButtonElement>("[data-magic-link-submit]")?.focus();
+      }
+    });
+  });
+
+  app.querySelector<HTMLButtonElement>("[data-password-visibility]")?.addEventListener("click", (event) => {
+    const button = event.currentTarget as HTMLButtonElement;
+    const input = passwordPanel?.querySelector<HTMLInputElement>("input[name='password']");
+    if (!input) return;
+    const visible = input.type === "text";
+    input.type = visible ? "password" : "text";
+    button.textContent = visible ? "Show" : "Hide";
+    button.setAttribute("aria-label", visible ? "Show password" : "Hide password");
+    input.focus();
+  });
+
+  passwordPanel?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget as HTMLFormElement;
     const form = new FormData(formElement);
-    const email = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
+    const submitButton = formElement.querySelector<HTMLButtonElement>("[data-password-submit]");
+
+    if (!submitButton) return;
+
+    submitButton.disabled = true;
+    submitButton.textContent = "Signing in…";
+    message("Checking your credentials…");
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: supabaseConfig.adminEmail,
+      password,
+    });
+
+    if (error) {
+      submitButton.disabled = false;
+      submitButton.textContent = "Sign in";
+      message("Email or password is incorrect, or this account does not have a password yet.", "error");
+      return;
+    }
+
+    await initialize();
+  });
+
+  magicLinkPanel?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget as HTMLFormElement;
     const submitButton = formElement.querySelector<HTMLButtonElement>("[data-magic-link-submit]");
 
     if (!submitButton) return;
@@ -154,7 +232,7 @@ const loginView = (): void => {
     submitButton.textContent = "Sending…";
     message("Sending magic link…");
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: supabaseConfig.adminEmail,
       options: {
         shouldCreateUser: false,
         emailRedirectTo: `${window.location.origin}${import.meta.env.BASE_URL}admin/`,
@@ -238,7 +316,7 @@ const editor = (project: AdminProjectRow): string => `
 
 const dashboardView = (): void => {
   app.innerHTML = `
-    <header class="admin-header"><div><p>HDL Portfolio CMS</p><small>Supabase · Singapore region</small></div><div><a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a><button type="button" data-sign-out>Sign out</button></div></header>
+    <header class="admin-header"><div><p>HDL Portfolio CMS</p><small>Supabase · Singapore region</small></div><div><a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div></header>
     <main class="admin-layout">
       <aside class="admin-sidebar">
         <div class="admin-sidebar__actions"><button class="button" type="button" data-new-project>New project</button><button class="button button--secondary" type="button" data-import>Import starter drafts</button></div>
@@ -249,7 +327,17 @@ const dashboardView = (): void => {
         <ul class="admin-projects">${toolList()}</ul>
       </aside>
       <section class="admin-workspace">${editor(selectedProject ?? blankProject())}</section>
-    </main>`;
+    </main>
+    <dialog class="admin-dialog" data-password-dialog>
+      <form data-password-update-form>
+        <div><p class="section-kicker">Account security</p><h2>Set or change password</h2></div>
+        <p>Use at least 12 characters. The password is sent directly to Supabase Auth and is never stored in this website's code.</p>
+        <label>New password<input name="new_password" type="password" autocomplete="new-password" minlength="12" required></label>
+        <label>Confirm password<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" required></label>
+        <p class="admin-message" data-password-message role="status"></p>
+        <div class="admin-actions"><button class="button" type="submit" data-password-update-submit>Save password</button><button class="button button--secondary" type="button" data-password-close>Cancel</button></div>
+      </form>
+    </dialog>`;
   bindDashboard();
 };
 
@@ -326,6 +414,39 @@ const uploadImage = async (formElement: HTMLFormElement): Promise<void> => {
 };
 
 const bindDashboard = (): void => {
+  const passwordDialog = app.querySelector<HTMLDialogElement>("[data-password-dialog]");
+  app.querySelector("[data-password-open]")?.addEventListener("click", () => passwordDialog?.showModal());
+  app.querySelector("[data-password-close]")?.addEventListener("click", () => passwordDialog?.close());
+  app.querySelector<HTMLFormElement>("[data-password-update-form]")?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const formElement = event.currentTarget as HTMLFormElement;
+    const form = new FormData(formElement);
+    const newPassword = String(form.get("new_password") ?? "");
+    const confirmPassword = String(form.get("confirm_password") ?? "");
+    const status = formElement.querySelector<HTMLElement>("[data-password-message]");
+    const submitButton = formElement.querySelector<HTMLButtonElement>("[data-password-update-submit]");
+    const setStatus = (text: string, kind: "error" | "success" | "info" = "info"): void => {
+      if (!status) return;
+      status.textContent = text;
+      status.dataset.kind = kind;
+    };
+
+    if (newPassword.length < 12) return setStatus("Use a password with at least 12 characters.", "error");
+    if (newPassword !== confirmPassword) return setStatus("The passwords do not match.", "error");
+    if (!submitButton) return;
+
+    submitButton.disabled = true;
+    submitButton.textContent = "Saving…";
+    setStatus("Updating your Supabase Auth password…");
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    submitButton.disabled = false;
+    submitButton.textContent = "Save password";
+
+    if (error) return setStatus(error.message, "error");
+
+    formElement.reset();
+    setStatus("Password updated. You can use Password sign-in next time.", "success");
+  });
   app.querySelector("[data-sign-out]")?.addEventListener("click", async () => { await supabase.auth.signOut(); loginView(); });
   app.querySelector("[data-new-project]")?.addEventListener("click", () => { selectedProject = blankProject(); dashboardView(); });
   app.querySelector("[data-cancel]")?.addEventListener("click", () => { selectedProject = null; dashboardView(); });

@@ -1,4 +1,4 @@
--- Run only after the magic-link user exists in Authentication > Users.
+-- Run only after the Auth user exists in Authentication > Users.
 -- This lookup is deliberately executed in the trusted SQL editor, never in the browser.
 insert into public.portfolio_admins (user_id)
 select id
