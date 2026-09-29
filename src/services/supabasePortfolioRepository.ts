@@ -31,6 +31,7 @@ interface ProjectRow {
   outcome: LocalizedText | null;
   start_date: string | null;
   end_date: string | null;
+  is_current: boolean;
   year: number | null;
   responsibilities: ContentPoint[];
   technologies: string[];
@@ -40,6 +41,11 @@ interface ProjectRow {
   include_in_portfolio: boolean;
   portfolio_order: number;
   portfolio_layout: PortfolioLayout;
+  include_in_cv: boolean;
+  cv_order: number;
+  cv_display: "detailed" | "compact";
+  cv_show_summary: boolean;
+  cv_responsibility_ids: string[];
   created_at: string;
   updated_at: string;
   project_images?: MediaRow[];
@@ -58,6 +64,8 @@ interface ToolRow {
   display_order: number;
   include_in_portfolio: boolean;
   portfolio_order: number;
+  include_in_cv: boolean;
+  cv_order: number;
   tool_images?: MediaRow[];
 }
 
@@ -87,7 +95,8 @@ export const projectFromRow = (row: ProjectRow): PortfolioProject => ({
   approach: row.approach ?? undefined,
   outcome: row.outcome ?? undefined,
   startDate: row.start_date ?? undefined,
-  endDate: row.end_date,
+  endDate: row.is_current ? null : row.end_date,
+  isCurrent: row.is_current ?? false,
   year: row.year ?? undefined,
   responsibilities: row.responsibilities ?? [],
   technologies: row.technologies ?? [],
@@ -98,6 +107,11 @@ export const projectFromRow = (row: ProjectRow): PortfolioProject => ({
   includeInPortfolio: row.include_in_portfolio,
   portfolioOrder: row.portfolio_order,
   portfolioLayout: row.portfolio_layout,
+  includeInCv: row.include_in_cv ?? false,
+  cvOrder: row.cv_order ?? 100,
+  cvDisplay: row.cv_display ?? "compact",
+  cvShowSummary: row.cv_show_summary ?? true,
+  cvResponsibilityIds: row.cv_responsibility_ids ?? [],
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -116,6 +130,8 @@ const toolFromRow = (row: ToolRow): PortfolioTool => ({
   displayOrder: row.display_order,
   includeInPortfolio: row.include_in_portfolio,
   portfolioOrder: row.portfolio_order,
+  includeInCv: row.include_in_cv ?? false,
+  cvOrder: row.cv_order ?? 100,
 });
 
 const projectSelect = "*, project_images(*)";

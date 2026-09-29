@@ -2,6 +2,7 @@ import type { ContentPoint, LocalizedText } from "./career";
 
 export type PublicationStatus = "draft" | "published" | "archived";
 export type PortfolioLayout = "feature" | "standard" | "compact";
+export type CvProjectDisplay = "detailed" | "compact";
 
 export interface PortfolioMedia {
   id: string;
@@ -25,6 +26,7 @@ export interface PortfolioProject {
   outcome?: LocalizedText;
   startDate?: string;
   endDate?: string | null;
+  isCurrent: boolean;
   year?: number;
   responsibilities: ContentPoint[];
   technologies: string[];
@@ -35,6 +37,11 @@ export interface PortfolioProject {
   includeInPortfolio: boolean;
   portfolioOrder: number;
   portfolioLayout: PortfolioLayout;
+  includeInCv: boolean;
+  cvOrder: number;
+  cvDisplay: CvProjectDisplay;
+  cvShowSummary: boolean;
+  cvResponsibilityIds: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -53,6 +60,8 @@ export interface PortfolioTool {
   displayOrder: number;
   includeInPortfolio: boolean;
   portfolioOrder: number;
+  includeInCv: boolean;
+  cvOrder: number;
 }
 
 export interface PortfolioRepository {

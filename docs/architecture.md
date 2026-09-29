@@ -11,7 +11,7 @@
 
 ## Data ownership
 
-Career facts that require strict versioned layout in the two-page CV remain in `src/data` and `src/config/cv.en.ts`. Portfolio projects, tools and media use the `PortfolioRepository` interface. Supabase is authoritative after migration; the local seed is a development/deployment fallback when the remote schema is unavailable.
+Supabase is authoritative for shared website, CV, Portfolio, project, tool and media content. The bundled data files seed a new installation and remain a development fallback when the remote schema is unavailable. The public CV reads the latest published CV release; the authenticated Admin preview reads current editable content.
 
 The website, project/tool routes and printable Portfolio all consume the same repository. This avoids a separate print-only copy of project data. Only published records are returned publicly. The Portfolio adds another explicit selection layer with `include_in_portfolio`, `portfolio_order` and `portfolio_layout`.
 

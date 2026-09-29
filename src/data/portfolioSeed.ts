@@ -1,6 +1,7 @@
 import { projects } from "./projects";
 import { automationTools } from "./tools";
 import type { PortfolioProject, PortfolioTool } from "../types/portfolio";
+import { cvProjectSeedSettings, cvToolSeedSettings } from "./cvSeed";
 
 const publishedProjectIds = new Set([
   "la-son-hoa-lien-expressway",
@@ -17,7 +18,9 @@ const publishedProjectIds = new Set([
 ]);
 
 export const portfolioProjectSeed: PortfolioProject[] = projects.map(
-  (project, index) => ({
+  (project, index) => {
+    const cv = cvProjectSeedSettings.get(project.id);
+    return ({
     ...project,
     slug: project.id,
     images: project.imagePaths.map((storagePath, imageIndex) => ({
@@ -31,11 +34,20 @@ export const portfolioProjectSeed: PortfolioProject[] = projects.map(
     includeInPortfolio: publishedProjectIds.has(project.id),
     portfolioOrder: index + 1,
     portfolioLayout: index === 0 ? "feature" : "standard",
-  }),
+    isCurrent: project.endDate === null,
+    includeInCv: cv?.include_in_cv ?? false,
+    cvOrder: cv?.cv_order ?? index + 1,
+    cvDisplay: cv?.cv_display ?? "compact",
+    cvShowSummary: cv?.cv_show_summary ?? true,
+    cvResponsibilityIds: cv?.cv_responsibility_ids ?? [],
+  });
+  },
 );
 
 export const portfolioToolSeed: PortfolioTool[] = automationTools.map(
-  (tool, index) => ({
+  (tool, index) => {
+    const cv = cvToolSeedSettings.get(tool.id);
+    return ({
     ...tool,
     slug: tool.id,
     images: tool.imagePaths.map((storagePath, imageIndex) => ({
@@ -49,5 +61,8 @@ export const portfolioToolSeed: PortfolioTool[] = automationTools.map(
     displayOrder: index + 1,
     includeInPortfolio: true,
     portfolioOrder: index + 1,
-  }),
+    includeInCv: cv?.include_in_cv ?? false,
+    cvOrder: cv?.cv_order ?? index + 1,
+  });
+  },
 );
