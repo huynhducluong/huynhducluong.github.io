@@ -1,0 +1,199 @@
+import { professionalProfileSeed, websiteContentSeed } from "../data/websiteSeed";
+import type { DocumentReleaseSummary } from "../types/portfolio";
+import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
+import { supabase } from "./supabaseClient";
+import {
+  projectFromRow,
+  toolFromRow,
+  type ProjectRow,
+  type ToolRow,
+} from "./supabasePortfolioRepository";
+
+interface WebsiteContentRow {
+  version: string;
+  seo_title: WebsiteContent["seoTitle"];
+  seo_description: WebsiteContent["seoDescription"];
+  navigation: WebsiteContent["navigation"];
+  hero_eyebrow: WebsiteContent["heroEyebrow"];
+  focus: WebsiteContent["focus"];
+  specialization: WebsiteContent["specialization"];
+  expertise_title: WebsiteContent["expertiseTitle"];
+  experience_title: WebsiteContent["experienceTitle"];
+  projects_title: WebsiteContent["projectsTitle"];
+  automation_title: WebsiteContent["automationTitle"];
+  projects_page: WebsiteContent["projectsPage"] | null;
+  tools_page: WebsiteContent["toolsPage"] | null;
+  contact_kicker: WebsiteContent["contactKicker"];
+  contact_title: WebsiteContent["contactTitle"];
+  footer_text: WebsiteContent["footerText"];
+  theme: WebsiteContent["theme"];
+  sections: WebsiteContent["sections"];
+}
+
+const websiteContentFromRow = (row: WebsiteContentRow): WebsiteContent => ({
+  version: row.version,
+  seoTitle: row.seo_title,
+  seoDescription: row.seo_description,
+  navigation: row.navigation,
+  heroEyebrow: row.hero_eyebrow,
+  focus: row.focus,
+  specialization: row.specialization,
+  expertiseTitle: row.expertise_title,
+  experienceTitle: row.experience_title,
+  projectsTitle: row.projects_title,
+  automationTitle: row.automation_title,
+  projectsPage: row.projects_page ?? structuredClone(websiteContentSeed.projectsPage),
+  toolsPage: row.tools_page ?? structuredClone(websiteContentSeed.toolsPage),
+  contactKicker: row.contact_kicker,
+  contactTitle: row.contact_title,
+  footerText: row.footer_text,
+  theme: row.theme ?? { presetId: "personal-blue" },
+  sections: row.sections ?? structuredClone(websiteContentSeed.sections),
+});
+
+const websiteContentWithDefaults = (content: WebsiteContent): WebsiteContent => ({
+  ...structuredClone(websiteContentSeed),
+  ...content,
+  navigation: {
+    ...structuredClone(websiteContentSeed.navigation),
+    ...content.navigation,
+  },
+  projectsPage: content.projectsPage ?? structuredClone(websiteContentSeed.projectsPage),
+  toolsPage: content.toolsPage ?? structuredClone(websiteContentSeed.toolsPage),
+  sections: {
+    ...structuredClone(websiteContentSeed.sections),
+    ...content.sections,
+  },
+});
+
+export const loadProfessionalProfile = async (): Promise<ProfessionalProfileContent> => {
+  const { data, error } = await supabase
+    .from("professional_profile")
+    .select("profile,experiences,education,skill_groups,languages")
+    .eq("id", "primary")
+    .maybeSingle();
+  if (error) throw error;
+  if (!data) return structuredClone(professionalProfileSeed);
+  return {
+    profile: data.profile as ProfessionalProfileContent["profile"],
+    experiences: (data.experiences ?? []) as ProfessionalProfileContent["experiences"],
+    education: (data.education ?? []) as ProfessionalProfileContent["education"],
+    skillGroups: (data.skill_groups ?? []) as ProfessionalProfileContent["skillGroups"],
+    languages: (data.languages ?? []) as ProfessionalProfileContent["languages"],
+  };
+};
+
+export const saveProfessionalProfile = async (content: ProfessionalProfileContent): Promise<void> => {
+  const { error } = await supabase.from("professional_profile").upsert({
+    id: "primary",
+    profile: content.profile,
+    experiences: content.experiences,
+    education: content.education,
+    skill_groups: content.skillGroups,
+    languages: content.languages,
+  });
+  if (error) throw error;
+};
+
+export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {
+  const [contentResult, professional, projectResult, toolResult] = await Promise.all([
+    supabase.from("website_content").select("*").eq("id", "primary").maybeSingle(),
+    loadProfessionalProfile(),
+    supabase.from("projects").select("*, project_images(*)").is("deleted_at", null).order("display_order"),
+    supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("display_order"),
+  ]);
+  if (contentResult.error) throw contentResult.error;
+  if (projectResult.error) throw projectResult.error;
+  if (toolResult.error) throw toolResult.error;
+  return {
+    content: contentResult.data
+      ? websiteContentFromRow(contentResult.data as WebsiteContentRow)
+      : structuredClone(websiteContentSeed),
+    professional,
+    projects: (projectResult.data as ProjectRow[]).map(projectFromRow),
+    tools: (toolResult.data as ToolRow[]).map(toolFromRow),
+  };
+};
+
+export const saveWebsiteContent = async (content: WebsiteContent): Promise<void> => {
+  const { error } = await supabase.from("website_content").upsert({
+    id: "primary",
+    version: content.version,
+    seo_title: content.seoTitle,
+    seo_description: content.seoDescription,
+    navigation: content.navigation,
+    hero_eyebrow: content.heroEyebrow,
+    focus: content.focus,
+    specialization: content.specialization,
+    expertise_title: content.expertiseTitle,
+    experience_title: content.experienceTitle,
+    projects_title: content.projectsTitle,
+    automation_title: content.automationTitle,
+    projects_page: content.projectsPage,
+    tools_page: content.toolsPage,
+    contact_kicker: content.contactKicker,
+    contact_title: content.contactTitle,
+    footer_text: content.footerText,
+    theme: content.theme,
+    sections: content.sections,
+  });
+  if (error) throw error;
+};
+
+export const saveWebsiteFeatured = async (runtime: WebsiteRuntimeData): Promise<void> => {
+  const results = await Promise.all([
+    ...runtime.projects.map((item) => supabase.from("projects").update({ featured: item.featured }).eq("id", item.id)),
+    ...runtime.tools.map((item) => supabase.from("automation_tools").update({ featured: item.featured }).eq("id", item.id)),
+  ]);
+  const failed = results.find((result) => result.error);
+  if (failed?.error) throw failed.error;
+};
+
+export const publishWebsiteRelease = async (): Promise<void> => {
+  const draft = await loadWebsiteDraftData();
+  const payload: WebsiteRuntimeData = {
+    content: draft.content,
+    professional: draft.professional,
+    projects: draft.projects.filter((item) => item.status === "published"),
+    tools: draft.tools.filter((item) => item.status === "published"),
+  };
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError) throw authError;
+  if (!authData.user) throw new Error("Sign in before publishing the website.");
+  const { error } = await supabase.from("website_releases").insert({
+    version: payload.content.version,
+    payload,
+    published_by: authData.user.id,
+  });
+  if (error) throw error;
+};
+
+export const loadPublishedWebsiteRelease = async (): Promise<WebsiteRuntimeData> => {
+  const { data, error } = await supabase
+    .from("website_releases")
+    .select("payload")
+    .order("published_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  if (!data?.payload) throw new Error("No published Website release is available.");
+  const payload = data.payload as WebsiteRuntimeData;
+  return {
+    ...payload,
+    content: websiteContentWithDefaults(payload.content),
+  };
+};
+
+export const listWebsiteReleases = async (): Promise<DocumentReleaseSummary[]> => {
+  const { data, error } = await supabase
+    .from("website_releases")
+    .select("id,version,published_at")
+    .order("published_at", { ascending: false })
+    .limit(12);
+  if (error) throw error;
+  return (data ?? []).map((row) => ({
+    id: String(row.id),
+    version: String(row.version),
+    publishedAt: String(row.published_at),
+  }));
+};

@@ -12,6 +12,7 @@ import type {
 interface CvContentRow {
   version: string;
   theme_id: string;
+  theme: CvContent["theme"] | null;
   page_one_project_count: number;
   profile: CvContent["profile"];
   experiences: CvContent["experiences"];
@@ -53,6 +54,7 @@ interface CvToolRow {
 const contentFromRow = (row: CvContentRow): CvContent => ({
   version: row.version,
   themeId: row.theme_id,
+  theme: row.theme ?? { presetId: row.theme_id },
   pageOneProjectCount: row.page_one_project_count,
   profile: row.profile,
   experiences: row.experiences ?? [],
@@ -99,26 +101,35 @@ const toolFromRow = (row: CvToolRow): CvRuntimeTool => ({
 });
 
 const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => {
-  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_order,cv_display,cv_show_summary,cv_responsibility_ids").eq("include_in_cv", true);
-  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,cv_order").eq("include_in_cv", true);
+  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_order,cv_display,cv_show_summary,cv_responsibility_ids").eq("include_in_cv", true).is("deleted_at", null);
+  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,cv_order").eq("include_in_cv", true).is("deleted_at", null);
   if (!adminPreview) {
     projectQuery = projectQuery.eq("status", "published");
     toolQuery = toolQuery.eq("status", "published");
   }
 
-  const [contentResult, projectResult, toolResult] = await Promise.all([
+  const [contentResult, professionalResult, projectResult, toolResult] = await Promise.all([
     supabase.from("cv_content").select("*").eq("id", "primary").maybeSingle(),
+    supabase.from("professional_profile").select("profile,experiences,education,skill_groups,languages").eq("id", "primary").maybeSingle(),
     projectQuery.order("cv_order"),
     toolQuery.order("cv_order"),
   ]);
 
   if (contentResult.error) throw contentResult.error;
+  if (professionalResult.error) throw professionalResult.error;
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
 
   const content = contentResult.data
     ? contentFromRow(contentResult.data as CvContentRow)
-    : cvContentSeed;
+    : structuredClone(cvContentSeed);
+  if (professionalResult.data) {
+    content.profile = professionalResult.data.profile as CvContent["profile"];
+    content.experiences = (professionalResult.data.experiences ?? []) as CvContent["experiences"];
+    content.education = (professionalResult.data.education ?? []) as CvContent["education"];
+    content.skillGroups = (professionalResult.data.skill_groups ?? []) as CvContent["skillGroups"];
+    content.languages = (professionalResult.data.languages ?? []) as CvContent["languages"];
+  }
   const projects = (projectResult.data as CvProjectRow[]).map(projectFromRow);
 
   return {
@@ -142,29 +153,46 @@ export const loadCvData = async (options: { adminPreview?: boolean; preferReleas
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      if (data?.payload) return data.payload as CvRuntimeData;
-      return cvRuntimeSeed;
+      if (data?.payload) {
+        const runtime = data.payload as CvRuntimeData;
+        runtime.content.theme ??= { presetId: runtime.content.themeId };
+        return runtime;
+      }
+      throw new Error("No published CV release is available.");
     }
     return await loadLiveCvData(adminPreview);
   } catch (error) {
-    console.warn("CV data could not be loaded from Supabase; using the bundled seed.", error);
-    return cvRuntimeSeed;
+    if (!adminPreview) throw error;
+    console.warn("CV draft could not be loaded from Supabase; using the bundled seed.", error);
+    return structuredClone(cvRuntimeSeed);
   }
 };
 
 export const saveCvContent = async (content: CvContent): Promise<void> => {
-  const { error } = await supabase.from("cv_content").upsert({
+  const [cvResult, profileResult] = await Promise.all([
+    supabase.from("cv_content").upsert({
     id: "primary",
     version: content.version,
     theme_id: content.themeId,
+    theme: content.theme,
     page_one_project_count: content.pageOneProjectCount,
     profile: content.profile,
     experiences: content.experiences,
     education: content.education,
     skill_groups: content.skillGroups,
     languages: content.languages,
-  });
-  if (error) throw error;
+    }),
+    supabase.from("professional_profile").upsert({
+      id: "primary",
+      profile: content.profile,
+      experiences: content.experiences,
+      education: content.education,
+      skill_groups: content.skillGroups,
+      languages: content.languages,
+    }),
+  ]);
+  if (cvResult.error) throw cvResult.error;
+  if (profileResult.error) throw profileResult.error;
 };
 
 export const publishCvRelease = async (): Promise<void> => {

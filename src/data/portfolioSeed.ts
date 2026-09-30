@@ -2,6 +2,24 @@ import { projects } from "./projects";
 import { automationTools } from "./tools";
 import type { PortfolioProject, PortfolioTool } from "../types/portfolio";
 import { cvProjectSeedSettings, cvToolSeedSettings } from "./cvSeed";
+import { profile } from "./profile";
+import { skillGroups } from "./skills";
+import type { PortfolioContent } from "../types/portfolio";
+
+export const portfolioContentSeed: PortfolioContent = {
+  version: "2026-09",
+  title: "PORTFOLIO",
+  year: String(new Date().getFullYear()),
+  kicker: "BIM · Infrastructure · Automation",
+  aboutKicker: "About me",
+  aboutHeading: "Coordination built on clear information and practical automation.",
+  closingKicker: "Thank you",
+  closingHeading: "Let’s build clearer BIM workflows.",
+  closingText: "Infrastructure BIM coordination · Model quality · Automation",
+  theme: { presetId: "personal-blue" },
+  profile,
+  skillGroups,
+};
 
 const publishedProjectIds = new Set([
   "la-son-hoa-lien-expressway",

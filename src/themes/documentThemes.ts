@@ -1,4 +1,4 @@
-import type { DocumentTheme, DocumentThemeTokens } from "../types/theme";
+import type { DocumentTheme, DocumentThemeTokens, StoredDocumentTheme } from "../types/theme";
 
 const HEX_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
@@ -129,6 +129,24 @@ export const createCustomDocumentTheme = (
   name: "Custom",
   tokens: buildDocumentThemeTokens(primary, accent),
 });
+
+export const resolveDocumentTheme = (
+  preference: StoredDocumentTheme | undefined,
+  fallbackId = "personal-blue",
+): DocumentTheme => {
+  if (
+    preference?.presetId === "custom" &&
+    preference.primary &&
+    preference.accent &&
+    isHexColor(preference.primary) &&
+    isHexColor(preference.accent)
+  ) {
+    return createCustomDocumentTheme(preference.primary, preference.accent);
+  }
+  return findDocumentTheme(preference?.presetId ?? fallbackId)
+    ?? findDocumentTheme(fallbackId)
+    ?? documentThemes[0];
+};
 
 const CSS_VARIABLES: Readonly<Record<keyof DocumentThemeTokens, string>> = {
   primary: "--document-primary",

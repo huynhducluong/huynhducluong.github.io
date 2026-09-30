@@ -23,6 +23,7 @@ const compactById = new Map<string, number>(englishCvConfig.pages[1].selectedPro
 export const cvContentSeed: CvContent = {
   version: englishCvConfig.version,
   themeId: englishCvConfig.themeId,
+  theme: { presetId: englishCvConfig.themeId },
   pageOneProjectCount: englishCvConfig.pages[0].projectExperience.length,
   profile,
   experiences,

@@ -2,24 +2,26 @@ import "../styles/reset.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 import "../styles/content.css";
-import { portfolioRepository } from "../services/portfolioRepository";
+import { loadPublishedWebsiteRelease } from "../services/websiteRepository";
 import { renderProjectCard } from "../site/renderers";
-import { siteFooter, siteHeader } from "../site/shell";
+import { applyWebsiteTheme, siteFooter, siteHeader } from "../site/shell";
+import { escapeHtml, localize } from "../shared/format";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
 
 const render = async (): Promise<void> => {
-  app.innerHTML = `${siteHeader("projects")}<main id="main-content"><section class="page-hero"><div class="container"><p class="section-kicker">Selected work</p><h1>Infrastructure projects shaped by BIM coordination.</h1><p>Published project records only. Draft work remains private until it is explicitly published.</p></div></section><section class="section"><div class="container"><p class="status-message">Loading projects…</p></div></section></main>${siteFooter()}`;
-  try {
-    const projects = await portfolioRepository.listPublishedProjects();
-    const content = projects.length
-      ? `<div class="listing-grid">${projects.map((item) => renderProjectCard(item, "en")).join("")}</div>`
-      : `<p class="status-message">No published projects yet.</p>`;
-    app.querySelector(".section .container")!.innerHTML = content;
-  } catch {
-    app.querySelector(".section .container")!.innerHTML = `<p class="status-message status-message--error">Projects could not be loaded. Please try again later.</p>`;
-  }
+  const release = await loadPublishedWebsiteRelease();
+  applyWebsiteTheme(release.content);
+  const profile = release.professional.profile;
+  const content = release.projects.length
+    ? `<div class="listing-grid">${release.projects.map((item) => renderProjectCard(item, "en")).join("")}</div>`
+    : '<p class="status-message">No projects are included in the latest website release.</p>';
+  const page = release.content.projectsPage;
+  document.title = `${localize(page.title, "en")} | ${profile.name}`;
+  app.innerHTML = `${siteHeader(profile, release.content, "projects")}<main id="main-content"><section class="page-hero"><div class="container"><p class="section-kicker">${escapeHtml(localize(page.kicker, "en"))}</p><h1>${escapeHtml(localize(page.title, "en"))}</h1><p>${escapeHtml(localize(page.description, "en"))}</p></div></section><section class="section"><div class="container">${content}</div></section></main>${siteFooter(profile, release.content)}`;
 };
 
-void render();
+void render().catch(() => {
+  app.innerHTML = '<main class="website-load-state"><h1>Projects unavailable</h1><p>Please try again later.</p></main>';
+});

@@ -1,6 +1,8 @@
 html, body { background: #dfe8ec; }
 .cv-print-button:disabled { cursor: wait; opacity: .55; }
 .portfolio-preview-shell { overflow-x: auto; padding: 2rem; }
+.document-embedded { min-width: 297mm; background: #dfe5ea; }
+.document-embedded .portfolio-preview-shell { padding: 0; }
 .portfolio-document {
   --document-primary: #087fb6;
   --document-primary-strong: #075d80;

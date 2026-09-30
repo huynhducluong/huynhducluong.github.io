@@ -7,12 +7,14 @@ import type {
   Project,
   SkillGroup,
 } from "./career";
+import type { StoredDocumentTheme } from "./theme";
 
 export type CvProjectDisplay = "detailed" | "compact";
 
 export interface CvContent {
   version: string;
   themeId: string;
+  theme: StoredDocumentTheme;
   pageOneProjectCount: number;
   profile: Profile;
   experiences: Experience[];

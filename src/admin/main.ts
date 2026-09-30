@@ -1,7 +1,13 @@
+import "@fontsource-variable/inter/wght.css";
 import "../styles/reset.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 import "../styles/admin.css";
+import "../styles/admin-cover-letter.css";
+import "../styles/admin-documents.css";
+import "../styles/admin-site.css";
+import "../styles/admin-typography.css";
+import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import { portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
@@ -11,6 +17,27 @@ import { loadCvData, publishCvRelease, saveCvContent } from "../services/cvRepos
 import { supabase } from "../services/supabaseClient";
 import type { CvContent, CvProjectDisplay } from "../types/cvContent";
 import type { PortfolioProject, PublicationStatus } from "../types/portfolio";
+import {
+  bindCoverLetterWorkspace,
+  coverLetterSummary,
+  coverLetterWorkspaceView,
+  discardCoverLetterChanges,
+  ensureCoverLetterWorkspace,
+} from "./coverLetterWorkspace";
+import {
+  bindProfileDocumentWorkspace,
+  discardProfileDocumentChanges,
+  ensureProfileDocumentWorkspace,
+  profileDocumentWorkspaceView,
+  type ProfileDocumentKind,
+} from "./profileDocumentWorkspace";
+import {
+  bindSiteWorkspace,
+  discardSiteChanges,
+  ensureSiteWorkspace,
+  siteWorkspaceView,
+  type SiteWorkspaceKind,
+} from "./siteWorkspace";
 
 interface AdminMediaRow {
   id: string;
@@ -47,14 +74,32 @@ interface AdminProjectRow {
   cv_show_summary: boolean;
   cv_responsibility_ids: string[];
   project_images: AdminMediaRow[];
+  deleted_at: string | null;
+  deleted_by: string | null;
+  purge_after: string | null;
+  deleted_from_status: PublicationStatus | null;
 }
 
 interface AdminToolRow {
   id: string;
+  slug: string;
   name: string;
+  problem: { en: string; vi: string };
+  solution: { en: string; vi: string };
+  benefit: { en: string; vi: string } | null;
+  technologies: string[];
+  featured: boolean;
   status: PublicationStatus;
+  display_order: number;
+  include_in_portfolio: boolean;
+  portfolio_order: number;
   include_in_cv: boolean;
   cv_order: number;
+  tool_images: AdminMediaRow[];
+  deleted_at: string | null;
+  deleted_by: string | null;
+  purge_after: string | null;
+  deleted_from_status: PublicationStatus | null;
 }
 
 interface PendingMedia {
@@ -65,18 +110,34 @@ interface PendingMedia {
   kind: "cover" | "gallery";
 }
 
-type AdminView = "projects" | "cv-content" | "documents";
+type AdminView = "overview" | "homepage" | "projects" | "tools" | "profile" | "cv" | "portfolio" | "cover-letters" | "trash";
+type AdminItemType = "project" | "tool";
+type ContentFilter = "all" | "project" | "tool";
+type ContentStatusFilter = "all" | PublicationStatus;
+type EditorTab = "overview" | "content" | "distribution" | "media";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
+document.documentElement.classList.add("admin-app");
 
 let projects: AdminProjectRow[] = [];
 let tools: AdminToolRow[] = [];
 let selectedProject: AdminProjectRow | null = null;
+let selectedTool: AdminToolRow | null = null;
+let selectedItemType: AdminItemType = "project";
 let cvContent: CvContent = structuredClone(cvContentSeed);
-let activeView: AdminView = "projects";
+let activeView: AdminView = "overview";
+let contentFilter: ContentFilter = "all";
+let contentStatusFilter: ContentStatusFilter = "all";
+let contentSearch = "";
+let activeEditorTab: EditorTab = "overview";
+let adminFormDirty = false;
 let pendingMedia: PendingMedia[] = [];
 let magicLinkCooldown: number | undefined;
+
+window.addEventListener("beforeunload", (event) => {
+  if (adminFormDirty) event.preventDefault();
+});
 
 const resetMagicLinkButton = (button: HTMLButtonElement): void => {
   button.disabled = false;
@@ -146,6 +207,10 @@ const toRow = (project: PortfolioProject): AdminProjectRow => ({
   cv_show_summary: project.cvShowSummary,
   cv_responsibility_ids: project.cvResponsibilityIds,
   project_images: [],
+  deleted_at: null,
+  deleted_by: null,
+  purge_after: null,
+  deleted_from_status: null,
 });
 
 const blankProject = (): AdminProjectRow => ({
@@ -173,6 +238,32 @@ const blankProject = (): AdminProjectRow => ({
   cv_show_summary: true,
   cv_responsibility_ids: [],
   project_images: [],
+  deleted_at: null,
+  deleted_by: null,
+  purge_after: null,
+  deleted_from_status: null,
+});
+
+const blankTool = (): AdminToolRow => ({
+  id: crypto.randomUUID(),
+  slug: "",
+  name: "",
+  problem: { en: "", vi: "" },
+  solution: { en: "", vi: "" },
+  benefit: null,
+  technologies: [],
+  featured: false,
+  status: "draft",
+  display_order: tools.length + 1,
+  include_in_portfolio: false,
+  portfolio_order: tools.length + 1,
+  include_in_cv: false,
+  cv_order: tools.length + 1,
+  tool_images: [],
+  deleted_at: null,
+  deleted_by: null,
+  purge_after: null,
+  deleted_from_status: null,
 });
 
 const loginView = (): void => {
@@ -314,25 +405,78 @@ const loginView = (): void => {
   });
 };
 
-const projectList = (): string =>
-  projects.length
-    ? projects.map((project) => `
-      <li class="admin-project">
-        <button type="button" data-edit="${escapeHtml(project.id)}">
-          <span>${escapeHtml(project.name.en || "Untitled project")}</span>
-          <small>${escapeHtml(project.slug || "No slug")}</small>
-        </button>
-        <span class="status status--${project.status}">${project.status}</span>
-        <button class="admin-project__status" type="button" data-status="${escapeHtml(project.id)}" data-next="${project.status === "published" ? "draft" : "published"}">
-          ${project.status === "published" ? "Unpublish" : "Publish"}
-        </button>
-      </li>`).join("")
-    : '<li class="admin-empty">No projects. Create one or import starter data.</li>';
+interface AdminContentListItem {
+  id: string;
+  type: AdminItemType;
+  name: string;
+  slug: string;
+  status: PublicationStatus;
+  deletedAt: string | null;
+  purgeAfter: string | null;
+}
 
-const toolList = (): string =>
-  tools.length
-    ? tools.map((tool) => `<li class="admin-project"><div><span>${escapeHtml(tool.name)}</span><small>BIM automation tool</small><label class="admin-inline-order">CV order <input type="number" min="1" value="${tool.cv_order}" data-tool-cv-order="${escapeHtml(tool.id)}"></label></div><span class="status status--${tool.status}">${tool.status}</span><button class="admin-project__status" type="button" data-tool-status="${escapeHtml(tool.id)}" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Unpublish" : "Publish"}</button><button class="admin-project__status" type="button" data-tool-cv="${escapeHtml(tool.id)}" data-next="${tool.include_in_cv ? "false" : "true"}">${tool.include_in_cv ? "Remove CV" : "Add CV"}</button></li>`).join("")
-    : '<li class="admin-empty">No tools. Import starter data first.</li>';
+const contentItems = (): AdminContentListItem[] => [
+  ...projects.map((project) => ({
+    id: project.id,
+    type: "project" as const,
+    name: project.name.en || "Untitled project",
+    slug: project.slug || "No slug",
+    status: project.status,
+    deletedAt: project.deleted_at,
+    purgeAfter: project.purge_after,
+  })),
+  ...tools.map((tool) => ({
+    id: tool.id,
+    type: "tool" as const,
+    name: tool.name || "Untitled tool",
+    slug: tool.slug || "No slug",
+    status: tool.status,
+    deletedAt: tool.deleted_at,
+    purgeAfter: tool.purge_after,
+  })),
+];
+
+const visibleContentItems = (): AdminContentListItem[] => {
+  const query = contentSearch.trim().toLowerCase();
+  const scope = activeView === "trash" ? "trash" : "active";
+  const type: ContentFilter = activeView === "projects" ? "project" : activeView === "tools" ? "tool" : contentFilter;
+  return contentItems().filter((item) => {
+    if ((scope === "trash") !== Boolean(item.deletedAt)) return false;
+    if (type !== "all" && item.type !== type) return false;
+    if (scope === "active" && contentStatusFilter !== "all" && item.status !== contentStatusFilter) return false;
+    return !query || item.name.toLowerCase().includes(query) || item.slug.toLowerCase().includes(query);
+  });
+};
+
+const trashDaysRemaining = (purgeAfter: string | null): string => {
+  if (!purgeAfter) return "Pending cleanup";
+  const days = Math.max(0, Math.ceil((new Date(purgeAfter).getTime() - Date.now()) / 86_400_000));
+  return days === 1 ? "1 day left" : `${days} days left`;
+};
+
+const isSelectedItem = (item: AdminContentListItem): boolean =>
+  selectedItemType === item.type
+  && (item.type === "project" ? selectedProject?.id === item.id : selectedTool?.id === item.id);
+
+const contentList = (): string => {
+  const items = visibleContentItems();
+  if (!items.length) {
+    return `<li class="admin-empty">${activeView === "trash" ? "Trash is empty." : "No content matches this view."}</li>`;
+  }
+  return items.map((item) => `
+    <li class="admin-content-item ${isSelectedItem(item) ? "is-selected" : ""}">
+      <button class="admin-content-item__select" type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${item.type}" aria-pressed="${isSelectedItem(item)}">
+        ${activeView === "trash" ? `<span class="admin-content-item__type">${item.type}</span>` : ""}
+        <strong>${escapeHtml(item.name)}</strong>
+        <small>${escapeHtml(item.slug)}</small>
+      </button>
+      <div class="admin-content-item__meta">
+        <span class="status status--${item.status}">${item.status}</span>
+        ${item.deletedAt ? `<small>${trashDaysRemaining(item.purgeAfter)}</small>` : ""}
+      </div>
+      ${item.deletedAt ? `<div class="admin-content-item__actions"><button type="button" data-restore-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Restore</button><button class="admin-danger" type="button" data-purge-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Delete permanently</button></div>` : ""}
+    </li>`).join("");
+};
 
 const field = (label: string, name: string, value = "", type = "text"): string =>
   `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}"></label>`;
@@ -361,56 +505,88 @@ const responsibilityOptions = (project: AdminProjectRow): string => project.resp
       <label><input type="checkbox" name="cv_responsibility" value="${escapeHtml(item.id)}" ${project.cv_responsibility_ids.includes(item.id) ? "checked" : ""}> ${escapeHtml(item.text.en)}</label>`).join("")}</fieldset>`
   : '<p class="admin-empty">Add and save responsibilities before selecting CV bullets.</p>';
 
+const editorTab = (tab: EditorTab, label: string): string =>
+  `<button type="button" role="tab" data-editor-tab="${tab}" aria-selected="${activeEditorTab === tab}" class="${activeEditorTab === tab ? "is-active" : ""}">${label}</button>`;
+
+const panelState = (tab: EditorTab): string => activeEditorTab === tab ? "" : "hidden";
+
 const editor = (project: AdminProjectRow): string => `
-  <form class="admin-editor" data-project-form>
-    <input name="id" type="hidden" value="${escapeHtml(project.id)}">
-    <div class="admin-editor__heading"><div><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2>${escapeHtml(project.name.en || "Untitled project")}</h2></div><span class="status status--${project.status}">${project.status}</span></div>
-    <div class="admin-form-grid">
-      ${field("Project name (English) *", "name_en", project.name.en)}
-      ${field("Project name (Vietnamese)", "name_vi", project.name.vi)}
-      ${field("Role (English)", "role_en", project.role?.en ?? "")}
-      ${field("Role (Vietnamese)", "role_vi", project.role?.vi ?? "")}
-      ${field("Location (English)", "location_en", project.location.en)}
-      ${field("Location (Vietnamese)", "location_vi", project.location.vi)}
-      ${field("Start", "start_date", project.start_date ?? "", "month")}
-      <label>End date
-        <span class="admin-end-date">
-          <input name="end_date" type="month" value="${escapeHtml(project.end_date ?? "")}" ${project.is_current ? "disabled" : ""}>
-          <button type="button" data-present-toggle aria-pressed="${project.is_current}">Present</button>
-          <input name="is_current" type="hidden" value="${project.is_current ? "true" : "false"}">
-        </span>
-      </label>
-      ${field("Display order", "display_order", String(project.display_order), "number")}
-      ${field("Portfolio order", "portfolio_order", String(project.portfolio_order), "number")}
-      ${field("CV order", "cv_order", String(project.cv_order), "number")}
-      ${field("Slug *", "slug", project.slug)}
+  <section class="admin-editor-shell">
+    <div class="admin-editor__heading">
+      <div><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2>${escapeHtml(project.name.en || "Untitled project")}</h2><small data-unsaved-state>All changes saved</small></div>
+      <div class="admin-editor__status"><span class="status status--${project.status}">${project.status}</span>${projects.some((item) => item.id === project.id) ? `<button type="button" class="button button--secondary" data-selected-status data-item-type="project" data-next="${project.status === "published" ? "draft" : "published"}">${project.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move project to Trash">•••</button>` : ""}<button class="button" type="submit" form="project-editor">Save changes</button></div>
     </div>
-    <label>Summary (English)<textarea name="summary_en" rows="4">${escapeHtml(project.summary?.en ?? "")}</textarea></label>
-    <label>Summary (Vietnamese)<textarea name="summary_vi" rows="4">${escapeHtml(project.summary?.vi ?? "")}</textarea></label>
-    <label>Responsibilities (one English item per line)<textarea name="responsibilities" rows="6">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label>
-    <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}"></label>
-    <fieldset class="admin-fieldset"><legend>Publishing and documents</legend><div class="admin-checks">
-      <label><input name="featured" type="checkbox" ${project.featured ? "checked" : ""}> Featured on website</label>
-      <label><input name="include_in_portfolio" type="checkbox" ${project.include_in_portfolio ? "checked" : ""}> Include in Portfolio PDF</label>
-      <label><input name="include_in_cv" type="checkbox" ${project.include_in_cv ? "checked" : ""}> Include in CV</label>
-    </div></fieldset>
-    <div class="admin-form-grid">
-      <label>Portfolio layout<select name="portfolio_layout"><option value="standard" ${project.portfolio_layout === "standard" ? "selected" : ""}>Standard</option><option value="feature" ${project.portfolio_layout === "feature" ? "selected" : ""}>Feature</option><option value="compact" ${project.portfolio_layout === "compact" ? "selected" : ""}>Compact</option></select></label>
-      <label>CV display<select name="cv_display"><option value="detailed" ${project.cv_display === "detailed" ? "selected" : ""}>Detailed experience</option><option value="compact" ${project.cv_display === "compact" ? "selected" : ""}>Compact project list</option></select></label>
+    <nav class="admin-editor-tabs" role="tablist" aria-label="Project editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("distribution", "Website, CV & Portfolio")}${editorTab("media", `Media (${project.project_images.length})`)}</nav>
+    <form id="project-editor" class="admin-editor" data-project-form>
+      <input name="id" type="hidden" value="${escapeHtml(project.id)}">
+      <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
+        <div class="admin-section-heading"><h3>Project identity</h3><p>Core information used across the website and documents.</p></div>
+        <div class="admin-form-grid">
+          ${field("Project name (English) *", "name_en", project.name.en)}${field("Project name (Vietnamese)", "name_vi", project.name.vi)}
+          ${field("Role (English)", "role_en", project.role?.en ?? "")}${field("Role (Vietnamese)", "role_vi", project.role?.vi ?? "")}
+          ${field("Location (English)", "location_en", project.location.en)}${field("Location (Vietnamese)", "location_vi", project.location.vi)}
+          ${field("Start", "start_date", project.start_date ?? "", "month")}
+          <label>End date<span class="admin-end-date"><input name="end_date" type="month" value="${escapeHtml(project.end_date ?? "")}" ${project.is_current ? "disabled" : ""}><button type="button" data-present-toggle aria-pressed="${project.is_current}">Present</button><input name="is_current" type="hidden" value="${project.is_current ? "true" : "false"}"></span></label>
+          ${field("Slug *", "slug", project.slug)}${field("Website order", "display_order", String(project.display_order), "number")}
+        </div>
+      </section>
+      <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
+        <div class="admin-section-heading"><h3>Bilingual content</h3><p>English and Vietnamese fields stay aligned for easier comparison.</p></div>
+        <div class="admin-form-grid"><label>Summary (English)<textarea name="summary_en" rows="7">${escapeHtml(project.summary?.en ?? "")}</textarea></label><label>Summary (Vietnamese)<textarea name="summary_vi" rows="7">${escapeHtml(project.summary?.vi ?? "")}</textarea></label></div>
+        <label>Responsibilities (one English item per line)<textarea name="responsibilities" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label>
+        <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}"></label>
+      </section>
+      <section class="admin-editor-panel" data-editor-panel="distribution" ${panelState("distribution")}>
+        <div class="admin-section-heading"><h3>Publishing channels</h3><p>Control where the project appears and how it is presented.</p></div>
+        <div class="admin-channel-grid">
+          <article><div><strong>Website</strong><small>Public portfolio website</small></div><label class="admin-switch"><input name="featured" type="checkbox" ${project.featured ? "checked" : ""}><span>Featured project</span></label></article>
+          <article><div><strong>Portfolio PDF</strong><small>Printable landscape portfolio</small></div><label class="admin-switch"><input name="include_in_portfolio" type="checkbox" ${project.include_in_portfolio ? "checked" : ""}><span>Include in Portfolio</span></label><label>Layout<select name="portfolio_layout"><option value="standard" ${project.portfolio_layout === "standard" ? "selected" : ""}>Standard</option><option value="feature" ${project.portfolio_layout === "feature" ? "selected" : ""}>Feature</option><option value="compact" ${project.portfolio_layout === "compact" ? "selected" : ""}>Compact</option></select></label><label>Order<input name="portfolio_order" type="number" value="${project.portfolio_order}"></label></article>
+          <article><div><strong>Curriculum Vitae</strong><small>Published CV project selection</small></div><label class="admin-switch"><input name="include_in_cv" type="checkbox" ${project.include_in_cv ? "checked" : ""}><span>Include in CV</span></label><label>Display<select name="cv_display"><option value="detailed" ${project.cv_display === "detailed" ? "selected" : ""}>Detailed experience</option><option value="compact" ${project.cv_display === "compact" ? "selected" : ""}>Compact project list</option></select></label><label>Order<input name="cv_order" type="number" value="${project.cv_order}"></label><label class="admin-switch"><input name="cv_show_summary" type="checkbox" ${project.cv_show_summary ? "checked" : ""}><span>Show summary</span></label></article>
+        </div>
+        ${responsibilityOptions(project)}
+      </section>
+    </form>
+    <div class="admin-media-panel" data-editor-panel="media" ${panelState("media")}>
+      <form class="admin-upload" data-upload-form><div><p class="section-kicker">Project media</p><h3>Upload images</h3><p>Select JPEG, PNG, WebP or AVIF images, maximum 5 MB each.</p></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary" type="submit" data-upload-submit disabled>Upload selected images</button></form>
+      <section class="admin-upload admin-media-library"><div><p class="section-kicker">Saved media</p><h3>Project image library</h3><p>Choose a Cover, edit alt text and control gallery order.</p></div>${mediaLibrary(project)}</section>
     </div>
-    <div class="admin-checks"><label><input name="cv_show_summary" type="checkbox" ${project.cv_show_summary ? "checked" : ""}> Show summary in CV</label></div>
-    ${responsibilityOptions(project)}
-    <div class="admin-actions"><button class="button" type="submit">Save as ${project.status}</button><button class="button button--secondary" type="button" data-cancel>Edit another project</button></div>
-  </form>
-  <form class="admin-upload" data-upload-form>
-    <div><p class="section-kicker">Project media</p><h2>Upload sanitized images</h2><p>Select JPEG, PNG, WebP or AVIF images, maximum 5 MB each. Review Cover, Gallery, order and alt text before upload.</p></div>
-    <label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label>
-    <div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div>
-    <button class="button button--secondary" type="submit" data-upload-submit disabled>Upload selected images</button>
-  </form>
-  <section class="admin-upload admin-media-library">
-    <div><p class="section-kicker">Saved media</p><h2>Project image library</h2><p>Choose one Cover, edit alt text, reorder Gallery images or remove obsolete media.</p></div>
-    ${mediaLibrary(project)}
+  </section>`;
+
+const toolEditor = (tool: AdminToolRow): string => `
+  <section class="admin-editor-shell">
+    <div class="admin-editor__heading">
+      <div><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2>${escapeHtml(tool.name || "Untitled tool")}</h2><small data-unsaved-state>All changes saved</small></div>
+      <div class="admin-editor__status"><span class="status status--${tool.status}">${tool.status}</span>${tools.some((item) => item.id === tool.id) ? `<button type="button" class="button button--secondary" data-selected-status data-item-type="tool" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move tool to Trash">•••</button>` : ""}<button class="button" type="submit" form="tool-editor">Save changes</button></div>
+    </div>
+    <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("distribution", "Website, CV & Portfolio")}</nav>
+    <form id="tool-editor" class="admin-editor" data-tool-form>
+      <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
+      <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
+        <div class="admin-section-heading"><h3>Tool identity</h3><p>Core information and display order.</p></div>
+        <div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}${field("Website order", "display_order", String(tool.display_order), "number")}</div>
+        <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>
+      </section>
+      <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
+        <div class="admin-section-heading"><h3>Bilingual content</h3><p>Describe the problem, solution and measurable benefit.</p></div>
+        <div class="admin-form-grid"><label>Problem (English)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (Vietnamese)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (English)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (Vietnamese)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (English)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (Vietnamese)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>
+      </section>
+      <section class="admin-editor-panel" data-editor-panel="distribution" ${panelState("distribution")}>
+        <div class="admin-section-heading"><h3>Publishing channels</h3><p>Choose where this tool is visible.</p></div>
+        <div class="admin-channel-grid"><article><div><strong>Website</strong><small>Public automation tool page</small></div><label class="admin-switch"><input name="featured" type="checkbox" ${tool.featured ? "checked" : ""}><span>Featured tool</span></label></article><article><div><strong>Portfolio PDF</strong><small>Printable portfolio</small></div><label class="admin-switch"><input name="include_in_portfolio" type="checkbox" ${tool.include_in_portfolio ? "checked" : ""}><span>Include in Portfolio</span></label><label>Order<input name="portfolio_order" type="number" value="${tool.portfolio_order}"></label></article><article><div><strong>Curriculum Vitae</strong><small>Published CV</small></div><label class="admin-switch"><input name="include_in_cv" type="checkbox" ${tool.include_in_cv ? "checked" : ""}><span>Include in CV</span></label><label>Order<input name="cv_order" type="number" value="${tool.cv_order}"></label></article></div>
+      </section>
+    </form>
+  </section>`;
+
+const selectedTrashItem = (): AdminContentListItem | null => {
+  const selectedId = selectedItemType === "project" ? selectedProject?.id : selectedTool?.id;
+  return contentItems().find((item) => item.type === selectedItemType && item.id === selectedId && item.deletedAt) ?? null;
+};
+
+const trashInspector = (item: AdminContentListItem): string => `
+  <section class="admin-editor admin-trash-detail">
+    <div class="admin-editor__heading"><div><p class="section-kicker">${item.type} in Trash</p><h2>${escapeHtml(item.name)}</h2><p>This item is hidden from active Website, Portfolio and CV draft data.</p></div><span class="status status--archived">Trash</span></div>
+    <dl><div><dt>Deleted</dt><dd>${item.deletedAt ? new Date(item.deletedAt).toLocaleString() : "Unknown"}</dd></div><div><dt>Permanent deletion</dt><dd>${item.purgeAfter ? new Date(item.purgeAfter).toLocaleString() : "Pending cleanup"} (${trashDaysRemaining(item.purgeAfter)})</dd></div></dl>
+    <div class="admin-actions"><button class="button" type="button" data-restore-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Restore as draft</button><button class="button admin-button--danger" type="button" data-purge-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Delete permanently</button></div>
   </section>`;
 
 const cvContentEditor = (): string => `
@@ -470,19 +646,98 @@ const documentsView = (): string => `
     <div class="admin-document-grid"><article><h3>Curriculum Vitae</h3><p>The draft preview uses current Admin content. The public CV uses the latest published release.</p><div class="admin-actions"><a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/?preview=1" target="_blank" rel="noreferrer">Preview draft CV</a><a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/" target="_blank" rel="noreferrer">View public CV</a><button class="button" type="button" data-publish-cv>Publish CV</button></div></article><article><h3>Portfolio PDF</h3><p>The Portfolio uses published projects selected with Include in Portfolio PDF.</p><div class="admin-actions"><a class="button button--secondary" href="${import.meta.env.BASE_URL}portfolio/" target="_blank" rel="noreferrer">Preview Portfolio</a></div></article></div>
   </section>`;
 
-const workspaceView = (): string => activeView === "cv-content" ? cvContentEditor() : activeView === "documents" ? documentsView() : editor(selectedProject ?? blankProject());
+// Kept temporarily for data-form compatibility while existing Admin sessions migrate.
+void cvContentEditor;
+void documentsView;
+
+const overviewView = (): string => {
+  const activeProjects = projects.filter((item) => !item.deleted_at);
+  const activeTools = tools.filter((item) => !item.deleted_at);
+  const activeItems = [...activeProjects, ...activeTools];
+  const published = activeItems.filter((item) => item.status === "published").length;
+  const drafts = activeItems.filter((item) => item.status === "draft").length;
+  const trash = [...projects, ...tools].filter((item) => item.deleted_at).length;
+  const letters = coverLetterSummary();
+  const needsAttention = activeItems.filter((item) => item.status !== "published").slice(0, 6);
+  return `
+    <section class="admin-overview">
+      <div class="admin-page-heading"><div><p class="section-kicker">Workspace overview</p><h1>Content dashboard</h1><p>Manage website content, CV data and publish-ready documents from one place.</p></div><div class="admin-actions"><button class="button" type="button" data-admin-view="projects">Manage projects</button><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">Open website</a></div></div>
+      <div class="admin-metric-grid">
+        <article><span>Active projects</span><strong>${activeProjects.length}</strong><button type="button" data-admin-view="projects">View projects</button></article>
+        <article><span>Automation tools</span><strong>${activeTools.length}</strong><button type="button" data-admin-view="tools">View tools</button></article>
+        <article><span>Published items</span><strong>${published}</strong><small>${drafts} drafts still being prepared</small></article>
+        <article><span>Cover letters</span><strong>${letters.loaded ? letters.total : "—"}</strong><button type="button" data-admin-view="cover-letters">${letters.loaded ? `${letters.drafts} drafts · ${letters.final} final` : "Open workspace"}</button></article>
+        <article class="${trash ? "has-warning" : ""}"><span>Trash</span><strong>${trash}</strong><button type="button" data-admin-view="trash">Review trash</button></article>
+      </div>
+      <div class="admin-overview-grid">
+        <section class="admin-overview-card"><div class="admin-card-heading"><div><h2>Needs attention</h2><p>Draft and archived content that is not public.</p></div><span>${needsAttention.length}</span></div>
+          <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong>${escapeHtml(itemName)}</strong><small>${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${item.status}</span></button>`; }).join("") : '<p class="admin-empty">Everything is published.</p>'}</div>
+        </section>
+        <section class="admin-overview-card"><div class="admin-card-heading"><div><h2>Publishing workflow</h2><p>A shared path for Website, CV and Portfolio.</p></div></div><ol class="admin-workflow"><li><span>1</span><div><strong>Edit shared content</strong><small>Update Professional Profile, projects and tools once.</small></div></li><li><span>2</span><div><strong>Review channel preview</strong><small>Check Website or document output inside Admin.</small></div></li><li><span>3</span><div><strong>Publish release</strong><small>Freeze a new read-only public snapshot.</small></div></li></ol><button class="button button--secondary" type="button" data-admin-view="homepage">Open Website workspace</button></section>
+      </div>
+    </section>`;
+};
+
+const workspaceView = (): string => {
+  if (activeView === "overview") return overviewView();
+  if (activeView === "homepage") return siteWorkspaceView("homepage");
+  if (activeView === "profile") return siteWorkspaceView("profile");
+  if (activeView === "cv") return profileDocumentWorkspaceView("cv");
+  if (activeView === "portfolio") return profileDocumentWorkspaceView("portfolio");
+  if (activeView === "cover-letters") return coverLetterWorkspaceView();
+  if (activeView === "trash") {
+    const item = selectedTrashItem();
+    return item ? trashInspector(item) : '<section class="admin-editor admin-placeholder"><p class="section-kicker">Trash</p><h2>Select an item to review</h2><p>Restore it as a draft or delete it permanently.</p></section>';
+  }
+  if (activeView === "tools") return toolEditor(selectedTool ?? blankTool());
+  return editor(selectedProject ?? blankProject());
+};
+
+const selectedContentSummary = (): { type: AdminItemType; name: string; status: PublicationStatus; persisted: boolean; deleted: boolean } | null => {
+  if (selectedItemType === "tool" && selectedTool) {
+    return { type: "tool", name: selectedTool.name || "Untitled tool", status: selectedTool.status, persisted: tools.some((item) => item.id === selectedTool?.id), deleted: Boolean(selectedTool.deleted_at) };
+  }
+  if (selectedItemType === "project" && selectedProject) {
+    return { type: "project", name: selectedProject.name.en || "Untitled project", status: selectedProject.status, persisted: projects.some((item) => item.id === selectedProject?.id), deleted: Boolean(selectedProject.deleted_at) };
+  }
+  return null;
+};
 
 const dashboardView = (): void => {
+  const trashCount = projects.filter((item) => item.deleted_at).length + tools.filter((item) => item.deleted_at).length;
+  const showCollection = activeView === "projects" || activeView === "tools" || activeView === "trash";
+  const viewTitle: Record<AdminView, string> = { overview: "Overview", homepage: "Homepage", projects: "Projects", tools: "Automation tools", profile: "Professional Profile", cv: "Curriculum Vitae", portfolio: "Portfolio", "cover-letters": "Cover letters", trash: "Trash" };
+  const collectionTitle = activeView === "projects" ? "Projects" : activeView === "tools" ? "Tools" : "Deleted items";
+  const collectionCount = visibleContentItems().length;
+  const navButton = (view: AdminView, label: string, marker: string): string => `<button type="button" data-admin-view="${view}" class="${activeView === view ? "is-active" : ""}"><span aria-hidden="true">${marker}</span>${label}${view === "trash" && trashCount ? `<b>${trashCount}</b>` : ""}</button>`;
   app.innerHTML = `
-    <header class="admin-header"><div><p>HDL Content Admin</p><small>Website · CV · Portfolio</small></div><div><a href="${import.meta.env.BASE_URL}admin/cover-letters/">Cover letters</a><a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div></header>
-    <main class="admin-layout">
-      <aside class="admin-sidebar">
-        <nav class="admin-nav" aria-label="Admin sections"><button type="button" data-admin-view="projects" class="${activeView === "projects" ? "is-active" : ""}">Projects & Media</button><button type="button" data-admin-view="cv-content" class="${activeView === "cv-content" ? "is-active" : ""}">CV Content</button><button type="button" data-admin-view="documents" class="${activeView === "documents" ? "is-active" : ""}">Documents</button></nav>
-        <div class="admin-sidebar__actions" ${activeView === "projects" ? "" : "hidden"}><button class="button" type="button" data-new-project>New project</button><button class="button button--secondary" type="button" data-import>Import starter data</button></div>
-        <p class="admin-message" data-admin-message role="status"></p>
-        <div ${activeView === "projects" ? "" : "hidden"}><h2 class="admin-sidebar__title">Projects</h2><ul class="admin-projects">${projectList()}</ul><h2 class="admin-sidebar__title">Tools</h2><ul class="admin-projects">${toolList()}</ul></div>
+    <main class="admin-shell">
+      <aside class="admin-rail">
+        <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span>HDL</span><div><strong>Content Admin</strong><small>Portfolio workspace</small></div></a>
+        <nav class="admin-nav" aria-label="Admin sections">
+          <p>Overview</p>${navButton("overview", "Dashboard", "01")}
+          <p>Website</p>${navButton("homepage", "Homepage", "02")}${navButton("projects", "Projects", "03")}${navButton("tools", "Automation tools", "04")}
+          <p>Profile & documents</p>${navButton("profile", "Professional Profile", "05")}${navButton("cv", "Curriculum Vitae", "06")}${navButton("portfolio", "Portfolio", "07")}
+          <p>Applications</p>${navButton("cover-letters", "Cover letters", "08")}
+          <p>System</p>${navButton("trash", "Trash", "09")}
+        </nav>
+        <div class="admin-rail__footer"><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div>
       </aside>
-      <section class="admin-workspace">${workspaceView()}</section>
+      <section class="admin-main">
+        <header class="admin-header"><div><small>HDL Admin /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message" data-admin-message role="status" aria-live="polite">Ready</p><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></header>
+        <div class="admin-layout ${showCollection ? "has-collection" : ""}">
+          ${showCollection ? `<aside class="admin-collection">
+            <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button" type="button" data-new-tool>+ New</button>' : ""}</div>
+            <div class="admin-list-controls">
+              <label class="admin-search"><span class="sr-only">Search content</span><input type="search" placeholder="Search by name or slug..." value="${escapeHtml(contentSearch)}" data-content-search></label>
+              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Publication status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}">${filter}</button>`).join("")}</div>`}
+            </div>
+            <div class="admin-collection__scroll"><ul class="admin-content-list" data-content-list>${contentList()}</ul></div>
+            ${activeView === "projects" ? '<details class="admin-more"><summary>More actions</summary><button type="button" data-import>Import starter data</button></details>' : ""}
+          </aside>` : ""}
+          <section class="admin-workspace">${workspaceView()}</section>
+        </div>
+      </section>
     </main>
     <dialog class="admin-dialog" data-password-dialog>
       <form data-password-update-form>
@@ -498,15 +753,21 @@ const dashboardView = (): void => {
 };
 
 const loadProjects = async (): Promise<void> => {
+  const selectedProjectId = selectedProject?.id;
+  const selectedToolId = selectedTool?.id;
+  const selectedProjectWasPersisted = Boolean(selectedProjectId && projects.some((item) => item.id === selectedProjectId));
+  const selectedToolWasPersisted = Boolean(selectedToolId && tools.some((item) => item.id === selectedToolId));
   const [projectResult, toolResult, cvData] = await Promise.all([
     supabase.from("projects").select("*, project_images(*)").order("display_order"),
-    supabase.from("automation_tools").select("id,name,status,include_in_cv,cv_order").order("display_order"),
+    supabase.from("automation_tools").select("*, tool_images(*)").order("display_order"),
     loadCvData({ adminPreview: true, preferRelease: false }),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
-  projects = projectResult.data as AdminProjectRow[];
-  tools = toolResult.data as AdminToolRow[];
+  projects = (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
+  tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
+  if (selectedProjectWasPersisted) selectedProject = projects.find((item) => item.id === selectedProjectId) ?? null;
+  if (selectedToolWasPersisted) selectedTool = tools.find((item) => item.id === selectedToolId) ?? null;
   cvContent = cvData.content;
 };
 
@@ -553,10 +814,118 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
   const { project_images: _projectImages, ...projectPayload } = payload;
   const { error } = await supabase.from("projects").upsert(projectPayload);
   if (error) throw error;
+  adminFormDirty = false;
   await loadProjects();
   selectedProject = projects.find((item) => item.id === payload.id) ?? payload;
   dashboardView();
   message("Project saved. Status was not changed.", "success");
+};
+
+const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
+  const form = new FormData(formElement);
+  const current = tools.find((item) => item.id === String(form.get("id"))) ?? selectedTool ?? blankTool();
+  const name = formText(form, "name");
+  const slug = slugify(formText(form, "slug") || name);
+  if (!name || !slug) throw new Error("Tool name and slug are required.");
+  const benefitEn = formText(form, "benefit_en");
+  const benefitVi = formText(form, "benefit_vi");
+  const payload: AdminToolRow = {
+    ...current,
+    id: formText(form, "id"),
+    slug,
+    name,
+    problem: { en: formText(form, "problem_en"), vi: formText(form, "problem_vi") },
+    solution: { en: formText(form, "solution_en"), vi: formText(form, "solution_vi") },
+    benefit: benefitEn || benefitVi ? { en: benefitEn, vi: benefitVi } : null,
+    technologies: commaList(formText(form, "technologies")),
+    featured: form.get("featured") === "on",
+    display_order: Number(form.get("display_order")) || 100,
+    include_in_portfolio: form.get("include_in_portfolio") === "on",
+    portfolio_order: Number(form.get("portfolio_order")) || 100,
+    include_in_cv: form.get("include_in_cv") === "on",
+    cv_order: Number(form.get("cv_order")) || 100,
+  };
+  const { tool_images: _toolImages, ...toolPayload } = payload;
+  const { error } = await supabase.from("automation_tools").upsert(toolPayload);
+  if (error) throw error;
+  adminFormDirty = false;
+  await loadProjects();
+  selectedTool = tools.find((item) => item.id === payload.id) ?? payload;
+  selectedItemType = "tool";
+  dashboardView();
+  message("Tool saved. Status was not changed.", "success");
+};
+
+const moveSelectedToTrash = async (): Promise<void> => {
+  const selected = selectedContentSummary();
+  if (!selected) return;
+  if (!selected.persisted) {
+    clearPendingMedia();
+    if (selected.type === "project") selectedProject = null;
+    else selectedTool = null;
+    dashboardView();
+    message("Unsaved draft discarded.", "success");
+    return;
+  }
+  const id = selected.type === "project" ? selectedProject?.id : selectedTool?.id;
+  if (!id || !window.confirm(`Move ${selected.type} “${selected.name}” to Trash? It will be hidden from active Website, Portfolio and CV draft data, and permanently deleted after 30 days.`)) return;
+  const { error } = await supabase.rpc("move_admin_item_to_trash", { target_type: selected.type, target_id: id });
+  if (error) throw error;
+  clearPendingMedia();
+  selectedProject = null;
+  selectedTool = null;
+  await loadProjects();
+  dashboardView();
+  message(`${selected.type === "project" ? "Project" : "Tool"} moved to Trash. Republish the CV if this item exists in the current public release.`, "success");
+};
+
+const restoreTrashItem = async (type: AdminItemType, id: string): Promise<void> => {
+  const { error } = await supabase.rpc("restore_admin_item_from_trash", { target_type: type, target_id: id });
+  if (error) throw error;
+  await loadProjects();
+  activeView = type === "project" ? "projects" : "tools";
+  selectedItemType = type;
+  if (type === "project") {
+    selectedProject = projects.find((item) => item.id === id) ?? null;
+    selectedTool = null;
+  } else {
+    selectedTool = tools.find((item) => item.id === id) ?? null;
+    selectedProject = null;
+  }
+  dashboardView();
+  message(`${type === "project" ? "Project" : "Tool"} restored as draft.`, "success");
+};
+
+const permanentlyDeleteTrashItem = async (type: AdminItemType, id: string): Promise<void> => {
+  const item = contentItems().find((candidate) => candidate.type === type && candidate.id === id);
+  if (!item?.deletedAt || !window.confirm(`Permanently delete ${type} “${item.name}”? This cannot be undone.`)) return;
+  const media = type === "project"
+    ? projects.find((project) => project.id === id)?.project_images ?? []
+    : tools.find((tool) => tool.id === id)?.tool_images ?? [];
+  const paths = media.map((entry) => entry.storage_path);
+  if (paths.length) {
+    const { error: storageError } = await supabase.storage.from(supabaseConfig.storageBucket).remove(paths);
+    if (storageError) throw new Error(`Storage cleanup failed, so the record was kept in Trash: ${storageError.message}`);
+  }
+  const { error } = await supabase.rpc("purge_admin_item", { target_type: type, target_id: id });
+  if (error) throw error;
+  if (type === "project" && selectedProject?.id === id) selectedProject = null;
+  if (type === "tool" && selectedTool?.id === id) selectedTool = null;
+  await loadProjects();
+  dashboardView();
+  message(`${type === "project" ? "Project" : "Tool"} permanently deleted.`, "success");
+};
+
+const changeSelectedStatus = async (type: AdminItemType, next: PublicationStatus): Promise<void> => {
+  const id = type === "project" ? selectedProject?.id : selectedTool?.id;
+  if (!id) return;
+  if (next === "published" && !window.confirm(`Publish this ${type} on the public website?`)) return;
+  const table = type === "project" ? "projects" : "automation_tools";
+  const { error } = await supabase.from(table).update({ status: next }).eq("id", id).is("deleted_at", null);
+  if (error) throw error;
+  await loadProjects();
+  dashboardView();
+  message(`${type === "project" ? "Project" : "Tool"} changed to ${next}.`, "success");
 };
 
 const clearPendingMedia = (): void => {
@@ -735,6 +1104,7 @@ const readCvContentForm = (formElement: HTMLFormElement): CvContent => {
   return {
     version: formText(form, "cv_version") || cvContent.version,
     themeId: cvContent.themeId,
+    theme: cvContent.theme,
     pageOneProjectCount: Math.max(1, Number(form.get("page_one_project_count")) || 3),
     profile: {
       name: formText(form, "profile_name"),
@@ -785,17 +1155,112 @@ const saveCvContentForm = async (formElement: HTMLFormElement): Promise<void> =>
   const content = readCvContentForm(formElement);
   await saveCvContent(content);
   cvContent = content;
+  adminFormDirty = false;
   dashboardView();
   message("CV content saved. Open the draft preview to check the two-page layout.", "success");
+};
+
+const bindContentItemActions = (root: ParentNode = app): void => {
+  root.querySelectorAll<HTMLElement>("[data-select-item]").forEach((button) => button.addEventListener("click", () => {
+    if (adminFormDirty && !window.confirm("Discard unsaved changes and open another item?")) return;
+    const type = button.dataset.itemType as AdminItemType;
+    const id = button.dataset.selectItem;
+    if (!id) return;
+    adminFormDirty = false;
+    activeEditorTab = "overview";
+    activeView = type === "project" ? "projects" : "tools";
+    clearPendingMedia();
+    selectedItemType = type;
+    if (type === "project") {
+      selectedProject = projects.find((item) => item.id === id) ?? null;
+      selectedTool = null;
+    } else {
+      selectedTool = tools.find((item) => item.id === id) ?? null;
+      selectedProject = null;
+    }
+    dashboardView();
+  }));
+  root.querySelectorAll<HTMLElement>("[data-restore-item]").forEach((button) => button.addEventListener("click", () => {
+    const type = button.dataset.itemType as AdminItemType;
+    const id = button.dataset.restoreItem;
+    if (id) void restoreTrashItem(type, id).catch((error: Error) => message(error.message, "error"));
+  }));
+  root.querySelectorAll<HTMLElement>("[data-purge-item]").forEach((button) => button.addEventListener("click", () => {
+    const type = button.dataset.itemType as AdminItemType;
+    const id = button.dataset.purgeItem;
+    if (id) void permanentlyDeleteTrashItem(type, id).catch((error: Error) => message(error.message, "error"));
+  }));
 };
 
 const bindDashboard = (): void => {
   const passwordDialog = app.querySelector<HTMLDialogElement>("[data-password-dialog]");
   app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", () => {
+    if (adminFormDirty && !window.confirm("Discard unsaved changes and leave this editor?")) return;
+    if (activeView === "cover-letters") discardCoverLetterChanges();
+    if (activeView === "cv" || activeView === "portfolio") discardProfileDocumentChanges();
+    if (activeView === "homepage" || activeView === "profile") discardSiteChanges();
     clearPendingMedia();
-    activeView = button.dataset.adminView as AdminView;
+    const nextView = button.dataset.adminView as AdminView;
+    activeView = nextView;
+    adminFormDirty = false;
+    activeEditorTab = "overview";
+    if (activeView === "projects") {
+      selectedItemType = "project";
+      selectedTool = null;
+    } else if (activeView === "tools") {
+      selectedItemType = "tool";
+      selectedProject = null;
+    } else if (activeView === "trash") {
+      selectedProject = null;
+      selectedTool = null;
+    }
+    const url = new URL(window.location.href);
+    if (nextView === "cover-letters" || nextView === "cv" || nextView === "portfolio" || nextView === "homepage" || nextView === "profile") url.searchParams.set("view", nextView);
+    else {
+      url.searchParams.delete("view");
+      url.searchParams.delete("id");
+    }
+    window.history.replaceState({}, "", url);
     dashboardView();
+    if (nextView === "cover-letters") {
+      void ensureCoverLetterWorkspace().then(() => {
+        if (activeView === "cover-letters") dashboardView();
+      });
+    }
+    if (nextView === "cv" || nextView === "portfolio") {
+      void ensureProfileDocumentWorkspace(nextView).then(() => {
+        if (activeView === nextView) dashboardView();
+      });
+    }
+    if (nextView === "homepage" || nextView === "profile") {
+      void ensureSiteWorkspace().then(() => {
+        if (activeView === nextView) dashboardView();
+      });
+    }
   }));
+  app.querySelectorAll<HTMLButtonElement>("[data-editor-tab]").forEach((button) => button.addEventListener("click", () => {
+    activeEditorTab = button.dataset.editorTab as EditorTab;
+    app.querySelectorAll<HTMLButtonElement>("[data-editor-tab]").forEach((tab) => {
+      const selected = tab === button;
+      tab.classList.toggle("is-active", selected);
+      tab.setAttribute("aria-selected", String(selected));
+    });
+    app.querySelectorAll<HTMLElement>("[data-editor-panel]").forEach((panel) => {
+      panel.hidden = panel.dataset.editorPanel !== activeEditorTab;
+    });
+  }));
+  const markDirty = (): void => {
+    adminFormDirty = true;
+    const state = app.querySelector<HTMLElement>("[data-unsaved-state]");
+    if (state) {
+      state.textContent = "Unsaved changes";
+      state.dataset.dirty = "true";
+    }
+  };
+  app.querySelectorAll<HTMLFormElement>("[data-project-form], [data-tool-form], [data-cv-content-form]").forEach((form) => {
+    form.addEventListener("input", markDirty);
+    form.addEventListener("change", markDirty);
+  });
   app.querySelector<HTMLButtonElement>("[data-present-toggle]")?.addEventListener("click", (event) => {
     const button = event.currentTarget as HTMLButtonElement;
     const form = button.closest<HTMLFormElement>("form");
@@ -879,35 +1344,37 @@ const bindDashboard = (): void => {
     formElement.reset();
     setStatus("Password updated. You can use Password sign-in next time.", "success");
   });
-  app.querySelector("[data-sign-out]")?.addEventListener("click", async () => { await supabase.auth.signOut(); loginView(); });
-  app.querySelector("[data-new-project]")?.addEventListener("click", () => { clearPendingMedia(); selectedProject = blankProject(); dashboardView(); });
-  app.querySelector("[data-cancel]")?.addEventListener("click", () => { clearPendingMedia(); selectedProject = null; dashboardView(); });
-  app.querySelectorAll<HTMLElement>("[data-edit]").forEach((button) => button.addEventListener("click", () => { clearPendingMedia(); selectedProject = projects.find((item) => item.id === button.dataset.edit) ?? null; dashboardView(); }));
-  app.querySelectorAll<HTMLElement>("[data-status]").forEach((button) => button.addEventListener("click", async () => {
-    if (button.dataset.next === "published" && !window.confirm("Publish this project on the public website?")) return;
-    const { error } = await supabase.from("projects").update({ status: button.dataset.next }).eq("id", button.dataset.status);
-    if (error) return message(error.message, "error");
-    await loadProjects(); dashboardView(); message(`Project changed to ${button.dataset.next}.`, "success");
+  app.querySelector("[data-sign-out]")?.addEventListener("click", async () => {
+    if (adminFormDirty && !window.confirm("Discard unsaved changes and sign out?")) return;
+    await supabase.auth.signOut();
+    loginView();
+  });
+  app.querySelector("[data-new-project]")?.addEventListener("click", () => {
+    if (adminFormDirty && !window.confirm("Discard unsaved changes and create a new project?")) return;
+    clearPendingMedia(); adminFormDirty = false; activeEditorTab = "overview"; activeView = "projects"; selectedItemType = "project"; selectedTool = null; selectedProject = blankProject(); dashboardView();
+  });
+  app.querySelector("[data-new-tool]")?.addEventListener("click", () => {
+    if (adminFormDirty && !window.confirm("Discard unsaved changes and create a new tool?")) return;
+    clearPendingMedia(); adminFormDirty = false; activeEditorTab = "overview"; activeView = "tools"; selectedItemType = "tool"; selectedProject = null; selectedTool = blankTool(); dashboardView();
+  });
+  app.querySelector("[data-delete-selected]")?.addEventListener("click", () => { void moveSelectedToTrash().catch((error: Error) => message(error.message, "error")); });
+  app.querySelectorAll<HTMLButtonElement>("[data-content-filter]").forEach((button) => button.addEventListener("click", () => { contentFilter = button.dataset.contentFilter as ContentFilter; dashboardView(); }));
+  app.querySelectorAll<HTMLButtonElement>("[data-status-filter]").forEach((button) => button.addEventListener("click", () => { contentStatusFilter = button.dataset.statusFilter as ContentStatusFilter; dashboardView(); }));
+  app.querySelector<HTMLInputElement>("[data-content-search]")?.addEventListener("input", (event) => {
+    contentSearch = (event.currentTarget as HTMLInputElement).value;
+    const list = app.querySelector<HTMLElement>("[data-content-list]");
+    if (list) {
+      list.innerHTML = contentList();
+      bindContentItemActions(list);
+    }
+  });
+  app.querySelectorAll<HTMLButtonElement>("[data-selected-status]").forEach((button) => button.addEventListener("click", () => {
+    void changeSelectedStatus(button.dataset.itemType as AdminItemType, button.dataset.next as PublicationStatus).catch((error: Error) => message(error.message, "error"));
   }));
-  app.querySelectorAll<HTMLElement>("[data-tool-status]").forEach((button) => button.addEventListener("click", async () => {
-    if (button.dataset.next === "published" && !window.confirm("Publish this automation tool on the public website?")) return;
-    const { error } = await supabase.from("automation_tools").update({ status: button.dataset.next }).eq("id", button.dataset.toolStatus);
-    if (error) return message(error.message, "error");
-    await loadProjects(); dashboardView(); message(`Tool changed to ${button.dataset.next}.`, "success");
-  }));
-  app.querySelectorAll<HTMLElement>("[data-tool-cv]").forEach((button) => button.addEventListener("click", async () => {
-    const { error } = await supabase.from("automation_tools").update({ include_in_cv: button.dataset.next === "true" }).eq("id", button.dataset.toolCv);
-    if (error) return message(error.message, "error");
-    await loadProjects(); dashboardView(); message("Tool CV selection updated.", "success");
-  }));
-  app.querySelectorAll<HTMLInputElement>("[data-tool-cv-order]").forEach((input) => input.addEventListener("change", async () => {
-    const { error } = await supabase.from("automation_tools").update({ cv_order: Math.max(1, Number(input.value) || 100) }).eq("id", input.dataset.toolCvOrder);
-    if (error) return message(error.message, "error");
-    await loadProjects(); dashboardView(); message("Tool CV order updated.", "success");
-  }));
+  bindContentItemActions();
   app.querySelector("[data-import]")?.addEventListener("click", async () => {
     if (!window.confirm("Import starter CV/Portfolio records as drafts? Existing matching IDs will be updated.")) return;
-    const projectRows = portfolioProjectSeed.map(toRow).map(({ project_images: _images, ...row }) => row);
+    const projectRows = portfolioProjectSeed.map(toRow).map(({ project_images: _images, deleted_at: _deletedAt, deleted_by: _deletedBy, purge_after: _purgeAfter, deleted_from_status: _deletedFromStatus, ...row }) => row);
     const projectResult = await supabase.from("projects").upsert(projectRows);
     if (projectResult.error) return message(projectResult.error.message, "error");
     const toolResult = await supabase.from("automation_tools").upsert(portfolioToolSeed.map((tool) => ({
@@ -931,12 +1398,34 @@ const bindDashboard = (): void => {
     await loadProjects(); dashboardView(); message("Starter projects and CV content imported as drafts.", "success");
   });
   app.querySelector<HTMLFormElement>("[data-project-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
+  app.querySelector<HTMLFormElement>("[data-tool-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveToolForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-upload-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void uploadImages(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-cv-content-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveCvContentForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector("[data-publish-cv]")?.addEventListener("click", () => {
     if (!window.confirm("Publish the current Admin data as the new public CV release?")) return;
     void publishCvRelease().then(() => message("CV release published.", "success")).catch((error: Error) => message(error.message, "error"));
   });
+  if (activeView === "cover-letters") {
+    bindCoverLetterWorkspace(app, {
+      rerender: dashboardView,
+      setDirty: (value) => { adminFormDirty = value; },
+      notify: message,
+    });
+  }
+  if (activeView === "cv" || activeView === "portfolio") {
+    bindProfileDocumentWorkspace(app, activeView as ProfileDocumentKind, {
+      rerender: dashboardView,
+      setDirty: (value) => { adminFormDirty = value; },
+      notify: message,
+    });
+  }
+  if (activeView === "homepage" || activeView === "profile") {
+    bindSiteWorkspace(app, activeView as SiteWorkspaceKind, {
+      rerender: dashboardView,
+      setDirty: (value) => { adminFormDirty = value; },
+      notify: message,
+    });
+  }
 };
 
 const initialize = async (): Promise<void> => {
@@ -957,7 +1446,24 @@ const initialize = async (): Promise<void> => {
 
   try {
     await loadProjects();
+    const params = new URLSearchParams(window.location.search);
+    const requestedView = params.get("view");
+    if (requestedView === "cover-letters") {
+      activeView = "cover-letters";
+      await ensureCoverLetterWorkspace();
+    } else if (requestedView === "cv" || requestedView === "portfolio") {
+      activeView = requestedView;
+      await ensureProfileDocumentWorkspace(requestedView);
+    } else if (requestedView === "homepage" || requestedView === "profile") {
+      activeView = requestedView;
+      await ensureSiteWorkspace();
+    }
     dashboardView();
+    if (activeView === "overview") {
+      void ensureCoverLetterWorkspace().then(() => {
+        if (activeView === "overview" && !adminFormDirty) dashboardView();
+      });
+    }
   } catch (error) {
     loginView();
     message(error instanceof Error ? error.message : "Admin data could not be loaded.", "error");

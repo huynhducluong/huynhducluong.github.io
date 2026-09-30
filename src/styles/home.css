@@ -6,6 +6,33 @@
   color: #ffffff;
 }
 
+body.website-embedded {
+  min-width: 0;
+}
+
+body.website-embedded .admin-link {
+  display: none;
+}
+
+.website-load-state {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  background: var(--color-background);
+  color: var(--color-text);
+  text-align: center;
+}
+
+.website-load-state h1 {
+  font-size: var(--font-size-xl);
+}
+
+.website-load-state p {
+  color: var(--color-text-muted);
+}
+
 .site-header__inner,
 .site-nav,
 .site-nav__links {

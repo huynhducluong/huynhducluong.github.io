@@ -19,7 +19,7 @@ interface MediaRow {
   display_order: number;
 }
 
-interface ProjectRow {
+export interface ProjectRow {
   id: string;
   slug: string;
   name: LocalizedText;
@@ -51,7 +51,7 @@ interface ProjectRow {
   project_images?: MediaRow[];
 }
 
-interface ToolRow {
+export interface ToolRow {
   id: string;
   slug: string;
   name: string;
@@ -116,7 +116,7 @@ export const projectFromRow = (row: ProjectRow): PortfolioProject => ({
   updatedAt: row.updated_at,
 });
 
-const toolFromRow = (row: ToolRow): PortfolioTool => ({
+export const toolFromRow = (row: ToolRow): PortfolioTool => ({
   id: row.id,
   slug: row.slug,
   name: row.name,
@@ -143,6 +143,7 @@ export const supabasePortfolioRepository: PortfolioRepository = {
       .from("projects")
       .select(projectSelect)
       .eq("status", "published")
+      .is("deleted_at", null)
       .order("display_order");
     if (error) throw error;
     return (data as ProjectRow[]).map(projectFromRow);
@@ -155,6 +156,7 @@ export const supabasePortfolioRepository: PortfolioRepository = {
       .select(projectSelect)
       .eq("slug", slug)
       .eq("status", "published")
+      .is("deleted_at", null)
       .maybeSingle();
     if (error) throw error;
     return data ? projectFromRow(data as ProjectRow) : null;
@@ -165,6 +167,7 @@ export const supabasePortfolioRepository: PortfolioRepository = {
       .from("automation_tools")
       .select(toolSelect)
       .eq("status", "published")
+      .is("deleted_at", null)
       .order("display_order");
     if (error) throw error;
     return (data as ToolRow[]).map(toolFromRow);
@@ -177,6 +180,7 @@ export const supabasePortfolioRepository: PortfolioRepository = {
       .select(toolSelect)
       .eq("slug", slug)
       .eq("status", "published")
+      .is("deleted_at", null)
       .maybeSingle();
     if (error) throw error;
     return data ? toolFromRow(data as ToolRow) : null;

@@ -7,6 +7,19 @@
   backdrop-filter: blur(14px);
 }
 
+.website-load-state {
+  display: grid;
+  min-height: 100vh;
+  place-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.website-load-state p {
+  color: var(--color-text-muted);
+}
+
 .page-header__inner,
 .page-nav,
 .page-footer__inner {

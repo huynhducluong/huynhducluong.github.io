@@ -5,60 +5,58 @@ import "../styles/cv-print.css";
 
 import { getAdminAccess } from "../admin/auth";
 import { loadCvData } from "../services/cvRepository";
-import { initializeDocumentThemeControls } from "../themes/themeController";
+import { applyDocumentTheme, resolveDocumentTheme } from "../themes/documentThemes";
+import type { CvRuntimeData } from "../types/cvContent";
 import { renderDynamicCv } from "./renderDynamicCv";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("CV app container was not found.");
 
-const initialize = async (): Promise<void> => {
-  const wantsPreview = new URLSearchParams(window.location.search).get("preview") === "1";
-  const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
-  const data = await loadCvData({ adminPreview, preferRelease: !adminPreview });
-
+const render = (data: CvRuntimeData): void => {
   document.documentElement.lang = "en";
   document.title = `${data.content.profile.name} | English CV`;
-  app.innerHTML = renderDynamicCv(data, adminPreview);
-
+  app.innerHTML = renderDynamicCv(data, false);
+  app.querySelector(".cv-toolbar")?.remove();
+  app.querySelector(".cv-skip-link")?.remove();
   const documentRoot = app.querySelector<HTMLElement>("#cv-document");
-  const themeControls = app.querySelector<HTMLElement>("[data-theme-controls]");
-  if (!documentRoot || !themeControls) throw new Error("CV theme elements were not found.");
-
-  initializeDocumentThemeControls({
-    documentRoot,
-    controlsRoot: themeControls,
-    defaultThemeId: data.content.themeId,
-    storageKey: "hdl.cv.document-theme.v1",
-  });
-
-  app.querySelector<HTMLButtonElement>("[data-print-cv]")?.addEventListener("click", () => window.print());
+  if (!documentRoot) throw new Error("CV document was not found.");
+  applyDocumentTheme(documentRoot, resolveDocumentTheme(data.content.theme, data.content.themeId));
 
   const photo = app.querySelector<HTMLImageElement>("[data-profile-photo]");
-  const updatePhotoState = (): void => {
+  const updatePhoto = (): void => {
     photo?.closest(".cv-photo")?.classList.toggle("cv-photo--loaded", Boolean(photo.complete && photo.naturalWidth > 0));
   };
-  photo?.addEventListener("load", updatePhotoState);
-  photo?.addEventListener("error", updatePhotoState);
-  updatePhotoState();
+  photo?.addEventListener("load", updatePhoto);
+  photo?.addEventListener("error", updatePhoto);
+  updatePhoto();
+};
 
-  const checkPageOverflow = (): void => {
-    const pages = [...app.querySelectorAll<HTMLElement>("[data-cv-page]")];
-    const overflowingPages = pages.filter((page) => page.scrollHeight > page.clientHeight + 1 || page.scrollWidth > page.clientWidth + 1);
-    const status = app.querySelector<HTMLElement>("[data-cv-status]");
-    pages.forEach((page) => page.classList.toggle("cv-page--overflow", overflowingPages.includes(page)));
-    if (status) {
-      status.textContent = overflowingPages.length ? `Overflow on page ${overflowingPages.map((page) => pages.indexOf(page) + 1).join(", ")}` : "Ready · 2 pages";
-      status.classList.toggle("cv-toolbar__status--warning", Boolean(overflowingPages.length));
-    }
-  };
+const checkOverflow = (): void => {
+  const pages = [...app.querySelectorAll<HTMLElement>("[data-cv-page]")];
+  pages.forEach((page) => page.classList.toggle("cv-page--overflow", page.scrollHeight > page.clientHeight + 1 || page.scrollWidth > page.clientWidth + 1));
+};
 
-  requestAnimationFrame(checkPageOverflow);
-  document.fonts.ready.then(checkPageOverflow).catch(checkPageOverflow);
-  window.addEventListener("beforeprint", checkPageOverflow);
+const initialize = async (): Promise<void> => {
+  const params = new URLSearchParams(window.location.search);
+  const wantsPreview = params.get("preview") === "1";
+  const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
+  if (params.get("embedded") === "1") document.body.classList.add("document-embedded");
+  const data = await loadCvData({ adminPreview, preferRelease: !adminPreview });
+  render(data);
+  requestAnimationFrame(checkOverflow);
+  document.fonts.ready.then(checkOverflow).catch(checkOverflow);
+  window.addEventListener("beforeprint", checkOverflow);
+  if (adminPreview) {
+    window.addEventListener("message", (event: MessageEvent<{ type?: string; data?: CvRuntimeData }>) => {
+      if (event.origin !== window.location.origin || event.data?.type !== "hdl:cv-preview" || !event.data.data) return;
+      render(event.data.data);
+      requestAnimationFrame(checkOverflow);
+    });
+  }
 };
 
 void initialize().catch((error: unknown) => {
-  app.innerHTML = '<main class="cv-load-error"><h1>CV could not be loaded</h1><p data-cv-load-error></p></main>';
+  app.innerHTML = '<main class="cv-load-error"><h1>CV is not available</h1><p data-cv-load-error></p></main>';
   const target = app.querySelector<HTMLElement>("[data-cv-load-error]");
-  if (target) target.textContent = error instanceof Error ? error.message : "Unknown error";
+  if (target) target.textContent = error instanceof Error && !error.message.includes("No published") ? "The published CV could not be loaded. Please try again later." : "The owner has not published a CV release yet.";
 });

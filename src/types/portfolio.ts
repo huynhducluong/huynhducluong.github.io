@@ -1,8 +1,36 @@
-import type { ContentPoint, LocalizedText } from "./career";
+import type { ContentPoint, LocalizedText, Profile, SkillGroup } from "./career";
+import type { StoredDocumentTheme } from "./theme";
 
 export type PublicationStatus = "draft" | "published" | "archived";
 export type PortfolioLayout = "feature" | "standard" | "compact";
 export type CvProjectDisplay = "detailed" | "compact";
+
+export interface PortfolioContent {
+  version: string;
+  title: string;
+  year: string;
+  kicker: string;
+  aboutKicker: string;
+  aboutHeading: string;
+  closingKicker: string;
+  closingHeading: string;
+  closingText: string;
+  theme: StoredDocumentTheme;
+  profile: Profile;
+  skillGroups: SkillGroup[];
+}
+
+export interface PortfolioRuntimeData {
+  content: PortfolioContent;
+  projects: PortfolioProject[];
+  tools: PortfolioTool[];
+}
+
+export interface DocumentReleaseSummary {
+  id: string;
+  version: string;
+  publishedAt: string;
+}
 
 export interface PortfolioMedia {
   id: string;

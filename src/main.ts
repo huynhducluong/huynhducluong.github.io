@@ -3,11 +3,10 @@ import "./styles/tokens.css";
 import "./styles/global.css";
 import "./styles/home.css";
 
-import { profile } from "./data/profile";
-import { experiences } from "./data/experience";
-import { skillGroups } from "./data/skills";
-import { portfolioRepository } from "./services/portfolioRepository";
-import type { PortfolioProject, PortfolioTool } from "./types/portfolio";
+import { getAdminAccess } from "./admin/auth";
+import { loadPublishedWebsiteRelease, loadWebsiteDraftData } from "./services/websiteRepository";
+import { resolveDocumentTheme } from "./themes/documentThemes";
+import type { WebsiteRuntimeData } from "./types/website";
 import {
   escapeHtml,
   formatDate,
@@ -98,22 +97,57 @@ const copy = {
   },
 } as const;
 
-let publicProjects: PortfolioProject[] = [];
-let publicTools: PortfolioTool[] = [];
+let websiteData: WebsiteRuntimeData | null = null;
 let currentLanguage: Language = "en";
 
 const renderTags = (items: string[]): string =>
   items.map((item) => `<li class="tag">${escapeHtml(item)}</li>`).join("");
 
 const renderPage = (language: Language): void => {
-  const text = copy[language];
+  if (!websiteData) {
+    app.innerHTML = '<main class="website-load-state"><h1>Loading website…</h1></main>';
+    return;
+  }
+  const { content, professional, projects: publicProjects, tools: publicTools } = websiteData;
+  const { profile, experiences, skillGroups } = professional;
+  const baseText = copy[language];
+  const text = {
+    ...baseText,
+    nav: [
+      localize(content.navigation.expertise, language),
+      localize(content.navigation.experience, language),
+      localize(content.navigation.projects, language),
+      localize(content.navigation.automation, language),
+    ] as readonly string[],
+    eyebrow: localize(content.heroEyebrow, language),
+    specializationValue: localize(content.specialization, language),
+    expertiseTitle: localize(content.expertiseTitle, language),
+    experienceTitle: localize(content.experienceTitle, language),
+    projectsTitle: localize(content.projectsTitle, language),
+    automationTitle: localize(content.automationTitle, language),
+    contactKicker: localize(content.contactKicker, language),
+    contactTitle: localize(content.contactTitle, language),
+    footer: localize(content.footerText, language),
+  };
   const sortedProjects = publicProjects
     .filter((project) => project.featured)
     .sort((first, second) => first.displayOrder - second.displayOrder);
   const homeSkills = skillGroups.flatMap((group) => group.items);
 
   document.documentElement.lang = language;
-  document.title = `${profile.name} | ${profile.professionalTitle[language]}`;
+  document.title = localize(content.seoTitle, language);
+  let description = document.querySelector<HTMLMetaElement>('meta[name="description"]');
+  if (!description) {
+    description = document.createElement("meta");
+    description.name = "description";
+    document.head.append(description);
+  }
+  description.content = localize(content.seoDescription, language);
+  const theme = resolveDocumentTheme(content.theme);
+  document.documentElement.style.setProperty("--color-primary", theme.tokens.primary);
+  document.documentElement.style.setProperty("--color-primary-dark", theme.tokens.primaryStrong);
+  document.documentElement.style.setProperty("--color-primary-light", theme.tokens.surfaceMuted);
+  document.documentElement.style.setProperty("--color-accent", theme.tokens.accent);
 
   app.innerHTML = `
     <a class="skip-link" href="#main-content">${text.skip}</a>
@@ -183,7 +217,7 @@ const renderPage = (language: Language): void => {
             </div>
             <div class="hero__meta-item">
               <span class="hero__meta-label">${text.focus}</span>
-              <span class="hero__meta-value">BIM · Revit · Civil 3D</span>
+              <span class="hero__meta-value">${localize(content.focus, language)}</span>
             </div>
             <div class="hero__meta-item">
               <span class="hero__meta-label">${text.specialization}</span>
@@ -193,7 +227,7 @@ const renderPage = (language: Language): void => {
         </div>
       </section>
 
-      <section id="expertise" class="section">
+      <section id="expertise" class="section"${content.sections.expertise ? "" : " hidden"}>
         <div class="container">
           <div class="section-heading">
             <p class="section-kicker">${text.expertiseKicker}</p>
@@ -215,7 +249,7 @@ const renderPage = (language: Language): void => {
         </div>
       </section>
 
-      <section id="experience" class="section section--muted">
+      <section id="experience" class="section section--muted"${content.sections.experience ? "" : " hidden"}>
         <div class="container">
           <div class="section-heading">
             <p class="section-kicker">${text.experienceKicker}</p>
@@ -254,7 +288,7 @@ const renderPage = (language: Language): void => {
         </div>
       </section>
 
-      <section id="projects" class="section">
+      <section id="projects" class="section"${content.sections.projects ? "" : " hidden"}>
         <div class="container">
           <div class="section-heading">
             <p class="section-kicker">${text.projectsKicker}</p>
@@ -286,7 +320,7 @@ const renderPage = (language: Language): void => {
         </div>
       </section>
 
-      <section id="automation" class="section section--muted">
+      <section id="automation" class="section section--muted"${content.sections.automation ? "" : " hidden"}>
         <div class="container">
           <div class="section-heading">
             <p class="section-kicker">${text.automationKicker}</p>
@@ -319,7 +353,7 @@ const renderPage = (language: Language): void => {
         </div>
       </section>
 
-      <section class="section contact">
+      <section class="section contact"${content.sections.contact ? "" : " hidden"}>
         <div class="container contact__inner">
           <div>
             <p class="section-kicker">${text.contactKicker}</p>
@@ -351,12 +385,25 @@ const renderPage = (language: Language): void => {
 };
 
 const initialize = async (): Promise<void> => {
-  [publicProjects, publicTools] = await Promise.all([
-    portfolioRepository.listPublishedProjects(),
-    portfolioRepository.listPublishedTools(),
-  ]);
+  const params = new URLSearchParams(window.location.search);
+  const wantsPreview = params.get("preview") === "1";
+  const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
+  if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
+  websiteData = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
   renderPage(currentLanguage);
+  if (adminPreview) {
+    window.addEventListener("message", (event: MessageEvent<{ type?: string; data?: WebsiteRuntimeData }>) => {
+      if (event.origin !== window.location.origin || event.data?.type !== "hdl:website-preview" || !event.data.data) return;
+      websiteData = event.data.data;
+      renderPage(currentLanguage);
+    });
+  }
 };
 
-renderPage(currentLanguage);
-void initialize();
+void initialize().catch((error: unknown) => {
+  app.innerHTML = '<main class="website-load-state"><h1>Website is not available</h1><p>The owner has not published a website release yet.</p></main>';
+  if (error instanceof Error && !error.message.includes("No published")) {
+    const paragraph = app.querySelector("p");
+    if (paragraph) paragraph.textContent = "The published website could not be loaded. Please try again later.";
+  }
+});

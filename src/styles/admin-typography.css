@@ -1,0 +1,382 @@
+/* Admin-only typography system. Document canvases keep their publication fonts. */
+html.admin-app {
+  --admin-font-family: "Inter Variable", "Segoe UI", Arial, sans-serif;
+  --admin-text-2xs: .6875rem;
+  --admin-text-xs: .75rem;
+  --admin-text-sm: .8125rem;
+  --admin-text-base: .875rem;
+  --admin-text-lg: 1rem;
+  --admin-title-sm: 1.125rem;
+  --admin-title-md: 1.375rem;
+  --admin-title-lg: 1.625rem;
+  --admin-line-compact: 1.3;
+  --admin-line-default: 1.5;
+  --admin-weight-regular: 400;
+  --admin-weight-medium: 500;
+  --admin-weight-semibold: 600;
+  --admin-weight-bold: 700;
+}
+
+html.admin-app body {
+  font-family: var(--admin-font-family);
+  font-size: var(--admin-text-base);
+  font-weight: var(--admin-weight-regular);
+  line-height: var(--admin-line-default);
+  font-optical-sizing: auto;
+}
+
+html.admin-app :where(.admin-login, .admin-shell),
+html.admin-app :where(.admin-login, .admin-shell) :where(button, input, textarea, select) {
+  font-family: var(--admin-font-family);
+  font-optical-sizing: auto;
+}
+
+html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
+  font-family: inherit;
+  font-weight: var(--admin-weight-bold);
+  line-height: var(--admin-line-compact);
+  letter-spacing: -.015em;
+}
+
+/* Authentication */
+.admin-login__card h1 {
+  font-size: var(--admin-title-lg);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-login__card,
+.admin-login__card input {
+  font-size: var(--admin-text-base);
+}
+
+.admin-login__card label,
+.admin-login__card .admin-login__help,
+.admin-password-field button {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-auth-tabs__button {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+}
+
+/* Shell and navigation */
+.admin-brand strong {
+  font-size: var(--admin-text-base);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-brand small,
+.admin-rail__footer button {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-medium);
+}
+
+.admin-nav p {
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+  letter-spacing: .1em;
+}
+
+.admin-nav button,
+.admin-nav a {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-nav button > span,
+.admin-nav a > span,
+.admin-nav b {
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-header small {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-medium);
+}
+
+.admin-header strong {
+  font-size: var(--admin-text-base);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-message {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-medium);
+}
+
+/* Shared controls */
+.admin-shell .button {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+  letter-spacing: 0;
+}
+
+.admin-shell label {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-shell input,
+.admin-shell textarea,
+.admin-shell select {
+  font-size: var(--admin-text-base);
+  font-weight: var(--admin-weight-regular);
+  line-height: 1.45;
+}
+
+.admin-shell input::placeholder,
+.admin-shell textarea::placeholder {
+  font-weight: var(--admin-weight-regular);
+}
+
+.admin-shell .section-kicker {
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+  letter-spacing: .12em;
+}
+
+.admin-shell .status {
+  min-height: 1.35rem;
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+  letter-spacing: .035em;
+  line-height: 1.2;
+}
+
+/* Collection and content editors */
+.admin-collection__heading small,
+.admin-content-item__type,
+.admin-selection-status__type,
+.admin-media-badge {
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-collection__heading h2 {
+  font-size: var(--admin-title-sm);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-collection__heading h2 span,
+.admin-content-item__select small,
+.admin-content-item__meta small {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-medium);
+}
+
+.admin-search input,
+.admin-content-item__select strong {
+  font-size: var(--admin-text-sm);
+}
+
+.admin-content-item__select strong {
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-filter-row button,
+.admin-scope-tabs button,
+.admin-content-item__actions button,
+.admin-more,
+.admin-more button {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-editor__heading h2 {
+  font-size: var(--admin-title-md);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-editor__heading small,
+.admin-channel-grid small {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-medium);
+}
+
+.admin-editor-tabs button {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-section-heading h3,
+.admin-media-panel h3,
+.admin-card-heading h2 {
+  font-size: var(--admin-text-lg);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-section-heading p,
+.admin-media-panel p,
+.admin-card-heading p {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-regular);
+  line-height: var(--admin-line-default);
+}
+
+.admin-channel-grid strong,
+.admin-cv-card h3 {
+  font-size: var(--admin-text-base);
+  font-weight: var(--admin-weight-semibold);
+}
+
+/* Dashboard */
+.admin-page-heading h1 {
+  font-size: var(--admin-title-lg);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-page-heading p:not(.section-kicker) {
+  font-size: var(--admin-text-base);
+}
+
+.admin-metric-grid span {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-metric-grid strong {
+  font-size: 1.625rem;
+  font-weight: var(--admin-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-metric-grid small,
+.admin-metric-grid button,
+.admin-attention-list small,
+.admin-workflow small {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-medium);
+}
+
+.admin-attention-list strong,
+.admin-workflow strong {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+}
+
+/* Cover Letter workspace chrome */
+.admin-cl-empty h1 {
+  font-size: var(--admin-title-lg);
+}
+
+.admin-cl-empty > div:first-child > p:last-child,
+.admin-cl-loading p {
+  font-size: var(--admin-text-sm);
+}
+
+.admin-cl-metrics span,
+.admin-cl-editor__identity small,
+.admin-cl-preview__heading small,
+.admin-cl-validation summary,
+.admin-cl-validation p {
+  font-size: var(--admin-text-xs);
+}
+
+.admin-cl-metrics span,
+.admin-cl-validation summary {
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-cl-metrics strong {
+  font-size: 1.5rem;
+  font-weight: var(--admin-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-cl-editor__identity h1 {
+  font-size: var(--admin-title-sm);
+}
+
+.admin-cl-back,
+.admin-cl-editor__actions .button,
+.admin-cl-tabs button,
+.admin-cl-preview__heading strong,
+.admin-cl-zoom button {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-cl-form-pane .evidence-option strong,
+.admin-cl-sender strong,
+.admin-cl-evidence-heading h4 {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-cl-form-pane .evidence-option small,
+.admin-cl-sender p,
+.admin-cl-evidence-heading small {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-regular);
+}
+
+/* CV and Portfolio workspace chrome */
+.admin-document-header h1 {
+  font-size: var(--admin-title-md);
+}
+
+.admin-document-header p:last-child,
+.admin-document-actions > span,
+.admin-form-help {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-medium);
+}
+
+.admin-document-tabs button,
+.admin-document-preview__toolbar button,
+.admin-document-preview__toolbar a {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-document-editor label {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-document-editor input,
+.admin-document-editor textarea,
+.admin-document-editor select {
+  font-size: var(--admin-text-sm);
+}
+
+.admin-document-cards h4,
+.admin-document-selection h4,
+.admin-document-preview__toolbar strong,
+.admin-document-validation strong {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-document-summary-grid span,
+.admin-document-preview__toolbar span,
+.admin-document-validation,
+.admin-document-releases {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-regular);
+}
+
+.admin-document-summary-grid strong {
+  font-size: var(--admin-title-md);
+  font-weight: var(--admin-weight-bold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Dialogs and system views */
+.admin-dialog h2,
+.admin-placeholder h2 {
+  font-size: var(--admin-title-md);
+}
+
+.admin-trash-detail dt {
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-trash-detail dd {
+  font-size: var(--admin-text-base);
+  font-weight: var(--admin-weight-medium);
+}

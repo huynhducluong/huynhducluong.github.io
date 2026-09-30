@@ -160,8 +160,8 @@ export const duplicateCoverLetter = async (record: CoverLetterRecord): Promise<C
 
 export const listCoverLetterEvidence = async (): Promise<{ projects: CoverLetterEvidenceOption[]; tools: CoverLetterEvidenceOption[] }> => {
   const [projectResult, toolResult] = await Promise.all([
-    supabase.from("projects").select("id, name, status").order("display_order"),
-    supabase.from("automation_tools").select("id, name, status").order("display_order"),
+    supabase.from("projects").select("id, name, status").is("deleted_at", null).order("display_order"),
+    supabase.from("automation_tools").select("id, name, status").is("deleted_at", null).order("display_order"),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
