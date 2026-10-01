@@ -7,6 +7,7 @@ import "../styles/admin-cover-letter.css";
 import "../styles/admin-documents.css";
 import "../styles/admin-site.css";
 import "../styles/admin-typography.css";
+import "../styles/admin-ui.css";
 import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
@@ -513,8 +514,8 @@ const panelState = (tab: EditorTab): string => activeEditorTab === tab ? "" : "h
 const editor = (project: AdminProjectRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
-      <div><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2>${escapeHtml(project.name.en || "Untitled project")}</h2><small data-unsaved-state>All changes saved</small></div>
-      <div class="admin-editor__status"><span class="status status--${project.status}">${project.status}</span>${projects.some((item) => item.id === project.id) ? `<button type="button" class="button button--secondary" data-selected-status data-item-type="project" data-next="${project.status === "published" ? "draft" : "published"}">${project.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move project to Trash">•••</button>` : ""}<button class="button" type="submit" form="project-editor">Save changes</button></div>
+      <div><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2>${escapeHtml(project.name.en || "Untitled project")}</h2><div class="admin-editor__meta"><span class="status status--${project.status}">${project.status}</span><small data-unsaved-state>Saved</small></div></div>
+      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="project" data-next="${project.status === "published" ? "draft" : "published"}">${project.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move project to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
     </div>
     <nav class="admin-editor-tabs" role="tablist" aria-label="Project editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("distribution", "Website, CV & Portfolio")}${editorTab("media", `Media (${project.project_images.length})`)}</nav>
     <form id="project-editor" class="admin-editor" data-project-form>
@@ -555,8 +556,8 @@ const editor = (project: AdminProjectRow): string => `
 const toolEditor = (tool: AdminToolRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
-      <div><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2>${escapeHtml(tool.name || "Untitled tool")}</h2><small data-unsaved-state>All changes saved</small></div>
-      <div class="admin-editor__status"><span class="status status--${tool.status}">${tool.status}</span>${tools.some((item) => item.id === tool.id) ? `<button type="button" class="button button--secondary" data-selected-status data-item-type="tool" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move tool to Trash">•••</button>` : ""}<button class="button" type="submit" form="tool-editor">Save changes</button></div>
+      <div><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2>${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${tool.status}</span><small data-unsaved-state>Saved</small></div></div>
+      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="tool" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move tool to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
     </div>
     <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("distribution", "Website, CV & Portfolio")}</nav>
     <form id="tool-editor" class="admin-editor" data-tool-form>
@@ -661,7 +662,7 @@ const overviewView = (): string => {
   const needsAttention = activeItems.filter((item) => item.status !== "published").slice(0, 6);
   return `
     <section class="admin-overview">
-      <div class="admin-page-heading"><div><p class="section-kicker">Workspace overview</p><h1>Content dashboard</h1><p>Manage website content, CV data and publish-ready documents from one place.</p></div><div class="admin-actions"><button class="button" type="button" data-admin-view="projects">Manage projects</button><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">Open website</a></div></div>
+      <div class="admin-page-heading"><div><p class="section-kicker">Workspace overview</p><h1>Content dashboard</h1><p>Manage website content, CV data and publish-ready documents from one place.</p></div></div>
       <div class="admin-metric-grid">
         <article><span>Active projects</span><strong>${activeProjects.length}</strong><button type="button" data-admin-view="projects">View projects</button></article>
         <article><span>Automation tools</span><strong>${activeTools.length}</strong><button type="button" data-admin-view="tools">View tools</button></article>
@@ -670,10 +671,10 @@ const overviewView = (): string => {
         <article class="${trash ? "has-warning" : ""}"><span>Trash</span><strong>${trash}</strong><button type="button" data-admin-view="trash">Review trash</button></article>
       </div>
       <div class="admin-overview-grid">
-        <section class="admin-overview-card"><div class="admin-card-heading"><div><h2>Needs attention</h2><p>Draft and archived content that is not public.</p></div><span>${needsAttention.length}</span></div>
-          <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong>${escapeHtml(itemName)}</strong><small>${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${item.status}</span></button>`; }).join("") : '<p class="admin-empty">Everything is published.</p>'}</div>
+        <section class="admin-overview-card admin-overview-card--attention${needsAttention.length ? "" : " is-empty"}"><div class="admin-card-heading"><div><h2>Needs attention</h2><p>Draft and archived content that is not public.</p></div><span>${needsAttention.length}</span></div>
+          <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong>${escapeHtml(itemName)}</strong><small>${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${item.status}</span></button>`; }).join("") : '<div class="admin-empty-state"><span aria-hidden="true">&#10003;</span><div><strong>Everything is published</strong><small>No draft or archived content needs attention.</small></div></div>'}</div>
         </section>
-        <section class="admin-overview-card"><div class="admin-card-heading"><div><h2>Publishing workflow</h2><p>A shared path for Website, CV and Portfolio.</p></div></div><ol class="admin-workflow"><li><span>1</span><div><strong>Edit shared content</strong><small>Update Professional Profile, projects and tools once.</small></div></li><li><span>2</span><div><strong>Review channel preview</strong><small>Check Website or document output inside Admin.</small></div></li><li><span>3</span><div><strong>Publish release</strong><small>Freeze a new read-only public snapshot.</small></div></li></ol><button class="button button--secondary" type="button" data-admin-view="homepage">Open Website workspace</button></section>
+        <section class="admin-overview-card"><div class="admin-card-heading"><div><h2>Publishing workflow</h2><p>A shared path for Website, CV and Portfolio.</p></div></div><ol class="admin-workflow"><li><span>1</span><div><strong>Edit shared content</strong><small>Update Professional Profile, projects and tools once.</small></div></li><li><span>2</span><div><strong>Review channel preview</strong><small>Check Website or document output inside Admin.</small></div></li><li><span>3</span><div><strong>Publish release</strong><small>Freeze a new read-only public snapshot.</small></div></li></ol></section>
       </div>
     </section>`;
 };
@@ -687,7 +688,7 @@ const workspaceView = (): string => {
   if (activeView === "cover-letters") return coverLetterWorkspaceView();
   if (activeView === "trash") {
     const item = selectedTrashItem();
-    return item ? trashInspector(item) : '<section class="admin-editor admin-placeholder"><p class="section-kicker">Trash</p><h2>Select an item to review</h2><p>Restore it as a draft or delete it permanently.</p></section>';
+    return item ? trashInspector(item) : '<section class="admin-placeholder admin-placeholder--centered"><div class="admin-placeholder__icon" aria-hidden="true">↺</div><div><p class="section-kicker">Trash</p><h2>Select an item to review</h2><p>Restore it as a draft or delete it permanently.</p></div></section>';
   }
   if (activeView === "tools") return toolEditor(selectedTool ?? blankTool());
   return editor(selectedProject ?? blankProject());
@@ -727,7 +728,7 @@ const dashboardView = (): void => {
         <header class="admin-header"><div><small>HDL Admin /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message" data-admin-message role="status" aria-live="polite">Ready</p><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></header>
         <div class="admin-layout ${showCollection ? "has-collection" : ""}">
           ${showCollection ? `<aside class="admin-collection">
-            <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button" type="button" data-new-tool>+ New</button>' : ""}</div>
+            <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
             <div class="admin-list-controls">
               <label class="admin-search"><span class="sr-only">Search content</span><input type="search" placeholder="Search by name or slug..." value="${escapeHtml(contentSearch)}" data-content-search></label>
               ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Publication status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}">${filter}</button>`).join("")}</div>`}

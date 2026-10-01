@@ -105,41 +105,41 @@
 }
 
 .admin-site-frame {
-  display: grid;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
   overflow: auto;
-  place-items: start center;
   padding: 1rem;
 }
 
 .admin-site-frame iframe {
   display: block;
   width: 1440px;
-  height: 1800px;
   border: 0;
   background: #fff;
   box-shadow: 0 12px 30px rgb(16 45 59 / 16%);
-  transform-origin: top center;
 }
 
 .admin-site-frame[data-viewport="desktop"] iframe {
   width: 1440px;
-  zoom: .48;
 }
 
 .admin-site-frame[data-viewport="laptop"] iframe {
   width: 1280px;
-  zoom: .52;
 }
 
 .admin-site-frame[data-viewport="tablet"] iframe {
   width: 768px;
-  zoom: .68;
 }
 
 .admin-site-frame[data-viewport="mobile"] iframe {
   width: 390px;
-  zoom: .86;
 }
+
+.admin-site-frame[data-viewport="desktop"] .admin-embedded-preview-stage { --preview-scale: .48; }
+.admin-site-frame[data-viewport="laptop"] .admin-embedded-preview-stage { --preview-scale: .52; }
+.admin-site-frame[data-viewport="tablet"] .admin-embedded-preview-stage { --preview-scale: .68; }
+.admin-site-frame[data-viewport="mobile"] .admin-embedded-preview-stage { --preview-scale: .86; }
 
 .admin-profile-layout {
   display: grid;
@@ -199,6 +199,6 @@
     grid-template-columns: minmax(28rem, .9fr) minmax(35rem, 1.1fr);
   }
 
-  .admin-site-frame[data-viewport="desktop"] iframe { zoom: .39; }
-  .admin-site-frame[data-viewport="laptop"] iframe { zoom: .43; }
+  .admin-site-frame[data-viewport="desktop"] .admin-embedded-preview-stage { --preview-scale: .39; }
+  .admin-site-frame[data-viewport="laptop"] .admin-embedded-preview-stage { --preview-scale: .43; }
 }

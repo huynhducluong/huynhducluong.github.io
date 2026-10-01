@@ -159,7 +159,7 @@ const evidenceChecks = (items: CoverLetterEvidenceOption[], name: "projectIds" |
 
 const collectionView = (): string => `
   <aside class="admin-cl-collection">
-    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${visibleRecords().length}</span></h2></div><button class="button" type="button" data-cl-new>+ New</button></div>
+    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${visibleRecords().length}</span></h2></div><button class="button admin-action-new" type="button" data-cl-new>+ New</button></div>
     <div class="admin-list-controls">
       <label class="admin-search"><span class="sr-only">Search cover letters</span><input type="search" placeholder="Search company, role or title..." value="${escapeHtml(search)}" data-cl-search></label>
       <div class="admin-filter-row" aria-label="Cover letter status">${(["all", "draft", "final", "archived"] as CoverLetterFilter[]).map((item) => `<button type="button" data-cl-filter="${item}" class="${filter === item ? "is-active" : ""}">${item}</button>`).join("")}</div>
@@ -187,14 +187,13 @@ const editorView = (): string => {
   return `
     <section class="admin-cl-editor">
       <header class="admin-cl-editor__heading">
-        <div class="admin-cl-editor__identity"><button type="button" class="admin-cl-back" data-cl-close>‹ Letters</button><div><p class="section-kicker">${record ? record.status : "New draft"}</p><h1>${escapeHtml(letter.internalTitle)}</h1><small data-cl-dirty-state>${dirty ? "Unsaved changes" : "All changes saved"}</small></div></div>
+        <div class="admin-cl-editor__identity"><button type="button" class="admin-cl-back" data-cl-close>‹ Letters</button><div><p class="section-kicker">Applications</p><h1>${escapeHtml(letter.internalTitle)}</h1><div class="admin-editor__meta"><span class="status status--${status()}">${status()}</span><small data-cl-dirty-state>${dirty ? "Unsaved changes" : "Saved"}</small></div></div></div>
         <div class="admin-cl-editor__actions">
-          <span class="status status--${status()}">${status()}</span>
-          ${isLocked
-            ? '<button class="button" type="button" data-cl-duplicate>Duplicate as draft</button>' + (record?.status === "final" ? '<button class="button button--secondary" type="button" data-cl-archive>Archive</button>' : "")
-            : '<button class="button button--secondary" type="button" data-cl-finalize>Finalize</button><button class="button" type="submit" form="admin-cover-letter-form">Save draft</button>'}
-          ${record ? `<a class="button button--secondary" href="${base}cover-letter/?id=${encodeURIComponent(record.id)}" target="_blank" rel="noreferrer">Print view</a>` : ""}
+          ${record ? `<a class="button button--secondary admin-action-utility" href="${base}cover-letter/?id=${encodeURIComponent(record.id)}" target="_blank" rel="noreferrer">Print view</a>` : ""}
           ${record?.status === "draft" ? '<button class="admin-icon-button admin-danger" type="button" data-cl-delete aria-label="Delete draft">•••</button>' : ""}
+          ${isLocked
+            ? (record?.status === "final" ? '<button class="button button--secondary" type="button" data-cl-archive>Archive</button>' : "") + '<button class="button" type="button" data-cl-duplicate>Duplicate as draft</button>'
+            : '<button class="button button--secondary admin-action-publish" type="button" data-cl-finalize>Finalize</button><button class="button admin-action-save" type="submit" form="admin-cover-letter-form">Save draft</button>'}
         </div>
       </header>
       ${isLocked ? '<div class="cover-letter-lock"><strong>Final content is locked.</strong><span>Duplicate this letter to create an editable draft.</span></div>' : ""}

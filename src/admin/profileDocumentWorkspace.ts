@@ -13,6 +13,7 @@ import { documentThemes, resolveDocumentTheme } from "../themes/documentThemes";
 import type { CvContent, CvRuntimeData } from "../types/cvContent";
 import type { DocumentReleaseSummary, PortfolioContent, PortfolioRuntimeData } from "../types/portfolio";
 import type { StoredDocumentTheme } from "../types/theme";
+import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 
 export type ProfileDocumentKind = "cv" | "portfolio";
 type DocumentTab = "content" | "experience" | "education" | "selection" | "appearance";
@@ -42,6 +43,7 @@ const state: {
 };
 
 let previewTimer: number | undefined;
+let previewController: EmbeddedPreviewController | undefined;
 
 const text = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const lines = (value: string): string[] => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
@@ -101,7 +103,7 @@ export const ensureProfileDocumentWorkspace = async (kind: ProfileDocumentKind):
 
 const latestRelease = (kind: ProfileDocumentKind): string => {
   const release = state.releases[kind][0];
-  return release ? `Published ${new Date(release.publishedAt).toLocaleString()} · ${escapeHtml(release.version)}` : "No public release yet";
+  return release ? `Published ${new Date(release.publishedAt).toLocaleString()} · ${escapeHtml(release.version)}` : "Not published yet";
 };
 
 const cvContentPanel = (content: CvContent): string => `
@@ -340,18 +342,18 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   return `
     <section class="admin-document-workspace" data-document-kind="${kind}">
       <header class="admin-document-header">
-        <div><p class="section-kicker">Profile & documents</p><h1>${kind === "cv" ? "Curriculum Vitae" : "Portfolio"}</h1><p><span class="status status--draft">Working draft</span> ${latestRelease(kind)}</p></div>
+        <div><p class="section-kicker">Profile & documents</p><h1>${kind === "cv" ? "Curriculum Vitae" : "Portfolio"}</h1><p><span class="status status--draft">Draft</span> ${latestRelease(kind)}</p></div>
         <div class="admin-document-actions">
-          <span data-document-save-state>All changes saved</span>
-          <button class="button button--secondary" type="button" data-document-print>Print / Save PDF</button>
-          <button class="button button--secondary" type="submit" form="${kind}-document-form">Save draft</button>
-          <button class="button" type="button" data-document-publish>Publish release</button>
+          <span data-document-save-state>Saved</span>
+          <button class="button button--secondary admin-action-utility" type="button" data-document-print>Print / PDF</button>
+          <button class="button button--secondary admin-action-save" type="submit" form="${kind}-document-form">Save draft</button>
+          <button class="button admin-action-publish" type="button" data-document-publish>Publish</button>
         </div>
       </header>
       <div class="admin-document-layout">
         <section class="admin-document-editor">
-          <nav class="admin-document-tabs" aria-label="Document editor sections">
-            ${tabs(kind).map(([id, label]) => `<button type="button" data-document-tab="${id}" class="${activeTab === id ? "is-active" : ""}">${label}</button>`).join("")}
+          <nav class="admin-document-tabs" role="tablist" aria-label="Document editor sections">
+            ${tabs(kind).map(([id, label]) => `<button type="button" role="tab" data-document-tab="${id}" aria-selected="${activeTab === id}" class="${activeTab === id ? "is-active" : ""}">${label}</button>`).join("")}
           </nav>
           <form id="${kind}-document-form" data-document-form>
             <section data-document-panel="content"${activeTab === "content" ? "" : " hidden"}>${contentPanel}</section>
@@ -362,7 +364,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
         </section>
         <aside class="admin-document-preview">
           <div class="admin-document-preview__toolbar"><div><strong>Draft preview</strong><span>${issues.length ? `${issues.length} item${issues.length === 1 ? "" : "s"} need attention` : "Ready to publish"}</span></div><div><button type="button" data-document-zoom="fit" class="${state.zoom[kind] === "fit" ? "is-active" : ""}">Fit</button><button type="button" data-document-zoom="75" class="${state.zoom[kind] === "75" ? "is-active" : ""}">75%</button><button type="button" data-document-zoom="100" class="${state.zoom[kind] === "100" ? "is-active" : ""}">100%</button><a href="${import.meta.env.BASE_URL + publicPath}" target="_blank" rel="noreferrer">Public ↗</a></div></div>
-          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind]}"><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe></iframe></div>
+          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind]}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="no" tabindex="-1"></iframe></div></div>
           <div class="admin-document-validation"><strong>Pre-publish check</strong>${issues.length ? `<ul>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "<p>Required content and document selection are ready.</p>"}</div>
           <details class="admin-document-releases"><summary>Release history (${state.releases[kind].length})</summary>${state.releases[kind].length ? `<ol>${state.releases[kind].map((item) => `<li><strong>${escapeHtml(item.version)}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></li>`).join("")}</ol>` : "<p>No release has been published.</p>"}</details>
         </aside>
@@ -381,19 +383,29 @@ const previewPayload = (kind: ProfileDocumentKind, form: HTMLFormElement): CvRun
 const sendPreview = (kind: ProfileDocumentKind, form: HTMLFormElement): void => {
   const frame = document.querySelector<HTMLIFrameElement>("[data-document-iframe]");
   frame?.contentWindow?.postMessage({ type: `hdl:${kind}-preview`, data: previewPayload(kind, form) }, window.location.origin);
+  previewController?.refresh();
 };
 
 export const discardProfileDocumentChanges = (): void => {
   if (previewTimer !== undefined) window.clearTimeout(previewTimer);
+  previewController?.disconnect();
+  previewController = undefined;
 };
 
 export const invalidateProfileDocumentWorkspace = (): void => {
+  previewController?.disconnect();
+  previewController = undefined;
   state.cv = null;
 };
 
 export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocumentKind, callbacks: WorkspaceCallbacks): void => {
   const form = root.querySelector<HTMLFormElement>("[data-document-form]");
   const iframe = root.querySelector<HTMLIFrameElement>("[data-document-iframe]");
+  const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
+  previewController?.disconnect();
+  previewController = iframe && previewStage
+    ? bindEmbeddedPreview(iframe, previewStage, { measurementHeight: kind === "cv" ? 1123 : 794 })
+    : undefined;
   if (!form) return;
   const markDirty = (): void => {
     callbacks.setDirty(true);
@@ -419,13 +431,18 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   iframe?.addEventListener("load", () => sendPreview(kind, form));
   root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((button) => button.addEventListener("click", () => {
     state.tab[kind] = button.dataset.documentTab as DocumentTab;
-    root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((item) => item.classList.toggle("is-active", item === button));
+    root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-selected", String(selected));
+    });
     root.querySelectorAll<HTMLElement>("[data-document-panel]").forEach((panel) => { panel.hidden = panel.dataset.documentPanel !== state.tab[kind]; });
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-document-zoom]").forEach((button) => button.addEventListener("click", () => {
     state.zoom[kind] = button.dataset.documentZoom as typeof state.zoom.cv;
     const frameRoot = root.querySelector<HTMLElement>(".admin-document-frame");
     if (frameRoot) frameRoot.dataset.zoom = state.zoom[kind];
+    previewController?.refresh();
     root.querySelectorAll<HTMLButtonElement>("[data-document-zoom]").forEach((item) => item.classList.toggle("is-active", item === button));
   }));
   root.querySelector("[data-document-print]")?.addEventListener("click", () => iframe?.contentWindow?.print());

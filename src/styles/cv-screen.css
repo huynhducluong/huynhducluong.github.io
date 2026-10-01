@@ -248,11 +248,17 @@ body::selection {
 
 body.document-embedded {
   min-width: 210mm;
+  overflow: hidden;
   background: #dfe5ea;
 }
 
 body.document-embedded .cv-preview-shell {
   padding: 0;
+}
+
+@media print {
+  html,
+  body.document-embedded { overflow: visible !important; }
 }
 
 .cv-preview {

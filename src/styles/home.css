@@ -8,6 +8,7 @@
 
 body.website-embedded {
   min-width: 0;
+  overflow: hidden;
 }
 
 body.website-embedded .admin-link {
