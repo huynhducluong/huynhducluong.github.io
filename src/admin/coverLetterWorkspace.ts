@@ -13,9 +13,11 @@ import {
 } from "../services/coverLetterRepository";
 import { escapeHtml } from "../shared/format";
 import { loadProfessionalProfile } from "../services/websiteRepository";
-import { applyDocumentTheme, createCustomDocumentTheme, documentThemes, findDocumentTheme } from "../themes/documentThemes";
+import { applyDocumentTheme, createCustomDocumentTheme, findDocumentTheme } from "../themes/documentThemes";
 import type { CoverLetterEvidenceOption, CoverLetterInput, CoverLetterRecord, CoverLetterSenderSnapshot, CoverLetterStatus } from "../types/coverLetter";
 import type { ProfessionalProfileContent } from "../types/website";
+import { renderDocumentThemeFields } from "./documentThemeFields";
+import { setButtonBusy } from "./ui";
 
 type CoverLetterFilter = CoverLetterStatus | "all";
 type CoverLetterEditorTab = "application" | "body" | "evidence" | "appearance" | "notes";
@@ -43,6 +45,7 @@ let loadError = "";
 let editorTab: CoverLetterEditorTab = "application";
 let previewZoom: PreviewZoom = "fit";
 let sharedSender: CoverLetterSenderSnapshot = coverLetterSenderDefaults;
+const lastOpenedStorageKey = "hdl-admin-cover-letter-last-opened";
 
 export const updateCoverLetterSharedProfile = (professional: ProfessionalProfileContent): void => {
   sharedSender = {
@@ -84,6 +87,49 @@ const upsertLocalRecord = (next: CoverLetterRecord): void => {
     .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
 };
 
+const rememberedRecordId = (): string => {
+  try {
+    return window.localStorage.getItem(lastOpenedStorageKey) ?? "";
+  } catch {
+    return "";
+  }
+};
+
+const rememberRecord = (id: string): void => {
+  try {
+    window.localStorage.setItem(lastOpenedStorageKey, id);
+  } catch {
+    // The workspace remains functional when browser storage is unavailable.
+  }
+};
+
+const forgetRecord = (id: string): void => {
+  try {
+    if (window.localStorage.getItem(lastOpenedStorageKey) === id) {
+      window.localStorage.removeItem(lastOpenedStorageKey);
+    }
+  } catch {
+    // The workspace remains functional when browser storage is unavailable.
+  }
+};
+
+const preferredRecord = (): CoverLetterRecord | null => {
+  const rememberedId = rememberedRecordId();
+  return records.find((item) => item.id === rememberedId && item.status !== "archived")
+    ?? records.find((item) => item.status === "draft")
+    ?? records.find((item) => item.status === "final")
+    ?? null;
+};
+
+const selectRecord = (selected: CoverLetterRecord): void => {
+  record = selected;
+  letter = structuredClone(selected);
+  editorOpen = true;
+  dirty = false;
+  editorTab = "application";
+  rememberRecord(selected.id);
+};
+
 export const ensureCoverLetterWorkspace = async (): Promise<void> => {
   if (loaded) return;
   if (loading) return loading;
@@ -95,13 +141,11 @@ export const ensureCoverLetterWorkspace = async (): Promise<void> => {
       tools = evidence.tools;
       updateCoverLetterSharedProfile(professional);
       const requestedId = new URLSearchParams(window.location.search).get("id");
-      if (requestedId) {
-        const requested = records.find((item) => item.id === requestedId);
-        if (requested) {
-          record = requested;
-          letter = structuredClone(requested);
-          editorOpen = true;
-        }
+      const requested = requestedId ? records.find((item) => item.id === requestedId) : null;
+      const initialRecord = requested ?? preferredRecord();
+      if (initialRecord) {
+        selectRecord(initialRecord);
+        syncUrl(initialRecord.id);
       }
       loaded = true;
       loadError = "";
@@ -132,6 +176,7 @@ const visibleRecords = (): CoverLetterRecord[] => {
 
 const recordList = (): string => {
   const visible = visibleRecords();
+  if (!records.length) return '<li class="admin-empty">No cover letters yet.</li>';
   if (!visible.length) return '<li class="admin-empty">No cover letters match this view.</li>';
   return visible.map((item) => `
     <li class="admin-content-item ${record?.id === item.id ? "is-selected" : ""}">
@@ -143,6 +188,10 @@ const recordList = (): string => {
       <div class="admin-content-item__meta"><span class="status status--${item.status}">${item.status}</span></div>
     </li>`).join("");
 };
+
+const filterCount = (item: CoverLetterFilter): number => item === "all"
+  ? records.length
+  : records.filter((recordItem) => recordItem.status === item).length;
 
 const tabButton = (tab: CoverLetterEditorTab, label: string): string =>
   `<button type="button" role="tab" data-cl-tab="${tab}" aria-selected="${editorTab === tab}" class="${editorTab === tab ? "is-active" : ""}">${label}</button>`;
@@ -159,27 +208,39 @@ const evidenceChecks = (items: CoverLetterEvidenceOption[], name: "projectIds" |
 
 const collectionView = (): string => `
   <aside class="admin-cl-collection">
-    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${visibleRecords().length}</span></h2></div><button class="button admin-action-new" type="button" data-cl-new>+ New</button></div>
+    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${records.length}</span></h2></div>${records.length ? '<button class="button admin-action-new" type="button" data-cl-new>+ New</button>' : ""}</div>
     <div class="admin-list-controls">
       <label class="admin-search"><span class="sr-only">Search cover letters</span><input type="search" placeholder="Search company, role or title..." value="${escapeHtml(search)}" data-cl-search></label>
-      <div class="admin-filter-row" aria-label="Cover letter status">${(["all", "draft", "final", "archived"] as CoverLetterFilter[]).map((item) => `<button type="button" data-cl-filter="${item}" class="${filter === item ? "is-active" : ""}">${item}</button>`).join("")}</div>
+      <div class="admin-filter-row" aria-label="Cover letter status">${(["all", "draft", "final", "archived"] as CoverLetterFilter[]).map((item) => `<button type="button" data-cl-filter="${item}" class="${filter === item ? "is-active" : ""}"><span>${item}</span><strong>${filterCount(item)}</strong></button>`).join("")}</div>
     </div>
     <div class="admin-collection__scroll"><ul class="admin-content-list" data-cl-list>${recordList()}</ul></div>
   </aside>`;
 
 const emptyWorkspace = (): string => {
-  const summary = coverLetterSummary();
+  if (records.length) {
+    const recent = preferredRecord() ?? records[0];
+    return `
+      <section class="admin-cl-empty admin-cl-empty--selection">
+        <div><p class="section-kicker">Applications</p><h1>Select a cover letter</h1><p>Choose a letter from the list or continue with the most recently updated application.</p></div>
+        <article class="admin-cl-recent">
+          <div><span>Recently updated</span><strong>${escapeHtml(recent.internalTitle)}</strong><small>${escapeHtml(recent.positionTitle || "Position not set")} · ${escapeHtml(recent.companyName || "Company not set")} · ${date(recent.updatedAt)}</small></div>
+          <button class="button" type="button" data-cl-select="${escapeHtml(recent.id)}">Open letter</button>
+        </article>
+        <p class="admin-cl-empty__hint">Use <strong>+ New</strong> in the sidebar to start another application.</p>
+      </section>`;
+  }
+
   return `
-    <section class="admin-cl-empty">
+    <section class="admin-cl-empty admin-cl-empty--onboarding">
       <div><p class="section-kicker">Applications</p><h1>Cover letter workspace</h1><p>Create tailored one-page letters using the same profile, projects and automation tools managed in this Admin.</p></div>
-      <div class="admin-cl-metrics"><article><span>Draft</span><strong>${summary.drafts}</strong></article><article><span>Final</span><strong>${summary.final}</strong></article><article><span>Total</span><strong>${summary.total}</strong></article></div>
-      <div class="admin-cl-empty__actions"><button class="button" type="button" data-cl-new>Create cover letter</button><p>Select an existing letter from the list to review, duplicate or archive it.</p></div>
+      <ol class="admin-cl-steps">
+        <li><span>1</span><div><strong>Application</strong><small>Add the company, role and recipient.</small></div></li>
+        <li><span>2</span><div><strong>Content & evidence</strong><small>Tailor the message with verified experience.</small></div></li>
+        <li><span>3</span><div><strong>Review & finalize</strong><small>Check the A4 preview and lock the release.</small></div></li>
+      </ol>
+      <div class="admin-cl-empty__actions"><button class="button" type="button" data-cl-new>Create cover letter</button><p>Your Professional Profile provides the reusable sender details.</p></div>
     </section>`;
 };
-
-const themeOptions = (): string => documentThemes
-  .map((theme) => `<option value="${theme.id}" ${letter.theme.presetId === theme.id ? "selected" : ""}>${escapeHtml(theme.name)}</option>`)
-  .join("") + `<option value="custom" ${letter.theme.presetId === "custom" ? "selected" : ""}>Custom company colors</option>`;
 
 const editorView = (): string => {
   const isLocked = locked();
@@ -224,7 +285,14 @@ const editorView = (): string => {
             </section>
             <section class="admin-editor-panel" data-cl-panel="appearance" ${panelState("appearance")}>
               <div class="admin-section-heading"><h3>Document appearance</h3><p>Apply a document preset or use verified company colors.</p></div>
-              <div class="admin-form-grid"><label>Preset<select name="themePreset"${disabled()}>${themeOptions()}</select></label><label>Primary color<input name="themePrimary" type="color" value="${escapeHtml(letter.theme.primary)}"${disabled()}></label><label>Accent color<input name="themeAccent" type="color" value="${escapeHtml(letter.theme.accent)}"${disabled()}></label></div>
+              ${renderDocumentThemeFields({
+                theme: letter.theme,
+                names: { preset: "themePreset", primary: "themePrimary", accent: "themeAccent" },
+                helpText: "Colors are stored in this draft and frozen when the cover letter is finalized.",
+                compact: true,
+                disabled: isLocked,
+                customLabel: "Custom company colors",
+              })}
             </section>
             <section class="admin-editor-panel" data-cl-panel="notes" ${panelState("notes")}>
               <div class="admin-section-heading"><h3>Private notes</h3><p>These notes remain inside Admin and are never printed.</p></div>
@@ -326,11 +394,7 @@ const openRecord = (id: string, callbacks: WorkspaceCallbacks): void => {
   if (dirty && !window.confirm("Discard unsaved changes and open another letter?")) return;
   const selected = records.find((item) => item.id === id);
   if (!selected) return;
-  record = selected;
-  letter = structuredClone(selected);
-  editorOpen = true;
-  dirty = false;
-  editorTab = "application";
+  selectRecord(selected);
   callbacks.setDirty(false);
   syncUrl(selected.id);
   callbacks.rerender();
@@ -355,6 +419,7 @@ const saveDraft = async (root: ParentNode, callbacks: WorkspaceCallbacks): Promi
   record = saved;
   letter = structuredClone(saved);
   upsertLocalRecord(saved);
+  rememberRecord(saved.id);
   dirty = false;
   callbacks.setDirty(false);
   syncUrl(saved.id);
@@ -378,6 +443,7 @@ const finalize = async (root: ParentNode, callbacks: WorkspaceCallbacks): Promis
   record = finalized;
   letter = structuredClone(finalized);
   upsertLocalRecord(finalized);
+  rememberRecord(finalized.id);
   dirty = false;
   callbacks.setDirty(false);
   syncUrl(finalized.id);
@@ -459,7 +525,11 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   });
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
-    void saveDraft(root, callbacks).catch((error: Error) => callbacks.notify(error.message, "error"));
+    const saveButton = root.querySelector<HTMLButtonElement>('[form="admin-cover-letter-form"].admin-action-save');
+    setButtonBusy(saveButton, true, "Saving…");
+    void saveDraft(root, callbacks)
+      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });
   });
   root.querySelector("[data-cl-starter]")?.addEventListener("click", () => {
     const company = form?.querySelector<HTMLInputElement>('input[name="companyName"]')?.value || "[Company]";
@@ -475,8 +545,12 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
     markDirty(root, callbacks);
     updatePreview(root);
   });
-  root.querySelector("[data-cl-finalize]")?.addEventListener("click", () => {
-    void finalize(root, callbacks).catch((error: Error) => callbacks.notify(error.message, "error"));
+  root.querySelector<HTMLButtonElement>("[data-cl-finalize]")?.addEventListener("click", (event) => {
+    const finalizeButton = event.currentTarget as HTMLButtonElement;
+    setButtonBusy(finalizeButton, true, "Finalizing…");
+    void finalize(root, callbacks)
+      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .finally(() => { if (finalizeButton.isConnected) setButtonBusy(finalizeButton, false); });
   });
   root.querySelector("[data-cl-duplicate]")?.addEventListener("click", () => {
     if (!record) return;
@@ -487,6 +561,7 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
       editorOpen = true;
       dirty = false;
       editorTab = "application";
+      rememberRecord(copy.id);
       callbacks.setDirty(false);
       syncUrl(copy.id);
       callbacks.rerender();
@@ -508,6 +583,7 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
     const id = record.id;
     void deleteCoverLetterDraft(id).then(() => {
       records = records.filter((item) => item.id !== id);
+      forgetRecord(id);
       resetEditor();
       callbacks.setDirty(false);
       syncUrl();

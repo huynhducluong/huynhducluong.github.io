@@ -8,13 +8,15 @@ import {
   saveWebsiteFeatured,
 } from "../services/websiteRepository";
 import { escapeHtml } from "../shared/format";
-import { documentThemes, resolveDocumentTheme } from "../themes/documentThemes";
+import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
 import type { StoredDocumentTheme } from "../types/theme";
+import { renderDocumentThemeFields } from "./documentThemeFields";
 import { invalidateProfileDocumentWorkspace } from "./profileDocumentWorkspace";
 import { updateCoverLetterSharedProfile } from "./coverLetterWorkspace";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
+import { setButtonBusy } from "./ui";
 
 export type SiteWorkspaceKind = "homepage" | "profile";
 type WebsiteTab = "general" | "navigation" | "sections" | "featured" | "appearance";
@@ -61,14 +63,15 @@ const readLocalized = (form: FormData, name: string): { en: string; vi: string }
   vi: value(form, `${name}_vi`),
 });
 
-const themeFields = (theme: StoredDocumentTheme): string => {
-  const resolved = resolveDocumentTheme(theme);
-  return `<div class="admin-document-theme">
-    <label>Theme preset<select name="website_theme_preset">${documentThemes.map((item) => `<option value="${item.id}"${theme.presetId === item.id ? " selected" : ""}>${escapeHtml(item.name)}</option>`).join("")}<option value="custom"${theme.presetId === "custom" ? " selected" : ""}>Custom</option></select></label>
-    <label>Primary color<input name="website_theme_primary" type="color" value="${escapeHtml(theme.primary ?? resolved.tokens.primary)}"></label>
-    <label>Accent color<input name="website_theme_accent" type="color" value="${escapeHtml(theme.accent ?? resolved.tokens.accent)}"></label>
-  </div><p class="admin-form-help">The website theme is frozen into the next release and does not affect document themes.</p>`;
-};
+const themeFields = (theme: StoredDocumentTheme): string => renderDocumentThemeFields({
+  theme,
+  names: {
+    preset: "website_theme_preset",
+    primary: "website_theme_primary",
+    accent: "website_theme_accent",
+  },
+  helpText: "The website theme is frozen into the next release and does not affect document themes.",
+});
 
 const readTheme = (form: FormData): StoredDocumentTheme => {
   const presetId = value(form, "website_theme_preset") || "personal-blue";
@@ -400,6 +403,8 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   }));
   websiteForm?.addEventListener("submit", (event) => {
     event.preventDefault();
+    const saveButton = root.querySelector<HTMLButtonElement>('[form="website-editor-form"].admin-action-save');
+    setButtonBusy(saveButton, true, "Saving…");
     void (async () => {
       const runtime = readWebsiteForm(websiteForm);
       await Promise.all([saveWebsiteContent(runtime.content), saveWebsiteFeatured(runtime)]);
@@ -407,10 +412,14 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       callbacks.setDirty(false);
       callbacks.rerender();
       callbacks.notify("Website draft saved. Public pages are unchanged until publish.", "success");
-    })().catch((error: Error) => callbacks.notify(error.message, "error"));
+    })()
+      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });
   });
   profileForm?.addEventListener("submit", (event) => {
     event.preventDefault();
+    const saveButton = root.querySelector<HTMLButtonElement>('[form="profile-editor-form"].admin-action-save');
+    setButtonBusy(saveButton, true, "Saving…");
     void (async () => {
       const professional = readProfileForm(profileForm);
       await saveProfessionalProfile(professional);
@@ -420,10 +429,14 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       callbacks.setDirty(false);
       callbacks.rerender();
       callbacks.notify("Professional Profile saved. Publish each channel when ready.", "success");
-    })().catch((error: Error) => callbacks.notify(error.message, "error"));
+    })()
+      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });
   });
-  root.querySelector("[data-publish-website]")?.addEventListener("click", () => {
+  root.querySelector<HTMLButtonElement>("[data-publish-website]")?.addEventListener("click", (event) => {
     if (!websiteForm || !window.confirm("Publish the current Website draft as a new public release?")) return;
+    const publishButton = event.currentTarget as HTMLButtonElement;
+    setButtonBusy(publishButton, true, "Publishing…");
     void (async () => {
       const runtime = readWebsiteForm(websiteForm);
       await saveWebsiteContent(runtime.content);
@@ -434,6 +447,8 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       callbacks.setDirty(false);
       callbacks.rerender();
       callbacks.notify("Website release published. All public pages now use this snapshot.", "success");
-    })().catch((error: Error) => callbacks.notify(error.message, "error"));
+    })()
+      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .finally(() => { if (publishButton.isConnected) setButtonBusy(publishButton, false); });
   });
 };

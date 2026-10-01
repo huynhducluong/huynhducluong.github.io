@@ -1,6 +1,5 @@
 import { portfolioContentSeed } from "../data/portfolioSeed";
 import type {
-  DocumentReleaseSummary,
   PortfolioContent,
   PortfolioRuntimeData,
 } from "../types/portfolio";
@@ -11,6 +10,7 @@ import {
   type ProjectRow,
   type ToolRow,
 } from "./supabasePortfolioRepository";
+import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
 
 interface PortfolioContentRow {
   version: string;
@@ -42,12 +42,6 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => ({
   skillGroups: row.skill_groups ?? [],
 });
 
-const releaseSummary = (row: { id: string; version: string; published_at: string }): DocumentReleaseSummary => ({
-  id: row.id,
-  version: row.version,
-  publishedAt: row.published_at,
-});
-
 export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> => {
   const [contentResult, projectResult, toolResult] = await Promise.all([
     supabase.from("portfolio_content").select("*").eq("id", "primary").maybeSingle(),
@@ -66,8 +60,13 @@ export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> =>
     tools: (toolResult.data as ToolRow[]).map(toolFromRow),
   };
 };
-
 export const loadPublishedPortfolioRelease = async (): Promise<PortfolioRuntimeData> => {
+  try {
+    const activeRelease = await loadActiveProfileDocumentRelease<PortfolioRuntimeData>("portfolio");
+    if (activeRelease) return activeRelease;
+  } catch {
+    // Fall through to the legacy release table until the library migration is applied.
+  }
   const { data, error } = await supabase
     .from("portfolio_releases")
     .select("payload")
@@ -77,74 +76,4 @@ export const loadPublishedPortfolioRelease = async (): Promise<PortfolioRuntimeD
   if (error) throw error;
   if (!data?.payload) throw new Error("No published Portfolio release is available.");
   return data.payload as PortfolioRuntimeData;
-};
-
-export const savePortfolioContent = async (content: PortfolioContent): Promise<void> => {
-  const { error } = await supabase.from("portfolio_content").upsert({
-    id: "primary",
-    version: content.version,
-    title: content.title,
-    year: content.year,
-    kicker: content.kicker,
-    about_kicker: content.aboutKicker,
-    about_heading: content.aboutHeading,
-    closing_kicker: content.closingKicker,
-    closing_heading: content.closingHeading,
-    closing_text: content.closingText,
-    theme: content.theme,
-    profile: content.profile,
-    skill_groups: content.skillGroups,
-  });
-  if (error) throw error;
-};
-
-export const savePortfolioSelection = async (
-  projects: PortfolioRuntimeData["projects"],
-  tools: PortfolioRuntimeData["tools"],
-): Promise<void> => {
-  const projectResults = await Promise.all(projects.map((project) =>
-    supabase.from("projects").update({
-      include_in_portfolio: project.includeInPortfolio,
-      portfolio_order: project.portfolioOrder,
-      portfolio_layout: project.portfolioLayout,
-    }).eq("id", project.id),
-  ));
-  const toolResults = await Promise.all(tools.map((tool) =>
-    supabase.from("automation_tools").update({
-      include_in_portfolio: tool.includeInPortfolio,
-      portfolio_order: tool.portfolioOrder,
-    }).eq("id", tool.id),
-  ));
-  const failed = [...projectResults, ...toolResults].find((result) => result.error);
-  if (failed?.error) throw failed.error;
-};
-
-export const publishPortfolioRelease = async (): Promise<void> => {
-  const runtime = await loadPortfolioDraftData();
-  const payload: PortfolioRuntimeData = {
-    content: runtime.content,
-    projects: runtime.projects.filter((project) => project.includeInPortfolio),
-    tools: runtime.tools.filter((tool) => tool.includeInPortfolio),
-  };
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error("Sign in before publishing the Portfolio.");
-  const { error } = await supabase.from("portfolio_releases").insert({
-    version: payload.content.version,
-    payload,
-    published_by: authData.user.id,
-  });
-  if (error) throw error;
-};
-
-export const listDocumentReleases = async (
-  table: "cv_releases" | "portfolio_releases",
-): Promise<DocumentReleaseSummary[]> => {
-  const { data, error } = await supabase
-    .from(table)
-    .select("id,version,published_at")
-    .order("published_at", { ascending: false })
-    .limit(12);
-  if (error) throw error;
-  return (data ?? []).map((row) => releaseSummary(row as { id: string; version: string; published_at: string }));
 };

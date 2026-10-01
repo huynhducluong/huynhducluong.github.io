@@ -11,12 +11,11 @@ import "../styles/admin-ui.css";
 import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
+import { bindAdminTablists } from "./ui";
 import { portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
-import { cvContentSeed } from "../data/cvSeed";
 import { escapeHtml } from "../shared/format";
-import { loadCvData, publishCvRelease, saveCvContent } from "../services/cvRepository";
 import { supabase } from "../services/supabaseClient";
-import type { CvContent, CvProjectDisplay } from "../types/cvContent";
+import type { CvProjectDisplay } from "../types/cvContent";
 import type { PortfolioProject, PublicationStatus } from "../types/portfolio";
 import {
   bindCoverLetterWorkspace,
@@ -126,7 +125,6 @@ let tools: AdminToolRow[] = [];
 let selectedProject: AdminProjectRow | null = null;
 let selectedTool: AdminToolRow | null = null;
 let selectedItemType: AdminItemType = "project";
-let cvContent: CvContent = structuredClone(cvContentSeed);
 let activeView: AdminView = "overview";
 let contentFilter: ContentFilter = "all";
 let contentStatusFilter: ContentStatusFilter = "all";
@@ -404,6 +402,7 @@ const loginView = (): void => {
     );
     startMagicLinkCooldown(submitButton);
   });
+  bindAdminTablists(app);
 };
 
 interface AdminContentListItem {
@@ -590,67 +589,6 @@ const trashInspector = (item: AdminContentListItem): string => `
     <div class="admin-actions"><button class="button" type="button" data-restore-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Restore as draft</button><button class="button admin-button--danger" type="button" data-purge-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Delete permanently</button></div>
   </section>`;
 
-const cvContentEditor = (): string => `
-  <form class="admin-editor admin-cv-editor" data-cv-content-form>
-    <div class="admin-editor__heading"><div><p class="section-kicker">CV content</p><h2>Shared professional information</h2><p>Edit once here; the CV preview reads this Supabase content.</p></div><a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/?preview=1" target="_blank" rel="noreferrer">Preview CV</a></div>
-    <fieldset class="admin-fieldset"><legend>Document settings</legend><div class="admin-form-grid">
-      ${field("CV version", "cv_version", cvContent.version)}
-      ${field("Detailed projects on page 1", "page_one_project_count", String(cvContent.pageOneProjectCount), "number")}
-    </div></fieldset>
-    <fieldset class="admin-fieldset"><legend>Profile</legend>
-      <div class="admin-form-grid">
-        ${field("Full name", "profile_name", cvContent.profile.name)}
-        ${field("Professional title (English)", "profile_title_en", cvContent.profile.professionalTitle.en)}
-        ${field("Professional title (Vietnamese)", "profile_title_vi", cvContent.profile.professionalTitle.vi)}
-        ${field("Email", "profile_email", cvContent.profile.email, "email")}
-        ${field("Phone", "profile_phone", cvContent.profile.phone, "tel")}
-        ${field("Photo path", "profile_photo", cvContent.profile.photoPath)}
-        ${field("Location (English)", "profile_location_en", cvContent.profile.location.en)}
-        ${field("Location (Vietnamese)", "profile_location_vi", cvContent.profile.location.vi)}
-      </div>
-      <label>Professional summary (English)<textarea name="profile_summary_en" rows="5">${escapeHtml(cvContent.profile.summary.en)}</textarea></label>
-      <label>Professional summary (Vietnamese)<textarea name="profile_summary_vi" rows="5">${escapeHtml(cvContent.profile.summary.vi)}</textarea></label>
-    </fieldset>
-    <fieldset class="admin-fieldset"><legend>Work experience</legend>
-      <div class="admin-cv-collection">${cvContent.experiences.map((item, index) => `
-        <article class="admin-cv-card">
-          <input type="hidden" name="experience_id_${index}" value="${escapeHtml(item.id)}"><div class="admin-cv-card__heading"><h3>${escapeHtml(item.company || `Experience ${index + 1}`)}</h3><button type="button" class="admin-danger" data-remove-experience="${index}">Remove</button></div>
-          <div class="admin-form-grid">
-            ${field("Company", `experience_company_${index}`, item.company)}
-            ${field("Position (English)", `experience_position_en_${index}`, item.position.en)}
-            ${field("Position (Vietnamese)", `experience_position_vi_${index}`, item.position.vi)}
-            ${field("Location (English)", `experience_location_en_${index}`, item.location.en)}
-            ${field("Location (Vietnamese)", `experience_location_vi_${index}`, item.location.vi)}
-            ${field("Start", `experience_start_${index}`, item.startDate, "month")}
-            <label>End date<span class="admin-end-date"><input name="experience_end_${index}" type="month" value="${escapeHtml(item.endDate ?? "")}" ${item.endDate === null ? "disabled" : ""}><button type="button" data-cv-present="${index}" aria-pressed="${item.endDate === null}">Present</button><input name="experience_current_${index}" type="hidden" value="${item.endDate === null ? "true" : "false"}"></span></label>
-          </div>
-          <label>Responsibilities (one English item per line)<textarea name="experience_responsibilities_${index}" rows="4">${escapeHtml(item.responsibilities.map((point) => point.text.en).join("\n"))}</textarea></label>
-          <label>Technologies (comma separated)<input name="experience_technologies_${index}" value="${escapeHtml(item.technologies.join(", "))}"></label>
-        </article>`).join("")}</div><button class="button button--secondary" type="button" data-add-experience>Add work experience</button>
-    </fieldset>
-    <fieldset class="admin-fieldset"><legend>Education</legend><div class="admin-cv-collection">${cvContent.education.map((item, index) => `
-      <article class="admin-cv-card"><input type="hidden" name="education_id_${index}" value="${escapeHtml(item.id)}"><div class="admin-form-grid">
-        ${field("Field (English)", `education_field_en_${index}`, item.field.en)}${field("Field (Vietnamese)", `education_field_vi_${index}`, item.field.vi)}
-        ${field("Institution (English)", `education_institution_en_${index}`, item.institution.en)}${field("Institution (Vietnamese)", `education_institution_vi_${index}`, item.institution.vi)}
-        ${field("Classification (English)", `education_classification_en_${index}`, item.classification?.en ?? "")}${field("Classification (Vietnamese)", `education_classification_vi_${index}`, item.classification?.vi ?? "")}
-        ${field("Start year", `education_start_${index}`, item.startDate)}${field("End year", `education_end_${index}`, item.endDate)}
-      </div></article>`).join("")}</div></fieldset>
-    <fieldset class="admin-fieldset"><legend>Skills and languages</legend><div class="admin-cv-collection">
-      ${cvContent.skillGroups.map((group, index) => `<article class="admin-cv-card"><input type="hidden" name="skill_id_${index}" value="${escapeHtml(group.id)}"><div class="admin-form-grid">${field("Group title (English)", `skill_title_en_${index}`, group.title.en)}${field("Group title (Vietnamese)", `skill_title_vi_${index}`, group.title.vi)}</div><label>Items (one per line)<textarea name="skill_items_${index}" rows="5">${escapeHtml(group.items.map((item) => item.label.en).join("\n"))}</textarea></label></article>`).join("")}
-      ${cvContent.languages.map((item, index) => `<article class="admin-cv-card"><input type="hidden" name="language_id_${index}" value="${escapeHtml(item.id)}"><div class="admin-form-grid">${field("Language (English)", `language_name_en_${index}`, item.name.en)}${field("Language (Vietnamese)", `language_name_vi_${index}`, item.name.vi)}${field("Proficiency (English)", `language_proficiency_en_${index}`, item.proficiency?.en ?? "")}${field("Proficiency (Vietnamese)", `language_proficiency_vi_${index}`, item.proficiency?.vi ?? "")}</div></article>`).join("")}
-    </div></fieldset>
-    <div class="admin-actions"><button class="button" type="submit">Save CV content</button><a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/?preview=1" target="_blank" rel="noreferrer">Open draft preview</a></div>
-  </form>`;
-
-const documentsView = (): string => `
-  <section class="admin-editor admin-documents"><div><p class="section-kicker">Documents</p><h2>Preview and publish</h2><p>Review the latest Admin data before publishing a stable CV release.</p></div>
-    <div class="admin-document-grid"><article><h3>Curriculum Vitae</h3><p>The draft preview uses current Admin content. The public CV uses the latest published release.</p><div class="admin-actions"><a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/?preview=1" target="_blank" rel="noreferrer">Preview draft CV</a><a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/" target="_blank" rel="noreferrer">View public CV</a><button class="button" type="button" data-publish-cv>Publish CV</button></div></article><article><h3>Portfolio PDF</h3><p>The Portfolio uses published projects selected with Include in Portfolio PDF.</p><div class="admin-actions"><a class="button button--secondary" href="${import.meta.env.BASE_URL}portfolio/" target="_blank" rel="noreferrer">Preview Portfolio</a></div></article></div>
-  </section>`;
-
-// Kept temporarily for data-form compatibility while existing Admin sessions migrate.
-void cvContentEditor;
-void documentsView;
-
 const overviewView = (): string => {
   const activeProjects = projects.filter((item) => !item.deleted_at);
   const activeTools = tools.filter((item) => !item.deleted_at);
@@ -751,6 +689,7 @@ const dashboardView = (): void => {
       </form>
     </dialog>`;
   bindDashboard();
+  bindAdminTablists(app);
 };
 
 const loadProjects = async (): Promise<void> => {
@@ -758,10 +697,9 @@ const loadProjects = async (): Promise<void> => {
   const selectedToolId = selectedTool?.id;
   const selectedProjectWasPersisted = Boolean(selectedProjectId && projects.some((item) => item.id === selectedProjectId));
   const selectedToolWasPersisted = Boolean(selectedToolId && tools.some((item) => item.id === selectedToolId));
-  const [projectResult, toolResult, cvData] = await Promise.all([
+  const [projectResult, toolResult] = await Promise.all([
     supabase.from("projects").select("*, project_images(*)").order("display_order"),
     supabase.from("automation_tools").select("*, tool_images(*)").order("display_order"),
-    loadCvData({ adminPreview: true, preferRelease: false }),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
@@ -769,7 +707,6 @@ const loadProjects = async (): Promise<void> => {
   tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
   if (selectedProjectWasPersisted) selectedProject = projects.find((item) => item.id === selectedProjectId) ?? null;
   if (selectedToolWasPersisted) selectedTool = tools.find((item) => item.id === selectedToolId) ?? null;
-  cvContent = cvData.content;
 };
 
 const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
@@ -1097,69 +1034,7 @@ const deleteSavedMedia = async (mediaId: string): Promise<void> => {
 };
 
 const formText = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
-const lines = (value: string): string[] => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 const commaList = (value: string): string[] => value.split(",").map((item) => item.trim()).filter(Boolean);
-
-const readCvContentForm = (formElement: HTMLFormElement): CvContent => {
-  const form = new FormData(formElement);
-  return {
-    version: formText(form, "cv_version") || cvContent.version,
-    themeId: cvContent.themeId,
-    theme: cvContent.theme,
-    pageOneProjectCount: Math.max(1, Number(form.get("page_one_project_count")) || 3),
-    profile: {
-      name: formText(form, "profile_name"),
-      professionalTitle: { en: formText(form, "profile_title_en"), vi: formText(form, "profile_title_vi") },
-      email: formText(form, "profile_email"), phone: formText(form, "profile_phone"),
-      location: { en: formText(form, "profile_location_en"), vi: formText(form, "profile_location_vi") },
-      summary: { en: formText(form, "profile_summary_en"), vi: formText(form, "profile_summary_vi") },
-      photoPath: formText(form, "profile_photo"),
-    },
-    experiences: cvContent.experiences.map((item, index) => {
-      const responsibilityLines = lines(formText(form, `experience_responsibilities_${index}`));
-      return {
-        id: formText(form, `experience_id_${index}`) || item.id,
-        company: formText(form, `experience_company_${index}`),
-        position: { en: formText(form, `experience_position_en_${index}`), vi: formText(form, `experience_position_vi_${index}`) },
-        location: { en: formText(form, `experience_location_en_${index}`), vi: formText(form, `experience_location_vi_${index}`) },
-        startDate: formText(form, `experience_start_${index}`),
-        endDate: form.get(`experience_current_${index}`) === "true" ? null : formText(form, `experience_end_${index}`) || null,
-        responsibilities: responsibilityLines.map((text, pointIndex) => ({ id: item.responsibilities[pointIndex]?.id ?? `${item.id}-${pointIndex + 1}`, text: { en: text, vi: item.responsibilities[pointIndex]?.text.vi ?? "" } })),
-        technologies: commaList(formText(form, `experience_technologies_${index}`)),
-      };
-    }),
-    education: cvContent.education.map((item, index) => {
-      const classificationEn = formText(form, `education_classification_en_${index}`);
-      const classificationVi = formText(form, `education_classification_vi_${index}`);
-      return {
-        id: formText(form, `education_id_${index}`) || item.id,
-        field: { en: formText(form, `education_field_en_${index}`), vi: formText(form, `education_field_vi_${index}`) },
-        institution: { en: formText(form, `education_institution_en_${index}`), vi: formText(form, `education_institution_vi_${index}`) },
-        classification: classificationEn || classificationVi ? { en: classificationEn, vi: classificationVi } : undefined,
-        startDate: formText(form, `education_start_${index}`), endDate: formText(form, `education_end_${index}`),
-      };
-    }),
-    skillGroups: cvContent.skillGroups.map((group, index) => ({
-      id: formText(form, `skill_id_${index}`) || group.id,
-      title: { en: formText(form, `skill_title_en_${index}`), vi: formText(form, `skill_title_vi_${index}`) },
-      items: lines(formText(form, `skill_items_${index}`)).map((label, itemIndex) => ({ id: group.items[itemIndex]?.id ?? `${group.id}-${itemIndex + 1}`, label: { en: label, vi: group.items[itemIndex]?.label.vi ?? label } })),
-    })),
-    languages: cvContent.languages.map((item, index) => {
-      const proficiencyEn = formText(form, `language_proficiency_en_${index}`);
-      const proficiencyVi = formText(form, `language_proficiency_vi_${index}`);
-      return { id: formText(form, `language_id_${index}`) || item.id, name: { en: formText(form, `language_name_en_${index}`), vi: formText(form, `language_name_vi_${index}`) }, proficiency: proficiencyEn || proficiencyVi ? { en: proficiencyEn, vi: proficiencyVi } : undefined };
-    }),
-  };
-};
-
-const saveCvContentForm = async (formElement: HTMLFormElement): Promise<void> => {
-  const content = readCvContentForm(formElement);
-  await saveCvContent(content);
-  cvContent = content;
-  adminFormDirty = false;
-  dashboardView();
-  message("CV content saved. Open the draft preview to check the two-page layout.", "success");
-};
 
 const bindContentItemActions = (root: ParentNode = app): void => {
   root.querySelectorAll<HTMLElement>("[data-select-item]").forEach((button) => button.addEventListener("click", () => {
@@ -1258,7 +1133,7 @@ const bindDashboard = (): void => {
       state.dataset.dirty = "true";
     }
   };
-  app.querySelectorAll<HTMLFormElement>("[data-project-form], [data-tool-form], [data-cv-content-form]").forEach((form) => {
+  app.querySelectorAll<HTMLFormElement>("[data-project-form], [data-tool-form]").forEach((form) => {
     form.addEventListener("input", markDirty);
     form.addEventListener("change", markDirty);
   });
@@ -1274,32 +1149,6 @@ const bindDashboard = (): void => {
     endDate.disabled = isPresent;
     if (isPresent) endDate.value = "";
   });
-  app.querySelectorAll<HTMLButtonElement>("[data-cv-present]").forEach((button) => button.addEventListener("click", () => {
-    const index = button.dataset.cvPresent;
-    const form = button.closest<HTMLFormElement>("form");
-    const endDate = form?.elements.namedItem(`experience_end_${index}`);
-    const current = form?.elements.namedItem(`experience_current_${index}`);
-    if (!(endDate instanceof HTMLInputElement) || !(current instanceof HTMLInputElement)) return;
-    const isPresent = button.getAttribute("aria-pressed") !== "true";
-    button.setAttribute("aria-pressed", String(isPresent));
-    current.value = String(isPresent);
-    endDate.disabled = isPresent;
-    if (isPresent) endDate.value = "";
-  }));
-  app.querySelector("[data-add-experience]")?.addEventListener("click", () => {
-    const form = app.querySelector<HTMLFormElement>("[data-cv-content-form]");
-    if (form) cvContent = readCvContentForm(form);
-    cvContent.experiences.push({ id: `experience-${crypto.randomUUID()}`, company: "", position: { en: "", vi: "" }, location: { en: "Viet Nam", vi: "Việt Nam" }, startDate: "", endDate: "", responsibilities: [], technologies: [] });
-    dashboardView();
-  });
-  app.querySelectorAll<HTMLButtonElement>("[data-remove-experience]").forEach((button) => button.addEventListener("click", () => {
-    const form = app.querySelector<HTMLFormElement>("[data-cv-content-form]");
-    if (form) cvContent = readCvContentForm(form);
-    const index = Number(button.dataset.removeExperience);
-    if (!Number.isInteger(index) || !window.confirm("Remove this work experience from the CV content draft?")) return;
-    cvContent.experiences.splice(index, 1);
-    dashboardView();
-  }));
   app.querySelector<HTMLInputElement>('input[name="images"]')?.addEventListener("change", (event) => {
     const files = (event.currentTarget as HTMLInputElement).files;
     if (!files) return;
@@ -1395,17 +1244,11 @@ const bindDashboard = (): void => {
       cv_order: tool.cvOrder,
     })));
     if (toolResult.error) return message(toolResult.error.message, "error");
-    try { await saveCvContent(cvContentSeed); } catch (error) { return message(error instanceof Error ? error.message : "CV content could not be imported.", "error"); }
-    await loadProjects(); dashboardView(); message("Starter projects and CV content imported as drafts.", "success");
+    await loadProjects(); dashboardView(); message("Starter projects and tools imported as drafts.", "success");
   });
   app.querySelector<HTMLFormElement>("[data-project-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-tool-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveToolForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-upload-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void uploadImages(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
-  app.querySelector<HTMLFormElement>("[data-cv-content-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveCvContentForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
-  app.querySelector("[data-publish-cv]")?.addEventListener("click", () => {
-    if (!window.confirm("Publish the current Admin data as the new public CV release?")) return;
-    void publishCvRelease().then(() => message("CV release published.", "success")).catch((error: Error) => message(error.message, "error"));
-  });
   if (activeView === "cover-letters") {
     bindCoverLetterWorkspace(app, {
       rerender: dashboardView,

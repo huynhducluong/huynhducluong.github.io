@@ -1,9 +1,9 @@
 /* Admin-only typography system. Document canvases keep their publication fonts. */
 html.admin-app {
   --admin-font-family: "Inter Variable", "Segoe UI", Arial, sans-serif;
-  --admin-text-2xs: .6875rem;
-  --admin-text-xs: .75rem;
-  --admin-text-sm: .8125rem;
+  --admin-text-2xs: .75rem;
+  --admin-text-xs: .8125rem;
+  --admin-text-sm: .875rem;
   --admin-text-base: .875rem;
   --admin-text-lg: 1rem;
   --admin-title-sm: 1.125rem;
@@ -149,7 +149,6 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 /* Collection and content editors */
 .admin-collection__heading small,
 .admin-content-item__type,
-.admin-selection-status__type,
 .admin-media-badge {
   font-size: var(--admin-text-2xs);
   font-weight: var(--admin-weight-bold);
@@ -177,7 +176,6 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-filter-row button,
-.admin-scope-tabs button,
 .admin-content-item__actions button,
 .admin-more,
 .admin-more button {
@@ -216,8 +214,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   line-height: var(--admin-line-default);
 }
 
-.admin-channel-grid strong,
-.admin-cv-card h3 {
+.admin-channel-grid strong {
   font-size: var(--admin-text-base);
   font-weight: var(--admin-weight-semibold);
 }
@@ -238,7 +235,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-metric-grid strong {
-  font-size: 1.625rem;
+  font-size: var(--admin-title-lg);
   font-weight: var(--admin-weight-bold);
   font-variant-numeric: tabular-nums;
 }
@@ -267,7 +264,6 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-size: var(--admin-text-sm);
 }
 
-.admin-cl-metrics span,
 .admin-cl-editor__identity small,
 .admin-cl-preview__heading small,
 .admin-cl-validation summary,
@@ -275,15 +271,8 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-size: var(--admin-text-xs);
 }
 
-.admin-cl-metrics span,
 .admin-cl-validation summary {
   font-weight: var(--admin-weight-semibold);
-}
-
-.admin-cl-metrics strong {
-  font-size: 1.5rem;
-  font-weight: var(--admin-weight-bold);
-  font-variant-numeric: tabular-nums;
 }
 
 .admin-cl-editor__identity h1 {
@@ -292,7 +281,6 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 
 .admin-cl-back,
 .admin-cl-editor__actions .button,
-.admin-cl-tabs button,
 .admin-cl-preview__heading strong,
 .admin-cl-zoom button {
   font-size: var(--admin-text-xs);

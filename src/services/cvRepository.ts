@@ -8,6 +8,7 @@ import type {
   CvRuntimeProject,
   CvRuntimeTool,
 } from "../types/cvContent";
+import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
 
 interface CvContentRow {
   version: string;
@@ -88,7 +89,6 @@ const projectFromRow = (row: CvProjectRow): CvRuntimeProject => {
     cvResponsibilityIds: row.cv_responsibility_ids ?? [],
   };
 };
-
 const toolFromRow = (row: CvToolRow): CvRuntimeTool => ({
   id: row.id,
   name: row.name,
@@ -146,6 +146,15 @@ export const loadCvData = async (options: { adminPreview?: boolean; preferReleas
 
   try {
     if (preferRelease) {
+      try {
+        const activeRelease = await loadActiveProfileDocumentRelease<CvRuntimeData>("cv");
+        if (activeRelease) {
+          activeRelease.content.theme ??= { presetId: activeRelease.content.themeId };
+          return activeRelease;
+        }
+      } catch {
+        // Fall through to the legacy release table until the library migration is applied.
+      }
       const { data, error } = await supabase
         .from("cv_releases")
         .select("payload")
@@ -166,44 +175,4 @@ export const loadCvData = async (options: { adminPreview?: boolean; preferReleas
     console.warn("CV draft could not be loaded from Supabase; using the bundled seed.", error);
     return structuredClone(cvRuntimeSeed);
   }
-};
-
-export const saveCvContent = async (content: CvContent): Promise<void> => {
-  const [cvResult, profileResult] = await Promise.all([
-    supabase.from("cv_content").upsert({
-    id: "primary",
-    version: content.version,
-    theme_id: content.themeId,
-    theme: content.theme,
-    page_one_project_count: content.pageOneProjectCount,
-    profile: content.profile,
-    experiences: content.experiences,
-    education: content.education,
-    skill_groups: content.skillGroups,
-    languages: content.languages,
-    }),
-    supabase.from("professional_profile").upsert({
-      id: "primary",
-      profile: content.profile,
-      experiences: content.experiences,
-      education: content.education,
-      skill_groups: content.skillGroups,
-      languages: content.languages,
-    }),
-  ]);
-  if (cvResult.error) throw cvResult.error;
-  if (profileResult.error) throw profileResult.error;
-};
-
-export const publishCvRelease = async (): Promise<void> => {
-  const data = await loadLiveCvData(true);
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error("Sign in before publishing the CV.");
-  const { error } = await supabase.from("cv_releases").insert({
-    version: data.content.version,
-    payload: data,
-    published_by: authData.user.id,
-  });
-  if (error) throw error;
 };
