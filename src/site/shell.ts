@@ -1,4 +1,5 @@
 import { escapeHtml, localize } from "../shared/format";
+import { websiteNavigationLabels } from "../data/websiteNavigation";
 import type { Profile } from "../types/career";
 import type { WebsiteContent } from "../types/website";
 import { resolveDocumentTheme } from "../themes/documentThemes";
@@ -14,14 +15,14 @@ export const applyWebsiteTheme = (content: WebsiteContent): void => {
   document.documentElement.style.setProperty("--color-accent", theme.tokens.accent);
 };
 
-export const siteHeader = (profile: Profile, content: WebsiteContent, active?: string): string => `
+export const siteHeader = (profile: Profile, _content: WebsiteContent, active?: string): string => `
   <a class="skip-link" href="#main-content">Skip to content</a>
   <header class="page-header">
     <div class="container page-header__inner">
       <a class="site-logo" href="${rootUrl()}" aria-label="${escapeHtml(profile.name)} home">HDL</a>
       <nav class="page-nav" aria-label="Primary navigation">
-        <a ${active === "projects" ? 'aria-current="page"' : ""} href="${rootUrl("projects/")}">${escapeHtml(localize(content.navigation.projects, "en"))}</a>
-        <a ${active === "tools" ? 'aria-current="page"' : ""} href="${rootUrl("tools/")}">${escapeHtml(localize(content.navigation.automation, "en"))}</a>
+        <a ${active === "projects" ? 'aria-current="page"' : ""} href="${rootUrl("projects/")}">${escapeHtml(localize(websiteNavigationLabels.projects, "en"))}</a>
+        <a ${active === "tools" ? 'aria-current="page"' : ""} href="${rootUrl("tools/")}">${escapeHtml(localize(websiteNavigationLabels.automation, "en"))}</a>
         <a href="${rootUrl("cv/")}">CV</a>
         <a href="${rootUrl("portfolio/")}">Portfolio PDF</a>
         <a class="page-nav__admin" href="${rootUrl("admin/")}">

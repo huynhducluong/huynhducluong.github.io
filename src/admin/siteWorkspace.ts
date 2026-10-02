@@ -17,11 +17,18 @@ import { renderDocumentThemeFields } from "./documentThemeFields";
 import { invalidateProfileDocumentWorkspace } from "./profileDocumentWorkspace";
 import { updateCoverLetterSharedProfile } from "./coverLetterWorkspace";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
-import { setButtonBusy } from "./ui";
+import {
+  renderAdminPreviewControlGroup,
+  renderAdminPreviewToolbar,
+  renderAdminSectionCard,
+  setButtonBusy,
+} from "./ui";
 
 export type SiteWorkspaceKind = "homepage" | "profile";
-type WebsiteTab = "general" | "navigation" | "sections" | "featured" | "appearance";
+type WebsiteTab = "general" | "sections" | "featured" | "appearance";
 type ProfileTab = "identity" | "experience" | "education" | "skills";
+type WebsiteViewport = "desktop" | "laptop" | "tablet" | "mobile";
+type WebsitePreviewZoom = "fit" | "75" | "100";
 
 interface WorkspaceCallbacks {
   rerender: () => void;
@@ -36,7 +43,8 @@ const state: {
   error: string;
   websiteTab: WebsiteTab;
   profileTab: ProfileTab;
-  zoom: "desktop" | "laptop" | "tablet" | "mobile";
+  viewport: WebsiteViewport;
+  previewZoom: WebsitePreviewZoom;
   stale: boolean;
 } = {
   runtime: null,
@@ -45,13 +53,21 @@ const state: {
   error: "",
   websiteTab: "general",
   profileTab: "identity",
-  zoom: "desktop",
+  viewport: "desktop",
+  previewZoom: "fit",
   stale: false,
 };
 
 let previewTimer: number | undefined;
 let previewController: EmbeddedPreviewController | undefined;
 let previewSender: PreviewSender | undefined;
+let previewResizeObserver: ResizeObserver | undefined;
+const websiteViewportWidths: Record<WebsiteViewport, number> = {
+  desktop: 1440,
+  laptop: 1280,
+  tablet: 768,
+  mobile: 390,
+};
 const value = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const lines = (text: string): string[] => text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 const commaList = (text: string): string[] => text.split(",").map((item) => item.trim()).filter(Boolean);
@@ -60,7 +76,7 @@ const field = (label: string, name: string, current: string, type = "text"): str
 const area = (label: string, name: string, current: string, rows = 4): string =>
   `<label>${escapeHtml(label)}<textarea name="${escapeHtml(name)}" rows="${rows}">${escapeHtml(current)}</textarea></label>`;
 const bilingual = (label: string, name: string, text: { en: string; vi: string }): string =>
-  `<div class="admin-site-bilingual">${field(`${label} (English)`, `${name}_en`, text.en)}${field(`${label} (Vietnamese)`, `${name}_vi`, text.vi)}</div>`;
+  `<div class="admin-site-bilingual">${field(`${label} (EN)`, `${name}_en`, text.en)}${field(`${label} (VI)`, `${name}_vi`, text.vi)}</div>`;
 
 const readLocalized = (form: FormData, name: string): { en: string; vi: string } => ({
   en: value(form, `${name}_en`),
@@ -101,58 +117,75 @@ export const ensureSiteWorkspace = async (): Promise<void> => {
   }
 };
 
-const websiteGeneral = (content: WebsiteContent): string => `
-  <div class="admin-section-heading"><h3>Release & search metadata</h3><p>Control how the website is identified in search results and browser tabs.</p></div>
-  <div class="admin-form-grid">${field("Website version", "website_version", content.version)}</div>
-  ${bilingual("SEO title", "seo_title", content.seoTitle)}
-  <div class="admin-site-bilingual">${area("SEO description (English)", "seo_description_en", content.seoDescription.en, 4)}${area("SEO description (Vietnamese)", "seo_description_vi", content.seoDescription.vi, 4)}</div>
-  <div class="admin-section-heading"><h3>Hero metadata</h3><p>The main identity comes from Professional Profile.</p></div>
-  ${bilingual("Hero eyebrow", "hero_eyebrow", content.heroEyebrow)}
-  ${bilingual("Professional focus", "focus", content.focus)}
-  ${bilingual("Specialization", "specialization", content.specialization)}
-  <div class="admin-section-heading"><h3>Listing pages</h3><p>Manage the introduction shown above the published Projects and Automation Tools collections.</p></div>
-  ${bilingual("Projects page kicker", "projects_page_kicker", content.projectsPage.kicker)}
-  ${bilingual("Projects page title", "projects_page_title", content.projectsPage.title)}
-  <div class="admin-site-bilingual">${area("Projects page description (English)", "projects_page_description_en", content.projectsPage.description.en, 3)}${area("Projects page description (Vietnamese)", "projects_page_description_vi", content.projectsPage.description.vi, 3)}</div>
-  ${bilingual("Tools page kicker", "tools_page_kicker", content.toolsPage.kicker)}
-  ${bilingual("Tools page title", "tools_page_title", content.toolsPage.title)}
-  <div class="admin-site-bilingual">${area("Tools page description (English)", "tools_page_description_en", content.toolsPage.description.en, 3)}${area("Tools page description (Vietnamese)", "tools_page_description_vi", content.toolsPage.description.vi, 3)}</div>`;
+const websiteGeneral = (content: WebsiteContent): string => [
+  renderAdminSectionCard({
+    title: "Website SEO",
+    note: "Edit browser and search-result titles and descriptions.",
+    content: `${bilingual("SEO title", "seo_title", content.seoTitle)}
+      <div class="admin-site-bilingual">${area("SEO description (EN)", "seo_description_en", content.seoDescription.en, 4)}${area("SEO description (VI)", "seo_description_vi", content.seoDescription.vi, 4)}</div>`,
+  }),
+  renderAdminSectionCard({
+    title: "Website hero",
+    note: "Edit the homepage introduction shown above the main content.",
+    content: `${bilingual("Hero eyebrow", "hero_eyebrow", content.heroEyebrow)}
+      ${bilingual("Professional focus", "focus", content.focus)}
+      ${bilingual("Specialization", "specialization", content.specialization)}`,
+  }),
+  renderAdminSectionCard({
+    title: "Website listings",
+    note: "Set introductions for the Projects and Automation pages.",
+    content: `${bilingual("Projects page kicker", "projects_page_kicker", content.projectsPage.kicker)}
+      ${bilingual("Projects page title", "projects_page_title", content.projectsPage.title)}
+      <div class="admin-site-bilingual">${area("Projects page description (EN)", "projects_page_description_en", content.projectsPage.description.en, 3)}${area("Projects page description (VI)", "projects_page_description_vi", content.projectsPage.description.vi, 3)}</div>
+      ${bilingual("Tools page kicker", "tools_page_kicker", content.toolsPage.kicker)}
+      ${bilingual("Tools page title", "tools_page_title", content.toolsPage.title)}
+      <div class="admin-site-bilingual">${area("Tools page description (EN)", "tools_page_description_en", content.toolsPage.description.en, 3)}${area("Tools page description (VI)", "tools_page_description_vi", content.toolsPage.description.vi, 3)}</div>`,
+  }),
+].join("");
 
-const websiteNavigation = (content: WebsiteContent): string => `
-  <div class="admin-section-heading"><h3>Primary navigation</h3><p>Keep labels short so the desktop and mobile navigation remain clear.</p></div>
-  ${bilingual("Expertise", "nav_expertise", content.navigation.expertise)}
-  ${bilingual("Experience", "nav_experience", content.navigation.experience)}
-  ${bilingual("Projects", "nav_projects", content.navigation.projects)}
-  ${bilingual("Automation", "nav_automation", content.navigation.automation)}`;
+const sectionGroup = (
+  order: string,
+  id: keyof WebsiteContent["sections"],
+  title: string,
+  enabled: boolean,
+  fields: string,
+): string => `<article class="admin-site-section-group">
+  <header class="admin-site-section-group__header">
+    <div class="admin-site-section-group__identity"><span>${order}</span><h4>${escapeHtml(title)}</h4></div>
+    <label class="admin-site-section-visibility">
+      <span class="admin-site-section-status admin-site-section-status--shown">Shown</span>
+      <span class="admin-site-section-status admin-site-section-status--hidden">Hidden</span>
+      <input name="section_${id}" type="checkbox" aria-label="Show ${escapeHtml(title)} section"${enabled ? " checked" : ""}>
+      <span class="admin-site-section-switch" aria-hidden="true"></span>
+    </label>
+  </header>
+  <div class="admin-site-section-group__body">${fields}</div>
+</article>`;
 
-const sectionRow = (id: keyof WebsiteContent["sections"], title: string, enabled: boolean): string =>
-  `<label class="admin-site-section-toggle"><input name="section_${id}" type="checkbox"${enabled ? " checked" : ""}><span><strong>${escapeHtml(title)}</strong><small>Show this section in the next Website release</small></span></label>`;
+const websiteSections = (content: WebsiteContent): string => renderAdminSectionCard({
+  title: "Website sections",
+  note: "Choose homepage visibility and edit each section heading.",
+  content: `<div class="admin-site-section-list">
+    ${sectionGroup("01", "expertise", "Expertise", content.sections.expertise, bilingual("Heading", "expertise_title", content.expertiseTitle))}
+    ${sectionGroup("02", "experience", "Experience", content.sections.experience, bilingual("Heading", "experience_title", content.experienceTitle))}
+    ${sectionGroup("03", "projects", "Projects", content.sections.projects, bilingual("Heading", "projects_title", content.projectsTitle))}
+    ${sectionGroup("04", "automation", "Automation", content.sections.automation, bilingual("Heading", "automation_title", content.automationTitle))}
+    ${sectionGroup("05", "contact", "Contact", content.sections.contact, `${bilingual("Kicker", "contact_kicker", content.contactKicker)}
+      ${bilingual("Heading", "contact_title", content.contactTitle)}
+      ${bilingual("Footer text", "footer_text", content.footerText)}`)}
+  </div>`,
+});
 
-const websiteSections = (content: WebsiteContent): string => `
-  <div class="admin-section-heading"><h3>Homepage sections</h3><p>Choose visibility and edit the main heading for each section.</p></div>
-  <div class="admin-site-section-list">
-    ${sectionRow("expertise", "Expertise", content.sections.expertise)}
-    ${bilingual("Expertise heading", "expertise_title", content.expertiseTitle)}
-    ${sectionRow("experience", "Experience", content.sections.experience)}
-    ${bilingual("Experience heading", "experience_title", content.experienceTitle)}
-    ${sectionRow("projects", "Projects", content.sections.projects)}
-    ${bilingual("Projects heading", "projects_title", content.projectsTitle)}
-    ${sectionRow("automation", "Automation", content.sections.automation)}
-    ${bilingual("Automation heading", "automation_title", content.automationTitle)}
-    ${sectionRow("contact", "Contact", content.sections.contact)}
-    ${bilingual("Contact kicker", "contact_kicker", content.contactKicker)}
-    ${bilingual("Contact heading", "contact_title", content.contactTitle)}
-    ${bilingual("Footer text", "footer_text", content.footerText)}
-  </div>`;
-
-const websiteFeatured = (runtime: WebsiteRuntimeData): string => `
-  <div class="admin-section-heading"><h3>Featured content</h3><p>Only records with Published status are included when a Website release is created.</p></div>
-  <div class="admin-site-featured">
+const websiteFeatured = (runtime: WebsiteRuntimeData): string => renderAdminSectionCard({
+  title: "Website featured content",
+  note: "Choose published Projects and Tools for the next release.",
+  content: `<div class="admin-site-featured">
     <h4>Projects</h4>
     ${runtime.projects.map((item) => `<label><input type="checkbox" name="featured_project" value="${escapeHtml(item.id)}"${item.featured ? " checked" : ""}><span><strong>${escapeHtml(item.name.en)}</strong><small>${item.status} · ${escapeHtml(item.slug)}</small></span></label>`).join("")}
     <h4>Automation tools</h4>
     ${runtime.tools.map((item) => `<label><input type="checkbox" name="featured_tool" value="${escapeHtml(item.id)}"${item.featured ? " checked" : ""}><span><strong>${escapeHtml(item.name)}</strong><small>${item.status} · ${escapeHtml(item.slug)}</small></span></label>`).join("")}
-  </div>`;
+  </div>`,
+});
 
 const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
   const current = state.runtime!;
@@ -161,15 +194,9 @@ const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
   const toolIds = new Set(form.getAll("featured_tool").map(String));
   const content: WebsiteContent = {
     ...current.content,
-    version: value(form, "website_version") || websiteContentSeed.version,
+    version: current.content.version || websiteContentSeed.version,
     seoTitle: readLocalized(form, "seo_title"),
     seoDescription: readLocalized(form, "seo_description"),
-    navigation: {
-      expertise: readLocalized(form, "nav_expertise"),
-      experience: readLocalized(form, "nav_experience"),
-      projects: readLocalized(form, "nav_projects"),
-      automation: readLocalized(form, "nav_automation"),
-    },
     heroEyebrow: readLocalized(form, "hero_eyebrow"),
     focus: readLocalized(form, "focus"),
     specialization: readLocalized(form, "specialization"),
@@ -207,49 +234,65 @@ const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
   };
 };
 
-const profileIdentity = (professional: ProfessionalProfileContent): string => `
-  <div class="admin-section-heading"><h3>Professional identity</h3><p>This is the shared source for Website, CV, Portfolio sync and Cover Letter sender details.</p></div>
-  <div class="admin-form-grid">
+const profileIdentity = (professional: ProfessionalProfileContent): string => renderAdminSectionCard({
+  title: "Profile identity",
+  note: "Shared contact and profile details used across all outputs.",
+  content: `<div class="admin-form-grid">
     ${field("Full name", "profile_name", professional.profile.name)}
     ${field("Email", "profile_email", professional.profile.email, "email")}
     ${field("Phone", "profile_phone", professional.profile.phone, "tel")}
     ${field("Photo path", "profile_photo", professional.profile.photoPath)}
-    ${field("Professional title (English)", "profile_title_en", professional.profile.professionalTitle.en)}
-    ${field("Professional title (Vietnamese)", "profile_title_vi", professional.profile.professionalTitle.vi)}
-    ${field("Location (English)", "profile_location_en", professional.profile.location.en)}
-    ${field("Location (Vietnamese)", "profile_location_vi", professional.profile.location.vi)}
+    ${field("Professional title (EN)", "profile_title_en", professional.profile.professionalTitle.en)}
+    ${field("Professional title (VI)", "profile_title_vi", professional.profile.professionalTitle.vi)}
+    ${field("Location (EN)", "profile_location_en", professional.profile.location.en)}
+    ${field("Location (VI)", "profile_location_vi", professional.profile.location.vi)}
   </div>
-  <div class="admin-site-bilingual">${area("Summary (English)", "profile_summary_en", professional.profile.summary.en, 6)}${area("Summary (Vietnamese)", "profile_summary_vi", professional.profile.summary.vi, 6)}</div>`;
+  <div class="admin-site-bilingual">${area("Summary (EN)", "profile_summary_en", professional.profile.summary.en, 6)}${area("Summary (VI)", "profile_summary_vi", professional.profile.summary.vi, 6)}</div>`,
+});
 
-const profileExperience = (professional: ProfessionalProfileContent): string => `
-  <div class="admin-section-heading"><h3>Experience</h3><p>Shared career history used by Website and CV.</p></div>
-  <div class="admin-document-cards">${professional.experiences.map((item, index) => `<article><h4>${escapeHtml(item.company)}</h4><div class="admin-form-grid">
+const profileExperience = (professional: ProfessionalProfileContent): string => renderAdminSectionCard({
+  title: "Profile experience",
+  note: "Shared career history used by the Website and CV.",
+  content: `<div class="admin-document-cards">${professional.experiences.map((item, index) => `<article><h4>${escapeHtml(item.company)}</h4><div class="admin-form-grid">
     ${field("Company", `profile_experience_company_${index}`, item.company)}
-    ${field("Position (English)", `profile_experience_position_en_${index}`, item.position.en)}
-    ${field("Position (Vietnamese)", `profile_experience_position_vi_${index}`, item.position.vi)}
-    ${field("Location (English)", `profile_experience_location_en_${index}`, item.location.en)}
-    ${field("Location (Vietnamese)", `profile_experience_location_vi_${index}`, item.location.vi)}
+    ${field("Position (EN)", `profile_experience_position_en_${index}`, item.position.en)}
+    ${field("Position (VI)", `profile_experience_position_vi_${index}`, item.position.vi)}
+    ${field("Location (EN)", `profile_experience_location_en_${index}`, item.location.en)}
+    ${field("Location (VI)", `profile_experience_location_vi_${index}`, item.location.vi)}
     ${field("Start", `profile_experience_start_${index}`, item.startDate, "month")}
     ${field("End (blank = Present)", `profile_experience_end_${index}`, item.endDate ?? "", "month")}
-  </div>${area("Responsibilities (one English item per line)", `profile_experience_responsibilities_${index}`, item.responsibilities.map((point) => point.text.en).join("\n"), 4)}${field("Technologies", `profile_experience_technologies_${index}`, item.technologies.join(", "))}</article>`).join("")}</div>`;
+  </div>${area("Responsibilities (one EN item per line)", `profile_experience_responsibilities_${index}`, item.responsibilities.map((point) => point.text.en).join("\n"), 4)}${field("Technologies", `profile_experience_technologies_${index}`, item.technologies.join(", "))}</article>`).join("")}</div>`,
+});
 
-const profileEducation = (professional: ProfessionalProfileContent): string => `
-  <div class="admin-section-heading"><h3>Education</h3><p>Education is stored once and included in CV snapshots.</p></div>
-  <div class="admin-document-cards">${professional.education.map((item, index) => `<article><h4>Education ${index + 1}</h4><div class="admin-form-grid">
-    ${field("Field (English)", `profile_education_field_en_${index}`, item.field.en)}
-    ${field("Field (Vietnamese)", `profile_education_field_vi_${index}`, item.field.vi)}
-    ${field("Institution (English)", `profile_education_institution_en_${index}`, item.institution.en)}
-    ${field("Institution (Vietnamese)", `profile_education_institution_vi_${index}`, item.institution.vi)}
+const profileEducation = (professional: ProfessionalProfileContent): string => renderAdminSectionCard({
+  title: "Profile education",
+  note: "Education saved once and reused in CV snapshots.",
+  content: `<div class="admin-document-cards">${professional.education.map((item, index) => `<article><h4>Education ${index + 1}</h4><div class="admin-form-grid">
+    ${field("Field (EN)", `profile_education_field_en_${index}`, item.field.en)}
+    ${field("Field (VI)", `profile_education_field_vi_${index}`, item.field.vi)}
+    ${field("Institution (EN)", `profile_education_institution_en_${index}`, item.institution.en)}
+    ${field("Institution (VI)", `profile_education_institution_vi_${index}`, item.institution.vi)}
     ${field("Start year", `profile_education_start_${index}`, item.startDate)}
     ${field("End year", `profile_education_end_${index}`, item.endDate)}
-  </div></article>`).join("")}</div>`;
+  </div></article>`).join("")}</div>`,
+});
 
-const profileSkills = (professional: ProfessionalProfileContent): string => `
-  <div class="admin-section-heading"><h3>Skills & languages</h3><p>These lists feed the Website expertise section and CV.</p></div>
-  <div class="admin-document-cards">
-    ${professional.skillGroups.map((group, index) => `<article><h4>${escapeHtml(group.title.en)}</h4><div class="admin-form-grid">${field("Group title (English)", `profile_skill_title_en_${index}`, group.title.en)}${field("Group title (Vietnamese)", `profile_skill_title_vi_${index}`, group.title.vi)}</div>${area("Items (one per line)", `profile_skill_items_${index}`, group.items.map((item) => item.label.en).join("\n"), 5)}</article>`).join("")}
-    ${professional.languages.map((item, index) => `<article><h4>Language ${index + 1}</h4><div class="admin-form-grid">${field("Name (English)", `profile_language_name_en_${index}`, item.name.en)}${field("Name (Vietnamese)", `profile_language_name_vi_${index}`, item.name.vi)}${field("Proficiency (English)", `profile_language_level_en_${index}`, item.proficiency?.en ?? "")}${field("Proficiency (Vietnamese)", `profile_language_level_vi_${index}`, item.proficiency?.vi ?? "")}</div></article>`).join("")}
-  </div>`;
+const profileSkills = (professional: ProfessionalProfileContent): string => [
+  renderAdminSectionCard({
+    title: "Profile skills",
+    note: "Skill groups used by Website expertise and CV.",
+    content: `<div class="admin-document-cards">
+      ${professional.skillGroups.map((group, index) => `<article><h4>${escapeHtml(group.title.en)}</h4><div class="admin-form-grid">${field("Group title (EN)", `profile_skill_title_en_${index}`, group.title.en)}${field("Group title (VI)", `profile_skill_title_vi_${index}`, group.title.vi)}</div>${area("Items (one per line)", `profile_skill_items_${index}`, group.items.map((item) => item.label.en).join("\n"), 5)}</article>`).join("")}
+    </div>`,
+  }),
+  renderAdminSectionCard({
+    title: "Profile languages",
+    note: "Keep language names and proficiency aligned in EN and VI.",
+    content: `<div class="admin-document-cards">
+      ${professional.languages.map((item, index) => `<article><h4>Language ${index + 1}</h4><div class="admin-form-grid">${field("Name (EN)", `profile_language_name_en_${index}`, item.name.en)}${field("Name (VI)", `profile_language_name_vi_${index}`, item.name.vi)}${field("Proficiency (EN)", `profile_language_level_en_${index}`, item.proficiency?.en ?? "")}${field("Proficiency (VI)", `profile_language_level_vi_${index}`, item.proficiency?.vi ?? "")}</div></article>`).join("")}
+    </div>`,
+  }),
+].join("");
 
 const readProfileForm = (formElement: HTMLFormElement): ProfessionalProfileContent => {
   const current = state.runtime!.professional;
@@ -302,20 +345,49 @@ const websiteView = (): string => {
   const content = runtime.content;
   const tab = state.websiteTab;
   const latest = state.releases[0];
+  const releaseHistory = state.releases.length
+    ? `<ol class="admin-release-history__list">${state.releases.map((item, index) => `<li><div><strong>${index === 0 ? "Latest release" : "Published release"}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
+    : '<p class="admin-empty">No Website release has been published yet.</p>';
+  const viewportControls = renderAdminPreviewControlGroup({
+    label: "Website viewport",
+    dataAttribute: "data-website-viewport",
+    activeValue: state.viewport,
+    options: [
+      { label: "Desktop", value: "desktop" },
+      { label: "Laptop", value: "laptop" },
+      { label: "Tablet", value: "tablet" },
+      { label: "Mobile", value: "mobile" },
+    ],
+  });
+  const zoomControls = renderAdminPreviewControlGroup({
+    label: "Preview zoom",
+    dataAttribute: "data-website-zoom",
+    activeValue: state.previewZoom,
+    options: [
+      { label: "Fit", value: "fit" },
+      { label: "75%", value: "75" },
+      { label: "100%", value: "100" },
+    ],
+  });
+  const previewToolbar = renderAdminPreviewToolbar({
+    title: "Website preview",
+    meta: 'Live draft · <span data-preview-status>Connecting…</span>',
+    controls: `${viewportControls}${zoomControls}`,
+  });
   return `<section class="admin-site-workspace">
-    <header class="admin-document-header"><div><p class="section-kicker">Website</p><h1>Homepage</h1><p><span class="status status--draft">Draft</span>${latest ? `Published ${new Date(latest.publishedAt).toLocaleString()} · ${escapeHtml(latest.version)}` : "Not published yet"}</p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button><button class="button admin-action-publish" type="button" data-publish-website>Publish</button></div></header>
+    <header class="admin-document-header"><div><p class="section-kicker">Website</p><h1>Homepage</h1><p><span class="status status--draft">Draft</span>${latest ? `Last published ${new Date(latest.publishedAt).toLocaleString()}` : "Not published yet"}</p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button><button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button><button class="button admin-action-publish" type="button" data-publish-website>Publish</button></div></header>
     <div class="admin-document-layout">
-      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Website editor sections">${([["general","General & SEO"],["navigation","Navigation"],["sections","Sections"],["featured","Featured content"],["appearance","Appearance"]] as Array<[WebsiteTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-website-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav>
+      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Website editor sections">${([["general","General & SEO"],["sections","Sections"],["featured","Featured content"],["appearance","Appearance"]] as Array<[WebsiteTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-website-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav>
         <form id="website-editor-form" data-website-form>
           <section data-website-panel="general"${tab === "general" ? "" : " hidden"}>${websiteGeneral(content)}</section>
-          <section data-website-panel="navigation"${tab === "navigation" ? "" : " hidden"}>${websiteNavigation(content)}</section>
           <section data-website-panel="sections"${tab === "sections" ? "" : " hidden"}>${websiteSections(content)}</section>
           <section data-website-panel="featured"${tab === "featured" ? "" : " hidden"}>${websiteFeatured(runtime)}</section>
-          <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}><div class="admin-section-heading"><h3>Website appearance</h3><p>Use a controlled brand theme while preserving the existing layout.</p></div>${themeFields(content.theme)}</section>
+          <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: "Website appearance", note: "Choose the brand theme for the next Website release.", content: themeFields(content.theme) })}</section>
         </form>
       </section>
-      <aside class="admin-site-preview"><div class="admin-document-preview__toolbar"><div><strong>Website draft preview</strong><span data-preview-status>Connecting preview…</span></div><div>${(["desktop","laptop","tablet","mobile"] as const).map((size) => `<button type="button" data-website-viewport="${size}" class="${state.zoom === size ? "is-active" : ""}">${size[0].toUpperCase() + size.slice(1)}</button>`).join("")}<a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">Public ↗</a></div></div><div class="admin-site-frame" data-viewport="${state.zoom}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="Website draft preview" src="${import.meta.env.BASE_URL}?preview=1&embedded=1" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div><details class="admin-document-releases"><summary>Website release history (${state.releases.length})</summary>${state.releases.length ? `<ol>${state.releases.map((item) => `<li><strong>${escapeHtml(item.version)}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></li>`).join("")}</ol>` : "<p>No release has been published.</p>"}</details></aside>
+      <aside class="admin-site-preview">${previewToolbar}<div class="admin-site-frame" data-viewport="${state.viewport}" data-zoom="${state.previewZoom}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="Website draft preview" src="${import.meta.env.BASE_URL}?preview=1&embedded=1" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div></aside>
     </div>
+    <dialog class="admin-dialog admin-release-history" data-website-history-dialog aria-labelledby="website-release-history-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-release-history-title">Release history</h2><p>Versions are generated automatically when a release is published.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-website-history-close>Close</button></div></form></dialog>
   </section>`;
 };
 
@@ -326,11 +398,7 @@ const profileView = (): string => {
     <header class="admin-document-header"><div><p class="section-kicker">Shared content</p><h1>Professional Profile</h1><p>Single source for Website, Curriculum Vitae, Portfolio and Cover Letters</p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button></div></header>
     <div class="admin-profile-layout">
       <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["experience","Experience"],["education","Education"],["skills","Skills & languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section></form></section>
-      <aside class="admin-site-preview admin-profile-preview">
-        <div class="admin-document-preview__toolbar"><div><strong>Live Website preview</strong><span data-preview-status>Connecting preview…</span></div><div>${(["desktop","laptop","tablet","mobile"] as const).map((size) => `<button type="button" data-website-viewport="${size}" class="${state.zoom === size ? "is-active" : ""}">${size[0].toUpperCase() + size.slice(1)}</button>`).join("")}<a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">Public ↗</a></div></div>
-        <div class="admin-site-frame" data-viewport="${state.zoom}" tabindex="0" aria-label="Scrollable website profile preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="Website profile preview" src="${import.meta.env.BASE_URL}?preview=1&embedded=1" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div>
-        <div class="admin-profile-usage"><p class="section-kicker">Used by</p><h2>One profile, four outputs</h2><div><article><strong>Website</strong><span>Previewed live here and applied to the next Website release.</span></article><article><strong>Curriculum Vitae</strong><span>Use “Sync from Professional Profile” in the CV draft before publishing.</span></article><article><strong>Portfolio</strong><span>Sync directly from the Professional Profile or from the active CV draft.</span></article><article><strong>Cover Letters</strong><span>Drafts use the saved profile; finalized letters retain their sender snapshot.</span></article></div><p>Published releases and finalized letters remain unchanged.</p></div>
-      </aside>
+      <aside class="admin-profile-usage"><p class="section-kicker">Used by</p><h2>One profile, four outputs</h2><div><article><strong>Website</strong><span>Applied when the next Website release is published.</span></article><article><strong>Curriculum Vitae</strong><span>Use “Sync from Professional Profile” in the CV draft before publishing.</span></article><article><strong>Portfolio</strong><span>Sync from the Professional Profile or from the active CV draft.</span></article><article><strong>Cover Letters</strong><span>Drafts use the saved profile; finalized letters retain their sender snapshot.</span></article></div><p>Published releases and finalized letters remain unchanged.</p></aside>
     </div>
   </section>`;
 };
@@ -344,12 +412,19 @@ export const siteWorkspaceView = (kind: SiteWorkspaceKind): string => {
 
 const sendPreview = (): void => previewSender?.send();
 
+const automaticWebsiteVersion = (date = new Date()): string => {
+  const pad = (value: number): string => String(value).padStart(2, "0");
+  return `${date.getFullYear()}.${pad(date.getMonth() + 1)}.${pad(date.getDate())}-${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`;
+};
+
 export const discardSiteChanges = (): void => {
   if (previewTimer !== undefined) window.clearTimeout(previewTimer);
   previewSender?.disconnect();
   previewSender = undefined;
   previewController?.disconnect();
   previewController = undefined;
+  previewResizeObserver?.disconnect();
+  previewResizeObserver = undefined;
 };
 
 export const markSiteWorkspaceStale = (): void => {
@@ -361,26 +436,40 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const profileForm = root.querySelector<HTMLFormElement>("[data-profile-form]");
   const previewIframe = root.querySelector<HTMLIFrameElement>("[data-website-iframe]");
   const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
+  const previewFrame = root.querySelector<HTMLElement>(".admin-site-frame");
   previewSender?.disconnect();
   previewSender = undefined;
   previewController?.disconnect();
   previewController = previewIframe && previewStage
     ? bindEmbeddedPreview(previewIframe, previewStage, { measurementHeight: 900 })
     : undefined;
-  previewSender = previewIframe && (websiteForm || profileForm)
-    ? bindPreviewSender(previewIframe, "website", () => websiteForm
-      ? readWebsiteForm(websiteForm)
-      : { ...state.runtime!, professional: readProfileForm(profileForm!) }, () => {
+  const syncWebsitePreviewScale = (): void => {
+    if (!previewFrame || !previewStage) return;
+    if (state.previewZoom === "fit") {
+      const availableWidth = Math.max(previewFrame.clientWidth - 32, 1);
+      const scale = Math.min(1, availableWidth / websiteViewportWidths[state.viewport]);
+      previewStage.style.setProperty("--preview-scale", String(scale));
+    } else {
+      previewStage.style.removeProperty("--preview-scale");
+    }
+    previewController?.refresh();
+  };
+  previewResizeObserver?.disconnect();
+  previewResizeObserver = previewFrame ? new ResizeObserver(syncWebsitePreviewScale) : undefined;
+  if (previewFrame) previewResizeObserver?.observe(previewFrame);
+  syncWebsitePreviewScale();
+  previewSender = previewIframe && websiteForm
+    ? bindPreviewSender(previewIframe, "website", () => readWebsiteForm(websiteForm), () => {
         previewController?.refresh();
         const status = root.querySelector<HTMLElement>("[data-preview-status]");
-        if (status) status.textContent = "Live unsaved draft";
+        if (status) status.textContent = "Auto-updating";
       })
     : undefined;
   const markDirty = (): void => {
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-site-save-state]");
     if (status) status.textContent = "Unsaved changes";
-    if (previewSender) {
+    if (websiteForm && previewSender) {
       if (previewTimer !== undefined) window.clearTimeout(previewTimer);
       previewTimer = window.setTimeout(sendPreview, 180);
     }
@@ -420,12 +509,28 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     root.querySelectorAll<HTMLElement>("[data-profile-panel]").forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== state.profileTab; });
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-website-viewport]").forEach((button) => button.addEventListener("click", () => {
-    state.zoom = button.dataset.websiteViewport as typeof state.zoom;
-    const frame = root.querySelector<HTMLElement>(".admin-site-frame");
-    if (frame) frame.dataset.viewport = state.zoom;
-    previewController?.refresh();
-    root.querySelectorAll<HTMLButtonElement>("[data-website-viewport]").forEach((item) => item.classList.toggle("is-active", item === button));
+    state.viewport = button.dataset.websiteViewport as WebsiteViewport;
+    if (previewFrame) previewFrame.dataset.viewport = state.viewport;
+    syncWebsitePreviewScale();
+    root.querySelectorAll<HTMLButtonElement>("[data-website-viewport]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
   }));
+  root.querySelectorAll<HTMLButtonElement>("[data-website-zoom]").forEach((button) => button.addEventListener("click", () => {
+    state.previewZoom = button.dataset.websiteZoom as WebsitePreviewZoom;
+    if (previewFrame) previewFrame.dataset.zoom = state.previewZoom;
+    syncWebsitePreviewScale();
+    root.querySelectorAll<HTMLButtonElement>("[data-website-zoom]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
+  }));
+  const releaseHistoryDialog = root.querySelector<HTMLDialogElement>("[data-website-history-dialog]");
+  root.querySelector<HTMLButtonElement>("[data-website-history-open]")?.addEventListener("click", () => releaseHistoryDialog?.showModal());
+  root.querySelector<HTMLButtonElement>("[data-website-history-close]")?.addEventListener("click", () => releaseHistoryDialog?.close());
   websiteForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     const saveButton = root.querySelector<HTMLButtonElement>('[form="website-editor-form"].admin-action-save');
@@ -459,11 +564,15 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });
   });
   root.querySelector<HTMLButtonElement>("[data-publish-website]")?.addEventListener("click", (event) => {
-    if (!websiteForm || !window.confirm("Publish the current Website draft as a new public release?")) return;
+    if (!websiteForm || !window.confirm("Publish the current Website draft as a new public release? A version will be generated automatically.")) return;
     const publishButton = event.currentTarget as HTMLButtonElement;
     setButtonBusy(publishButton, true, "Publishing…");
     void (async () => {
-      const runtime = readWebsiteForm(websiteForm);
+      const draft = readWebsiteForm(websiteForm);
+      const runtime: WebsiteRuntimeData = {
+        ...draft,
+        content: { ...draft.content, version: automaticWebsiteVersion() },
+      };
       await saveWebsiteContent(runtime.content);
       await saveWebsiteFeatured(runtime);
       state.runtime = runtime;

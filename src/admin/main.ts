@@ -11,7 +11,7 @@ import "../styles/admin-ui.css";
 import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
-import { bindAdminTablists } from "./ui";
+import { bindAdminTablists, renderAdminSectionCard } from "./ui";
 import { portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
 import { escapeHtml } from "../shared/format";
 import { supabase } from "../services/supabaseClient";
@@ -492,7 +492,7 @@ const mediaLibrary = (project: AdminProjectRow): string => {
   return `<div class="admin-media-grid">${media.map((item, index) => `
     <article class="admin-media-card" data-media-id="${escapeHtml(item.id)}">
       <div class="admin-media-card__image"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
-      <label>Alt text (English)<input value="${escapeHtml(item.alt.en)}" data-media-alt></label>
+      <label>Alt text (EN)<input value="${escapeHtml(item.alt.en)}" data-media-alt></label>
       <div class="admin-media-card__actions">
         <button type="button" data-media-cover ${item.kind === "cover" ? "disabled" : ""}>Set Cover</button>
         <button type="button" data-media-move="up" ${index === 0 ? "disabled" : ""} aria-label="Move image earlier">↑</button>
@@ -523,35 +523,44 @@ const editor = (project: AdminProjectRow): string => `
     <form id="project-editor" class="admin-editor" data-project-form>
       <input name="id" type="hidden" value="${escapeHtml(project.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
-        <div class="admin-section-heading"><h3>Project identity</h3><p>Core information used across the website and documents.</p></div>
-        <div class="admin-form-grid">
-          ${field("Project name (English) *", "name_en", project.name.en)}${field("Project name (Vietnamese)", "name_vi", project.name.vi)}
-          ${field("Role (English)", "role_en", project.role?.en ?? "")}${field("Role (Vietnamese)", "role_vi", project.role?.vi ?? "")}
-          ${field("Location (English)", "location_en", project.location.en)}${field("Location (Vietnamese)", "location_vi", project.location.vi)}
+        ${renderAdminSectionCard({
+          title: "Project overview",
+          note: "Edit identity, dates, slug and display order.",
+          content: `<div class="admin-form-grid">
+          ${field("Project name (EN) *", "name_en", project.name.en)}${field("Project name (VI)", "name_vi", project.name.vi)}
+          ${field("Role (EN)", "role_en", project.role?.en ?? "")}${field("Role (VI)", "role_vi", project.role?.vi ?? "")}
+          ${field("Location (EN)", "location_en", project.location.en)}${field("Location (VI)", "location_vi", project.location.vi)}
           ${field("Start", "start_date", project.start_date ?? "", "month")}
           <label>End date<span class="admin-end-date"><input name="end_date" type="month" value="${escapeHtml(project.end_date ?? "")}" ${project.is_current ? "disabled" : ""}><button type="button" data-present-toggle aria-pressed="${project.is_current}">Present</button><input name="is_current" type="hidden" value="${project.is_current ? "true" : "false"}"></span></label>
           ${field("Slug *", "slug", project.slug)}${field("Website order", "display_order", String(project.display_order), "number")}
-        </div>
+        </div>`,
+        })}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
-        <div class="admin-section-heading"><h3>Bilingual content</h3><p>English and Vietnamese fields stay aligned for easier comparison.</p></div>
-        <div class="admin-form-grid"><label>Summary (English)<textarea name="summary_en" rows="7">${escapeHtml(project.summary?.en ?? "")}</textarea></label><label>Summary (Vietnamese)<textarea name="summary_vi" rows="7">${escapeHtml(project.summary?.vi ?? "")}</textarea></label></div>
-        <label>Responsibilities (one English item per line)<textarea name="responsibilities" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label>
-        <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}"></label>
+        ${renderAdminSectionCard({
+          title: "Project content",
+          note: "Edit paired EN and VI project descriptions.",
+          content: `<div class="admin-form-grid"><label>Summary (EN)<textarea name="summary_en" rows="7">${escapeHtml(project.summary?.en ?? "")}</textarea></label><label>Summary (VI)<textarea name="summary_vi" rows="7">${escapeHtml(project.summary?.vi ?? "")}</textarea></label></div>
+            <label>Responsibilities (one EN item per line)<textarea name="responsibilities" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label>
+            <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}"></label>`,
+        })}
       </section>
       <section class="admin-editor-panel" data-editor-panel="distribution" ${panelState("distribution")}>
-        <div class="admin-section-heading"><h3>Publishing channels</h3><p>Control where the project appears and how it is presented.</p></div>
-        <div class="admin-channel-grid">
+        ${renderAdminSectionCard({
+          title: "Project distribution",
+          note: "Choose where this project appears and how it is displayed.",
+          content: `<div class="admin-channel-grid">
           <article><div><strong>Website</strong><small>Public portfolio website</small></div><label class="admin-switch"><input name="featured" type="checkbox" ${project.featured ? "checked" : ""}><span>Featured project</span></label></article>
           <article><div><strong>Portfolio PDF</strong><small>Printable landscape portfolio</small></div><label class="admin-switch"><input name="include_in_portfolio" type="checkbox" ${project.include_in_portfolio ? "checked" : ""}><span>Include in Portfolio</span></label><label>Layout<select name="portfolio_layout"><option value="standard" ${project.portfolio_layout === "standard" ? "selected" : ""}>Standard</option><option value="feature" ${project.portfolio_layout === "feature" ? "selected" : ""}>Feature</option><option value="compact" ${project.portfolio_layout === "compact" ? "selected" : ""}>Compact</option></select></label><label>Order<input name="portfolio_order" type="number" value="${project.portfolio_order}"></label></article>
           <article><div><strong>Curriculum Vitae</strong><small>Published CV project selection</small></div><label class="admin-switch"><input name="include_in_cv" type="checkbox" ${project.include_in_cv ? "checked" : ""}><span>Include in CV</span></label><label>Display<select name="cv_display"><option value="detailed" ${project.cv_display === "detailed" ? "selected" : ""}>Detailed experience</option><option value="compact" ${project.cv_display === "compact" ? "selected" : ""}>Compact project list</option></select></label><label>Order<input name="cv_order" type="number" value="${project.cv_order}"></label><label class="admin-switch"><input name="cv_show_summary" type="checkbox" ${project.cv_show_summary ? "checked" : ""}><span>Show summary</span></label></article>
         </div>
-        ${responsibilityOptions(project)}
+        ${responsibilityOptions(project)}`,
+        })}
       </section>
     </form>
     <div class="admin-media-panel" data-editor-panel="media" ${panelState("media")}>
-      <form class="admin-upload" data-upload-form><div><p class="section-kicker">Project media</p><h3>Upload images</h3><p>Select JPEG, PNG, WebP or AVIF images, maximum 5 MB each.</p></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary" type="submit" data-upload-submit disabled>Upload selected images</button></form>
-      <section class="admin-upload admin-media-library"><div><p class="section-kicker">Saved media</p><h3>Project image library</h3><p>Choose a Cover, edit alt text and control gallery order.</p></div>${mediaLibrary(project)}</section>
+      <form class="admin-upload admin-form-section" data-upload-form><div class="admin-section-heading"><h3 class="admin-form-section__title">Project media</h3><p class="admin-form-section__note" title="Select JPEG, PNG, WebP or AVIF files up to 5 MB.">Select JPEG, PNG, WebP or AVIF files up to 5 MB.</p></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary" type="submit" data-upload-submit disabled>Upload selected images</button></form>
+      <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="Choose the cover image, alt text and gallery order.">Choose the cover image, alt text and gallery order.</p></div>${mediaLibrary(project)}</section>
     </div>
   </section>`;
 
@@ -565,17 +574,13 @@ const toolEditor = (tool: AdminToolRow): string => `
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
-        <div class="admin-section-heading"><h3>Tool identity</h3><p>Core information and display order.</p></div>
-        <div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}${field("Website order", "display_order", String(tool.display_order), "number")}</div>
-        <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>
+        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug, order and technologies.", content: `<div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}${field("Website order", "display_order", String(tool.display_order), "number")}</div><label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>` })}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
-        <div class="admin-section-heading"><h3>Bilingual content</h3><p>Describe the problem, solution and measurable benefit.</p></div>
-        <div class="admin-form-grid"><label>Problem (English)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (Vietnamese)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (English)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (Vietnamese)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (English)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (Vietnamese)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>
+        ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>Problem (EN)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (VI)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (EN)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (VI)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (EN)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (VI)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
       </section>
       <section class="admin-editor-panel" data-editor-panel="distribution" ${panelState("distribution")}>
-        <div class="admin-section-heading"><h3>Publishing channels</h3><p>Choose where this tool is visible.</p></div>
-        <div class="admin-channel-grid"><article><div><strong>Website</strong><small>Public automation tool page</small></div><label class="admin-switch"><input name="featured" type="checkbox" ${tool.featured ? "checked" : ""}><span>Featured tool</span></label></article><article><div><strong>Portfolio PDF</strong><small>Printable portfolio</small></div><label class="admin-switch"><input name="include_in_portfolio" type="checkbox" ${tool.include_in_portfolio ? "checked" : ""}><span>Include in Portfolio</span></label><label>Order<input name="portfolio_order" type="number" value="${tool.portfolio_order}"></label></article><article><div><strong>Curriculum Vitae</strong><small>Published CV</small></div><label class="admin-switch"><input name="include_in_cv" type="checkbox" ${tool.include_in_cv ? "checked" : ""}><span>Include in CV</span></label><label>Order<input name="cv_order" type="number" value="${tool.cv_order}"></label></article></div>
+        ${renderAdminSectionCard({ title: "Tool distribution", note: "Choose where this tool appears.", content: `<div class="admin-channel-grid"><article><div><strong>Website</strong><small>Public automation tool page</small></div><label class="admin-switch"><input name="featured" type="checkbox" ${tool.featured ? "checked" : ""}><span>Featured tool</span></label></article><article><div><strong>Portfolio PDF</strong><small>Printable portfolio</small></div><label class="admin-switch"><input name="include_in_portfolio" type="checkbox" ${tool.include_in_portfolio ? "checked" : ""}><span>Include in Portfolio</span></label><label>Order<input name="portfolio_order" type="number" value="${tool.portfolio_order}"></label></article><article><div><strong>Curriculum Vitae</strong><small>Published CV</small></div><label class="admin-switch"><input name="include_in_cv" type="checkbox" ${tool.include_in_cv ? "checked" : ""}><span>Include in CV</span></label><label>Order<input name="cv_order" type="number" value="${tool.cv_order}"></label></article></div>` })}
       </section>
     </form>
   </section>`;
@@ -720,7 +725,7 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
   const current = projects.find((item) => item.id === String(form.get("id"))) ?? selectedProject ?? blankProject();
   const nameEn = String(form.get("name_en") ?? "").trim();
   const slug = slugify(String(form.get("slug") ?? "") || nameEn);
-  if (!nameEn || !slug) throw new Error("English name and slug are required.");
+  if (!nameEn || !slug) throw new Error("Name (EN) and slug are required.");
   const responsibilities = String(form.get("responsibilities") ?? "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean).map((text, index) => ({
     id: current.responsibilities[index]?.id ?? `${slug}-${index + 1}`,
     text: { en: text, vi: current.responsibilities[index]?.text.vi ?? "" },
@@ -888,7 +893,7 @@ const renderUploadQueue = (): void => {
       <div class="admin-media-card__image"><img src="${item.previewUrl}" alt=""><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
       <strong>${escapeHtml(item.file.name)}</strong><small>${(item.file.size / 1024 / 1024).toFixed(2)} MB</small>
       <label>Use as<select data-pending-kind><option value="cover" ${item.kind === "cover" ? "selected" : ""}>Cover</option><option value="gallery" ${item.kind === "gallery" ? "selected" : ""}>Gallery</option></select></label>
-      <label>Alt text (English)<input value="${escapeHtml(item.alt)}" data-pending-alt></label>
+      <label>Alt text (EN)<input value="${escapeHtml(item.alt)}" data-pending-alt></label>
       <div class="admin-media-card__actions"><button type="button" data-pending-move="up" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-pending-move="down" ${index === pendingMedia.length - 1 ? "disabled" : ""}>↓</button><button type="button" class="admin-danger" data-pending-remove>Remove</button></div>
     </article>`).join("")}</div>` : '<p class="admin-empty">Selected images will appear here before upload.</p>';
   bindPendingMedia();

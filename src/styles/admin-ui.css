@@ -216,6 +216,93 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-shell .admin-message[data-kind="success"] { color: var(--admin-color-success); }
 .admin-shell .admin-message[data-kind="error"] { color: var(--admin-color-danger); }
 
+/* Let form pairs respond to the space inside each editor, including when a
+   sidebar, preview pane, or browser zoom reduces the available width. */
+.admin-editor-panel,
+.admin-document-editor [data-document-panel],
+.admin-site-workspace .admin-document-editor [data-website-panel],
+.admin-profile-workspace .admin-document-editor [data-profile-panel],
+.admin-media-panel,
+.admin-document-cards > article,
+.admin-form-section {
+  container: admin-form / inline-size;
+}
+
+.admin-form-section {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-radius-lg);
+  background: var(--admin-color-surface);
+}
+
+.admin-form-section > .admin-section-heading {
+  display: grid;
+  min-width: 0;
+  gap: .15rem;
+  padding: 0;
+  border: 0;
+}
+
+.admin-form-section > .admin-section-heading .admin-form-section__title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-primary);
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+  letter-spacing: .1em;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.admin-form-section > .admin-section-heading .admin-form-section__note {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-regular);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-form-section__body {
+  display: grid;
+  min-width: 0;
+  gap: 1rem;
+}
+
+.admin-form-section__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: .65rem;
+  padding-top: .9rem;
+  border-top: 1px solid var(--admin-color-border);
+}
+
+.admin-form-grid > label,
+.admin-site-bilingual > label {
+  min-width: 0;
+}
+
+@container admin-form (max-width: 40rem) {
+  .admin-form-grid,
+  .admin-site-bilingual {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-form-section {
+    padding: .85rem;
+  }
+}
+
 .admin-document-tabs,
 .admin-editor-tabs {
   min-height: var(--admin-tabs-height);
@@ -285,7 +372,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   min-height: 0;
 }
 
-.admin-site-preview { grid-template-rows: auto minmax(0, 1fr) auto; }
+.admin-site-preview { grid-template-rows: auto minmax(0, 1fr); }
 
 .admin-profile-usage {
   position: static;
@@ -307,6 +394,126 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-nav {
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+}
+
+.admin-site-preview,
+.admin-document-preview,
+.admin-cl-preview {
+  container-type: inline-size;
+}
+
+.admin-preview-toolbar {
+  display: grid;
+  min-width: 0;
+  min-height: 3.5rem;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .75rem 1rem;
+  padding: .6rem .8rem;
+  border-bottom: 1px solid var(--admin-color-border);
+  background: var(--admin-color-surface-subtle);
+}
+
+.admin-preview-toolbar__identity {
+  min-width: 0;
+}
+
+.admin-preview-toolbar__identity > strong {
+  display: block;
+  overflow: hidden;
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-preview-toolbar__meta {
+  overflow: hidden;
+  margin-top: .12rem;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-preview-toolbar__meta span {
+  display: inline;
+}
+
+.admin-preview-toolbar__meta [data-kind="success"] {
+  color: var(--admin-color-success);
+  font-weight: 800;
+}
+
+.admin-preview-toolbar__meta [data-kind="warning"] {
+  color: var(--admin-color-warning);
+  font-weight: 800;
+}
+
+.admin-preview-toolbar__meta [data-kind="error"] {
+  color: var(--admin-color-danger);
+  font-weight: 800;
+}
+
+.admin-preview-toolbar__controls {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: .5rem;
+}
+
+.admin-preview-toolbar__group {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: .12rem;
+  padding: .2rem;
+  border-radius: .45rem;
+  background: var(--admin-color-surface-muted);
+}
+
+.admin-preview-toolbar__group button {
+  min-height: 1.85rem;
+  padding: .3rem .5rem;
+  border: 0;
+  border-radius: .32rem;
+  background: transparent;
+  color: var(--admin-color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--admin-text-2xs);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-preview-toolbar__group button:hover {
+  color: var(--color-primary-dark);
+}
+
+.admin-preview-toolbar__group button.is-active {
+  background: var(--admin-color-surface);
+  color: var(--color-primary-dark);
+  box-shadow: 0 1px 4px rgb(16 45 59 / 12%);
+}
+
+@container (max-width: 44rem) {
+  .admin-preview-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-preview-toolbar__controls {
+    justify-content: flex-start;
+  }
+}
+
+@container (max-width: 28rem) {
+  .admin-preview-toolbar__controls {
+    flex-wrap: wrap;
+  }
 }
 
 .admin-embedded-preview-stage {
@@ -382,9 +589,6 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 .admin-shell .admin-filter-row button,
 .admin-shell .admin-content-item__actions button,
-.admin-shell .admin-document-preview__toolbar button,
-.admin-shell .admin-document-preview__toolbar a,
-.admin-shell .admin-cl-zoom button,
 .admin-shell .admin-cl-back {
   display: inline-flex;
   min-height: var(--admin-control-height-sm);
@@ -397,14 +601,11 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   line-height: 1.2;
 }
 
-.admin-shell :where(.admin-filter-row button, .admin-content-item__actions button, .admin-document-preview__toolbar button, .admin-document-preview__toolbar a, .admin-cl-zoom button, .admin-cl-back):hover {
+.admin-shell :where(.admin-filter-row button, .admin-content-item__actions button, .admin-cl-back):hover {
   border-color: var(--admin-color-border-strong);
   background: var(--admin-color-hover);
   color: var(--color-primary-dark);
 }
-
-.admin-document-preview__toolbar > div:last-child,
-.admin-cl-zoom { align-items: center; }
 
 .admin-workspace > .admin-placeholder--centered {
   display: grid;
@@ -438,8 +639,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 @media (max-width: 1480px) {
   .admin-document-layout,
-  .admin-site-workspace .admin-document-layout,
-  .admin-profile-layout {
+  .admin-site-workspace .admin-document-layout {
     grid-template-columns: minmax(26rem, .9fr) minmax(28rem, 1.1fr);
   }
 }

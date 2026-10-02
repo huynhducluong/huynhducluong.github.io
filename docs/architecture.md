@@ -28,10 +28,11 @@ Archiving or returning a record to Draft removes it from public queries without 
 ## Admin preview contract
 
 - Website, CV and Portfolio previews exchange the latest unsaved form payload through a same-origin ready/rendered handshake. The iframe announces readiness after Admin authorization, so its first payload cannot be lost during asynchronous startup.
-- Professional Profile includes a live Website preview. CV and Portfolio keep document-specific draft copies and provide explicit sync actions before publishing.
+- Professional Profile remains the shared data editor. Website, CV, Portfolio and Cover Letter previews stay in their own workspaces; CV and Portfolio provide explicit sync actions before publishing.
 - Project and automation-tool changes mark dependent workspaces stale. They reload on the next visit without discarding edits in another open workspace.
 - CV and Portfolio drafts compose current shared Project/Tool records with their saved document settings. Published releases remain immutable snapshots.
 - Cover Letter drafts render directly from the current form. Final and archived letters retain their saved sender snapshot.
+- Website release versions are generated automatically at publish time. Release history remains available from the Homepage header without occupying the preview canvas.
 
 ## Security boundary
 

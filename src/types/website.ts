@@ -14,12 +14,6 @@ export interface WebsiteContent {
   version: string;
   seoTitle: LocalizedText;
   seoDescription: LocalizedText;
-  navigation: {
-    expertise: LocalizedText;
-    experience: LocalizedText;
-    projects: LocalizedText;
-    automation: LocalizedText;
-  };
   heroEyebrow: LocalizedText;
   focus: LocalizedText;
   specialization: LocalizedText;

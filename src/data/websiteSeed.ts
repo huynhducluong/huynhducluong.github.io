@@ -23,12 +23,6 @@ export const websiteContentSeed: WebsiteContent = {
     en: "Infrastructure BIM coordination, model quality and practical automation.",
     vi: "Điều phối BIM hạ tầng, kiểm soát chất lượng mô hình và tự động hóa thực tiễn.",
   },
-  navigation: {
-    expertise: { en: "Expertise", vi: "Chuyên môn" },
-    experience: { en: "Experience", vi: "Kinh nghiệm" },
-    projects: { en: "Projects", vi: "Dự án" },
-    automation: { en: "Automation", vi: "Tự động hóa" },
-  },
   heroEyebrow: {
     en: "BIM · Infrastructure · Automation",
     vi: "BIM · Hạ tầng · Tự động hóa",

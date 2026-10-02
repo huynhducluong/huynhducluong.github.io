@@ -4,6 +4,7 @@ import "./styles/global.css";
 import "./styles/home.css";
 
 import { getAdminAccess } from "./admin/auth";
+import { websiteNavigationItems } from "./data/websiteNavigation";
 import { loadPublishedWebsiteRelease, loadWebsiteDraftData } from "./services/websiteRepository";
 import { resolveDocumentTheme } from "./themes/documentThemes";
 import type { WebsiteRuntimeData } from "./types/website";
@@ -23,7 +24,6 @@ if (!app) {
 
 const copy = {
   en: {
-    nav: ["Expertise", "Experience", "Projects", "Automation"],
     skip: "Skip to content",
     primaryNavigation: "Primary navigation",
     adminLabel: "Open Portfolio administration",
@@ -60,7 +60,6 @@ const copy = {
     languageLabel: "Chuyển sang tiếng Việt",
   },
   vi: {
-    nav: ["Chuyên môn", "Kinh nghiệm", "Dự án", "Tự động hóa"],
     skip: "Đi đến nội dung chính",
     primaryNavigation: "Điều hướng chính",
     adminLabel: "Mở trang quản trị Portfolio",
@@ -114,12 +113,6 @@ const renderPage = (language: Language): void => {
   const baseText = copy[language];
   const text = {
     ...baseText,
-    nav: [
-      localize(content.navigation.expertise, language),
-      localize(content.navigation.experience, language),
-      localize(content.navigation.projects, language),
-      localize(content.navigation.automation, language),
-    ] as readonly string[],
     eyebrow: localize(content.heroEyebrow, language),
     specializationValue: localize(content.specialization, language),
     expertiseTitle: localize(content.expertiseTitle, language),
@@ -134,6 +127,10 @@ const renderPage = (language: Language): void => {
     .filter((project) => project.featured)
     .sort((first, second) => first.displayOrder - second.displayOrder);
   const homeSkills = skillGroups.flatMap((group) => group.items);
+  const navigationLinks = websiteNavigationItems
+    .filter((item) => content.sections[item.section])
+    .map((item) => `<li><a href="${item.href}">${escapeHtml(localize(item.label, language))}</a></li>`)
+    .join("");
 
   document.documentElement.lang = language;
   document.title = localize(content.seoTitle, language);
@@ -161,10 +158,7 @@ const renderPage = (language: Language): void => {
 
         <nav class="site-nav" aria-label="${text.primaryNavigation}">
           <ul class="site-nav__links">
-            <li><a href="#expertise">${text.nav[0]}</a></li>
-            <li><a href="#experience">${text.nav[1]}</a></li>
-            <li><a href="#projects">${text.nav[2]}</a></li>
-            <li><a href="#automation">${text.nav[3]}</a></li>
+            ${navigationLinks}
           </ul>
 
           <button

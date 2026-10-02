@@ -17,7 +17,12 @@ import { applyDocumentTheme, createCustomDocumentTheme, findDocumentTheme } from
 import type { CoverLetterEvidenceOption, CoverLetterInput, CoverLetterRecord, CoverLetterSenderSnapshot, CoverLetterStatus } from "../types/coverLetter";
 import type { ProfessionalProfileContent } from "../types/website";
 import { renderDocumentThemeFields } from "./documentThemeFields";
-import { setButtonBusy } from "./ui";
+import {
+  renderAdminPreviewControlGroup,
+  renderAdminPreviewToolbar,
+  renderAdminSectionCard,
+  setButtonBusy,
+} from "./ui";
 
 type CoverLetterFilter = CoverLetterStatus | "all";
 type CoverLetterEditorTab = "application" | "body" | "evidence" | "appearance" | "notes";
@@ -247,6 +252,21 @@ const emptyWorkspace = (): string => {
 const editorView = (): string => {
   const isLocked = locked();
   const validation = validateCoverLetter(letter);
+  const zoomControls = renderAdminPreviewControlGroup({
+    label: "Preview zoom",
+    dataAttribute: "data-cl-zoom",
+    activeValue: previewZoom,
+    options: [
+      { label: "Fit", value: "fit" },
+      { label: "75%", value: "75" },
+      { label: "100%", value: "100" },
+    ],
+  });
+  const previewToolbar = renderAdminPreviewToolbar({
+    title: isLocked ? "Cover Letter snapshot" : "Cover Letter preview",
+    meta: `A4 · <span data-cl-word-count>${validation.wordCount} words</span> · <span data-cl-fit-state>Checking page…</span>`,
+    controls: zoomControls,
+  });
   return `
     <section class="admin-cl-editor">
       <header class="admin-cl-editor__heading">
@@ -265,45 +285,56 @@ const editorView = (): string => {
           <nav class="admin-editor-tabs" role="tablist" aria-label="Cover letter sections">${tabButton("application", "Application")}${tabButton("body", "Letter body")}${tabButton("evidence", "Evidence")}${tabButton("appearance", "Appearance")}${tabButton("notes", "Notes")}</nav>
           <form id="admin-cover-letter-form" data-cl-form>
             <section class="admin-editor-panel" data-cl-panel="application" ${panelState("application")}>
-              <div class="admin-section-heading"><h3>Application details</h3><p>Identify the role, company and recipient.</p></div>
-              <div class="admin-form-grid">${input("Internal title *", "internalTitle", "text", true)}${input("Application date *", "applicationDate", "date", true)}${input("Company name *", "companyName", "text", true)}${input("Position title *", "positionTitle", "text", true)}${input("Recipient name", "recipientName")}${input("Recipient title", "recipientTitle")}</div>
-              ${textarea("Company address", "companyAddress", 3)}
-              ${input("Salutation *", "salutation", "text", true)}
-              <article class="admin-cl-sender"><div><span>Candidate profile</span><strong>${escapeHtml(record?.senderSnapshot?.name ?? sharedSender.name)}</strong><small>${escapeHtml(record?.senderSnapshot?.professionalTitle ?? sharedSender.professionalTitle)}</small></div><p>The shared Professional Profile is captured as a locked snapshot when the letter is finalized.</p></article>
+              ${renderAdminSectionCard({
+                title: "Application details",
+                note: "Identify the role, company and recipient.",
+                content: `<div class="admin-form-grid">${input("Internal title *", "internalTitle", "text", true)}${input("Application date *", "applicationDate", "date", true)}${input("Company name *", "companyName", "text", true)}${input("Position title *", "positionTitle", "text", true)}${input("Recipient name", "recipientName")}${input("Recipient title", "recipientTitle")}</div>
+                  ${textarea("Company address", "companyAddress", 3)}
+                  ${input("Salutation *", "salutation", "text", true)}
+                  <article class="admin-cl-sender"><div><span>Candidate profile</span><strong>${escapeHtml(record?.senderSnapshot?.name ?? sharedSender.name)}</strong><small>${escapeHtml(record?.senderSnapshot?.professionalTitle ?? sharedSender.professionalTitle)}</small></div><p>The shared Professional Profile is captured as a locked snapshot when the letter is finalized.</p></article>`,
+              })}
             </section>
             <section class="admin-editor-panel" data-cl-panel="body" ${panelState("body")}>
-              <div class="admin-section-heading"><h3>Letter body</h3><p>Keep company claims factual and aim for 250–400 words.</p></div>
-              ${textarea("Opening paragraph *", "openingParagraph", 5, true)}
-              ${textarea("Experience and fit *", "fitParagraph", 7, true)}
-              ${textarea("Why this company *", "companyParagraph", 6, true)}
-              ${textarea("Closing paragraph *", "closingParagraph", 5, true)}
-              ${input("Sign-off *", "signOff", "text", true)}
-              ${isLocked ? "" : '<button class="button button--secondary" type="button" data-cl-starter>Generate safe starter text</button>'}
+              ${renderAdminSectionCard({
+                title: "Letter body",
+                note: "Keep claims factual and aim for 250–400 words.",
+                content: `${textarea("Opening paragraph *", "openingParagraph", 5, true)}
+                  ${textarea("Experience and fit *", "fitParagraph", 7, true)}
+                  ${textarea("Why this company *", "companyParagraph", 6, true)}
+                  ${textarea("Closing paragraph *", "closingParagraph", 5, true)}
+                  ${input("Sign-off *", "signOff", "text", true)}`,
+                actions: isLocked ? undefined : '<button class="button button--secondary" type="button" data-cl-starter>Generate safe starter text</button>',
+              })}
             </section>
             <section class="admin-editor-panel" data-cl-panel="evidence" ${panelState("evidence")}>
-              <div class="admin-section-heading"><h3>Supporting evidence</h3><p>Private editing references only. Published content is listed first.</p></div>
-              <div class="admin-cl-evidence-heading"><h4>Projects</h4><small>${letter.projectIds.length} selected</small></div><div class="evidence-grid">${evidenceChecks(projects, "projectIds")}</div>
-              <div class="admin-cl-evidence-heading"><h4>Automation tools</h4><small>${letter.toolIds.length} selected</small></div><div class="evidence-grid">${evidenceChecks(tools, "toolIds")}</div>
+              ${renderAdminSectionCard({
+                title: "Supporting evidence",
+                note: "Private references only; published content appears first.",
+                content: `<div class="admin-cl-evidence-heading"><h4>Projects</h4><small>${letter.projectIds.length} selected</small></div><div class="evidence-grid">${evidenceChecks(projects, "projectIds")}</div>
+                  <div class="admin-cl-evidence-heading"><h4>Automation tools</h4><small>${letter.toolIds.length} selected</small></div><div class="evidence-grid">${evidenceChecks(tools, "toolIds")}</div>`,
+              })}
             </section>
             <section class="admin-editor-panel" data-cl-panel="appearance" ${panelState("appearance")}>
-              <div class="admin-section-heading"><h3>Document appearance</h3><p>Apply a document preset or use verified company colors.</p></div>
-              ${renderDocumentThemeFields({
-                theme: letter.theme,
-                names: { preset: "themePreset", primary: "themePrimary", accent: "themeAccent" },
-                helpText: "Colors are stored in this draft and frozen when the cover letter is finalized.",
-                compact: true,
-                disabled: isLocked,
-                customLabel: "Custom company colors",
+              ${renderAdminSectionCard({
+                title: "Document appearance",
+                note: "Choose a preset or verified company colors.",
+                content: renderDocumentThemeFields({
+                  theme: letter.theme,
+                  names: { preset: "themePreset", primary: "themePrimary", accent: "themeAccent" },
+                  helpText: "Colors are stored in this draft and frozen when the cover letter is finalized.",
+                  compact: true,
+                  disabled: isLocked,
+                  customLabel: "Custom company colors",
+                }),
               })}
             </section>
             <section class="admin-editor-panel" data-cl-panel="notes" ${panelState("notes")}>
-              <div class="admin-section-heading"><h3>Private notes</h3><p>These notes remain inside Admin and are never printed.</p></div>
-              ${textarea("Notes", "privateNotes", 10)}
+              ${renderAdminSectionCard({ title: "Private notes", note: "Visible only in Admin and never printed.", content: textarea("Notes", "privateNotes", 10) })}
             </section>
           </form>
         </section>
         <aside class="admin-cl-preview">
-          <div class="admin-cl-preview__heading"><div><strong>${isLocked ? "Final A4 snapshot" : "Live A4 preview"}</strong><small><span data-cl-word-count>${validation.wordCount} words</span> · <span data-cl-fit-state>Checking page…</span></small></div><div class="admin-cl-zoom"><button type="button" data-cl-zoom="fit" class="${previewZoom === "fit" ? "is-active" : ""}">Fit</button><button type="button" data-cl-zoom="75" class="${previewZoom === "75" ? "is-active" : ""}">75%</button><button type="button" data-cl-zoom="100" class="${previewZoom === "100" ? "is-active" : ""}">100%</button></div></div>
+          ${previewToolbar}
           <div class="admin-cl-preview-scroll"><div class="admin-cl-preview-stage zoom-${previewZoom}"><div data-cl-preview></div></div></div>
           <details class="admin-cl-validation" ${validation.errors.length ? "open" : ""}><summary><span>Validation</span><strong data-cl-validation-count>${validation.errors.length} errors · ${validation.warnings.length} warnings</strong></summary><div data-cl-validation>${validation.errors.map((item) => `<p class="is-error">${escapeHtml(item)}</p>`).concat(validation.warnings.map((item) => `<p>${escapeHtml(item)}</p>`)).join("") || "<p>Ready for final review.</p>"}</div></details>
         </aside>
@@ -505,7 +536,11 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-cl-zoom]").forEach((button) => button.addEventListener("click", () => {
     previewZoom = button.dataset.clZoom as PreviewZoom;
-    root.querySelectorAll<HTMLButtonElement>("[data-cl-zoom]").forEach((item) => item.classList.toggle("is-active", item === button));
+    root.querySelectorAll<HTMLButtonElement>("[data-cl-zoom]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
     const stage = root.querySelector<HTMLElement>(".admin-cl-preview-stage");
     if (stage) stage.className = `admin-cl-preview-stage zoom-${previewZoom}`;
   }));

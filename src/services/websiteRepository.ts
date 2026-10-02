@@ -1,4 +1,5 @@
 import { professionalProfileSeed, websiteContentSeed } from "../data/websiteSeed";
+import { websiteNavigationLabels, type WebsiteNavigationLabels } from "../data/websiteNavigation";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
 import { supabase } from "./supabaseClient";
@@ -13,7 +14,7 @@ interface WebsiteContentRow {
   version: string;
   seo_title: WebsiteContent["seoTitle"];
   seo_description: WebsiteContent["seoDescription"];
-  navigation: WebsiteContent["navigation"];
+  navigation: WebsiteNavigationLabels;
   hero_eyebrow: WebsiteContent["heroEyebrow"];
   focus: WebsiteContent["focus"];
   specialization: WebsiteContent["specialization"];
@@ -34,7 +35,6 @@ const websiteContentFromRow = (row: WebsiteContentRow): WebsiteContent => ({
   version: row.version,
   seoTitle: row.seo_title,
   seoDescription: row.seo_description,
-  navigation: row.navigation,
   heroEyebrow: row.hero_eyebrow,
   focus: row.focus,
   specialization: row.specialization,
@@ -51,20 +51,19 @@ const websiteContentFromRow = (row: WebsiteContentRow): WebsiteContent => ({
   sections: row.sections ?? structuredClone(websiteContentSeed.sections),
 });
 
-const websiteContentWithDefaults = (content: WebsiteContent): WebsiteContent => ({
-  ...structuredClone(websiteContentSeed),
-  ...content,
-  navigation: {
-    ...structuredClone(websiteContentSeed.navigation),
-    ...content.navigation,
-  },
-  projectsPage: content.projectsPage ?? structuredClone(websiteContentSeed.projectsPage),
-  toolsPage: content.toolsPage ?? structuredClone(websiteContentSeed.toolsPage),
-  sections: {
-    ...structuredClone(websiteContentSeed.sections),
-    ...content.sections,
-  },
-});
+const websiteContentWithDefaults = (content: WebsiteContent): WebsiteContent => {
+  const { navigation: _legacyNavigation, ...supportedContent } = content as WebsiteContent & { navigation?: unknown };
+  return {
+    ...structuredClone(websiteContentSeed),
+    ...supportedContent,
+    projectsPage: supportedContent.projectsPage ?? structuredClone(websiteContentSeed.projectsPage),
+    toolsPage: supportedContent.toolsPage ?? structuredClone(websiteContentSeed.toolsPage),
+    sections: {
+      ...structuredClone(websiteContentSeed.sections),
+      ...supportedContent.sections,
+    },
+  };
+};
 
 export const loadProfessionalProfile = async (): Promise<ProfessionalProfileContent> => {
   const { data, error } = await supabase
@@ -121,7 +120,7 @@ export const saveWebsiteContent = async (content: WebsiteContent): Promise<void>
     version: content.version,
     seo_title: content.seoTitle,
     seo_description: content.seoDescription,
-    navigation: content.navigation,
+    navigation: websiteNavigationLabels,
     hero_eyebrow: content.heroEyebrow,
     focus: content.focus,
     specialization: content.specialization,

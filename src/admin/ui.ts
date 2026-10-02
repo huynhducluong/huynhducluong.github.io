@@ -1,4 +1,68 @@
+import { escapeHtml } from "../shared/format";
+
 const tabKeys = new Set(["ArrowLeft", "ArrowRight", "Home", "End"]);
+
+interface AdminSectionCardOptions {
+  title: string;
+  note?: string;
+  content: string;
+  actions?: string;
+  className?: string;
+}
+
+interface AdminPreviewControlOption {
+  label: string;
+  value: string;
+}
+
+interface AdminPreviewControlGroupOptions {
+  label: string;
+  dataAttribute: string;
+  activeValue: string;
+  options: AdminPreviewControlOption[];
+}
+
+interface AdminPreviewToolbarOptions {
+  title: string;
+  meta: string;
+  controls: string;
+}
+
+export const renderAdminSectionCard = ({
+  title,
+  note,
+  content,
+  actions,
+  className = "",
+}: AdminSectionCardOptions): string => {
+  const classes = `admin-form-section${className ? ` ${className}` : ""}`;
+  return `<section class="${escapeHtml(classes)}">
+    <header class="admin-section-heading">
+      <h3 class="admin-form-section__title">${escapeHtml(title)}</h3>
+      ${note ? `<p class="admin-form-section__note" title="${escapeHtml(note)}">${escapeHtml(note)}</p>` : ""}
+    </header>
+    <div class="admin-form-section__body">${content}</div>
+    ${actions ? `<footer class="admin-form-section__actions">${actions}</footer>` : ""}
+  </section>`;
+};
+
+export const renderAdminPreviewControlGroup = ({
+  label,
+  dataAttribute,
+  activeValue,
+  options,
+}: AdminPreviewControlGroupOptions): string => `<div class="admin-preview-toolbar__group" role="group" aria-label="${escapeHtml(label)}">
+  ${options.map((option) => `<button type="button" ${escapeHtml(dataAttribute)}="${escapeHtml(option.value)}" class="${activeValue === option.value ? "is-active" : ""}" aria-pressed="${activeValue === option.value}">${escapeHtml(option.label)}</button>`).join("")}
+</div>`;
+
+export const renderAdminPreviewToolbar = ({
+  title,
+  meta,
+  controls,
+}: AdminPreviewToolbarOptions): string => `<div class="admin-preview-toolbar">
+  <div class="admin-preview-toolbar__identity"><strong>${escapeHtml(title)}</strong><div class="admin-preview-toolbar__meta">${meta}</div></div>
+  <div class="admin-preview-toolbar__controls">${controls}</div>
+</div>`;
 
 const connectTabPanel = (root: ParentNode, tab: HTMLButtonElement): void => {
   const bindings: Array<[string | undefined, string, string]> = [

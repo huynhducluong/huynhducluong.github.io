@@ -27,7 +27,12 @@ import type {
 import type { StoredDocumentTheme } from "../types/theme";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
-import { setButtonBusy } from "./ui";
+import {
+  renderAdminPreviewControlGroup,
+  renderAdminPreviewToolbar,
+  renderAdminSectionCard,
+  setButtonBusy,
+} from "./ui";
 
 export type { ProfileDocumentKind } from "../types/profileDocument";
 type DocumentTab = "content" | "experience" | "education" | "selection" | "appearance";
@@ -216,73 +221,103 @@ const latestRelease = (kind: ProfileDocumentKind): string => {
   return release ? `Published ${new Date(release.publishedAt).toLocaleString()} · ${escapeHtml(release.version)}` : "Not published yet";
 };
 
-const cvContentPanel = (content: CvContent): string => `
-  <div class="admin-section-heading"><h3>Profile & document</h3><p>This CV keeps an editable draft copy. Sync it when the shared Professional Profile changes.</p></div>
-  <button class="button button--secondary" type="button" data-sync-professional-profile>Sync from Professional Profile</button>
-  <div class="admin-form-grid">
-    ${field("CV version", "cv_version", content.version)}
-    ${field("Detailed projects on page 1", "page_one_project_count", String(content.pageOneProjectCount), "number")}
-    ${field("Full name", "profile_name", content.profile.name)}
-    ${field("Professional title (English)", "profile_title_en", content.profile.professionalTitle.en)}
-    ${field("Professional title (Vietnamese)", "profile_title_vi", content.profile.professionalTitle.vi)}
-    ${field("Email", "profile_email", content.profile.email, "email")}
-    ${field("Phone", "profile_phone", content.profile.phone, "tel")}
-    ${field("Photo path", "profile_photo", content.profile.photoPath)}
-    ${field("Location (English)", "profile_location_en", content.profile.location.en)}
-    ${field("Location (Vietnamese)", "profile_location_vi", content.profile.location.vi)}
-  </div>
-  ${area("Professional summary (English)", "profile_summary_en", content.profile.summary.en)}
-  ${area("Professional summary (Vietnamese)", "profile_summary_vi", content.profile.summary.vi)}`;
+const cvContentPanel = (content: CvContent): string => [
+  renderAdminSectionCard({
+    title: "CV document",
+    note: "Control the draft version and first-page project density.",
+    content: `<div class="admin-form-grid">
+      ${field("CV version", "cv_version", content.version)}
+      ${field("Detailed projects on page 1", "page_one_project_count", String(content.pageOneProjectCount), "number")}
+    </div>`,
+  }),
+  renderAdminSectionCard({
+    title: "CV profile",
+    note: "Edit or sync the profile snapshot stored in this CV draft.",
+    content: `<div class="admin-form-grid">
+      ${field("Full name", "profile_name", content.profile.name)}
+      ${field("Professional title (EN)", "profile_title_en", content.profile.professionalTitle.en)}
+      ${field("Professional title (VI)", "profile_title_vi", content.profile.professionalTitle.vi)}
+      ${field("Email", "profile_email", content.profile.email, "email")}
+      ${field("Phone", "profile_phone", content.profile.phone, "tel")}
+      ${field("Photo path", "profile_photo", content.profile.photoPath)}
+      ${field("Location (EN)", "profile_location_en", content.profile.location.en)}
+      ${field("Location (VI)", "profile_location_vi", content.profile.location.vi)}
+    </div>
+    ${area("Professional summary (EN)", "profile_summary_en", content.profile.summary.en)}
+    ${area("Professional summary (VI)", "profile_summary_vi", content.profile.summary.vi)}`,
+    actions: '<button class="button button--secondary" type="button" data-sync-professional-profile>Sync from Professional Profile</button>',
+  }),
+].join("");
 
-const cvExperiencePanel = (content: CvContent): string => `
-  <div class="admin-section-heading"><h3>Professional experience</h3><p>Edit the entries that appear in the CV sidebar.</p></div>
-  <div class="admin-document-cards">${content.experiences.map((item, index) => `
+const cvExperiencePanel = (content: CvContent): string => renderAdminSectionCard({
+  title: "CV experience",
+  note: "Edit the work history shown in the CV sidebar.",
+  content: `<div class="admin-document-cards">${content.experiences.map((item, index) => `
     <article>
       <input type="hidden" name="experience_id_${index}" value="${escapeHtml(item.id)}">
       <h4>${escapeHtml(item.company || `Experience ${index + 1}`)}</h4>
       <div class="admin-form-grid">
         ${field("Company", `experience_company_${index}`, item.company)}
-        ${field("Position (English)", `experience_position_en_${index}`, item.position.en)}
-        ${field("Position (Vietnamese)", `experience_position_vi_${index}`, item.position.vi)}
-        ${field("Location (English)", `experience_location_en_${index}`, item.location.en)}
-        ${field("Location (Vietnamese)", `experience_location_vi_${index}`, item.location.vi)}
+        ${field("Position (EN)", `experience_position_en_${index}`, item.position.en)}
+        ${field("Position (VI)", `experience_position_vi_${index}`, item.position.vi)}
+        ${field("Location (EN)", `experience_location_en_${index}`, item.location.en)}
+        ${field("Location (VI)", `experience_location_vi_${index}`, item.location.vi)}
         ${field("Start", `experience_start_${index}`, item.startDate, "month")}
         ${field("End (blank = Present)", `experience_end_${index}`, item.endDate ?? "", "month")}
       </div>
-      ${area("Responsibilities (one English item per line)", `experience_responsibilities_${index}`, item.responsibilities.map((point) => point.text.en).join("\n"), 4)}
+      ${area("Responsibilities (one EN item per line)", `experience_responsibilities_${index}`, item.responsibilities.map((point) => point.text.en).join("\n"), 4)}
       ${field("Technologies (comma separated)", `experience_technologies_${index}`, item.technologies.join(", "))}
-    </article>`).join("")}</div>`;
+    </article>`).join("")}</div>`,
+});
 
-const cvEducationPanel = (content: CvContent): string => `
-  <div class="admin-section-heading"><h3>Education, skills & languages</h3><p>Keep compact lists concise to protect the two-page layout.</p></div>
-  <div class="admin-document-cards">
-    ${content.education.map((item, index) => `<article><h4>Education ${index + 1}</h4><div class="admin-form-grid">
-      ${field("Field (English)", `education_field_en_${index}`, item.field.en)}
-      ${field("Field (Vietnamese)", `education_field_vi_${index}`, item.field.vi)}
-      ${field("Institution (English)", `education_institution_en_${index}`, item.institution.en)}
-      ${field("Institution (Vietnamese)", `education_institution_vi_${index}`, item.institution.vi)}
+const cvEducationPanel = (content: CvContent): string => [
+  renderAdminSectionCard({
+    title: "CV education",
+    note: "Keep education entries concise for the two-page layout.",
+    content: `<div class="admin-document-cards">
+      ${content.education.map((item, index) => `<article><h4>Education ${index + 1}</h4><div class="admin-form-grid">
+      ${field("Field (EN)", `education_field_en_${index}`, item.field.en)}
+      ${field("Field (VI)", `education_field_vi_${index}`, item.field.vi)}
+      ${field("Institution (EN)", `education_institution_en_${index}`, item.institution.en)}
+      ${field("Institution (VI)", `education_institution_vi_${index}`, item.institution.vi)}
       ${field("Start year", `education_start_${index}`, item.startDate)}
       ${field("End year", `education_end_${index}`, item.endDate)}
-    </div></article>`).join("")}
-    ${content.skillGroups.map((group, index) => `<article><h4>${escapeHtml(group.title.en)}</h4><div class="admin-form-grid">
-      ${field("Group title (English)", `skill_title_en_${index}`, group.title.en)}
-      ${field("Group title (Vietnamese)", `skill_title_vi_${index}`, group.title.vi)}
-    </div>${area("Items (one per line)", `skill_items_${index}`, group.items.map((item) => item.label.en).join("\n"), 5)}</article>`).join("")}
-    ${content.languages.map((item, index) => `<article><h4>Language ${index + 1}</h4><div class="admin-form-grid">
-      ${field("Language (English)", `language_name_en_${index}`, item.name.en)}
-      ${field("Language (Vietnamese)", `language_name_vi_${index}`, item.name.vi)}
-      ${field("Proficiency (English)", `language_proficiency_en_${index}`, item.proficiency?.en ?? "")}
-      ${field("Proficiency (Vietnamese)", `language_proficiency_vi_${index}`, item.proficiency?.vi ?? "")}
-    </div></article>`).join("")}
-  </div>`;
+      </div></article>`).join("")}
+    </div>`,
+  }),
+  renderAdminSectionCard({
+    title: "CV skills",
+    note: "Organize compact skill groups for the CV sidebar.",
+    content: `<div class="admin-document-cards">
+      ${content.skillGroups.map((group, index) => `<article><h4>${escapeHtml(group.title.en)}</h4><div class="admin-form-grid">
+      ${field("Group title (EN)", `skill_title_en_${index}`, group.title.en)}
+      ${field("Group title (VI)", `skill_title_vi_${index}`, group.title.vi)}
+      </div>${area("Items (one per line)", `skill_items_${index}`, group.items.map((item) => item.label.en).join("\n"), 5)}</article>`).join("")}
+    </div>`,
+  }),
+  renderAdminSectionCard({
+    title: "CV languages",
+    note: "Keep language and proficiency labels aligned in EN and VI.",
+    content: `<div class="admin-document-cards">
+      ${content.languages.map((item, index) => `<article><h4>Language ${index + 1}</h4><div class="admin-form-grid">
+      ${field("Language (EN)", `language_name_en_${index}`, item.name.en)}
+      ${field("Language (VI)", `language_name_vi_${index}`, item.name.vi)}
+      ${field("Proficiency (EN)", `language_proficiency_en_${index}`, item.proficiency?.en ?? "")}
+      ${field("Proficiency (VI)", `language_proficiency_vi_${index}`, item.proficiency?.vi ?? "")}
+      </div></article>`).join("")}
+    </div>`,
+  }),
+].join("");
 
-const cvSelectionPanel = (runtime: CvRuntimeData): string => `
-  <div class="admin-section-heading"><h3>Projects & automation</h3><p>Selection and order are managed on each Project or Automation tool under “Website, CV & Portfolio”.</p></div>
-  <div class="admin-document-summary-grid">
+const cvSelectionPanel = (runtime: CvRuntimeData): string => renderAdminSectionCard({
+  title: "CV selection",
+  note: "Review Projects and Tools selected from their editors.",
+  content: `<div class="admin-document-summary-grid">
     <article><strong>${runtime.detailedProjects.length}</strong><span>Detailed projects</span><ul>${runtime.detailedProjects.map((item) => `<li>${escapeHtml(item.name.en)}</li>`).join("")}</ul></article>
     <article><strong>${runtime.compactProjects.length}</strong><span>Compact projects</span><ul>${runtime.compactProjects.map((item) => `<li>${escapeHtml(item.name.en)}</li>`).join("")}</ul></article>
     <article><strong>${runtime.tools.length}</strong><span>Automation tools</span><ul>${runtime.tools.map((item) => `<li>${escapeHtml(item.name)}</li>`).join("")}</ul></article>
-  </div>`;
+  </div>`,
+});
 
 const readCvForm = (formElement: HTMLFormElement): CvContent => {
   const current = state.cv?.content ?? structuredClone(cvContentSeed);
@@ -340,9 +375,11 @@ const readCvForm = (formElement: HTMLFormElement): CvContent => {
   };
 };
 
-const portfolioContentPanel = (content: PortfolioContent): string => `
-  <div class="admin-section-heading"><h3>Cover & document settings</h3><p>These values belong to the working Portfolio draft.</p></div>
-  <div class="admin-form-grid">
+const portfolioContentPanel = (content: PortfolioContent): string => [
+  renderAdminSectionCard({
+    title: "Portfolio cover",
+    note: "Edit cover details and the profile used in this draft.",
+    content: `<div class="admin-form-grid">
     ${field("Portfolio version", "portfolio_version", content.version)}
     ${field("Cover year", "portfolio_year", content.year)}
     ${field("Document title", "portfolio_title", content.title)}
@@ -352,25 +389,32 @@ const portfolioContentPanel = (content: PortfolioContent): string => `
     ${field("Email", "portfolio_email", content.profile.email, "email")}
     ${field("Phone", "portfolio_phone", content.profile.phone, "tel")}
   </div>
-  ${area("Profile summary", "portfolio_summary", content.profile.summary.en)}
-  <div class="admin-section-heading"><h3>About & closing pages</h3></div>
-  <div class="admin-form-grid">
+  ${area("Profile summary", "portfolio_summary", content.profile.summary.en)}`,
+    actions: '<div class="admin-document-sync-actions"><button class="button button--secondary" type="button" data-sync-professional-profile>Sync from Professional Profile</button><button class="button button--secondary" type="button" data-sync-cv-profile>Sync from active CV</button></div>',
+  }),
+  renderAdminSectionCard({
+    title: "Portfolio narrative",
+    note: "Edit the About and closing page content.",
+    content: `<div class="admin-form-grid">
     ${field("About kicker", "about_kicker", content.aboutKicker)}
     ${field("About heading", "about_heading", content.aboutHeading)}
     ${field("Closing kicker", "closing_kicker", content.closingKicker)}
     ${field("Closing heading", "closing_heading", content.closingHeading)}
   </div>
-  ${area("Closing text", "closing_text", content.closingText, 3)}
-  <div class="admin-document-sync-actions"><button class="button button--secondary" type="button" data-sync-professional-profile>Sync from Professional Profile</button><button class="button button--secondary" type="button" data-sync-cv-profile>Sync from active CV</button></div>`;
+  ${area("Closing text", "closing_text", content.closingText, 3)}`,
+  }),
+].join("");
 
-const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => `
-  <div class="admin-section-heading"><h3>Portfolio pages</h3><p>Select and order the records that will be frozen into the next release.</p></div>
-  <div class="admin-document-selection">
+const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => renderAdminSectionCard({
+  title: "Portfolio selection",
+  note: "Choose and order content for the next Portfolio release.",
+  content: `<div class="admin-document-selection">
     <h4>Projects</h4>
     ${runtime.projects.map((item) => `<article><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${item.includeInPortfolio ? " checked" : ""}><span>${escapeHtml(item.name.en)}</span></label><input aria-label="Order" name="project_order_${escapeHtml(item.id)}" type="number" value="${item.portfolioOrder}"><select aria-label="Layout" name="project_layout_${escapeHtml(item.id)}"><option value="feature"${item.portfolioLayout === "feature" ? " selected" : ""}>Feature</option><option value="standard"${item.portfolioLayout === "standard" ? " selected" : ""}>Standard</option><option value="compact"${item.portfolioLayout === "compact" ? " selected" : ""}>Compact</option></select><span class="status status--${item.status}">${item.status}</span></article>`).join("")}
     <h4>Automation tools</h4>
     ${runtime.tools.map((item) => `<article><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}"${item.includeInPortfolio ? " checked" : ""}><span>${escapeHtml(item.name)}</span></label><input aria-label="Order" name="tool_order_${escapeHtml(item.id)}" type="number" value="${item.portfolioOrder}"><span></span><span class="status status--${item.status}">${item.status}</span></article>`).join("")}
-  </div>`;
+  </div>`,
+});
 
 const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData => {
   const current = state.portfolio ?? { content: structuredClone(portfolioContentSeed), projects: [], tools: [] };
@@ -504,6 +548,26 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   const experiencePanel = kind === "cv" ? cvExperiencePanel(content as CvContent) : "";
   const educationPanel = kind === "cv" ? cvEducationPanel(content as CvContent) : "";
   const archived = selected.status === "archived";
+  const initialPageCount = kind === "cv"
+    ? 2
+    : 4
+      + (runtime as PortfolioRuntimeData).projects.filter((item) => item.includeInPortfolio).length
+      + ((runtime as PortfolioRuntimeData).tools.some((item) => item.includeInPortfolio) ? 1 : 0);
+  const zoomControls = renderAdminPreviewControlGroup({
+    label: "Preview zoom",
+    dataAttribute: "data-document-zoom",
+    activeValue: state.zoom[kind],
+    options: [
+      { label: "Fit", value: "fit" },
+      { label: "75%", value: "75" },
+      { label: "100%", value: "100" },
+    ],
+  });
+  const previewToolbar = renderAdminPreviewToolbar({
+    title: `${documentLabel(kind)} preview`,
+    meta: `${kind === "cv" ? "A4" : "A4 landscape"} · <span data-preview-page-count>${initialPageCount} pages</span> · <span data-kind="${issues.length ? "warning" : "success"}">${issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : "Ready"}</span>`,
+    controls: zoomControls,
+  });
   return `
     <section class="admin-document-library is-editing">${documentCollectionView(kind)}<div class="admin-document-library__workspace">
     <section class="admin-document-workspace" data-document-kind="${kind}">
@@ -526,11 +590,11 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
             <section data-document-panel="content"${activeTab === "content" ? "" : " hidden"}>${contentPanel}</section>
             ${kind === "cv" ? `<section data-document-panel="experience"${activeTab === "experience" ? "" : " hidden"}>${experiencePanel}</section><section data-document-panel="education"${activeTab === "education" ? "" : " hidden"}>${educationPanel}</section>` : ""}
             <section data-document-panel="selection"${activeTab === "selection" ? "" : " hidden"}>${selectionPanel}</section>
-            <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}><div class="admin-section-heading"><h3>Brand colors</h3><p>Appearance is saved with the draft and becomes read-only after publishing.</p></div>${themeFields(content.theme)}</section>
+            <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose brand colors saved with this draft.", content: themeFields(content.theme) })}</section>
           </form>
         </section>
         <aside class="admin-document-preview">
-          <div class="admin-document-preview__toolbar"><div><strong>Draft preview</strong><span><span data-preview-status>Connecting preview…</span> · ${issues.length ? `${issues.length} item${issues.length === 1 ? "" : "s"} need attention` : "Ready to publish"}</span></div><div><button type="button" data-document-zoom="fit" class="${state.zoom[kind] === "fit" ? "is-active" : ""}">Fit</button><button type="button" data-document-zoom="75" class="${state.zoom[kind] === "75" ? "is-active" : ""}">75%</button><button type="button" data-document-zoom="100" class="${state.zoom[kind] === "100" ? "is-active" : ""}">100%</button><a href="${import.meta.env.BASE_URL + publicPath}" target="_blank" rel="noreferrer">Public ↗</a></div></div>
+          ${previewToolbar}
           <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind]}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="no" tabindex="-1"></iframe></div></div>
           <div class="admin-document-validation"><strong>Pre-publish check</strong>${issues.length ? `<ul>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "<p>Required content and document selection are ready.</p>"}</div>
           <details class="admin-document-releases"><summary>Release history (${state.releases[kind].length})</summary>${state.releases[kind].length ? `<ol>${state.releases[kind].map((item) => `<li><strong>${escapeHtml(item.version)}${item.isActive ? " · Active" : ""}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></li>`).join("")}</ol>` : "<p>No release has been published.</p>"}</details>
@@ -597,8 +661,9 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   previewSender = iframe && form
     ? bindPreviewSender(iframe, kind, () => previewPayload(kind, form), () => {
       previewController?.refresh();
-      const status = root.querySelector<HTMLElement>("[data-preview-status]");
-      if (status) status.textContent = "Live unsaved draft";
+      const pageCount = iframe.contentDocument?.querySelectorAll(kind === "cv" ? ".cv-page" : ".portfolio-page").length ?? 0;
+      const pageCountLabel = root.querySelector<HTMLElement>("[data-preview-page-count]");
+      if (pageCountLabel && pageCount) pageCountLabel.textContent = `${pageCount} page${pageCount === 1 ? "" : "s"}`;
     })
     : undefined;
 
@@ -747,7 +812,11 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     const frameRoot = root.querySelector<HTMLElement>(".admin-document-frame");
     if (frameRoot) frameRoot.dataset.zoom = state.zoom[kind];
     previewController?.refresh();
-    root.querySelectorAll<HTMLButtonElement>("[data-document-zoom]").forEach((item) => item.classList.toggle("is-active", item === button));
+    root.querySelectorAll<HTMLButtonElement>("[data-document-zoom]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
   }));
   root.querySelector("[data-document-print]")?.addEventListener("click", () => iframe?.contentWindow?.print());
   root.querySelector("[data-sync-professional-profile]")?.addEventListener("click", () => {

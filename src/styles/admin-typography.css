@@ -265,7 +265,6 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-cl-editor__identity small,
-.admin-cl-preview__heading small,
 .admin-cl-validation summary,
 .admin-cl-validation p {
   font-size: var(--admin-text-xs);
@@ -280,9 +279,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-cl-back,
-.admin-cl-editor__actions .button,
-.admin-cl-preview__heading strong,
-.admin-cl-zoom button {
+.admin-cl-editor__actions .button {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-semibold);
 }
@@ -313,9 +310,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-weight: var(--admin-weight-medium);
 }
 
-.admin-document-tabs button,
-.admin-document-preview__toolbar button,
-.admin-document-preview__toolbar a {
+.admin-document-tabs button {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-semibold);
 }
@@ -333,14 +328,12 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 
 .admin-document-cards h4,
 .admin-document-selection h4,
-.admin-document-preview__toolbar strong,
 .admin-document-validation strong {
   font-size: var(--admin-text-sm);
   font-weight: var(--admin-weight-semibold);
 }
 
 .admin-document-summary-grid span,
-.admin-document-preview__toolbar span,
 .admin-document-validation,
 .admin-document-releases {
   font-size: var(--admin-text-xs);
