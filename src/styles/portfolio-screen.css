@@ -46,7 +46,9 @@ html, body { background: #dfe8ec; }
 
 .portfolio-split { display: grid; height: 100%; grid-template-columns: 92mm 1fr; }
 .portfolio-about__aside { display: flex; flex-direction: column; padding: 18mm 12mm; background: var(--document-primary); color: var(--document-on-primary); }
-.portfolio-about__aside img { width: 48mm; height: 48mm; margin-bottom: 11mm; border: 2mm solid var(--document-accent); border-radius: 50%; object-fit: cover; }
+.portfolio-about__photo { position: relative; display: grid; width: 48mm; height: 48mm; overflow: hidden; place-items: center; margin-bottom: 11mm; border: 2mm solid var(--document-accent); border-radius: 50%; background: color-mix(in srgb, var(--document-primary) 76%, white); color: var(--document-on-primary); font-size: 24pt; font-weight: 900; letter-spacing: .08em; }
+.portfolio-about__photo img { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; object-fit: cover; }
+.portfolio-about__photo.has-image img { opacity: 1; }
 .portfolio-about__aside .portfolio-kicker { color: var(--document-on-primary); opacity: .75; }
 .portfolio-about__aside h2 { max-width: 62mm; margin-block: 4mm 2mm; font-size: 24pt; line-height: .98; }
 .portfolio-about__aside > p:last-of-type { color: var(--document-on-primary); font-weight: 750; }

@@ -20,6 +20,24 @@ export const localize = (
   language: Language,
 ): string => escapeHtml(value[language]);
 
+const degreeClassificationPrefixes: Record<Language, RegExp> = {
+  en: /^degree\s+classification\s*:\s*/i,
+  vi: /^xếp\s+loại\s+tốt\s+nghiệp\s*:\s*/i,
+};
+
+export const degreeClassificationValue = (value: string, language: Language): string =>
+  value.trim().replace(degreeClassificationPrefixes[language], "").trim();
+
+export const formatDegreeClassification = (
+  classification: LocalizedText | undefined,
+  language: Language,
+): string => {
+  const value = degreeClassificationValue(classification?.[language] ?? "", language);
+  if (!value) return "";
+  const label = language === "vi" ? "Xếp loại tốt nghiệp" : "Degree classification";
+  return escapeHtml(`${label}: ${value}`);
+};
+
 export const formatDate = (date: string, language: Language): string => {
   const [year, month] = date.split("-").map(Number);
 
@@ -38,5 +56,9 @@ export const formatNumericDate = (date: string): string => {
   return month ? month + "/" + year : year;
 };
 
-export const assetUrl = (path: string): string =>
-  import.meta.env.BASE_URL + path.replace(/^\/+/, "");
+export const assetUrl = (path: string): string => {
+  const normalized = path.trim();
+  if (!normalized) return "";
+  if (/^(?:https?:\/\/|data:image\/|blob:)/i.test(normalized)) return normalized;
+  return import.meta.env.BASE_URL + normalized.replace(/^\/+/, "");
+};

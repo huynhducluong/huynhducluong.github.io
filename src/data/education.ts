@@ -9,8 +9,8 @@ export const education: Education[] = [
       vi: "Trường Đại học Xây dựng Miền Trung",
     },
     classification: {
-      en: "Degree classification: Excellent",
-      vi: "Xếp loại tốt nghiệp: Xuất sắc",
+      en: "Excellent",
+      vi: "Xuất sắc",
     },
     startDate: "2016",
     endDate: "2021",

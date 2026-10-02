@@ -164,14 +164,22 @@
 
 .admin-cl-form-pane .admin-editor-tabs {
   top: 0;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   padding-inline: .7rem;
-  overflow-x: auto;
+  overflow: hidden;
 }
 
 .admin-cl-form-pane .admin-editor-tabs button {
-  flex: 0 0 auto;
-  padding-inline: .55rem;
+  min-width: 0;
+  padding-inline: .4rem;
   font-size: var(--admin-text-2xs);
+  text-align: center;
+  white-space: nowrap;
+}
+
+@container admin-cover-letter-form (max-width: 23rem) {
+  .admin-cl-form-pane .admin-editor-tabs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 
 .admin-cl-form-pane form { display: block; margin: 0; padding: 1rem; }

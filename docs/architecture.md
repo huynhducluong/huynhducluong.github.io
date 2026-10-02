@@ -19,7 +19,7 @@ Each output owns its composition:
 
 - Projects and Automation Tools own the canonical cross-channel `display_order`; the Admin master lists provide drag-and-drop plus keyboard/touch reorder controls.
 - Website draft content owns Website inclusion and Homepage highlighting in `website_content.content_selection`; its output follows the shared Project/Tool order.
-- Each CV document draft owns detailed/compact selection, summary visibility, responsibility bullets and tool selection; each Portfolio draft owns selection and project layout. Both consume the shared Project/Tool order.
+- Each CV document draft owns Professional Profile background ordering, detailed/compact project selection, summary visibility, responsibility bullets and tool selection; each Portfolio draft owns selection and project layout. Both consume the shared Project/Tool order.
 - Cover Letters keep their independent evidence references.
 
 Legacy Project/Tool distribution columns remain readable for migration and old-release compatibility, but current Admin editors no longer write them. Existing published releases remain immutable snapshots.
@@ -37,7 +37,7 @@ Returning a shared item to Draft prevents it from being selected in new output d
 ## Admin preview contract
 
 - Website, CV and Portfolio previews exchange the latest unsaved form payload through a same-origin ready/rendered handshake. The iframe announces readiness after Admin authorization, so its first payload cannot be lost during asynchronous startup.
-- Professional Profile remains the shared data editor. Website, CV, Portfolio and Cover Letter previews stay in their own workspaces; CV and Portfolio provide explicit sync actions before publishing.
+- Professional Profile remains the shared data editor. CV Background is a read-only composition view that stores Experience, Education, Skill Group and Language order by ID; explicit sync refreshes its snapshot without discarding that order. Website, CV, Portfolio and Cover Letter previews stay in their own workspaces, and published releases remain frozen.
 - Project and automation-tool changes mark dependent workspaces stale. They reload on the next visit without discarding edits in another open workspace.
 - CV and Portfolio drafts compose current shared Project/Tool records with their saved document settings. Published releases remain immutable snapshots.
 - Cover Letter drafts render directly from the current form. Final and archived letters retain their saved sender snapshot.

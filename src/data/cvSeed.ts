@@ -30,6 +30,12 @@ export const cvContentSeed: CvContent = {
   education,
   skillGroups,
   languages: languageSkills,
+  backgroundOrder: {
+    experienceIds: experiences.map((item) => item.id),
+    educationIds: education.map((item) => item.id),
+    skillGroupIds: skillGroups.map((item) => item.id),
+    languageIds: languageSkills.map((item) => item.id),
+  },
 };
 
 export const cvProjectSeed = projects.map((project): CvRuntimeProject | null => {

@@ -25,6 +25,118 @@
   gap: .75rem;
 }
 
+.admin-profile-photo-field {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: .4rem;
+}
+
+.admin-profile-photo-field__label {
+  color: var(--color-text-muted);
+  font-size: var(--admin-text-xs);
+  font-weight: 700;
+}
+
+.admin-profile-photo-control {
+  display: grid;
+  height: var(--admin-control-height);
+  min-width: 0;
+  min-height: var(--admin-control-height);
+  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  align-items: center;
+  gap: .45rem;
+  padding: .18rem .35rem;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-control-radius);
+  background: #fff;
+}
+
+.admin-profile-photo-preview {
+  position: relative;
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  overflow: hidden;
+  place-items: center;
+  border: 1px solid #b9dbe7;
+  border-radius: 50%;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  font-size: .55rem;
+  font-weight: 900;
+  letter-spacing: .04em;
+}
+
+.admin-profile-photo-preview img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  object-fit: cover;
+}
+
+.admin-profile-photo-preview.has-image img { opacity: 1; }
+
+.admin-profile-photo-identity,
+.admin-profile-photo-identity strong,
+.admin-profile-photo-identity small {
+  display: block;
+  min-width: 0;
+}
+
+.admin-profile-photo-identity strong,
+.admin-profile-photo-identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-profile-photo-identity strong {
+  color: var(--color-text);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-profile-photo-identity small {
+  margin-top: .12rem;
+  color: var(--color-text-muted);
+  font-size: var(--admin-text-2xs);
+}
+
+.admin-app .admin-shell .admin-profile-photo-replace {
+  position: relative;
+  display: inline-flex !important;
+  min-height: var(--admin-control-height-sm);
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: .3rem .5rem;
+  overflow: hidden;
+  cursor: pointer;
+  font-size: var(--admin-text-xs);
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-profile-photo-replace input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.admin-profile-photo-source {
+  padding: .22rem .4rem;
+  border-radius: 999px;
+  background: #e8f6ed;
+  color: #14723a;
+  font-size: var(--admin-text-2xs);
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .admin-site-section-list {
   display: grid;
   gap: .8rem;

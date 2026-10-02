@@ -12,6 +12,15 @@ import type { PublicationStatus } from "./portfolio";
 
 export type CvProjectDisplay = "detailed" | "compact";
 
+export type CvBackgroundGroup = "experiences" | "education" | "skillGroups" | "languages";
+
+export interface CvBackgroundOrder {
+  experienceIds: string[];
+  educationIds: string[];
+  skillGroupIds: string[];
+  languageIds: string[];
+}
+
 export interface CvContent {
   version: string;
   themeId: string;
@@ -22,6 +31,7 @@ export interface CvContent {
   education: Education[];
   skillGroups: SkillGroup[];
   languages: LanguageSkill[];
+  backgroundOrder?: CvBackgroundOrder;
 }
 
 export interface CvRuntimeProject extends Project {

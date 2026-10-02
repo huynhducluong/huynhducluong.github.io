@@ -1,4 +1,5 @@
 import { websiteContentSeed } from "../data/websiteSeed";
+import { supabaseConfig } from "../config/supabase";
 import {
   listWebsiteReleases,
   loadWebsiteDraftData,
@@ -6,8 +7,9 @@ import {
   saveProfessionalProfile,
   saveWebsiteContent,
 } from "../services/websiteRepository";
-import { escapeHtml, type Language } from "../shared/format";
+import { assetUrl, degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
+import { supabase } from "../services/supabaseClient";
 import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
@@ -66,6 +68,7 @@ let previewTimer: number | undefined;
 let previewController: EmbeddedPreviewController | undefined;
 let previewSender: PreviewSender | undefined;
 let previewResizeObserver: ResizeObserver | undefined;
+let profilePhotoPreviewUrl: string | undefined;
 const websiteViewportWidths: Record<WebsiteViewport, number> = {
   desktop: 1440,
   laptop: 1280,
@@ -81,6 +84,71 @@ const area = (label: string, name: string, current: string, rows = 4): string =>
   `<label>${escapeHtml(label)}<textarea name="${escapeHtml(name)}" rows="${rows}">${escapeHtml(current)}</textarea></label>`;
 const bilingual = (label: string, name: string, text: { en: string; vi: string }): string =>
   `<div class="admin-site-bilingual">${field(`${label} (EN)`, `${name}_en`, text.en)}${field(`${label} (VI)`, `${name}_vi`, text.vi)}</div>`;
+
+const profilePhotoTypes: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+};
+const profilePhotoMaxBytes = 5 * 1024 * 1024;
+
+const profileInitials = (name: string): string => name
+  .trim()
+  .split(/\s+/)
+  .slice(0, 3)
+  .map((part) => part[0] ?? "")
+  .join("")
+  .toUpperCase() || "HDL";
+
+const profilePhotoName = (path: string): string => {
+  const cleanPath = path.split(/[?#]/, 1)[0];
+  const name = cleanPath.split("/").at(-1) || "No photo selected";
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+};
+
+const profilePhotoControl = (professional: ProfessionalProfileContent): string => {
+  const path = professional.profile.photoPath;
+  return `<div class="admin-profile-photo-field">
+    <span class="admin-profile-photo-field__label">Profile photo</span>
+    <input type="hidden" name="profile_photo" value="${escapeHtml(path)}" data-profile-photo-path>
+    <div class="admin-profile-photo-control">
+      <span class="admin-profile-photo-preview" data-profile-photo-frame aria-hidden="true">
+        <span>${escapeHtml(profileInitials(professional.profile.name))}</span>
+        <img src="${escapeHtml(assetUrl(path))}" alt="" data-profile-photo-preview>
+      </span>
+      <span class="admin-profile-photo-identity">
+        <strong data-profile-photo-name>${escapeHtml(profilePhotoName(path))}</strong>
+        <small data-profile-photo-status>Used by CV and Portfolio after sync</small>
+      </span>
+      <label class="button button--secondary admin-profile-photo-replace">
+        <span>Replace</span>
+        <input type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-profile-photo-input>
+      </label>
+    </div>
+  </div>`;
+};
+
+const validateProfilePhoto = (file: File): string | null => {
+  if (!profilePhotoTypes[file.type]) return "Choose a JPEG, PNG, WebP or AVIF image.";
+  if (file.size > profilePhotoMaxBytes) return "Profile photo must be 5 MB or smaller.";
+  return null;
+};
+
+const uploadProfilePhoto = async (file: File): Promise<{ path: string; publicUrl: string }> => {
+  const extension = profilePhotoTypes[file.type];
+  const path = `profiles/${crypto.randomUUID()}.${extension}`;
+  const { error } = await supabase.storage
+    .from(supabaseConfig.storageBucket)
+    .upload(path, file, { contentType: file.type, upsert: false });
+  if (error) throw error;
+  const publicUrl = supabase.storage.from(supabaseConfig.storageBucket).getPublicUrl(path).data.publicUrl;
+  return { path, publicUrl };
+};
 
 const readLocalized = (form: FormData, name: string): { en: string; vi: string } => ({
   en: value(form, `${name}_en`),
@@ -291,7 +359,7 @@ const profileIdentity = (professional: ProfessionalProfileContent): string => re
     ${field("Full name", "profile_name", professional.profile.name)}
     ${field("Email", "profile_email", professional.profile.email, "email")}
     ${field("Phone", "profile_phone", professional.profile.phone, "tel")}
-    ${field("Photo path", "profile_photo", professional.profile.photoPath)}
+    ${profilePhotoControl(professional)}
     ${field("Professional title (EN)", "profile_title_en", professional.profile.professionalTitle.en)}
     ${field("Professional title (VI)", "profile_title_vi", professional.profile.professionalTitle.vi)}
     ${field("Location (EN)", "profile_location_en", professional.profile.location.en)}
@@ -322,6 +390,8 @@ const profileEducation = (professional: ProfessionalProfileContent): string => r
     ${field("Field (VI)", `profile_education_field_vi_${index}`, item.field.vi)}
     ${field("Institution (EN)", `profile_education_institution_en_${index}`, item.institution.en)}
     ${field("Institution (VI)", `profile_education_institution_vi_${index}`, item.institution.vi)}
+    ${field("Degree classification (EN)", `profile_education_classification_en_${index}`, degreeClassificationValue(item.classification?.en ?? "", "en"))}
+    ${field("Degree classification (VI)", `profile_education_classification_vi_${index}`, degreeClassificationValue(item.classification?.vi ?? "", "vi"))}
     ${field("Start year", `profile_education_start_${index}`, item.startDate)}
     ${field("End year", `profile_education_end_${index}`, item.endDate)}
   </div></article>`).join("")}</div>`,
@@ -370,13 +440,20 @@ const readProfileForm = (formElement: HTMLFormElement): ProfessionalProfileConte
         technologies: commaList(value(form, `profile_experience_technologies_${index}`)),
       };
     }),
-    education: current.education.map((item, index) => ({
-      ...item,
-      field: { en: value(form, `profile_education_field_en_${index}`), vi: value(form, `profile_education_field_vi_${index}`) },
-      institution: { en: value(form, `profile_education_institution_en_${index}`), vi: value(form, `profile_education_institution_vi_${index}`) },
-      startDate: value(form, `profile_education_start_${index}`),
-      endDate: value(form, `profile_education_end_${index}`),
-    })),
+    education: current.education.map((item, index) => {
+      const classification = {
+        en: value(form, `profile_education_classification_en_${index}`),
+        vi: value(form, `profile_education_classification_vi_${index}`),
+      };
+      return {
+        ...item,
+        field: { en: value(form, `profile_education_field_en_${index}`), vi: value(form, `profile_education_field_vi_${index}`) },
+        institution: { en: value(form, `profile_education_institution_en_${index}`), vi: value(form, `profile_education_institution_vi_${index}`) },
+        classification: classification.en || classification.vi ? classification : undefined,
+        startDate: value(form, `profile_education_start_${index}`),
+        endDate: value(form, `profile_education_end_${index}`),
+      };
+    }),
     skillGroups: current.skillGroups.map((group, index) => ({
       ...group,
       title: { en: value(form, `profile_skill_title_en_${index}`), vi: value(form, `profile_skill_title_vi_${index}`) },
@@ -480,6 +557,8 @@ const automaticWebsiteVersion = (date = new Date()): string => {
 
 export const discardSiteChanges = (): void => {
   if (previewTimer !== undefined) window.clearTimeout(previewTimer);
+  if (profilePhotoPreviewUrl) URL.revokeObjectURL(profilePhotoPreviewUrl);
+  profilePhotoPreviewUrl = undefined;
   previewSender?.disconnect();
   previewSender = undefined;
   previewController?.disconnect();
@@ -545,6 +624,18 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       previewTimer = window.setTimeout(sendPreview, 180);
     }
   };
+  const photoInput = profileForm?.querySelector<HTMLInputElement>("[data-profile-photo-input]");
+  const photoPath = profileForm?.querySelector<HTMLInputElement>("[data-profile-photo-path]");
+  const photoImage = profileForm?.querySelector<HTMLImageElement>("[data-profile-photo-preview]");
+  const photoFrame = profileForm?.querySelector<HTMLElement>("[data-profile-photo-frame]");
+  const photoName = profileForm?.querySelector<HTMLElement>("[data-profile-photo-name]");
+  const photoStatus = profileForm?.querySelector<HTMLElement>("[data-profile-photo-status]");
+  const syncPhotoPreviewState = (): void => {
+    photoFrame?.classList.toggle("has-image", Boolean(photoImage?.complete && photoImage.naturalWidth > 0));
+  };
+  photoImage?.addEventListener("load", syncPhotoPreviewState);
+  photoImage?.addEventListener("error", syncPhotoPreviewState);
+  syncPhotoPreviewState();
   websiteForm?.addEventListener("input", markDirty);
   websiteForm?.addEventListener("change", (event) => {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
@@ -569,8 +660,34 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     }
     markDirty();
   });
-  profileForm?.addEventListener("input", markDirty);
-  profileForm?.addEventListener("change", markDirty);
+  profileForm?.addEventListener("input", (event) => {
+    if (event.target !== photoInput) markDirty();
+  });
+  profileForm?.addEventListener("change", (event) => {
+    const input = event.target;
+    if (!(input instanceof HTMLInputElement) || !input.hasAttribute("data-profile-photo-input")) return markDirty();
+    const file = input.files?.[0];
+    if (!file) return;
+    const validationError = validateProfilePhoto(file);
+    if (validationError) {
+      input.value = "";
+      if (profilePhotoPreviewUrl) URL.revokeObjectURL(profilePhotoPreviewUrl);
+      profilePhotoPreviewUrl = undefined;
+      photoFrame?.classList.remove("has-image");
+      if (photoImage) photoImage.src = assetUrl(photoPath?.value ?? "");
+      if (photoName) photoName.textContent = profilePhotoName(photoPath?.value ?? "");
+      if (photoStatus) photoStatus.textContent = "Used by CV and Portfolio after sync";
+      callbacks.notify(validationError, "error");
+      return;
+    }
+    if (profilePhotoPreviewUrl) URL.revokeObjectURL(profilePhotoPreviewUrl);
+    profilePhotoPreviewUrl = URL.createObjectURL(file);
+    photoFrame?.classList.remove("has-image");
+    if (photoImage) photoImage.src = profilePhotoPreviewUrl;
+    if (photoName) photoName.textContent = file.name;
+    if (photoStatus) photoStatus.textContent = "Selected · save changes to upload";
+    markDirty();
+  });
   root.querySelectorAll<HTMLButtonElement>("[data-website-tab]").forEach((button) => button.addEventListener("click", () => {
     state.websiteTab = button.dataset.websiteTab as WebsiteTab;
     root.querySelectorAll<HTMLButtonElement>("[data-website-tab]").forEach((item) => {
@@ -632,14 +749,37 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     const saveButton = root.querySelector<HTMLButtonElement>('[form="profile-editor-form"].admin-action-save');
     setButtonBusy(saveButton, true, "Saving…");
     void (async () => {
-      const professional = readProfileForm(profileForm);
-      await saveProfessionalProfile(professional);
-      state.runtime = { ...state.runtime!, professional };
-      invalidateProfileDocumentWorkspace();
-      updateCoverLetterSharedProfile(professional);
-      callbacks.setDirty(false);
-      callbacks.rerender();
-      callbacks.notify("Professional Profile saved. Publish each channel when ready.", "success");
+      const originalPhotoPath = state.runtime!.professional.profile.photoPath;
+      let uploadedPath: string | undefined;
+      try {
+        const file = photoInput?.files?.[0];
+        if (file) {
+          callbacks.notify("Uploading profile photo…");
+          const uploaded = await uploadProfilePhoto(file);
+          uploadedPath = uploaded.path;
+          if (photoPath) photoPath.value = uploaded.publicUrl;
+        }
+        const professional = readProfileForm(profileForm);
+        await saveProfessionalProfile(professional);
+        state.runtime = { ...state.runtime!, professional };
+        invalidateProfileDocumentWorkspace();
+        updateCoverLetterSharedProfile(professional);
+        callbacks.setDirty(false);
+        if (profilePhotoPreviewUrl) URL.revokeObjectURL(profilePhotoPreviewUrl);
+        profilePhotoPreviewUrl = undefined;
+        callbacks.rerender();
+        callbacks.notify("Professional Profile saved. Publish each channel when ready.", "success");
+      } catch (error) {
+        if (uploadedPath) {
+          try {
+            await supabase.storage.from(supabaseConfig.storageBucket).remove([uploadedPath]);
+          } catch {
+            // Preserve the original save error; unused uploads can be cleaned up separately.
+          }
+        }
+        if (photoPath) photoPath.value = originalPhotoPath;
+        throw error;
+      }
     })()
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });

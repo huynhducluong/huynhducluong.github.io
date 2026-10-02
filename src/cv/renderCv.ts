@@ -8,6 +8,7 @@ import { projects } from "../data/projects";
 import { skillGroups } from "../data/skills";
 import {
   assetUrl,
+  formatDegreeClassification,
   escapeHtml,
   formatNumericDate,
   localize,
@@ -49,15 +50,12 @@ const renderEducation = (): string =>
   englishCvConfig.pages[0].educationIds
     .map((id) => {
       const item = findRequired(education, id, "education");
+      const classification = formatDegreeClassification(item.classification, language);
       return `
         <article class="cv-sidebar-entry">
           <h3>${localize(item.field, language)}</h3>
           <p>${localize(item.institution, language)}</p>
-          ${
-            item.classification
-              ? `<p class="cv-sidebar-entry__meta">${localize(item.classification, language)}</p>`
-              : ""
-          }
+          ${classification ? `<p class="cv-sidebar-entry__meta">${classification}</p>` : ""}
           <p class="cv-sidebar-entry__meta">${escapeHtml(item.startDate)} - ${escapeHtml(item.endDate)}</p>
         </article>
       `;

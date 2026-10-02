@@ -19,6 +19,7 @@ const page = (content: string, className = ""): string =>
 export const renderPortfolio = (data: PortfolioRuntimeData): string => {
   const { content, projects, tools } = data;
   const { profile, skillGroups } = content;
+  const profileInitials = profile.name.trim().split(/\s+/).slice(0, 3).map((part) => part[0] ?? "").join("").toUpperCase() || "HDL";
   const selectedProjects = projects
     .filter((project) => project.includeInPortfolio)
     .sort((a, b) => a.portfolioOrder - b.portfolioOrder);
@@ -44,7 +45,10 @@ export const renderPortfolio = (data: PortfolioRuntimeData): string => {
   const about = numbered(`
     <div class="portfolio-split">
       <aside class="portfolio-about__aside">
-        <img src="${assetUrl(profile.photoPath)}" alt="${escapeHtml(profile.name)}">
+        <div class="portfolio-about__photo" data-portfolio-profile-photo-frame>
+          <span aria-hidden="true">${escapeHtml(profileInitials)}</span>
+          <img src="${escapeHtml(assetUrl(profile.photoPath))}" alt="${escapeHtml(profile.name)}" data-portfolio-profile-photo>
+        </div>
         <p class="portfolio-kicker">Profile</p>
         <h2>${escapeHtml(profile.name)}</h2>
         <p>${localize(profile.professionalTitle, "en")}</p>

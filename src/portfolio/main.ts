@@ -21,6 +21,13 @@ const render = (data: PortfolioRuntimeData): void => {
   const documentRoot = app.querySelector<HTMLElement>("#portfolio-document");
   if (!documentRoot) throw new Error("Portfolio document was not found.");
   applyDocumentTheme(documentRoot, resolveDocumentTheme(data.content.theme));
+  const photo = app.querySelector<HTMLImageElement>("[data-portfolio-profile-photo]");
+  const updatePhoto = (): void => {
+    photo?.closest("[data-portfolio-profile-photo-frame]")?.classList.toggle("has-image", Boolean(photo.complete && photo.naturalWidth > 0));
+  };
+  photo?.addEventListener("load", updatePhoto);
+  photo?.addEventListener("error", updatePhoto);
+  updatePhoto();
 };
 
 const initialize = async (): Promise<void> => {

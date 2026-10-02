@@ -26,7 +26,7 @@ import {
 import { confirmAdmin } from "./confirmDialog";
 
 type CoverLetterFilter = CoverLetterStatus | "all";
-type CoverLetterEditorTab = "application" | "body" | "evidence" | "appearance" | "notes";
+type CoverLetterEditorTab = "content" | "evidence" | "appearance" | "notes";
 type PreviewZoom = "fit" | "75" | "100";
 type MessageKind = "info" | "error" | "success";
 
@@ -49,7 +49,7 @@ let loaded = false;
 let loading: Promise<void> | null = null;
 let loadError = "";
 let stale = false;
-let editorTab: CoverLetterEditorTab = "application";
+let editorTab: CoverLetterEditorTab = "content";
 let previewZoom: PreviewZoom = "fit";
 let sharedSender: CoverLetterSenderSnapshot = coverLetterSenderDefaults;
 const lastOpenedStorageKey = "hdl-admin-cover-letter-last-opened";
@@ -133,7 +133,7 @@ const selectRecord = (selected: CoverLetterRecord): void => {
   letter = structuredClone(selected);
   editorOpen = true;
   dirty = false;
-  editorTab = "application";
+  editorTab = "content";
   rememberRecord(selected.id);
 };
 
@@ -283,9 +283,9 @@ const editorView = (): string => {
       ${isLocked ? '<div class="cover-letter-lock"><strong>Final content is locked.</strong><span>Duplicate this letter to create an editable draft.</span></div>' : ""}
       <div class="admin-cl-editor__body">
         <section class="admin-cl-form-pane">
-          <nav class="admin-editor-tabs" role="tablist" aria-label="Cover letter sections">${tabButton("application", "Application")}${tabButton("body", "Letter body")}${tabButton("evidence", "Evidence")}${tabButton("appearance", "Appearance")}${tabButton("notes", "Notes")}</nav>
+          <nav class="admin-editor-tabs" role="tablist" aria-label="Cover letter sections">${tabButton("content", "Content")}${tabButton("evidence", "Evidence")}${tabButton("appearance", "Appearance")}${tabButton("notes", "Notes")}</nav>
           <form id="admin-cover-letter-form" data-cl-form>
-            <section class="admin-editor-panel" data-cl-panel="application" ${panelState("application")}>
+            <section class="admin-editor-panel" data-cl-panel="content" ${panelState("content")}>
               ${renderAdminSectionCard({
                 title: "Application details",
                 note: "Identify the role, company and recipient.",
@@ -294,8 +294,6 @@ const editorView = (): string => {
                   ${input("Salutation *", "salutation", "text", true)}
                   <article class="admin-cl-sender"><div><span>Candidate profile</span><strong>${escapeHtml(record?.senderSnapshot?.name ?? sharedSender.name)}</strong><small>${escapeHtml(record?.senderSnapshot?.professionalTitle ?? sharedSender.professionalTitle)}</small></div><p>The shared Professional Profile is captured as a locked snapshot when the letter is finalized.</p></article>`,
               })}
-            </section>
-            <section class="admin-editor-panel" data-cl-panel="body" ${panelState("body")}>
               ${renderAdminSectionCard({
                 title: "Letter body",
                 note: "Keep claims factual and aim for 250–400 words.",
@@ -415,7 +413,7 @@ const resetEditor = (): void => {
   letter = createCoverLetterDraft();
   editorOpen = false;
   dirty = false;
-  editorTab = "application";
+  editorTab = "content";
 };
 
 export const discardCoverLetterChanges = (): void => {
@@ -444,7 +442,7 @@ const openNew = async (callbacks: WorkspaceCallbacks): Promise<void> => {
   letter = createCoverLetterDraft();
   editorOpen = true;
   dirty = false;
-  editorTab = "application";
+  editorTab = "content";
   callbacks.setDirty(false);
   syncUrl();
   callbacks.rerender();
@@ -602,7 +600,7 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
       letter = structuredClone(copy);
       editorOpen = true;
       dirty = false;
-      editorTab = "application";
+      editorTab = "content";
       rememberRecord(copy.id);
       callbacks.setDirty(false);
       syncUrl(copy.id);

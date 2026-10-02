@@ -1,7 +1,8 @@
 import { documentThemes } from "../themes/documentThemes";
-import { assetUrl, escapeHtml, formatNumericDate, localize } from "../shared/format";
+import { assetUrl, escapeHtml, formatDegreeClassification, formatNumericDate, localize } from "../shared/format";
 import type { ContentPoint } from "../types/career";
 import type { CvRuntimeData, CvRuntimeProject } from "../types/cvContent";
+import { orderedCvBackground } from "./backgroundOrder";
 
 const language = "en" as const;
 
@@ -38,6 +39,7 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false): stri
   const pageOneProjects = data.detailedProjects.slice(0, content.pageOneProjectCount);
   const pageTwoProjects = data.detailedProjects.slice(content.pageOneProjectCount);
   const profile = content.profile;
+  const background = orderedCvBackground(content);
 
   const sidebar = `
     <aside class="cv-sidebar">
@@ -55,26 +57,28 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false): stri
       </section>
       <section class="cv-sidebar-section">
         ${heading("Education")}
-        ${content.education.map((item) => `
-          <article class="cv-sidebar-entry">
+        ${background.education.map((item) => {
+          const classification = formatDegreeClassification(item.classification, language);
+          return `<article class="cv-sidebar-entry">
             <h3>${localize(item.field, language)}</h3>
             <p>${localize(item.institution, language)}</p>
-            ${item.classification ? `<p class="cv-sidebar-entry__meta">${localize(item.classification, language)}</p>` : ""}
+            ${classification ? `<p class="cv-sidebar-entry__meta">${classification}</p>` : ""}
             <p class="cv-sidebar-entry__meta">${escapeHtml(item.startDate)} - ${escapeHtml(item.endDate)}</p>
-          </article>`).join("")}
+          </article>`;
+        }).join("")}
       </section>
-      ${content.skillGroups.map((group) => `
+      ${background.skillGroups.map((group) => `
         <section class="cv-sidebar-section">
           ${heading(localize(group.title, language))}
           <ul class="cv-sidebar-list">${group.items.map((item) => `<li>${localize(item.label, language)}</li>`).join("")}</ul>
         </section>`).join("")}
       <section class="cv-sidebar-section">
         ${heading("Language")}
-        <ul class="cv-sidebar-list cv-sidebar-list--compact">${content.languages.map((item) => `<li>${localize(item.name, language)}${item.proficiency ? ` - ${localize(item.proficiency, language)}` : ""}</li>`).join("")}</ul>
+        <ul class="cv-sidebar-list cv-sidebar-list--compact">${background.languages.map((item) => `<li>${localize(item.name, language)}${item.proficiency ? ` - ${localize(item.proficiency, language)}` : ""}</li>`).join("")}</ul>
       </section>
       <section class="cv-sidebar-section cv-sidebar-section--employment">
         ${heading("Experience")}
-        <ul class="cv-employment-list">${content.experiences.map((item) => `
+        <ul class="cv-employment-list">${background.experiences.map((item) => `
           <li class="cv-employment"><strong>${escapeHtml(item.company)}</strong><span>${formatRange(item.startDate, item.endDate)}</span></li>`).join("")}</ul>
       </section>
     </aside>`;

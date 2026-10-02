@@ -472,8 +472,8 @@ const orderedProjectMedia = (media: AdminMediaRow[]): AdminMediaRow[] => [...med
   return left.display_order - right.display_order;
 });
 
-const mediaLibrary = (project: AdminProjectRow): string => {
-  const media = orderedProjectMedia(project.project_images);
+const mediaLibrary = (mediaRows: AdminMediaRow[]): string => {
+  const media = orderedProjectMedia(mediaRows);
   if (!media.length) return '<p class="admin-empty">No saved images yet.</p>';
   const firstGalleryIndex = media[0]?.kind === "cover" ? 1 : 0;
   return `<div class="admin-media-list">${media.map((item, index) => `
@@ -489,6 +489,21 @@ const mediaLibrary = (project: AdminProjectRow): string => {
         <button type="button" class="admin-danger" data-media-delete>Delete</button>
       </div>
     </article>`).join("")}</div>`;
+};
+
+const mediaPanel = (type: AdminItemType, media: AdminMediaRow[]): string => {
+  const isProject = type === "project";
+  const uploadTitle = isProject ? "Project media" : "Tool media";
+  const uploadNote = isProject
+    ? "Add a cover and gallery images for the project. JPEG, PNG, WebP or AVIF up to 5 MB."
+    : "Add a primary cover and gallery screenshots showing the tool workflow or output. JPEG, PNG, WebP or AVIF up to 5 MB.";
+  const libraryNote = isProject
+    ? "Choose the cover image, alt text and gallery order."
+    : "Choose the primary tool visual, edit alt text and order supporting screenshots.";
+  return `<div class="admin-media-panel" data-editor-panel="media" data-media-owner="${type}" ${panelState("media")}>
+    <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload selected images</button></form>
+    <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(media)}</section>
+  </div>`;
 };
 
 const editorTab = (tab: EditorTab, label: string): string =>
@@ -529,10 +544,7 @@ const editor = (project: AdminProjectRow): string => `
         })}
       </section>
     </form>
-    <div class="admin-media-panel" data-editor-panel="media" ${panelState("media")}>
-      <form class="admin-upload admin-form-section" data-upload-form><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Project media</h3><p class="admin-form-section__note" title="Select JPEG, PNG, WebP or AVIF files up to 5 MB.">Select JPEG, PNG, WebP or AVIF files up to 5 MB.</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload selected images</button></form>
-      <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="Choose the cover image, alt text and gallery order.">Choose the cover image, alt text and gallery order.</p><span class="admin-media-section-heading__count">${project.project_images.length} ${project.project_images.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(project)}</section>
-    </div>
+    ${mediaPanel("project", project.project_images)}
   </section>`;
 
 const toolEditor = (tool: AdminToolRow): string => `
@@ -541,7 +553,7 @@ const toolEditor = (tool: AdminToolRow): string => `
       <div><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2>${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${contentStatusLabel(tool.status)}</span><small data-unsaved-state>Saved</small></div></div>
       <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="tool" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Return to draft" : "Mark ready"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move tool to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
     </div>
-    <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}</nav>
+    <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${tool.tool_images.length})`)}</nav>
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
@@ -551,6 +563,7 @@ const toolEditor = (tool: AdminToolRow): string => `
         ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>Problem (EN)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (VI)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (EN)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (VI)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (EN)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (VI)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
       </section>
     </form>
+    ${mediaPanel("tool", tool.tool_images)}
   </section>`;
 
 const selectedTrashItem = (): AdminContentListItem | null => {
@@ -885,8 +898,47 @@ const moveItem = <T,>(items: T[], index: number, direction: "up" | "down"): T[] 
   return copy;
 };
 
-const persistProjectMediaOrder = async (ordered: Array<{ id: string }>): Promise<void> => {
-  const results = await Promise.all(ordered.map((item, index) => supabase.from("project_images").update({ display_order: index + 1 }).eq("id", item.id)));
+interface SelectedMediaOwner {
+  type: AdminItemType;
+  id: string;
+  name: string;
+  media: AdminMediaRow[];
+  table: "project_images" | "tool_images";
+  foreignKey: "project_id" | "tool_id";
+  storageFolder: "projects" | "tools";
+  coverRpc: "set_project_image_cover" | "set_tool_image_cover";
+  label: "Project" | "Tool";
+}
+
+const selectedMediaOwner = (type: AdminItemType): SelectedMediaOwner | null => {
+  if (type === "project" && selectedProject) return {
+    type,
+    id: selectedProject.id,
+    name: selectedProject.name.en,
+    media: selectedProject.project_images,
+    table: "project_images",
+    foreignKey: "project_id",
+    storageFolder: "projects",
+    coverRpc: "set_project_image_cover",
+    label: "Project",
+  };
+  if (type === "tool" && selectedTool) return {
+    type,
+    id: selectedTool.id,
+    name: selectedTool.name,
+    media: selectedTool.tool_images,
+    table: "tool_images",
+    foreignKey: "tool_id",
+    storageFolder: "tools",
+    coverRpc: "set_tool_image_cover",
+    label: "Tool",
+  };
+  return null;
+};
+
+const persistMediaOrder = async (type: AdminItemType, ordered: Array<{ id: string }>): Promise<void> => {
+  const table = type === "project" ? "project_images" : "tool_images";
+  const results = await Promise.all(ordered.map((item, index) => supabase.from(table).update({ display_order: index + 1 }).eq("id", item.id)));
   const failure = results.find((result) => result.error)?.error;
   if (failure) throw failure;
 };
@@ -958,22 +1010,26 @@ const bindPendingMedia = (): void => {
   });
 };
 
-const choosePendingMedia = (files: FileList): void => {
+const choosePendingMedia = (files: FileList, type: AdminItemType): void => {
   clearPendingMedia();
   const allowed = ["image/jpeg", "image/png", "image/webp", "image/avif"];
   const selected = Array.from(files);
   const invalid = selected.find((file) => !allowed.includes(file.type) || file.size > 5 * 1024 * 1024);
   if (invalid) throw new Error(`Use JPEG, PNG, WebP or AVIF files smaller than 5 MB. Check "${invalid.name}".`);
-  const hasCover = selectedProject?.project_images.some((item) => item.kind === "cover") ?? false;
+  const owner = selectedMediaOwner(type);
+  const hasCover = owner?.media.some((item) => item.kind === "cover") ?? false;
   pendingMedia = selected.map((file, index) => ({
-    id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file), alt: selectedProject?.name.en ?? "",
+    id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file), alt: owner?.name ?? "",
     kind: !hasCover && index === 0 ? "cover" : "gallery",
   }));
   renderUploadQueue();
 };
 
 const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
-  if (!selectedProject || !projects.some((project) => project.id === selectedProject?.id)) throw new Error("Save or select a project before uploading.");
+  const type = formElement.dataset.mediaOwner as AdminItemType;
+  const owner = selectedMediaOwner(type);
+  const persisted = type === "project" ? projects.some((item) => item.id === owner?.id) : tools.some((item) => item.id === owner?.id);
+  if (!owner || !persisted) throw new Error(`Save or select a ${type} before uploading.`);
   if (!pendingMedia.length) throw new Error("Choose one or more images.");
   const submitButton = formElement.querySelector<HTMLButtonElement>("[data-upload-submit]");
   const failures: Array<{ name: string; reason: string }> = [];
@@ -984,14 +1040,14 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
   try {
     for (const [index, item] of pendingMedia.entries()) {
       if (submitButton) submitButton.textContent = `Uploading ${index + 1} of ${pendingMedia.length}...`;
-      message(`Uploading image ${index + 1} of ${pendingMedia.length}...`);
+        message(`Uploading image ${index + 1} of ${pendingMedia.length}...`);
       try {
         const extension = item.file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
-        const path = `projects/${selectedProject.id}/${crypto.randomUUID()}.${extension}`;
+        const path = `${owner.storageFolder}/${owner.id}/${crypto.randomUUID()}.${extension}`;
         const { error: uploadError } = await supabase.storage.from(supabaseConfig.storageBucket).upload(path, item.file, { contentType: item.file.type, upsert: false });
         if (uploadError) throw uploadError;
-        const currentMaxOrder = Math.max(0, ...selectedProject.project_images.map((media) => media.display_order));
-        const { data, error: metadataError } = await supabase.from("project_images").insert({ project_id: selectedProject.id, storage_path: path, alt: { en: item.alt.trim(), vi: "" }, kind: "gallery", display_order: currentMaxOrder + index + 1, mime_type: item.file.type, file_size: item.file.size }).select("id").single();
+        const currentMaxOrder = Math.max(0, ...owner.media.map((media) => media.display_order));
+        const { data, error: metadataError } = await supabase.from(owner.table).insert({ [owner.foreignKey]: owner.id, storage_path: path, alt: { en: item.alt.trim(), vi: "" }, kind: "gallery", display_order: currentMaxOrder + index + 1, mime_type: item.file.type, file_size: item.file.size }).select("id").single();
         if (metadataError) { await supabase.storage.from(supabaseConfig.storageBucket).remove([path]); throw metadataError; }
         const uploadedId = String(data.id);
         uploadedMediaIds.push(uploadedId);
@@ -1003,10 +1059,10 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
     }
     const coverId = uploadedCoverIds.at(-1);
     if (coverId) {
-      const { error } = await supabase.rpc("set_project_image_cover", { target_image_id: coverId });
+      const { error } = await supabase.rpc(owner.coverRpc, { target_image_id: coverId });
       if (error) throw error;
-      const existingMedia = orderedProjectMedia(selectedProject.project_images);
-      await persistProjectMediaOrder([
+      const existingMedia = orderedProjectMedia(owner.media);
+      await persistMediaOrder(type, [
         { id: coverId },
         ...existingMedia.map((item) => ({ id: item.id })),
         ...uploadedMediaIds.filter((id) => id !== coverId).map((id) => ({ id })),
@@ -1018,66 +1074,65 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
   const total = pendingMedia.length;
   clearPendingMedia();
   formElement.reset();
-  await loadProjects();
-  selectedProject = projects.find((project) => project.id === selectedProject?.id) ?? null;
-  dashboardView();
+  await refreshSelectedMediaOwner(type, owner.id);
   if (failures.length) throw new Error(`${uploaded} of ${total} images uploaded. Failed: ${failures.map((failure) => `${failure.name}: ${failure.reason}`).join("; ")}`);
   message(`${uploaded} ${uploaded === 1 ? "image" : "images"} uploaded.`, "success");
 };
 
-const refreshSelectedProject = async (projectId: string): Promise<void> => {
+const refreshSelectedMediaOwner = async (type: AdminItemType, ownerId: string): Promise<void> => {
   await loadProjects();
-  selectedProject = projects.find((project) => project.id === projectId) ?? null;
+  if (type === "project") selectedProject = projects.find((project) => project.id === ownerId) ?? null;
+  else selectedTool = tools.find((tool) => tool.id === ownerId) ?? null;
   dashboardView();
 };
 
-const setMediaCover = async (mediaId: string): Promise<void> => {
-  if (!selectedProject) return;
-  const projectId = selectedProject.id;
-  const ordered = orderedProjectMedia(selectedProject.project_images);
+const setMediaCover = async (type: AdminItemType, mediaId: string): Promise<void> => {
+  const owner = selectedMediaOwner(type);
+  if (!owner) return;
+  const ordered = orderedProjectMedia(owner.media);
   const cover = ordered.find((item) => item.id === mediaId);
   if (!cover) return;
-  const { error } = await supabase.rpc("set_project_image_cover", { target_image_id: mediaId });
+  const { error } = await supabase.rpc(owner.coverRpc, { target_image_id: mediaId });
   if (error) throw error;
-  await persistProjectMediaOrder([cover, ...ordered.filter((item) => item.id !== mediaId)]);
-  await refreshSelectedProject(projectId);
-  message("Cover image updated.", "success");
+  await persistMediaOrder(type, [cover, ...ordered.filter((item) => item.id !== mediaId)]);
+  await refreshSelectedMediaOwner(type, owner.id);
+  message(`${owner.label} cover image updated.`, "success");
 };
 
-const saveMediaAlt = async (card: HTMLElement): Promise<void> => {
-  if (!selectedProject || !card.dataset.mediaId) return;
-  const projectId = selectedProject.id;
+const saveMediaAlt = async (type: AdminItemType, card: HTMLElement): Promise<void> => {
+  const owner = selectedMediaOwner(type);
+  if (!owner || !card.dataset.mediaId) return;
   const alt = card.querySelector<HTMLInputElement>("[data-media-alt]")?.value.trim() ?? "";
-  const current = selectedProject.project_images.find((item) => item.id === card.dataset.mediaId);
-  const { error } = await supabase.from("project_images").update({ alt: { en: alt, vi: current?.alt.vi ?? "" } }).eq("id", card.dataset.mediaId);
+  const current = owner.media.find((item) => item.id === card.dataset.mediaId);
+  const { error } = await supabase.from(owner.table).update({ alt: { en: alt, vi: current?.alt.vi ?? "" } }).eq("id", card.dataset.mediaId);
   if (error) throw error;
-  await refreshSelectedProject(projectId);
+  await refreshSelectedMediaOwner(type, owner.id);
   message("Image alt text saved.", "success");
 };
 
-const moveSavedMedia = async (mediaId: string, direction: "up" | "down"): Promise<void> => {
-  if (!selectedProject) return;
-  const projectId = selectedProject.id;
-  const ordered = orderedProjectMedia(selectedProject.project_images);
+const moveSavedMedia = async (type: AdminItemType, mediaId: string, direction: "up" | "down"): Promise<void> => {
+  const owner = selectedMediaOwner(type);
+  if (!owner) return;
+  const ordered = orderedProjectMedia(owner.media);
   const cover = ordered.find((item) => item.kind === "cover");
   if (cover?.id === mediaId) return;
   const gallery = ordered.filter((item) => item.kind !== "cover");
   const index = gallery.findIndex((item) => item.id === mediaId);
   const moved = moveItem(gallery, index, direction);
-  await persistProjectMediaOrder(cover ? [cover, ...moved] : moved);
-  await refreshSelectedProject(projectId);
+  await persistMediaOrder(type, cover ? [cover, ...moved] : moved);
+  await refreshSelectedMediaOwner(type, owner.id);
   message("Image order updated.", "success");
 };
 
-const deleteSavedMedia = async (mediaId: string): Promise<void> => {
-  if (!selectedProject) return;
-  const media = selectedProject.project_images.find((item) => item.id === mediaId);
-  if (!media || !(await confirmAdmin({ eyebrow: "Project media", title: "Delete this image?", message: "The image record and its stored file will be removed.", confirmLabel: "Delete image", tone: "danger" }))) return;
-  const projectId = selectedProject.id;
-  const { error: metadataError } = await supabase.from("project_images").delete().eq("id", mediaId);
+const deleteSavedMedia = async (type: AdminItemType, mediaId: string): Promise<void> => {
+  const owner = selectedMediaOwner(type);
+  if (!owner) return;
+  const media = owner.media.find((item) => item.id === mediaId);
+  if (!media || !(await confirmAdmin({ eyebrow: `${owner.label} media`, title: "Delete this image?", message: "The image record and its stored file will be removed.", confirmLabel: "Delete image", tone: "danger" }))) return;
+  const { error: metadataError } = await supabase.from(owner.table).delete().eq("id", mediaId);
   if (metadataError) throw metadataError;
   const { error: storageError } = await supabase.storage.from(supabaseConfig.storageBucket).remove([media.storage_path]);
-  await refreshSelectedProject(projectId);
+  await refreshSelectedMediaOwner(type, owner.id);
   if (storageError) throw new Error(`Image record deleted, but Storage cleanup failed: ${storageError.message}`);
   message("Image deleted.", "success");
 };
@@ -1224,17 +1279,20 @@ const bindDashboard = (): void => {
     form.addEventListener("change", markDirty);
   });
   app.querySelector<HTMLInputElement>('input[name="images"]')?.addEventListener("change", (event) => {
-    const files = (event.currentTarget as HTMLInputElement).files;
-    if (!files) return;
-    try { choosePendingMedia(files); } catch (error) { message(error instanceof Error ? error.message : "Images could not be selected.", "error"); }
+    const input = event.currentTarget as HTMLInputElement;
+    const files = input.files;
+    const type = input.closest<HTMLElement>("[data-media-owner]")?.dataset.mediaOwner as AdminItemType | undefined;
+    if (!files || !type) return;
+    try { choosePendingMedia(files, type); } catch (error) { message(error instanceof Error ? error.message : "Images could not be selected.", "error"); }
   });
   app.querySelectorAll<HTMLElement>("[data-media-id]").forEach((card) => {
     const mediaId = card.dataset.mediaId;
-    if (!mediaId) return;
-    card.querySelector("[data-media-cover]")?.addEventListener("click", () => { void setMediaCover(mediaId).catch((error: Error) => message(error.message, "error")); });
-    card.querySelector("[data-media-save]")?.addEventListener("click", () => { void saveMediaAlt(card).catch((error: Error) => message(error.message, "error")); });
-    card.querySelector("[data-media-delete]")?.addEventListener("click", () => { void deleteSavedMedia(mediaId).catch((error: Error) => message(error.message, "error")); });
-    card.querySelectorAll<HTMLElement>("[data-media-move]").forEach((button) => button.addEventListener("click", () => { void moveSavedMedia(mediaId, button.dataset.mediaMove as "up" | "down").catch((error: Error) => message(error.message, "error")); }));
+    const type = card.closest<HTMLElement>("[data-media-owner]")?.dataset.mediaOwner as AdminItemType | undefined;
+    if (!mediaId || !type) return;
+    card.querySelector("[data-media-cover]")?.addEventListener("click", () => { void setMediaCover(type, mediaId).catch((error: Error) => message(error.message, "error")); });
+    card.querySelector("[data-media-save]")?.addEventListener("click", () => { void saveMediaAlt(type, card).catch((error: Error) => message(error.message, "error")); });
+    card.querySelector("[data-media-delete]")?.addEventListener("click", () => { void deleteSavedMedia(type, mediaId).catch((error: Error) => message(error.message, "error")); });
+    card.querySelectorAll<HTMLElement>("[data-media-move]").forEach((button) => button.addEventListener("click", () => { void moveSavedMedia(type, mediaId, button.dataset.mediaMove as "up" | "down").catch((error: Error) => message(error.message, "error")); }));
   });
   app.querySelector("[data-password-open]")?.addEventListener("click", () => passwordDialog?.showModal());
   app.querySelector("[data-password-close]")?.addEventListener("click", () => passwordDialog?.close());

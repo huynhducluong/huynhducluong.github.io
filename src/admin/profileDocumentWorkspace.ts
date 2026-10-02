@@ -13,10 +13,11 @@ import {
   renameProfileDocument,
   saveProfileDocument,
 } from "../services/profileDocumentRepository";
-import { escapeHtml } from "../shared/format";
+import { assetUrl, degreeClassificationValue, escapeHtml } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes } from "../themes/documentThemes";
-import type { CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
+import { backgroundOrderKey, orderedCvBackground, resolveCvBackgroundOrder } from "../cv/backgroundOrder";
+import type { CvBackgroundGroup, CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
 import type { PortfolioContent, PortfolioRuntimeData } from "../types/portfolio";
 import type {
   ProfileDocumentKind,
@@ -36,7 +37,7 @@ import {
 } from "./ui";
 
 export type { ProfileDocumentKind } from "../types/profileDocument";
-type DocumentTab = "content" | "experience" | "education" | "selection" | "appearance";
+type DocumentTab = "content" | "background" | "selection" | "appearance";
 type DocumentFilter = ProfileDocumentStatus | "all";
 
 interface WorkspaceCallbacks {
@@ -80,8 +81,6 @@ let previewController: EmbeddedPreviewController | undefined;
 let previewSender: PreviewSender | undefined;
 
 const text = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
-const lines = (value: string): string[] => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
-const commaList = (value: string): string[] => value.split(",").map((item) => item.trim()).filter(Boolean);
 const field = (label: string, name: string, value: string, type = "text"): string =>
   `<label${type === "month" ? ' class="admin-date-field"' : ""}>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(value)}"></label>`;
 const area = (label: string, name: string, value: string, rows = 5): string =>
@@ -250,6 +249,39 @@ const latestRelease = (kind: ProfileDocumentKind): string => {
   return release ? `Published ${new Date(release.publishedAt).toLocaleString()} · ${escapeHtml(release.version)}` : "Not published yet";
 };
 
+const profilePhotoName = (path: string): string => {
+  const name = path.split(/[?#]/, 1)[0].split("/").at(-1) || "No photo selected";
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+};
+
+const cvProfilePhoto = (content: CvContent): string => {
+  const initials = content.profile.name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 3)
+    .map((part) => part[0] ?? "")
+    .join("")
+    .toUpperCase() || "HDL";
+  return `<div class="admin-profile-photo-field admin-profile-photo-field--readonly">
+    <span class="admin-profile-photo-field__label">Profile photo</span>
+    <div class="admin-profile-photo-control">
+      <span class="admin-profile-photo-preview" data-profile-photo-frame aria-hidden="true">
+        <span>${escapeHtml(initials)}</span>
+        <img src="${escapeHtml(assetUrl(content.profile.photoPath))}" alt="" data-profile-photo-preview>
+      </span>
+      <span class="admin-profile-photo-identity">
+        <strong>${escapeHtml(profilePhotoName(content.profile.photoPath))}</strong>
+        <small>Synced from Professional Profile</small>
+      </span>
+      <span class="admin-profile-photo-source">Profile</span>
+    </div>
+  </div>`;
+};
+
 const cvContentPanel = (content: CvContent): string => [
   renderAdminSectionCard({
     title: "CV document",
@@ -264,11 +296,11 @@ const cvContentPanel = (content: CvContent): string => [
     note: "Edit or sync the profile snapshot stored in this CV draft.",
     content: `<div class="admin-form-grid">
       ${field("Full name", "profile_name", content.profile.name)}
-      ${field("Professional title (EN)", "profile_title_en", content.profile.professionalTitle.en)}
-      ${field("Professional title (VI)", "profile_title_vi", content.profile.professionalTitle.vi)}
       ${field("Email", "profile_email", content.profile.email, "email")}
       ${field("Phone", "profile_phone", content.profile.phone, "tel")}
-      ${field("Photo path", "profile_photo", content.profile.photoPath)}
+      ${cvProfilePhoto(content)}
+      ${field("Professional title (EN)", "profile_title_en", content.profile.professionalTitle.en)}
+      ${field("Professional title (VI)", "profile_title_vi", content.profile.professionalTitle.vi)}
       ${field("Location (EN)", "profile_location_en", content.profile.location.en)}
       ${field("Location (VI)", "profile_location_vi", content.profile.location.vi)}
     </div>
@@ -278,65 +310,111 @@ const cvContentPanel = (content: CvContent): string => [
   }),
 ].join("");
 
-const cvExperiencePanel = (content: CvContent): string => renderAdminSectionCard({
-  title: "CV experience",
-  note: "Edit the work history shown in the CV sidebar.",
-  content: `<div class="admin-document-cards">${content.experiences.map((item, index) => `
-    <article>
-      <input type="hidden" name="experience_id_${index}" value="${escapeHtml(item.id)}">
-      <h4>${escapeHtml(item.company || `Experience ${index + 1}`)}</h4>
-      <div class="admin-form-grid">
-        ${field("Company", `experience_company_${index}`, item.company)}
-        ${field("Position (EN)", `experience_position_en_${index}`, item.position.en)}
-        ${field("Position (VI)", `experience_position_vi_${index}`, item.position.vi)}
-        ${field("Location (EN)", `experience_location_en_${index}`, item.location.en)}
-        ${field("Location (VI)", `experience_location_vi_${index}`, item.location.vi)}
-        ${field("Start", `experience_start_${index}`, item.startDate, "month")}
-        ${field("End (blank = Present)", `experience_end_${index}`, item.endDate ?? "", "month")}
-      </div>
-      ${area("Responsibilities (one EN item per line)", `experience_responsibilities_${index}`, item.responsibilities.map((point) => point.text.en).join("\n"), 4)}
-      ${field("Technologies (comma separated)", `experience_technologies_${index}`, item.technologies.join(", "))}
-    </article>`).join("")}</div>`,
-});
+const backgroundRange = (start: string, end: string | null): string => `${start || "Start not set"} – ${end || "Present"}`;
 
-const cvEducationPanel = (content: CvContent): string => [
-  renderAdminSectionCard({
-    title: "CV education",
-    note: "Keep education entries concise for the two-page layout.",
-    content: `<div class="admin-document-cards">
-      ${content.education.map((item, index) => `<article><h4>Education ${index + 1}</h4><div class="admin-form-grid">
-      ${field("Field (EN)", `education_field_en_${index}`, item.field.en)}
-      ${field("Field (VI)", `education_field_vi_${index}`, item.field.vi)}
-      ${field("Institution (EN)", `education_institution_en_${index}`, item.institution.en)}
-      ${field("Institution (VI)", `education_institution_vi_${index}`, item.institution.vi)}
-      ${field("Start year", `education_start_${index}`, item.startDate)}
-      ${field("End year", `education_end_${index}`, item.endDate)}
-      </div></article>`).join("")}
-    </div>`,
-  }),
-  renderAdminSectionCard({
-    title: "CV skills",
-    note: "Organize compact skill groups for the CV sidebar.",
-    content: `<div class="admin-document-cards">
-      ${content.skillGroups.map((group, index) => `<article><h4>${escapeHtml(group.title.en)}</h4><div class="admin-form-grid">
-      ${field("Group title (EN)", `skill_title_en_${index}`, group.title.en)}
-      ${field("Group title (VI)", `skill_title_vi_${index}`, group.title.vi)}
-      </div>${area("Items (one per line)", `skill_items_${index}`, group.items.map((item) => item.label.en).join("\n"), 5)}</article>`).join("")}
-    </div>`,
-  }),
-  renderAdminSectionCard({
-    title: "CV languages",
-    note: "Keep language and proficiency labels aligned in EN and VI.",
-    content: `<div class="admin-document-cards">
-      ${content.languages.map((item, index) => `<article><h4>Language ${index + 1}</h4><div class="admin-form-grid">
-      ${field("Language (EN)", `language_name_en_${index}`, item.name.en)}
-      ${field("Language (VI)", `language_name_vi_${index}`, item.name.vi)}
-      ${field("Proficiency (EN)", `language_proficiency_en_${index}`, item.proficiency?.en ?? "")}
-      ${field("Proficiency (VI)", `language_proficiency_vi_${index}`, item.proficiency?.vi ?? "")}
-      </div></article>`).join("")}
-    </div>`,
-  }),
-].join("");
+const backgroundRow = ({
+  group,
+  id,
+  index,
+  total,
+  title,
+  meta,
+}: {
+  group: CvBackgroundGroup;
+  id: string;
+  index: number;
+  total: number;
+  title: string;
+  meta: string;
+}): string => `<article class="admin-cv-background__item" data-cv-background-item data-background-group="${group}" data-background-id="${escapeHtml(id)}">
+  <button class="admin-cv-background__drag" type="button" draggable="true" data-background-drag aria-label="Drag ${escapeHtml(title)} to reorder" title="Drag to reorder"><span aria-hidden="true">⋮⋮</span></button>
+  <span class="admin-cv-background__index" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
+  <span class="admin-cv-background__identity"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>
+  <span class="admin-cv-background__source">Profile</span>
+  <span class="admin-cv-background__actions">
+    <button type="button" data-background-move="up" aria-label="Move ${escapeHtml(title)} earlier" title="Move earlier"${index === 0 ? " disabled" : ""}>↑</button>
+    <button type="button" data-background-move="down" aria-label="Move ${escapeHtml(title)} later" title="Move later"${index === total - 1 ? " disabled" : ""}>↓</button>
+  </span>
+</article>`;
+
+const cvBackgroundPanel = (content: CvContent): string => {
+  const background = orderedCvBackground(content);
+  const experienceRows = background.experiences.map((item, index) => backgroundRow({
+    group: "experiences",
+    id: item.id,
+    index,
+    total: background.experiences.length,
+    title: item.company,
+    meta: [item.position.en, item.location.en, backgroundRange(item.startDate, item.endDate)].filter(Boolean).join(" · "),
+  })).join("");
+  const educationRows = background.education.map((item, index) => {
+    const classification = degreeClassificationValue(item.classification?.en ?? "", "en");
+    return backgroundRow({
+      group: "education",
+      id: item.id,
+      index,
+      total: background.education.length,
+      title: item.field.en,
+      meta: [
+        item.institution.en,
+        classification ? `Degree classification: ${classification}` : "",
+        `${item.startDate} – ${item.endDate}`,
+      ].filter(Boolean).join(" · "),
+    });
+  }).join("");
+  const skillRows = background.skillGroups.map((item, index) => backgroundRow({
+    group: "skillGroups",
+    id: item.id,
+    index,
+    total: background.skillGroups.length,
+    title: item.title.en,
+    meta: item.items.map((skill) => skill.label.en).join(" · "),
+  })).join("");
+  const languageRows = background.languages.map((item, index) => backgroundRow({
+    group: "languages",
+    id: item.id,
+    index,
+    total: background.languages.length,
+    title: item.name.en,
+    meta: item.proficiency?.en || "Proficiency not set",
+  })).join("");
+  return renderAdminSectionCard({
+    title: "CV background",
+    note: "Content comes from Professional Profile. Drag within each group to control its order in this CV.",
+    className: "admin-cv-background",
+    content: `<div class="admin-cv-background__source-note"><span class="admin-cv-background__source">Profile source</span><p>Changes here affect CV composition only. Edit content in Professional Profile.</p></div>
+      <div class="admin-cv-background__groups">
+        <section><header><div><h4>Experience</h4><p>Employment history shown in the CV sidebar.</p></div><span>${background.experiences.length}</span></header><div class="admin-cv-background__list" data-background-list="experiences">${experienceRows || '<p class="admin-empty">No experience entries in Professional Profile.</p>'}</div></section>
+        <section><header><div><h4>Education</h4><p>Qualifications shown before skills.</p></div><span>${background.education.length}</span></header><div class="admin-cv-background__list" data-background-list="education">${educationRows || '<p class="admin-empty">No education entries in Professional Profile.</p>'}</div></section>
+        <section><header><div><h4>Skills</h4><p>Skill groups and languages shown in the CV sidebar.</p></div><span>${background.skillGroups.length + background.languages.length}</span></header>
+          <div class="admin-cv-background__subsection"><h5>Skill groups</h5><div class="admin-cv-background__list" data-background-list="skillGroups">${skillRows || '<p class="admin-empty">No skill groups in Professional Profile.</p>'}</div></div>
+          <div class="admin-cv-background__subsection"><h5>Languages</h5><div class="admin-cv-background__list" data-background-list="languages">${languageRows || '<p class="admin-empty">No languages in Professional Profile.</p>'}</div></div>
+        </section>
+      </div>`,
+    actions: '<button class="button button--secondary" type="button" data-sync-professional-profile>Sync latest</button><button class="button button--secondary" type="button" data-admin-view="profile">Edit Professional Profile</button>',
+  });
+};
+
+const moveCvBackgroundItem = (
+  content: CvContent,
+  group: CvBackgroundGroup,
+  itemId: string,
+  movement: "up" | "down" | { targetId: string },
+): boolean => {
+  const order = resolveCvBackgroundOrder(content);
+  const key = backgroundOrderKey(group);
+  const current = [...order[key]];
+  const fromIndex = current.indexOf(itemId);
+  if (fromIndex < 0) return false;
+  const toIndex = typeof movement === "string"
+    ? fromIndex + (movement === "up" ? -1 : 1)
+    : current.indexOf(movement.targetId);
+  if (toIndex < 0 || toIndex >= current.length || toIndex === fromIndex) return false;
+  current.splice(fromIndex, 1);
+  current.splice(toIndex, 0, itemId);
+  content.backgroundOrder = { ...order, [key]: current };
+  return true;
+};
 
 const cvSelectionPanel = (runtime: CvRuntimeData): string => {
   const selectedProjects = new Map([...runtime.detailedProjects, ...runtime.compactProjects].map((item) => [item.id, item]));
@@ -391,46 +469,15 @@ const readCvForm = (formElement: HTMLFormElement): CvContent => {
       professionalTitle: { en: text(form, "profile_title_en"), vi: text(form, "profile_title_vi") },
       email: text(form, "profile_email"),
       phone: text(form, "profile_phone"),
-      photoPath: text(form, "profile_photo"),
+      photoPath: current.profile.photoPath,
       location: { en: text(form, "profile_location_en"), vi: text(form, "profile_location_vi") },
       summary: { en: text(form, "profile_summary_en"), vi: text(form, "profile_summary_vi") },
     },
-    experiences: current.experiences.map((item, index) => {
-      const responsibilityLines = lines(text(form, `experience_responsibilities_${index}`));
-      return {
-        ...item,
-        company: text(form, `experience_company_${index}`),
-        position: { en: text(form, `experience_position_en_${index}`), vi: text(form, `experience_position_vi_${index}`) },
-        location: { en: text(form, `experience_location_en_${index}`), vi: text(form, `experience_location_vi_${index}`) },
-        startDate: text(form, `experience_start_${index}`),
-        endDate: text(form, `experience_end_${index}`) || null,
-        responsibilities: responsibilityLines.map((value, pointIndex) => ({
-          id: item.responsibilities[pointIndex]?.id ?? `${item.id}-${pointIndex + 1}`,
-          text: { en: value, vi: item.responsibilities[pointIndex]?.text.vi ?? "" },
-        })),
-        technologies: commaList(text(form, `experience_technologies_${index}`)),
-      };
-    }),
-    education: current.education.map((item, index) => ({
-      ...item,
-      field: { en: text(form, `education_field_en_${index}`), vi: text(form, `education_field_vi_${index}`) },
-      institution: { en: text(form, `education_institution_en_${index}`), vi: text(form, `education_institution_vi_${index}`) },
-      startDate: text(form, `education_start_${index}`),
-      endDate: text(form, `education_end_${index}`),
-    })),
-    skillGroups: current.skillGroups.map((group, index) => ({
-      ...group,
-      title: { en: text(form, `skill_title_en_${index}`), vi: text(form, `skill_title_vi_${index}`) },
-      items: lines(text(form, `skill_items_${index}`)).map((value, itemIndex) => ({
-        id: group.items[itemIndex]?.id ?? `${group.id}-${itemIndex + 1}`,
-        label: { en: value, vi: group.items[itemIndex]?.label.vi ?? value },
-      })),
-    })),
-    languages: current.languages.map((item, index) => ({
-      ...item,
-      name: { en: text(form, `language_name_en_${index}`), vi: text(form, `language_name_vi_${index}`) },
-      proficiency: { en: text(form, `language_proficiency_en_${index}`), vi: text(form, `language_proficiency_vi_${index}`) },
-    })),
+    experiences: current.experiences,
+    education: current.education,
+    skillGroups: current.skillGroups,
+    languages: current.languages,
+    backgroundOrder: resolveCvBackgroundOrder(current),
   };
 };
 
@@ -585,7 +632,7 @@ const validation = (kind: ProfileDocumentKind, runtime?: CvRuntimeData | Portfol
 };
 
 const tabs = (kind: ProfileDocumentKind): Array<[DocumentTab, string]> => kind === "cv"
-  ? [["content", "Profile"], ["experience", "Experience"], ["education", "Education & skills"], ["selection", "Projects & tools"], ["appearance", "Appearance"]]
+  ? [["content", "Profile"], ["background", "Background"], ["selection", "Projects & tools"], ["appearance", "Appearance"]]
   : [["content", "Content"], ["selection", "Projects & tools"], ["appearance", "Appearance"]];
 
 const documentLabel = (kind: ProfileDocumentKind): string => kind === "cv" ? "CV" : "Portfolio";
@@ -647,7 +694,9 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   const selected = selectedDocument(kind);
   if (!runtime || !selected) return `<section class="admin-document-library">${documentCollectionView(kind)}<div class="admin-document-library__workspace">${emptyDocumentWorkspace(kind)}</div></section>`;
   const content = runtime.content;
-  const activeTab = state.tab[kind];
+  const availableTabs = tabs(kind);
+  const activeTab = availableTabs.some(([id]) => id === state.tab[kind]) ? state.tab[kind] : availableTabs[0][0];
+  state.tab[kind] = activeTab;
   const issues = validation(kind, runtime);
   const validationContent = issues.length
     ? `<ul data-document-validation-list>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
@@ -659,8 +708,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   const previewPath = `${publicPath}?preview=1&embedded=1`;
   const contentPanel = kind === "cv" ? cvContentPanel(content as CvContent) : portfolioContentPanel(content as PortfolioContent);
   const selectionPanel = kind === "cv" ? cvSelectionPanel(runtime as CvRuntimeData) : portfolioSelectionPanel(runtime as PortfolioRuntimeData);
-  const experiencePanel = kind === "cv" ? cvExperiencePanel(content as CvContent) : "";
-  const educationPanel = kind === "cv" ? cvEducationPanel(content as CvContent) : "";
+  const backgroundPanel = kind === "cv" ? cvBackgroundPanel(content as CvContent) : "";
   const archived = selected.status === "archived";
   const initialPageCount = kind === "cv"
     ? 2
@@ -699,11 +747,11 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
       <div class="admin-document-layout">
         <section class="admin-document-editor">
           <nav class="admin-document-tabs" role="tablist" aria-label="Document editor sections">
-            ${tabs(kind).map(([id, label]) => `<button type="button" role="tab" data-document-tab="${id}" aria-selected="${activeTab === id}" class="${activeTab === id ? "is-active" : ""}">${label}</button>`).join("")}
+            ${availableTabs.map(([id, label]) => `<button type="button" role="tab" data-document-tab="${id}" aria-selected="${activeTab === id}" class="${activeTab === id ? "is-active" : ""}">${label}</button>`).join("")}
           </nav>
           <form id="${kind}-document-form" data-document-form>
             <section data-document-panel="content"${activeTab === "content" ? "" : " hidden"}>${contentPanel}</section>
-            ${kind === "cv" ? `<section data-document-panel="experience"${activeTab === "experience" ? "" : " hidden"}>${experiencePanel}</section><section data-document-panel="education"${activeTab === "education" ? "" : " hidden"}>${educationPanel}</section>` : ""}
+            ${kind === "cv" ? `<section data-document-panel="background"${activeTab === "background" ? "" : " hidden"}>${backgroundPanel}</section>` : ""}
             <section data-document-panel="selection"${activeTab === "selection" ? "" : " hidden"}>${selectionPanel}</section>
             <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose brand colors saved with this draft.", content: themeFields(content.theme) })}</section>
           </form>
@@ -761,6 +809,15 @@ export const markProfileDocumentWorkspaceStale = (): void => {
 };
 
 export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocumentKind, callbacks: WorkspaceCallbacks): void => {
+  root.querySelectorAll<HTMLImageElement>("[data-profile-photo-preview]").forEach((image) => {
+    const frame = image.closest<HTMLElement>("[data-profile-photo-frame]");
+    const update = (): void => {
+      frame?.classList.toggle("has-image", image.complete && image.naturalWidth > 0);
+    };
+    image.addEventListener("load", update);
+    image.addEventListener("error", update);
+    update();
+  });
   const form = root.querySelector<HTMLFormElement>("[data-document-form]");
   const iframe = root.querySelector<HTMLIFrameElement>("[data-document-iframe]");
   const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
@@ -943,6 +1000,60 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     });
     root.querySelectorAll<HTMLElement>("[data-document-panel]").forEach((panel) => { panel.hidden = panel.dataset.documentPanel !== state.tab[kind]; });
   }));
+  const commitBackgroundMove = (
+    group: CvBackgroundGroup,
+    itemId: string,
+    movement: "up" | "down" | { targetId: string },
+  ): void => {
+    if (kind !== "cv" || !state.cv || activeDocument?.status === "archived") return;
+    state.cv = readCvRuntimeForm(form);
+    if (!moveCvBackgroundItem(state.cv.content, group, itemId, movement)) return;
+    state.dirty.cv = true;
+    callbacks.setDirty(true);
+    callbacks.rerender();
+  };
+  root.querySelectorAll<HTMLButtonElement>("[data-background-move]").forEach((button) => button.addEventListener("click", () => {
+    const item = button.closest<HTMLElement>("[data-cv-background-item]");
+    const group = item?.dataset.backgroundGroup as CvBackgroundGroup | undefined;
+    const itemId = item?.dataset.backgroundId;
+    const direction = button.dataset.backgroundMove as "up" | "down" | undefined;
+    if (group && itemId && direction) commitBackgroundMove(group, itemId, direction);
+  }));
+  let draggedBackground: { group: CvBackgroundGroup; itemId: string } | null = null;
+  root.querySelectorAll<HTMLButtonElement>("[data-background-drag]").forEach((handle) => {
+    handle.addEventListener("dragstart", (event) => {
+      const item = handle.closest<HTMLElement>("[data-cv-background-item]");
+      const group = item?.dataset.backgroundGroup as CvBackgroundGroup | undefined;
+      const itemId = item?.dataset.backgroundId;
+      if (!item || !group || !itemId || handle.disabled || activeDocument?.status === "archived") return event.preventDefault();
+      draggedBackground = { group, itemId };
+      item.classList.add("is-dragging");
+      event.dataTransfer?.setData("text/plain", `${group}:${itemId}`);
+      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
+    });
+    handle.addEventListener("dragend", () => {
+      handle.closest<HTMLElement>("[data-cv-background-item]")?.classList.remove("is-dragging");
+      root.querySelectorAll(".admin-cv-background__item.is-drop-target").forEach((item) => item.classList.remove("is-drop-target"));
+      draggedBackground = null;
+    });
+  });
+  root.querySelectorAll<HTMLElement>("[data-cv-background-item]").forEach((item) => {
+    item.addEventListener("dragover", (event) => {
+      if (!draggedBackground || item.dataset.backgroundGroup !== draggedBackground.group || item.dataset.backgroundId === draggedBackground.itemId) return;
+      event.preventDefault();
+      item.classList.add("is-drop-target");
+      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
+    });
+    item.addEventListener("dragleave", () => item.classList.remove("is-drop-target"));
+    item.addEventListener("drop", (event) => {
+      event.preventDefault();
+      item.classList.remove("is-drop-target");
+      const targetId = item.dataset.backgroundId;
+      if (draggedBackground && targetId && item.dataset.backgroundGroup === draggedBackground.group) {
+        commitBackgroundMove(draggedBackground.group, draggedBackground.itemId, { targetId });
+      }
+    });
+  });
   root.querySelectorAll<HTMLButtonElement>("[data-document-zoom]").forEach((button) => button.addEventListener("click", () => {
     state.zoom[kind] = button.dataset.documentZoom as typeof state.zoom.cv;
     const frameRoot = root.querySelector<HTMLElement>(".admin-document-frame");
@@ -955,15 +1066,21 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     });
   }));
   root.querySelector("[data-document-print]")?.addEventListener("click", () => iframe?.contentWindow?.print());
-  root.querySelector("[data-sync-professional-profile]")?.addEventListener("click", () => {
+  root.querySelectorAll("[data-sync-professional-profile]").forEach((button) => button.addEventListener("click", () => {
     void loadProfessionalProfile()
       .then((professional) => {
         if (kind === "cv" && state.cv) {
-          state.cv.content.profile = structuredClone(professional.profile);
-          state.cv.content.experiences = structuredClone(professional.experiences);
-          state.cv.content.education = structuredClone(professional.education);
-          state.cv.content.skillGroups = structuredClone(professional.skillGroups);
-          state.cv.content.languages = structuredClone(professional.languages);
+          state.cv = readCvRuntimeForm(form);
+          const nextContent: CvContent = {
+            ...state.cv.content,
+            profile: structuredClone(professional.profile),
+            experiences: structuredClone(professional.experiences),
+            education: structuredClone(professional.education),
+            skillGroups: structuredClone(professional.skillGroups),
+            languages: structuredClone(professional.languages),
+          };
+          nextContent.backgroundOrder = resolveCvBackgroundOrder(nextContent);
+          state.cv.content = nextContent;
           state.dirty.cv = true;
         } else if (kind === "portfolio" && state.portfolio) {
           state.portfolio.content.profile = structuredClone(professional.profile);
@@ -975,7 +1092,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
         callbacks.notify(`${documentLabel(kind)} synced from the saved Professional Profile.`, "success");
       })
       .catch((error: Error) => callbacks.notify(error.message, "error"));
-  });
+  }));
   root.querySelector("[data-sync-cv-profile]")?.addEventListener("click", async () => {
     if (!state.loaded.has("cv")) await ensureProfileDocumentWorkspace("cv");
     const source = state.documents.cv.find((item) => item.isActive)?.draftPayload
