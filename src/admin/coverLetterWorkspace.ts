@@ -23,6 +23,7 @@ import {
   renderAdminSectionCard,
   setButtonBusy,
 } from "./ui";
+import { confirmAdmin } from "./confirmDialog";
 
 type CoverLetterFilter = CoverLetterStatus | "all";
 type CoverLetterEditorTab = "application" | "body" | "evidence" | "appearance" | "notes";
@@ -427,8 +428,8 @@ export const markCoverLetterWorkspaceStale = (): void => {
   stale = true;
 };
 
-const openRecord = (id: string, callbacks: WorkspaceCallbacks): void => {
-  if (dirty && !window.confirm("Discard unsaved changes and open another letter?")) return;
+const openRecord = async (id: string, callbacks: WorkspaceCallbacks): Promise<void> => {
+  if (dirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this cover letter?", message: "Your unsaved changes will be discarded if you open another letter.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
   const selected = records.find((item) => item.id === id);
   if (!selected) return;
   selectRecord(selected);
@@ -437,8 +438,8 @@ const openRecord = (id: string, callbacks: WorkspaceCallbacks): void => {
   callbacks.rerender();
 };
 
-const openNew = (callbacks: WorkspaceCallbacks): void => {
-  if (dirty && !window.confirm("Discard unsaved changes and create a new letter?")) return;
+const openNew = async (callbacks: WorkspaceCallbacks): Promise<void> => {
+  if (dirty && !(await confirmAdmin({ eyebrow: "New cover letter", title: "Discard current changes?", message: "A new cover letter draft will open and the current unsaved changes will be lost.", confirmLabel: "Create new letter", cancelLabel: "Keep editing", tone: "danger" }))) return;
   record = null;
   letter = createCoverLetterDraft();
   editorOpen = true;
@@ -473,7 +474,7 @@ const finalize = async (root: ParentNode, callbacks: WorkspaceCallbacks): Promis
     callbacks.notify("Resolve validation errors and page overflow before finalizing.", "error");
     return;
   }
-  if (!window.confirm("Finalize and lock this cover letter? Future edits will require a duplicate draft.")) return;
+  if (!(await confirmAdmin({ eyebrow: "Finalize cover letter", title: "Finalize and lock this letter?", message: "Future edits will require creating a duplicate draft.", confirmLabel: "Finalize letter" }))) return;
   callbacks.notify("Finalizing cover letter…");
   const saved = record ?? await createCoverLetter(letter);
   const finalized = await finalizeCoverLetter(saved.id, letter, sharedSender);
@@ -489,7 +490,7 @@ const finalize = async (root: ParentNode, callbacks: WorkspaceCallbacks): Promis
 };
 
 const bindRecordButtons = (root: ParentNode, callbacks: WorkspaceCallbacks): void => {
-  root.querySelectorAll<HTMLButtonElement>("[data-cl-select]").forEach((button) => button.addEventListener("click", () => {
+  root.querySelectorAll<HTMLButtonElement>("[data-cl-select]").forEach((button) => button.addEventListener("click", async () => {
     const id = button.dataset.clSelect;
     if (id) openRecord(id, callbacks);
   }));
@@ -502,7 +503,7 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
     callbacks.rerender();
     void ensureCoverLetterWorkspace().then(callbacks.rerender);
   });
-  root.querySelectorAll<HTMLElement>("[data-cl-new]").forEach((button) => button.addEventListener("click", () => openNew(callbacks)));
+  root.querySelectorAll<HTMLElement>("[data-cl-new]").forEach((button) => button.addEventListener("click", () => { void openNew(callbacks); }));
   bindRecordButtons(root, callbacks);
   root.querySelector<HTMLInputElement>("[data-cl-search]")?.addEventListener("input", (event) => {
     search = (event.currentTarget as HTMLInputElement).value;
@@ -516,8 +517,8 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
     filter = button.dataset.clFilter as CoverLetterFilter;
     callbacks.rerender();
   }));
-  root.querySelector("[data-cl-close]")?.addEventListener("click", () => {
-    if (dirty && !window.confirm("Discard unsaved changes and return to the letter list?")) return;
+  root.querySelector("[data-cl-close]")?.addEventListener("click", async () => {
+    if (dirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Close this cover letter?", message: "Your unsaved changes will be discarded and you will return to the letter list.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     resetEditor();
     callbacks.setDirty(false);
     syncUrl();
@@ -609,8 +610,8 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
       callbacks.notify("Editable draft created.", "success");
     }).catch((error: Error) => callbacks.notify(error.message, "error"));
   });
-  root.querySelector("[data-cl-archive]")?.addEventListener("click", () => {
-    if (!record || !window.confirm("Archive this final cover letter?")) return;
+  root.querySelector("[data-cl-archive]")?.addEventListener("click", async () => {
+    if (!record || !(await confirmAdmin({ eyebrow: "Cover letter status", title: "Archive this final letter?", message: "The finalized letter will be kept as an archived record.", confirmLabel: "Archive letter", tone: "danger" }))) return;
     void archiveCoverLetter(record.id).then(async () => {
       records = await listCoverLetters();
       record = records.find((item) => item.id === record?.id) ?? null;
@@ -619,8 +620,8 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
       callbacks.notify("Cover letter archived.", "success");
     }).catch((error: Error) => callbacks.notify(error.message, "error"));
   });
-  root.querySelector("[data-cl-delete]")?.addEventListener("click", () => {
-    if (!record || !window.confirm("Permanently delete this draft? This cannot be undone.")) return;
+  root.querySelector("[data-cl-delete]")?.addEventListener("click", async () => {
+    if (!record || !(await confirmAdmin({ eyebrow: "Permanent deletion", title: "Delete this draft permanently?", message: "This cannot be undone.", confirmLabel: "Delete draft", tone: "danger" }))) return;
     const id = record.id;
     void deleteCoverLetterDraft(id).then(() => {
       records = records.filter((item) => item.id !== id);

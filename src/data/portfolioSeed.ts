@@ -50,7 +50,7 @@ export const portfolioProjectSeed: PortfolioProject[] = projects.map(
     })),
     status: publishedProjectIds.has(project.id) ? "published" : "draft",
     includeInPortfolio: publishedProjectIds.has(project.id),
-    portfolioOrder: index + 1,
+    portfolioOrder: project.displayOrder ?? index + 1,
     portfolioLayout: index === 0 ? "feature" : "standard",
     isCurrent: project.endDate === null,
     includeInCv: cv?.include_in_cv ?? false,

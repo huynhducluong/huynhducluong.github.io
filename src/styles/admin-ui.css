@@ -405,11 +405,11 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-preview-toolbar {
   display: grid;
   min-width: 0;
-  min-height: 3.5rem;
-  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 3.25rem;
+  grid-template-columns: minmax(6rem, 1fr) auto;
   align-items: center;
-  gap: .75rem 1rem;
-  padding: .6rem .8rem;
+  gap: .5rem .65rem;
+  padding: .4rem .65rem;
   border-bottom: 1px solid var(--admin-color-border);
   background: var(--admin-color-surface-subtle);
 }
@@ -463,7 +463,8 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   min-width: 0;
   align-items: center;
   justify-content: flex-end;
-  gap: .5rem;
+  gap: .4rem;
+  white-space: nowrap;
 }
 
 .admin-preview-toolbar__group {
@@ -473,6 +474,47 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   padding: .2rem;
   border-radius: .45rem;
   background: var(--admin-color-surface-muted);
+}
+
+.admin-preview-toolbar__select {
+  display: inline-flex;
+  min-height: 2.25rem;
+  flex: 0 0 auto;
+  align-items: center;
+  padding: .2rem;
+  border-radius: .45rem;
+  background: var(--admin-color-surface-muted);
+}
+
+.admin-preview-toolbar__select select {
+  width: 100%;
+  min-width: 0;
+  min-height: 1.85rem;
+  padding: .3rem 1.2rem .3rem .5rem;
+  border: 0;
+  border-radius: .32rem;
+  background-color: var(--admin-color-surface);
+  color: var(--color-primary-dark);
+  box-shadow: 0 1px 4px rgb(16 45 59 / 12%);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--admin-text-2xs);
+  font-weight: 800;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.admin-preview-toolbar__select select:focus-visible {
+  outline: 2px solid var(--admin-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.admin-preview-toolbar__select--viewport {
+  width: 7rem;
+}
+
+.admin-preview-toolbar__select--language {
+  width: 5rem;
 }
 
 .admin-preview-toolbar__group button {
@@ -500,19 +542,26 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   box-shadow: 0 1px 4px rgb(16 45 59 / 12%);
 }
 
-@container (max-width: 44rem) {
+@container (max-width: 34rem) {
   .admin-preview-toolbar {
-    grid-template-columns: minmax(0, 1fr);
+    gap: .35rem;
+    padding-inline: .5rem;
   }
 
   .admin-preview-toolbar__controls {
-    justify-content: flex-start;
+    gap: .25rem;
   }
-}
 
-@container (max-width: 28rem) {
-  .admin-preview-toolbar__controls {
-    flex-wrap: wrap;
+  .admin-preview-toolbar__select--viewport {
+    width: 6.25rem;
+  }
+
+  .admin-preview-toolbar__select--language {
+    width: 4.5rem;
+  }
+
+  .admin-preview-toolbar__group button {
+    padding-inline: .38rem;
   }
 }
 
@@ -699,50 +748,6 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
   .admin-layout.has-collection { grid-template-columns: 18rem minmax(0, 1fr); }
 
-  .admin-workspace:has(> .admin-document-workspace),
-  .admin-workspace:has(> .admin-site-workspace),
-  .admin-workspace:has(> .admin-profile-workspace) {
-    overflow-y: auto;
-  }
-
-  .admin-document-workspace,
-  .admin-site-workspace,
-  .admin-profile-workspace {
-    display: block;
-    height: auto;
-    min-height: 100%;
-    overflow: visible;
-  }
-
-  .admin-document-layout,
-  .admin-site-workspace .admin-document-layout,
-  .admin-profile-layout {
-    display: block;
-    height: auto;
-    overflow: visible;
-  }
-
-  .admin-document-editor {
-    overflow: visible;
-    border-right: 0;
-  }
-
-  .admin-document-tabs {
-    position: static;
-  }
-
-  .admin-document-preview,
-  .admin-site-preview {
-    position: static;
-    height: 50rem;
-    max-height: none;
-    border-top: 1px solid var(--admin-color-border);
-  }
-
-  .admin-profile-usage {
-    max-height: none;
-    margin-top: 0;
-  }
 }
 
 @media (max-width: 900px) {
@@ -843,4 +848,131 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .admin-document-loading span { animation: none; }
+}
+
+/* Fixed workspace chrome: keep identity/actions/tabs visible while the active pane scrolls. */
+.admin-workspace:has(> .admin-editor-shell) {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.admin-workspace:has(> .admin-editor-shell) > .admin-editor-shell {
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.admin-workspace:has(> .admin-editor-shell) > .admin-editor-shell:has(> .admin-media-panel:not([hidden])) > .admin-editor {
+  display: none;
+}
+
+.admin-workspace:has(> .admin-editor-shell) > .admin-editor-shell:has(> .admin-media-panel:not([hidden])) > .admin-media-panel {
+  grid-row: 3;
+  min-height: 0;
+}
+
+.admin-workspace:has(> .admin-editor-shell) .admin-editor__heading,
+.admin-workspace:has(> .admin-editor-shell) .admin-editor-tabs {
+  position: static;
+}
+
+.admin-workspace:has(> .admin-editor-shell) > .admin-editor-shell > .admin-editor,
+.admin-workspace:has(> .admin-editor-shell) > .admin-editor-shell > .admin-media-panel {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+}
+
+/* At laptop widths, retain nested panes instead of falling back to a page-length scroll. */
+@media (max-width: 1180px) {
+  .admin-workspace:has(> .admin-document-workspace),
+  .admin-workspace:has(> .admin-site-workspace),
+  .admin-workspace:has(> .admin-profile-workspace) {
+    overflow: hidden;
+  }
+
+  .admin-document-workspace,
+  .admin-site-workspace,
+  .admin-profile-workspace {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    grid-template-rows: auto minmax(0, 1fr);
+    overflow: hidden;
+  }
+
+  .admin-document-layout,
+  .admin-site-workspace .admin-document-layout {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    overflow: hidden;
+  }
+
+  .admin-profile-layout {
+    display: grid;
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(0, 1fr) minmax(15rem, 22rem);
+    overflow: hidden;
+  }
+
+  .admin-document-editor {
+    min-height: 0;
+    overflow-y: auto;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .admin-document-preview,
+  .admin-site-preview {
+    position: relative;
+    height: 100%;
+    min-height: 0;
+    max-height: none;
+    overflow: hidden;
+    border-top: 0;
+  }
+
+  .admin-profile-usage {
+    max-height: calc(100% - 2rem);
+    overflow-y: auto;
+  }
+}
+
+@media (max-width: 720px) {
+  .admin-document-layout,
+  .admin-site-workspace .admin-document-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(24rem, 50rem);
+  }
+
+  .admin-profile-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(12rem, 40%);
+  }
+
+  .admin-document-editor {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .admin-document-preview,
+  .admin-site-preview {
+    border-top: 0;
+  }
+
+  .admin-cl-editor__body {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(0, 1fr) minmax(24rem, 50rem);
+  }
+
+  .admin-cl-form-pane {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+  }
 }

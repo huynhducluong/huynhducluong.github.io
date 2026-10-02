@@ -10,6 +10,13 @@ export interface ProfessionalProfileContent {
   languages: LanguageSkill[];
 }
 
+export interface WebsiteContentSelection {
+  projectIds: string[];
+  featuredProjectIds: string[];
+  toolIds: string[];
+  featuredToolIds: string[];
+}
+
 export interface WebsiteContent {
   version: string;
   seoTitle: LocalizedText;
@@ -35,6 +42,7 @@ export interface WebsiteContent {
   contactTitle: LocalizedText;
   footerText: LocalizedText;
   theme: StoredDocumentTheme;
+  contentSelection: WebsiteContentSelection;
   sections: {
     expertise: boolean;
     experience: boolean;
@@ -44,9 +52,17 @@ export interface WebsiteContent {
   };
 }
 
+export interface WebsiteRuntimeProject extends PortfolioProject {
+  websiteVisible?: boolean;
+}
+
+export interface WebsiteRuntimeTool extends PortfolioTool {
+  websiteVisible?: boolean;
+}
+
 export interface WebsiteRuntimeData {
   content: WebsiteContent;
   professional: ProfessionalProfileContent;
-  projects: PortfolioProject[];
-  tools: PortfolioTool[];
+  projects: WebsiteRuntimeProject[];
+  tools: WebsiteRuntimeTool[];
 }

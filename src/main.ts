@@ -99,6 +99,7 @@ const copy = {
 
 let websiteData: WebsiteRuntimeData | null = null;
 let currentLanguage: Language = "en";
+type WebsitePreviewData = WebsiteRuntimeData & { previewLanguage?: Language };
 
 const renderTags = (items: string[]): string =>
   items.map((item) => `<li class="tag">${escapeHtml(item)}</li>`).join("");
@@ -125,6 +126,9 @@ const renderPage = (language: Language): void => {
   };
   const sortedProjects = publicProjects
     .filter((project) => project.featured)
+    .sort((first, second) => first.displayOrder - second.displayOrder);
+  const sortedTools = publicTools
+    .filter((tool) => tool.featured)
     .sort((first, second) => first.displayOrder - second.displayOrder);
   const homeSkills = skillGroups.flatMap((group) => group.items);
   const navigationLinks = websiteNavigationItems
@@ -323,7 +327,7 @@ const renderPage = (language: Language): void => {
           </div>
 
           <div class="tool-grid">
-            ${publicTools
+            ${sortedTools
               .map(
                 (tool) => `
                   <article class="tool-card">
@@ -382,7 +386,7 @@ const renderPage = (language: Language): void => {
 const initialize = async (): Promise<void> => {
   const params = new URLSearchParams(window.location.search);
   const wantsPreview = params.get("preview") === "1";
-  const previewReceiver = wantsPreview ? createPreviewReceiver<WebsiteRuntimeData>("website") : null;
+  const previewReceiver = wantsPreview ? createPreviewReceiver<WebsitePreviewData>("website") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
   websiteData = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
@@ -390,6 +394,7 @@ const initialize = async (): Promise<void> => {
   if (adminPreview) {
     previewReceiver?.activate((previewData) => {
       websiteData = previewData;
+      currentLanguage = previewData.previewLanguage ?? currentLanguage;
       renderPage(currentLanguage);
     });
   } else {

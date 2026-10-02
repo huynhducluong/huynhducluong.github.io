@@ -1,6 +1,7 @@
 import { cvContentSeed, cvRuntimeSeed } from "../data/cvSeed";
 import { supabase } from "./supabaseClient";
 import type { ContentPoint, LocalizedText, Project } from "../types/career";
+import type { PublicationStatus } from "../types/portfolio";
 import type {
   CvContent,
   CvProjectDisplay,
@@ -40,6 +41,8 @@ interface CvProjectRow {
   cv_display: CvProjectDisplay;
   cv_show_summary: boolean;
   cv_responsibility_ids: string[];
+  include_in_cv: boolean;
+  status: PublicationStatus;
 }
 
 interface CvToolRow {
@@ -49,7 +52,10 @@ interface CvToolRow {
   solution: LocalizedText;
   technologies: string[];
   featured: boolean;
+  display_order: number;
   cv_order: number;
+  include_in_cv: boolean;
+  status: PublicationStatus;
 }
 
 const contentFromRow = (row: CvContentRow): CvContent => ({
@@ -83,10 +89,12 @@ const projectFromRow = (row: CvProjectRow): CvRuntimeProject => {
 
   return {
     ...project,
-    cvOrder: row.cv_order,
+    cvOrder: row.display_order,
     cvDisplay: row.cv_display,
     cvShowSummary: row.cv_show_summary,
     cvResponsibilityIds: row.cv_responsibility_ids ?? [],
+    includeInCv: row.include_in_cv,
+    status: row.status,
   };
 };
 const toolFromRow = (row: CvToolRow): CvRuntimeTool => ({
@@ -97,22 +105,24 @@ const toolFromRow = (row: CvToolRow): CvRuntimeTool => ({
   technologies: row.technologies ?? [],
   imagePaths: [],
   featured: row.featured,
-  cvOrder: row.cv_order,
+  cvOrder: row.display_order,
+  includeInCv: row.include_in_cv,
+  status: row.status,
 });
 
 const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => {
-  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_order,cv_display,cv_show_summary,cv_responsibility_ids").eq("include_in_cv", true).is("deleted_at", null);
-  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,cv_order").eq("include_in_cv", true).is("deleted_at", null);
+  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_order,cv_display,cv_show_summary,cv_responsibility_ids,include_in_cv,status").is("deleted_at", null);
+  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,display_order,cv_order,include_in_cv,status").is("deleted_at", null);
   if (!adminPreview) {
-    projectQuery = projectQuery.eq("status", "published");
-    toolQuery = toolQuery.eq("status", "published");
+    projectQuery = projectQuery.eq("include_in_cv", true).eq("status", "published");
+    toolQuery = toolQuery.eq("include_in_cv", true).eq("status", "published");
   }
 
   const [contentResult, professionalResult, projectResult, toolResult] = await Promise.all([
     supabase.from("cv_content").select("*").eq("id", "primary").maybeSingle(),
     supabase.from("professional_profile").select("profile,experiences,education,skill_groups,languages").eq("id", "primary").maybeSingle(),
-    projectQuery.order("cv_order"),
-    toolQuery.order("cv_order"),
+    projectQuery.order("display_order"),
+    toolQuery.order("display_order"),
   ]);
 
   if (contentResult.error) throw contentResult.error;
@@ -131,12 +141,17 @@ const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => 
     content.languages = (professionalResult.data.languages ?? []) as CvContent["languages"];
   }
   const projects = (projectResult.data as CvProjectRow[]).map(projectFromRow);
+  const selectedProjects = projects.filter((project) => project.includeInCv);
+  const tools = (toolResult.data as CvToolRow[]).map(toolFromRow);
+  const selectedTools = tools.filter((tool) => tool.includeInCv);
 
   return {
     content,
-    detailedProjects: projects.filter((project) => project.cvDisplay === "detailed"),
-    compactProjects: projects.filter((project) => project.cvDisplay === "compact"),
-    tools: (toolResult.data as CvToolRow[]).map(toolFromRow),
+    detailedProjects: selectedProjects.filter((project) => project.cvDisplay === "detailed"),
+    compactProjects: selectedProjects.filter((project) => project.cvDisplay === "compact"),
+    tools: selectedTools,
+    availableProjects: adminPreview ? projects : undefined,
+    availableTools: adminPreview ? tools : undefined,
   };
 };
 

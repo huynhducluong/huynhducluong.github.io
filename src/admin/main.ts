@@ -12,11 +12,11 @@ import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import { bindAdminTablists, renderAdminSectionCard } from "./ui";
-import { portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
+import { confirmAdmin } from "./confirmDialog";
 import { escapeHtml } from "../shared/format";
 import { supabase } from "../services/supabaseClient";
 import type { CvProjectDisplay } from "../types/cvContent";
-import type { PortfolioProject, PublicationStatus } from "../types/portfolio";
+import type { PublicationStatus } from "../types/portfolio";
 import {
   bindCoverLetterWorkspace,
   coverLetterSummary,
@@ -117,7 +117,7 @@ type AdminView = "overview" | "homepage" | "projects" | "tools" | "profile" | "c
 type AdminItemType = "project" | "tool";
 type ContentFilter = "all" | "project" | "tool";
 type ContentStatusFilter = "all" | PublicationStatus;
-type EditorTab = "overview" | "content" | "distribution" | "media";
+type EditorTab = "overview" | "content" | "media";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
@@ -136,6 +136,7 @@ let activeEditorTab: EditorTab = "overview";
 let adminFormDirty = false;
 let pendingMedia: PendingMedia[] = [];
 let magicLinkCooldown: number | undefined;
+let reorderBusy = false;
 
 window.addEventListener("beforeunload", (event) => {
   if (adminFormDirty) event.preventDefault();
@@ -183,37 +184,6 @@ const slugify = (value: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
-
-const toRow = (project: PortfolioProject): AdminProjectRow => ({
-  id: project.id,
-  slug: project.slug,
-  name: project.name,
-  location: project.location,
-  role: project.role ?? null,
-  summary: project.summary ?? null,
-  start_date: project.startDate ?? null,
-  end_date: project.endDate ?? null,
-  is_current: project.isCurrent,
-  year: project.year ?? null,
-  responsibilities: project.responsibilities,
-  technologies: project.technologies,
-  featured: project.featured,
-  status: "draft",
-  display_order: project.displayOrder,
-  include_in_portfolio: false,
-  portfolio_order: project.portfolioOrder,
-  portfolio_layout: project.portfolioLayout,
-  include_in_cv: project.includeInCv,
-  cv_order: project.cvOrder,
-  cv_display: project.cvDisplay,
-  cv_show_summary: project.cvShowSummary,
-  cv_responsibility_ids: project.cvResponsibilityIds,
-  project_images: [],
-  deleted_at: null,
-  deleted_by: null,
-  purge_after: null,
-  deleted_from_status: null,
-});
 
 const blankProject = (): AdminProjectRow => ({
   id: crypto.randomUUID(),
@@ -416,6 +386,7 @@ interface AdminContentListItem {
   status: PublicationStatus;
   deletedAt: string | null;
   purgeAfter: string | null;
+  displayOrder: number;
 }
 
 const contentItems = (): AdminContentListItem[] => [
@@ -427,6 +398,7 @@ const contentItems = (): AdminContentListItem[] => [
     status: project.status,
     deletedAt: project.deleted_at,
     purgeAfter: project.purge_after,
+    displayOrder: project.display_order,
   })),
   ...tools.map((tool) => ({
     id: tool.id,
@@ -436,6 +408,7 @@ const contentItems = (): AdminContentListItem[] => [
     status: tool.status,
     deletedAt: tool.deleted_at,
     purgeAfter: tool.purge_after,
+    displayOrder: tool.display_order,
   })),
 ];
 
@@ -468,13 +441,14 @@ const contentList = (): string => {
   }
   return items.map((item) => `
     <li class="admin-content-item ${isSelectedItem(item) ? "is-selected" : ""}">
+      ${activeView !== "trash" && !item.deletedAt ? `<div class="admin-content-item__reorder" aria-label="Reorder ${escapeHtml(item.name)}"><span class="admin-content-item__drag" draggable="true" data-reorder-drag data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span><button type="button" data-reorder-direction="up" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} earlier">↑</button><button type="button" data-reorder-direction="down" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} later">↓</button></div>` : ""}
       <button class="admin-content-item__select" type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${item.type}" aria-pressed="${isSelectedItem(item)}">
         ${activeView === "trash" ? `<span class="admin-content-item__type">${item.type}</span>` : ""}
         <strong>${escapeHtml(item.name)}</strong>
         <small>${escapeHtml(item.slug)}</small>
       </button>
       <div class="admin-content-item__meta">
-        <span class="status status--${item.status}">${item.status}</span>
+        <span class="status status--${item.status}">${contentStatusLabel(item.status)}</span>
         ${item.deletedAt ? `<small>${trashDaysRemaining(item.purgeAfter)}</small>` : ""}
       </div>
       ${item.deletedAt ? `<div class="admin-content-item__actions"><button type="button" data-restore-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Restore</button><button class="admin-danger" type="button" data-purge-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Delete permanently</button></div>` : ""}
@@ -482,7 +456,10 @@ const contentList = (): string => {
 };
 
 const field = (label: string, name: string, value = "", type = "text"): string =>
-  `<label>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}"></label>`;
+  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}"></label>`;
+
+const contentStatusLabel = (status: PublicationStatus): string =>
+  status === "published" ? "Ready" : status.charAt(0).toUpperCase() + status.slice(1);
 
 const publicMediaUrl = (path: string): string => supabase.storage.from(supabaseConfig.storageBucket).getPublicUrl(path).data.publicUrl;
 
@@ -503,11 +480,6 @@ const mediaLibrary = (project: AdminProjectRow): string => {
     </article>`).join("")}</div>`;
 };
 
-const responsibilityOptions = (project: AdminProjectRow): string => project.responsibilities.length
-  ? `<fieldset class="admin-responsibility-picker"><legend>Responsibilities used in CV</legend>${project.responsibilities.map((item) => `
-      <label><input type="checkbox" name="cv_responsibility" value="${escapeHtml(item.id)}" ${project.cv_responsibility_ids.includes(item.id) ? "checked" : ""}> ${escapeHtml(item.text.en)}</label>`).join("")}</fieldset>`
-  : '<p class="admin-empty">Add and save responsibilities before selecting CV bullets.</p>';
-
 const editorTab = (tab: EditorTab, label: string): string =>
   `<button type="button" role="tab" data-editor-tab="${tab}" aria-selected="${activeEditorTab === tab}" class="${activeEditorTab === tab ? "is-active" : ""}">${label}</button>`;
 
@@ -516,23 +488,23 @@ const panelState = (tab: EditorTab): string => activeEditorTab === tab ? "" : "h
 const editor = (project: AdminProjectRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
-      <div><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2>${escapeHtml(project.name.en || "Untitled project")}</h2><div class="admin-editor__meta"><span class="status status--${project.status}">${project.status}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="project" data-next="${project.status === "published" ? "draft" : "published"}">${project.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move project to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
+      <div><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2>${escapeHtml(project.name.en || "Untitled project")}</h2><div class="admin-editor__meta"><span class="status status--${project.status}">${contentStatusLabel(project.status)}</span><small data-unsaved-state>Saved</small></div></div>
+      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="project" data-next="${project.status === "published" ? "draft" : "published"}">${project.status === "published" ? "Return to draft" : "Mark ready"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move project to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
     </div>
-    <nav class="admin-editor-tabs" role="tablist" aria-label="Project editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("distribution", "Website, CV & Portfolio")}${editorTab("media", `Media (${project.project_images.length})`)}</nav>
+    <nav class="admin-editor-tabs" role="tablist" aria-label="Project editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${project.project_images.length})`)}</nav>
     <form id="project-editor" class="admin-editor" data-project-form>
       <input name="id" type="hidden" value="${escapeHtml(project.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
         ${renderAdminSectionCard({
           title: "Project overview",
-          note: "Edit identity, dates, slug and display order.",
+          note: "Edit identity, dates and slug. Output selection is managed in Website, CV and Portfolio.",
           content: `<div class="admin-form-grid">
           ${field("Project name (EN) *", "name_en", project.name.en)}${field("Project name (VI)", "name_vi", project.name.vi)}
           ${field("Role (EN)", "role_en", project.role?.en ?? "")}${field("Role (VI)", "role_vi", project.role?.vi ?? "")}
           ${field("Location (EN)", "location_en", project.location.en)}${field("Location (VI)", "location_vi", project.location.vi)}
           ${field("Start", "start_date", project.start_date ?? "", "month")}
-          <label>End date<span class="admin-end-date"><input name="end_date" type="month" value="${escapeHtml(project.end_date ?? "")}" ${project.is_current ? "disabled" : ""}><button type="button" data-present-toggle aria-pressed="${project.is_current}">Present</button><input name="is_current" type="hidden" value="${project.is_current ? "true" : "false"}"></span></label>
-          ${field("Slug *", "slug", project.slug)}${field("Website order", "display_order", String(project.display_order), "number")}
+          ${field("End (blank = Present)", "end_date", project.is_current ? "" : project.end_date ?? "", "month")}
+          ${field("Slug *", "slug", project.slug)}
         </div>`,
         })}
       </section>
@@ -541,20 +513,8 @@ const editor = (project: AdminProjectRow): string => `
           title: "Project content",
           note: "Edit paired EN and VI project descriptions.",
           content: `<div class="admin-form-grid"><label>Summary (EN)<textarea name="summary_en" rows="7">${escapeHtml(project.summary?.en ?? "")}</textarea></label><label>Summary (VI)<textarea name="summary_vi" rows="7">${escapeHtml(project.summary?.vi ?? "")}</textarea></label></div>
-            <label>Responsibilities (one EN item per line)<textarea name="responsibilities" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label>
+            <div class="admin-form-grid"><label>Responsibilities (EN, one item per line)<textarea name="responsibilities_en" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label><label>Responsibilities (VI, one item per line)<textarea name="responsibilities_vi" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.vi).join("\n"))}</textarea></label></div>
             <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}"></label>`,
-        })}
-      </section>
-      <section class="admin-editor-panel" data-editor-panel="distribution" ${panelState("distribution")}>
-        ${renderAdminSectionCard({
-          title: "Project distribution",
-          note: "Choose where this project appears and how it is displayed.",
-          content: `<div class="admin-channel-grid">
-          <article><div><strong>Website</strong><small>Public portfolio website</small></div><label class="admin-switch"><input name="featured" type="checkbox" ${project.featured ? "checked" : ""}><span>Featured project</span></label></article>
-          <article><div><strong>Portfolio PDF</strong><small>Printable landscape portfolio</small></div><label class="admin-switch"><input name="include_in_portfolio" type="checkbox" ${project.include_in_portfolio ? "checked" : ""}><span>Include in Portfolio</span></label><label>Layout<select name="portfolio_layout"><option value="standard" ${project.portfolio_layout === "standard" ? "selected" : ""}>Standard</option><option value="feature" ${project.portfolio_layout === "feature" ? "selected" : ""}>Feature</option><option value="compact" ${project.portfolio_layout === "compact" ? "selected" : ""}>Compact</option></select></label><label>Order<input name="portfolio_order" type="number" value="${project.portfolio_order}"></label></article>
-          <article><div><strong>Curriculum Vitae</strong><small>Published CV project selection</small></div><label class="admin-switch"><input name="include_in_cv" type="checkbox" ${project.include_in_cv ? "checked" : ""}><span>Include in CV</span></label><label>Display<select name="cv_display"><option value="detailed" ${project.cv_display === "detailed" ? "selected" : ""}>Detailed experience</option><option value="compact" ${project.cv_display === "compact" ? "selected" : ""}>Compact project list</option></select></label><label>Order<input name="cv_order" type="number" value="${project.cv_order}"></label><label class="admin-switch"><input name="cv_show_summary" type="checkbox" ${project.cv_show_summary ? "checked" : ""}><span>Show summary</span></label></article>
-        </div>
-        ${responsibilityOptions(project)}`,
         })}
       </section>
     </form>
@@ -567,20 +527,17 @@ const editor = (project: AdminProjectRow): string => `
 const toolEditor = (tool: AdminToolRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
-      <div><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2>${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${tool.status}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="tool" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Unpublish" : "Publish"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move tool to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
+      <div><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2>${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${contentStatusLabel(tool.status)}</span><small data-unsaved-state>Saved</small></div></div>
+      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="tool" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Return to draft" : "Mark ready"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move tool to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
     </div>
-    <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("distribution", "Website, CV & Portfolio")}</nav>
+    <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}</nav>
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
-        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug, order and technologies.", content: `<div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}${field("Website order", "display_order", String(tool.display_order), "number")}</div><label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>` })}
+        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug and technologies. Output selection is managed in Website, CV and Portfolio.", content: `<div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}</div><label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>` })}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
         ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>Problem (EN)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (VI)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (EN)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (VI)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (EN)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (VI)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
-      </section>
-      <section class="admin-editor-panel" data-editor-panel="distribution" ${panelState("distribution")}>
-        ${renderAdminSectionCard({ title: "Tool distribution", note: "Choose where this tool appears.", content: `<div class="admin-channel-grid"><article><div><strong>Website</strong><small>Public automation tool page</small></div><label class="admin-switch"><input name="featured" type="checkbox" ${tool.featured ? "checked" : ""}><span>Featured tool</span></label></article><article><div><strong>Portfolio PDF</strong><small>Printable portfolio</small></div><label class="admin-switch"><input name="include_in_portfolio" type="checkbox" ${tool.include_in_portfolio ? "checked" : ""}><span>Include in Portfolio</span></label><label>Order<input name="portfolio_order" type="number" value="${tool.portfolio_order}"></label></article><article><div><strong>Curriculum Vitae</strong><small>Published CV</small></div><label class="admin-switch"><input name="include_in_cv" type="checkbox" ${tool.include_in_cv ? "checked" : ""}><span>Include in CV</span></label><label>Order<input name="cv_order" type="number" value="${tool.cv_order}"></label></article></div>` })}
       </section>
     </form>
   </section>`;
@@ -601,7 +558,7 @@ const overviewView = (): string => {
   const activeProjects = projects.filter((item) => !item.deleted_at);
   const activeTools = tools.filter((item) => !item.deleted_at);
   const activeItems = [...activeProjects, ...activeTools];
-  const published = activeItems.filter((item) => item.status === "published").length;
+  const ready = activeItems.filter((item) => item.status === "published").length;
   const drafts = activeItems.filter((item) => item.status === "draft").length;
   const trash = [...projects, ...tools].filter((item) => item.deleted_at).length;
   const letters = coverLetterSummary();
@@ -612,13 +569,13 @@ const overviewView = (): string => {
       <div class="admin-metric-grid">
         <article><span>Active projects</span><strong>${activeProjects.length}</strong><button type="button" data-admin-view="projects">View projects</button></article>
         <article><span>Automation tools</span><strong>${activeTools.length}</strong><button type="button" data-admin-view="tools">View tools</button></article>
-        <article><span>Published items</span><strong>${published}</strong><small>${drafts} drafts still being prepared</small></article>
+        <article><span>Ready items</span><strong>${ready}</strong><small>${drafts} drafts still being prepared</small></article>
         <article><span>Cover letters</span><strong>${letters.loaded ? letters.total : "—"}</strong><button type="button" data-admin-view="cover-letters">${letters.loaded ? `${letters.drafts} drafts · ${letters.final} final` : "Open workspace"}</button></article>
         <article class="${trash ? "has-warning" : ""}"><span>Trash</span><strong>${trash}</strong><button type="button" data-admin-view="trash">Review trash</button></article>
       </div>
       <div class="admin-overview-grid">
         <section class="admin-overview-card admin-overview-card--attention${needsAttention.length ? "" : " is-empty"}"><div class="admin-card-heading"><div><h2>Needs attention</h2><p>Draft and archived content that is not public.</p></div><span>${needsAttention.length}</span></div>
-          <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong>${escapeHtml(itemName)}</strong><small>${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${item.status}</span></button>`; }).join("") : '<div class="admin-empty-state"><span aria-hidden="true">&#10003;</span><div><strong>Everything is published</strong><small>No draft or archived content needs attention.</small></div></div>'}</div>
+          <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong>${escapeHtml(itemName)}</strong><small>${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${contentStatusLabel(item.status)}</span></button>`; }).join("") : '<div class="admin-empty-state"><span aria-hidden="true">&#10003;</span><div><strong>Everything is ready</strong><small>No draft or archived content needs attention.</small></div></div>'}</div>
         </section>
         <section class="admin-overview-card"><div class="admin-card-heading"><div><h2>Publishing workflow</h2><p>A shared path for Website, CV and Portfolio.</p></div></div><ol class="admin-workflow"><li><span>1</span><div><strong>Edit shared content</strong><small>Update Professional Profile, projects and tools once.</small></div></li><li><span>2</span><div><strong>Review channel preview</strong><small>Check Website or document output inside Admin.</small></div></li><li><span>3</span><div><strong>Publish release</strong><small>Freeze a new read-only public snapshot.</small></div></li></ol></section>
       </div>
@@ -677,10 +634,9 @@ const dashboardView = (): void => {
             <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
             <div class="admin-list-controls">
               <label class="admin-search"><span class="sr-only">Search content</span><input type="search" placeholder="Search by name or slug..." value="${escapeHtml(contentSearch)}" data-content-search></label>
-              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Publication status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}">${filter}</button>`).join("")}</div>`}
+              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
             </div>
             <div class="admin-collection__scroll"><ul class="admin-content-list" data-content-list>${contentList()}</ul></div>
-            ${activeView === "projects" ? '<details class="admin-more"><summary>More actions</summary><button type="button" data-import>Import starter data</button></details>' : ""}
           </aside>` : ""}
           <section class="admin-workspace">${workspaceView()}</section>
         </div>
@@ -726,12 +682,14 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
   const nameEn = String(form.get("name_en") ?? "").trim();
   const slug = slugify(String(form.get("slug") ?? "") || nameEn);
   if (!nameEn || !slug) throw new Error("Name (EN) and slug are required.");
-  const responsibilities = String(form.get("responsibilities") ?? "").split(/\r?\n/).map((item) => item.trim()).filter(Boolean).map((text, index) => ({
+  const responsibilityEn = String(form.get("responsibilities_en") ?? "").split(/\r?\n/).map((item) => item.trim());
+  const responsibilityVi = String(form.get("responsibilities_vi") ?? "").split(/\r?\n/).map((item) => item.trim());
+  const responsibilities = Array.from({ length: Math.max(responsibilityEn.length, responsibilityVi.length) }, (_, index) => ({
     id: current.responsibilities[index]?.id ?? `${slug}-${index + 1}`,
-    text: { en: text, vi: current.responsibilities[index]?.text.vi ?? "" },
-  }));
-  const selectedResponsibilityIds = form.getAll("cv_responsibility").map(String).filter((id) => responsibilities.some((item) => item.id === id));
-  const isCurrent = form.get("is_current") === "true";
+    text: { en: responsibilityEn[index] ?? "", vi: responsibilityVi[index] ?? "" },
+  })).filter((item) => item.text.en || item.text.vi);
+  const endDate = String(form.get("end_date") ?? "").trim();
+  const isCurrent = !endDate;
   const roleEn = String(form.get("role_en") ?? "").trim();
   const roleVi = String(form.get("role_vi") ?? "").trim();
   const summaryEn = String(form.get("summary_en") ?? "").trim();
@@ -745,22 +703,25 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     role: roleEn || roleVi ? { en: roleEn, vi: roleVi } : null,
     summary: summaryEn || summaryVi ? { en: summaryEn, vi: summaryVi } : null,
     start_date: String(form.get("start_date") ?? "").trim() || null,
-    end_date: isCurrent ? null : String(form.get("end_date") ?? "").trim() || null,
+    end_date: isCurrent ? null : endDate,
     is_current: isCurrent,
     responsibilities,
     technologies: String(form.get("technologies") ?? "").split(",").map((item) => item.trim()).filter(Boolean),
-    featured: form.get("featured") === "on",
-    include_in_portfolio: form.get("include_in_portfolio") === "on",
-    display_order: Number(form.get("display_order")) || 100,
-    portfolio_order: Number(form.get("portfolio_order")) || 100,
-    portfolio_layout: String(form.get("portfolio_layout")) as AdminProjectRow["portfolio_layout"],
-    include_in_cv: form.get("include_in_cv") === "on",
-    cv_order: Number(form.get("cv_order")) || 100,
-    cv_display: String(form.get("cv_display")) as CvProjectDisplay,
-    cv_show_summary: form.get("cv_show_summary") === "on",
-    cv_responsibility_ids: selectedResponsibilityIds,
   };
-  const { project_images: _projectImages, ...projectPayload } = payload;
+  const projectPayload = {
+    id: payload.id,
+    slug: payload.slug,
+    name: payload.name,
+    location: payload.location,
+    role: payload.role,
+    summary: payload.summary,
+    start_date: payload.start_date,
+    end_date: payload.end_date,
+    is_current: payload.is_current,
+    year: payload.year,
+    responsibilities: payload.responsibilities,
+    technologies: payload.technologies,
+  };
   const { error } = await supabase.from("projects").upsert(projectPayload);
   if (error) throw error;
   adminFormDirty = false;
@@ -787,14 +748,16 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     solution: { en: formText(form, "solution_en"), vi: formText(form, "solution_vi") },
     benefit: benefitEn || benefitVi ? { en: benefitEn, vi: benefitVi } : null,
     technologies: commaList(formText(form, "technologies")),
-    featured: form.get("featured") === "on",
-    display_order: Number(form.get("display_order")) || 100,
-    include_in_portfolio: form.get("include_in_portfolio") === "on",
-    portfolio_order: Number(form.get("portfolio_order")) || 100,
-    include_in_cv: form.get("include_in_cv") === "on",
-    cv_order: Number(form.get("cv_order")) || 100,
   };
-  const { tool_images: _toolImages, ...toolPayload } = payload;
+  const toolPayload = {
+    id: payload.id,
+    slug: payload.slug,
+    name: payload.name,
+    problem: payload.problem,
+    solution: payload.solution,
+    benefit: payload.benefit,
+    technologies: payload.technologies,
+  };
   const { error } = await supabase.from("automation_tools").upsert(toolPayload);
   if (error) throw error;
   adminFormDirty = false;
@@ -817,7 +780,7 @@ const moveSelectedToTrash = async (): Promise<void> => {
     return;
   }
   const id = selected.type === "project" ? selectedProject?.id : selectedTool?.id;
-  if (!id || !window.confirm(`Move ${selected.type} “${selected.name}” to Trash? It will be hidden from active Website, Portfolio and CV draft data, and permanently deleted after 30 days.`)) return;
+  if (!id || !(await confirmAdmin({ eyebrow: "Move to trash", title: `Move ${selected.name} to Trash?`, message: "It will be hidden from active Website, Portfolio and CV draft data, and permanently deleted after 30 days.", confirmLabel: "Move to Trash", tone: "danger" }))) return;
   const { error } = await supabase.rpc("move_admin_item_to_trash", { target_type: selected.type, target_id: id });
   if (error) throw error;
   clearPendingMedia();
@@ -847,7 +810,7 @@ const restoreTrashItem = async (type: AdminItemType, id: string): Promise<void> 
 
 const permanentlyDeleteTrashItem = async (type: AdminItemType, id: string): Promise<void> => {
   const item = contentItems().find((candidate) => candidate.type === type && candidate.id === id);
-  if (!item?.deletedAt || !window.confirm(`Permanently delete ${type} “${item.name}”? This cannot be undone.`)) return;
+  if (!item?.deletedAt || !(await confirmAdmin({ eyebrow: "Permanent deletion", title: `Delete ${item.name} permanently?`, message: "This cannot be undone.", confirmLabel: "Delete permanently", tone: "danger" }))) return;
   const media = type === "project"
     ? projects.find((project) => project.id === id)?.project_images ?? []
     : tools.find((tool) => tool.id === id)?.tool_images ?? [];
@@ -868,13 +831,13 @@ const permanentlyDeleteTrashItem = async (type: AdminItemType, id: string): Prom
 const changeSelectedStatus = async (type: AdminItemType, next: PublicationStatus): Promise<void> => {
   const id = type === "project" ? selectedProject?.id : selectedTool?.id;
   if (!id) return;
-  if (next === "published" && !window.confirm(`Publish this ${type} on the public website?`)) return;
+  if (next === "published" && !(await confirmAdmin({ eyebrow: "Content status", title: `Mark this ${type} as Ready?`, message: "It will become available for Website, CV and Portfolio selection.", confirmLabel: "Mark ready" }))) return;
   const table = type === "project" ? "projects" : "automation_tools";
   const { error } = await supabase.from(table).update({ status: next }).eq("id", id).is("deleted_at", null);
   if (error) throw error;
   await loadProjects();
   dashboardView();
-  message(`${type === "project" ? "Project" : "Tool"} changed to ${next}.`, "success");
+  message(`${type === "project" ? "Project" : "Tool"} ${next === "published" ? "marked Ready" : `changed to ${contentStatusLabel(next)}`}.`, "success");
 };
 
 const clearPendingMedia = (): void => {
@@ -905,6 +868,46 @@ const moveItem = <T,>(items: T[], index: number, direction: "up" | "down"): T[] 
   const copy = [...items];
   [copy[index], copy[destination]] = [copy[destination], copy[index]];
   return copy;
+};
+
+const masterOrder = (type: AdminItemType): Array<AdminProjectRow | AdminToolRow> =>
+  (type === "project" ? projects : tools)
+    .filter((item) => !item.deleted_at)
+    .sort((left, right) => left.display_order - right.display_order);
+
+const persistMasterOrder = async (type: AdminItemType, ordered: Array<AdminProjectRow | AdminToolRow>): Promise<void> => {
+  const table = type === "project" ? "projects" : "automation_tools";
+  const results = await Promise.all(ordered.map((item, index) => supabase.from(table).update({ display_order: index + 1 }).eq("id", item.id)));
+  const failure = results.find((result) => result.error)?.error;
+  if (failure) throw failure;
+};
+
+const reorderMasterItem = async (type: AdminItemType, id: string, direction: "up" | "down" | string): Promise<void> => {
+  if (reorderBusy) return;
+  if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Reorder content?", message: "Your current editor changes will remain open while the shared order is updated.", confirmLabel: "Reorder", cancelLabel: "Keep editing" }))) return;
+  const ordered = masterOrder(type);
+  const index = ordered.findIndex((item) => item.id === id);
+  if (index < 0) return;
+  const next = direction === "up" || direction === "down"
+    ? moveItem(ordered, index, direction)
+    : (() => {
+      const target = ordered.findIndex((item) => item.id === direction);
+      if (target < 0 || target === index) return ordered;
+      const copy = [...ordered];
+      const [item] = copy.splice(index, 1);
+      copy.splice(target, 0, item);
+      return copy;
+    })();
+  if (next.every((item, position) => item.id === ordered[position]?.id)) return;
+  reorderBusy = true;
+  try {
+    await persistMasterOrder(type, next);
+    await loadProjects();
+    dashboardView();
+    message(`${type === "project" ? "Project" : "Tool"} order updated.`, "success");
+  } finally {
+    reorderBusy = false;
+  }
 };
 
 const bindPendingMedia = (): void => {
@@ -1034,7 +1037,7 @@ const moveSavedMedia = async (mediaId: string, direction: "up" | "down"): Promis
 const deleteSavedMedia = async (mediaId: string): Promise<void> => {
   if (!selectedProject) return;
   const media = selectedProject.project_images.find((item) => item.id === mediaId);
-  if (!media || !window.confirm("Delete this image from the project and Storage?")) return;
+  if (!media || !(await confirmAdmin({ eyebrow: "Project media", title: "Delete this image?", message: "The image record and its stored file will be removed.", confirmLabel: "Delete image", tone: "danger" }))) return;
   const projectId = selectedProject.id;
   const { error: metadataError } = await supabase.from("project_images").delete().eq("id", mediaId);
   if (metadataError) throw metadataError;
@@ -1048,8 +1051,8 @@ const formText = (form: FormData, name: string): string => String(form.get(name)
 const commaList = (value: string): string[] => value.split(",").map((item) => item.trim()).filter(Boolean);
 
 const bindContentItemActions = (root: ParentNode = app): void => {
-  root.querySelectorAll<HTMLElement>("[data-select-item]").forEach((button) => button.addEventListener("click", () => {
-    if (adminFormDirty && !window.confirm("Discard unsaved changes and open another item?")) return;
+  root.querySelectorAll<HTMLElement>("[data-select-item]").forEach((button) => button.addEventListener("click", async () => {
+    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you open another item.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     const type = button.dataset.itemType as AdminItemType;
     const id = button.dataset.selectItem;
     if (!id) return;
@@ -1077,12 +1080,49 @@ const bindContentItemActions = (root: ParentNode = app): void => {
     const id = button.dataset.purgeItem;
     if (id) void permanentlyDeleteTrashItem(type, id).catch((error: Error) => message(error.message, "error"));
   }));
+  root.querySelectorAll<HTMLButtonElement>("[data-reorder-direction]").forEach((button) => button.addEventListener("click", () => {
+    const type = button.dataset.reorderType as AdminItemType;
+    const id = button.dataset.reorderItem;
+    const direction = button.dataset.reorderDirection;
+    if (id && (direction === "up" || direction === "down")) void reorderMasterItem(type, id, direction).catch((error: Error) => message(error.message, "error"));
+  }));
+  let dragged: { type: AdminItemType; id: string } | null = null;
+  root.querySelectorAll<HTMLElement>("[data-reorder-drag]").forEach((handle) => {
+    handle.addEventListener("dragstart", (event) => {
+      const type = handle.dataset.reorderType as AdminItemType;
+      const id = handle.dataset.reorderItem;
+      if (!id) return;
+      dragged = { type, id };
+      handle.closest(".admin-content-item")?.classList.add("is-dragging");
+      (event as DragEvent).dataTransfer?.setData("text/plain", id);
+    });
+    handle.addEventListener("dragend", () => {
+      dragged = null;
+      root.querySelectorAll<HTMLElement>(".admin-content-item.is-dragging, .admin-content-item.is-drag-over").forEach((item) => item.classList.remove("is-dragging", "is-drag-over"));
+    });
+  });
+  root.querySelectorAll<HTMLElement>(".admin-content-item").forEach((row) => {
+    row.addEventListener("dragover", (event) => {
+      const type = row.querySelector<HTMLElement>("[data-item-type]")?.dataset.itemType as AdminItemType | undefined;
+      if (!dragged || !type || dragged.type !== type) return;
+      event.preventDefault();
+      row.classList.add("is-drag-over");
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("is-drag-over"));
+    row.addEventListener("drop", (event) => {
+      event.preventDefault();
+      row.classList.remove("is-drag-over");
+      const target = row.querySelector<HTMLElement>("[data-reorder-item]")?.dataset.reorderItem;
+      if (dragged && target && target !== dragged.id) void reorderMasterItem(dragged.type, dragged.id, target).catch((error: Error) => message(error.message, "error"));
+      dragged = null;
+    });
+  });
 };
 
 const bindDashboard = (): void => {
   const passwordDialog = app.querySelector<HTMLDialogElement>("[data-password-dialog]");
-  app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", () => {
-    if (adminFormDirty && !window.confirm("Discard unsaved changes and leave this editor?")) return;
+  app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", async () => {
+    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you leave this workspace.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     if (activeView === "cover-letters") discardCoverLetterChanges();
     if (activeView === "cv" || activeView === "portfolio") discardProfileDocumentChanges();
     if (activeView === "homepage" || activeView === "profile") discardSiteChanges();
@@ -1148,18 +1188,6 @@ const bindDashboard = (): void => {
     form.addEventListener("input", markDirty);
     form.addEventListener("change", markDirty);
   });
-  app.querySelector<HTMLButtonElement>("[data-present-toggle]")?.addEventListener("click", (event) => {
-    const button = event.currentTarget as HTMLButtonElement;
-    const form = button.closest<HTMLFormElement>("form");
-    const endDate = form?.elements.namedItem("end_date");
-    const current = form?.elements.namedItem("is_current");
-    if (!(endDate instanceof HTMLInputElement) || !(current instanceof HTMLInputElement)) return;
-    const isPresent = button.getAttribute("aria-pressed") !== "true";
-    button.setAttribute("aria-pressed", String(isPresent));
-    current.value = String(isPresent);
-    endDate.disabled = isPresent;
-    if (isPresent) endDate.value = "";
-  });
   app.querySelector<HTMLInputElement>('input[name="images"]')?.addEventListener("change", (event) => {
     const files = (event.currentTarget as HTMLInputElement).files;
     if (!files) return;
@@ -1206,16 +1234,16 @@ const bindDashboard = (): void => {
     setStatus("Password updated. You can use Password sign-in next time.", "success");
   });
   app.querySelector("[data-sign-out]")?.addEventListener("click", async () => {
-    if (adminFormDirty && !window.confirm("Discard unsaved changes and sign out?")) return;
+    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Sign out", title: "Leave with unsaved changes?", message: "Your unsaved changes will be discarded when you sign out.", confirmLabel: "Discard and sign out", cancelLabel: "Keep editing", tone: "danger" }))) return;
     await supabase.auth.signOut();
     loginView();
   });
-  app.querySelector("[data-new-project]")?.addEventListener("click", () => {
-    if (adminFormDirty && !window.confirm("Discard unsaved changes and create a new project?")) return;
+  app.querySelector("[data-new-project]")?.addEventListener("click", async () => {
+    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "New project", title: "Discard current changes?", message: "A new project editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new project", cancelLabel: "Keep editing", tone: "danger" }))) return;
     clearPendingMedia(); adminFormDirty = false; activeEditorTab = "overview"; activeView = "projects"; selectedItemType = "project"; selectedTool = null; selectedProject = blankProject(); dashboardView();
   });
-  app.querySelector("[data-new-tool]")?.addEventListener("click", () => {
-    if (adminFormDirty && !window.confirm("Discard unsaved changes and create a new tool?")) return;
+  app.querySelector("[data-new-tool]")?.addEventListener("click", async () => {
+    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "New automation tool", title: "Discard current changes?", message: "A new tool editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new tool", cancelLabel: "Keep editing", tone: "danger" }))) return;
     clearPendingMedia(); adminFormDirty = false; activeEditorTab = "overview"; activeView = "tools"; selectedItemType = "tool"; selectedProject = null; selectedTool = blankTool(); dashboardView();
   });
   app.querySelector("[data-delete-selected]")?.addEventListener("click", () => { void moveSelectedToTrash().catch((error: Error) => message(error.message, "error")); });
@@ -1233,30 +1261,6 @@ const bindDashboard = (): void => {
     void changeSelectedStatus(button.dataset.itemType as AdminItemType, button.dataset.next as PublicationStatus).catch((error: Error) => message(error.message, "error"));
   }));
   bindContentItemActions();
-  app.querySelector("[data-import]")?.addEventListener("click", async () => {
-    if (!window.confirm("Import starter CV/Portfolio records as drafts? Existing matching IDs will be updated.")) return;
-    const projectRows = portfolioProjectSeed.map(toRow).map(({ project_images: _images, deleted_at: _deletedAt, deleted_by: _deletedBy, purge_after: _purgeAfter, deleted_from_status: _deletedFromStatus, ...row }) => row);
-    const projectResult = await supabase.from("projects").upsert(projectRows);
-    if (projectResult.error) return message(projectResult.error.message, "error");
-    const toolResult = await supabase.from("automation_tools").upsert(portfolioToolSeed.map((tool) => ({
-      id: tool.id,
-      slug: tool.slug,
-      name: tool.name,
-      problem: tool.problem,
-      solution: tool.solution,
-      benefit: tool.benefit ?? null,
-      technologies: tool.technologies,
-      featured: tool.featured,
-      status: "draft",
-      display_order: tool.displayOrder,
-      include_in_portfolio: false,
-      portfolio_order: tool.portfolioOrder,
-      include_in_cv: tool.includeInCv,
-      cv_order: tool.cvOrder,
-    })));
-    if (toolResult.error) return message(toolResult.error.message, "error");
-    await loadProjects(); dashboardView(); message("Starter projects and tools imported as drafts.", "success");
-  });
   app.querySelector<HTMLFormElement>("[data-project-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-tool-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveToolForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-upload-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void uploadImages(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });

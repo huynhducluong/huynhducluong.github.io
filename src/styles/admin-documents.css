@@ -424,7 +424,7 @@
 
 .admin-document-selection article {
   display: grid;
-  grid-template-columns: minmax(16rem, 1fr) 4.5rem 6.5rem 4.8rem;
+  grid-template-columns: minmax(16rem, 1fr) 6.5rem 4.8rem;
   align-items: center;
   gap: .5rem;
   padding: .55rem .65rem;
@@ -451,13 +451,170 @@
   white-space: nowrap;
 }
 
+.admin-document-selection__identity {
+  display: grid;
+  min-width: 0;
+  gap: .15rem;
+}
+
+.admin-document-selection__identity strong,
+.admin-document-selection__identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-document-selection__identity strong { color: var(--color-text); }
+.admin-document-selection__identity small { color: var(--color-text-muted); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-regular); }
+
+.admin-cv-selection {
+  container: cv-selection / inline-size;
+  display: grid;
+  gap: 1.15rem;
+}
+
+.admin-cv-selection > section,
+.admin-cv-selection__list {
+  display: grid;
+  gap: .5rem;
+}
+
+.admin-cv-selection h4 {
+  margin: 0 0 .15rem;
+  color: var(--color-primary-dark);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-cv-selection article {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) 7.5rem auto 4.8rem;
+  align-items: center;
+  gap: .65rem;
+  padding: .7rem;
+  border: 1px solid #e1e8eb;
+  border-radius: .55rem;
+  background: #fff;
+}
+
+.admin-cv-selection__identity,
+.admin-cv-selection__identity strong,
+.admin-cv-selection__identity small {
+  display: block;
+  min-width: 0;
+}
+
+.admin-cv-selection__identity strong,
+.admin-cv-selection__identity small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-cv-selection__identity strong {
+  color: var(--color-text);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-cv-selection__identity small {
+  margin-top: .15rem;
+  color: var(--color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-cv-selection article > label:not(.admin-switch) {
+  display: grid;
+  gap: .2rem;
+  color: var(--color-text-muted);
+  font-size: var(--admin-text-2xs);
+  font-weight: 800;
+}
+
+.admin-cv-selection article > label:not(.admin-switch) input,
+.admin-cv-selection article > label:not(.admin-switch) select {
+  min-width: 0;
+  padding: .45rem;
+}
+
+.admin-cv-selection .admin-switch {
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: .4rem;
+  white-space: nowrap;
+}
+
+.admin-cv-selection .admin-switch input,
+.admin-cv-selection__responsibilities input {
+  width: auto;
+}
+
+.admin-cv-selection__responsibilities {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: .4rem;
+  margin: 0;
+  padding: .7rem;
+  border: 1px solid #e5ebee;
+  border-radius: .45rem;
+  background: #f8fafb;
+}
+
+.admin-cv-selection__responsibilities[hidden] {
+  display: none;
+}
+
+.admin-cv-selection__responsibilities legend {
+  padding: 0 .25rem;
+  color: var(--color-text-muted);
+  font-size: var(--admin-text-2xs);
+  font-weight: 800;
+}
+
+.admin-cv-selection__responsibilities label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: .5rem;
+  color: var(--color-text);
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-regular);
+  line-height: 1.4;
+}
+
+.admin-cv-selection__list--tools article {
+  grid-template-columns: minmax(12rem, 1fr) auto;
+}
+
+.admin-cv-selection input:disabled,
+.admin-cv-selection select:disabled,
+.admin-document-selection input:disabled,
+.admin-document-selection select:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+@container cv-selection (max-width: 44rem) {
+  .admin-cv-selection__project {
+    grid-template-columns: 7rem minmax(7rem, 1fr) auto 4.8rem !important;
+  }
+
+  .admin-cv-selection__identity,
+  .admin-cv-selection__responsibilities {
+    grid-column: 1 / -1;
+  }
+
+  .admin-cv-selection__list--tools article {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
 .admin-document-preview {
   position: sticky;
   top: 5.25rem;
   display: grid;
   min-width: 0;
   max-height: calc(100vh - 5.25rem);
-  grid-template-rows: auto minmax(30rem, 1fr) auto auto;
+  grid-template-rows: auto minmax(30rem, 1fr);
   background: #e8edef;
 }
 
@@ -489,51 +646,47 @@
 .admin-document-frame[data-zoom="75"] .admin-embedded-preview-stage { --preview-scale: .75; }
 .admin-document-frame[data-zoom="100"] .admin-embedded-preview-stage { --preview-scale: 1; }
 
-.admin-document-validation,
-.admin-document-releases {
-  margin: 0 .8rem .7rem;
-  padding: .7rem .8rem;
-  border: 1px solid #d6e0e3;
-  border-radius: .55rem;
-  background: #fff;
-  font-size: var(--admin-text-2xs);
-}
-
-.admin-document-validation strong {
-  font-size: var(--admin-text-xs);
-}
-
-.admin-document-validation p,
-.admin-document-validation ul {
-  margin: .3rem 0 0;
-  color: var(--color-text-muted);
-}
-
-.admin-document-validation ul {
-  padding-left: 1rem;
-  color: var(--admin-color-warning);
-}
-
-.admin-document-releases summary {
-  cursor: pointer;
-  font-weight: 800;
-}
-
-.admin-document-releases ol {
-  display: grid;
-  gap: .35rem;
-  max-height: 8rem;
-  margin: .55rem 0 0;
+.admin-preview-status {
+  display: inline;
   padding: 0;
-  overflow: auto;
-  list-style: none;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: .16rem;
 }
 
-.admin-document-releases li {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  color: var(--color-text-muted);
+.admin-preview-status:hover,
+.admin-preview-status:focus-visible {
+  text-decoration-color: currentcolor;
+}
+
+.admin-preview-status:focus-visible {
+  border-radius: .2rem;
+  outline: 2px solid var(--admin-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.admin-document-check-dialog {
+  width: min(calc(100% - 2rem), 34rem);
+}
+
+.admin-document-check-dialog__content ul {
+  display: grid;
+  gap: .45rem;
+  margin: 0;
+  padding-left: 1.2rem;
+  color: var(--admin-color-warning);
+  font-size: var(--admin-text-sm);
+  line-height: 1.45;
+}
+
+.admin-document-check-dialog__content p {
+  margin: 0;
+  color: var(--admin-color-success);
+  font-weight: 700;
 }
 
 .admin-document-loading {

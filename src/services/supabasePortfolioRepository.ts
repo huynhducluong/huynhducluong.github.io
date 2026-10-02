@@ -105,7 +105,7 @@ export const projectFromRow = (row: ProjectRow): PortfolioProject => ({
   status: row.status,
   displayOrder: row.display_order,
   includeInPortfolio: row.include_in_portfolio,
-  portfolioOrder: row.portfolio_order,
+  portfolioOrder: row.display_order,
   portfolioLayout: row.portfolio_layout,
   includeInCv: row.include_in_cv ?? false,
   cvOrder: row.cv_order ?? 100,
@@ -129,7 +129,7 @@ export const toolFromRow = (row: ToolRow): PortfolioTool => ({
   status: row.status,
   displayOrder: row.display_order,
   includeInPortfolio: row.include_in_portfolio,
-  portfolioOrder: row.portfolio_order,
+  portfolioOrder: row.display_order,
   includeInCv: row.include_in_cv ?? false,
   cvOrder: row.cv_order ?? 100,
 });

@@ -6,7 +6,7 @@ import { profile } from "./profile";
 import { projects } from "./projects";
 import { skillGroups } from "./skills";
 import { automationTools } from "./tools";
-import type { CvContent, CvRuntimeData, CvRuntimeProject } from "../types/cvContent";
+import type { CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
 
 const detailedSelections = [
   ...englishCvConfig.pages[0].projectExperience,
@@ -39,22 +39,43 @@ export const cvProjectSeed = projects.map((project): CvRuntimeProject | null => 
 
   return {
     ...project,
-    cvOrder: detailed?.order ?? compactOrder ?? 100,
+    cvOrder: project.displayOrder ?? detailed?.order ?? compactOrder ?? 100,
     cvDisplay: detailed ? "detailed" : "compact",
     cvShowSummary: detailed?.selection.showSummary ?? false,
     cvResponsibilityIds: detailed ? [...detailed.selection.responsibilityIds] : [],
   };
 }).filter((project): project is CvRuntimeProject => project !== null);
 
+const cvAvailableProjectSeed: CvRuntimeProject[] = projects.map((project, index) => {
+  const selected = cvProjectSeed.find((item) => item.id === project.id);
+  return selected ? { ...selected, includeInCv: true } : {
+    ...project,
+    includeInCv: false,
+    cvOrder: project.displayOrder ?? index + 1,
+    cvDisplay: "compact",
+    cvShowSummary: false,
+    cvResponsibilityIds: [],
+  };
+});
+
+const cvSelectedToolSeed: CvRuntimeTool[] = englishCvConfig.pages[1].automationToolIds.map((id, index) => {
+  const tool = automationTools.find((item) => item.id === id);
+  if (!tool) throw new Error(`Missing CV automation tool "${id}".`);
+  return { ...tool, includeInCv: true, cvOrder: index + 1 };
+});
+
+const cvAvailableToolSeed: CvRuntimeTool[] = automationTools.map((tool, index) => {
+  const selected = cvSelectedToolSeed.find((item) => item.id === tool.id);
+  return selected ?? { ...tool, includeInCv: false, cvOrder: index + 1 };
+});
+
 export const cvRuntimeSeed: CvRuntimeData = {
   content: cvContentSeed,
   detailedProjects: cvProjectSeed.filter((project) => project.cvDisplay === "detailed").sort((a, b) => a.cvOrder - b.cvOrder),
   compactProjects: cvProjectSeed.filter((project) => project.cvDisplay === "compact").sort((a, b) => a.cvOrder - b.cvOrder),
-  tools: englishCvConfig.pages[1].automationToolIds.map((id, index) => {
-    const tool = automationTools.find((item) => item.id === id);
-    if (!tool) throw new Error(`Missing CV automation tool "${id}".`);
-    return { ...tool, cvOrder: index + 1 };
-  }),
+  tools: cvSelectedToolSeed,
+  availableProjects: cvAvailableProjectSeed,
+  availableTools: cvAvailableToolSeed,
 };
 
 export const cvProjectSeedSettings = new Map(cvProjectSeed.map((project) => [project.id, {

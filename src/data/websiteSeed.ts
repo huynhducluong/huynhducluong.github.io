@@ -86,6 +86,12 @@ export const websiteContentSeed: WebsiteContent = {
     vi: "Điều phối BIM · Hạ tầng · Tự động hóa",
   },
   theme: { presetId: "personal-blue" },
+  contentSelection: {
+    projectIds: [],
+    featuredProjectIds: [],
+    toolIds: [],
+    featuredToolIds: [],
+  },
   sections: {
     expertise: true,
     experience: true,

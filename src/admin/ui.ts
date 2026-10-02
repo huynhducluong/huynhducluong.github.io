@@ -22,6 +22,14 @@ interface AdminPreviewControlGroupOptions {
   options: AdminPreviewControlOption[];
 }
 
+interface AdminPreviewSelectOptions {
+  label: string;
+  dataAttribute: string;
+  activeValue: string;
+  options: AdminPreviewControlOption[];
+  className?: string;
+}
+
 interface AdminPreviewToolbarOptions {
   title: string;
   meta: string;
@@ -54,6 +62,19 @@ export const renderAdminPreviewControlGroup = ({
 }: AdminPreviewControlGroupOptions): string => `<div class="admin-preview-toolbar__group" role="group" aria-label="${escapeHtml(label)}">
   ${options.map((option) => `<button type="button" ${escapeHtml(dataAttribute)}="${escapeHtml(option.value)}" class="${activeValue === option.value ? "is-active" : ""}" aria-pressed="${activeValue === option.value}">${escapeHtml(option.label)}</button>`).join("")}
 </div>`;
+
+export const renderAdminPreviewSelect = ({
+  label,
+  dataAttribute,
+  activeValue,
+  options,
+  className = "",
+}: AdminPreviewSelectOptions): string => `<label class="admin-preview-toolbar__select${className ? ` ${escapeHtml(className)}` : ""}">
+  <span class="sr-only">${escapeHtml(label)}</span>
+  <select ${escapeHtml(dataAttribute)} aria-label="${escapeHtml(label)}">
+    ${options.map((option) => `<option value="${escapeHtml(option.value)}"${activeValue === option.value ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+  </select>
+</label>`;
 
 export const renderAdminPreviewToolbar = ({
   title,

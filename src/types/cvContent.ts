@@ -8,6 +8,7 @@ import type {
   SkillGroup,
 } from "./career";
 import type { StoredDocumentTheme } from "./theme";
+import type { PublicationStatus } from "./portfolio";
 
 export type CvProjectDisplay = "detailed" | "compact";
 
@@ -24,6 +25,8 @@ export interface CvContent {
 }
 
 export interface CvRuntimeProject extends Project {
+  status?: PublicationStatus;
+  includeInCv?: boolean;
   cvOrder: number;
   cvDisplay: CvProjectDisplay;
   cvShowSummary: boolean;
@@ -31,6 +34,8 @@ export interface CvRuntimeProject extends Project {
 }
 
 export interface CvRuntimeTool extends AutomationTool {
+  status?: PublicationStatus;
+  includeInCv?: boolean;
   cvOrder: number;
 }
 
@@ -39,4 +44,6 @@ export interface CvRuntimeData {
   detailedProjects: CvRuntimeProject[];
   compactProjects: CvRuntimeProject[];
   tools: CvRuntimeTool[];
+  availableProjects?: CvRuntimeProject[];
+  availableTools?: CvRuntimeTool[];
 }

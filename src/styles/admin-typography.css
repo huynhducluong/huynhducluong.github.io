@@ -176,9 +176,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-filter-row button,
-.admin-content-item__actions button,
-.admin-more,
-.admin-more button {
+.admin-content-item__actions button {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-semibold);
 }

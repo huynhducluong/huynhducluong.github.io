@@ -5,9 +5,8 @@ import {
   publishWebsiteRelease,
   saveProfessionalProfile,
   saveWebsiteContent,
-  saveWebsiteFeatured,
 } from "../services/websiteRepository";
-import { escapeHtml } from "../shared/format";
+import { escapeHtml, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
@@ -16,9 +15,11 @@ import type { StoredDocumentTheme } from "../types/theme";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { invalidateProfileDocumentWorkspace } from "./profileDocumentWorkspace";
 import { updateCoverLetterSharedProfile } from "./coverLetterWorkspace";
+import { confirmAdmin } from "./confirmDialog";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import {
   renderAdminPreviewControlGroup,
+  renderAdminPreviewSelect,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
   setButtonBusy,
@@ -29,6 +30,7 @@ type WebsiteTab = "general" | "sections" | "featured" | "appearance";
 type ProfileTab = "identity" | "experience" | "education" | "skills";
 type WebsiteViewport = "desktop" | "laptop" | "tablet" | "mobile";
 type WebsitePreviewZoom = "fit" | "75" | "100";
+type WebsitePreviewData = WebsiteRuntimeData & { previewLanguage?: Language };
 
 interface WorkspaceCallbacks {
   rerender: () => void;
@@ -44,6 +46,7 @@ const state: {
   websiteTab: WebsiteTab;
   profileTab: ProfileTab;
   viewport: WebsiteViewport;
+  previewLanguage: Language;
   previewZoom: WebsitePreviewZoom;
   stale: boolean;
 } = {
@@ -54,6 +57,7 @@ const state: {
   websiteTab: "general",
   profileTab: "identity",
   viewport: "desktop",
+  previewLanguage: "en",
   previewZoom: "fit",
   stale: false,
 };
@@ -72,7 +76,7 @@ const value = (form: FormData, name: string): string => String(form.get(name) ??
 const lines = (text: string): string[] => text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 const commaList = (text: string): string[] => text.split(",").map((item) => item.trim()).filter(Boolean);
 const field = (label: string, name: string, current: string, type = "text"): string =>
-  `<label>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(current)}"></label>`;
+  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(current)}"></label>`;
 const area = (label: string, name: string, current: string, rows = 4): string =>
   `<label>${escapeHtml(label)}<textarea name="${escapeHtml(name)}" rows="${rows}">${escapeHtml(current)}</textarea></label>`;
 const bilingual = (label: string, name: string, text: { en: string; vi: string }): string =>
@@ -177,21 +181,53 @@ const websiteSections = (content: WebsiteContent): string => renderAdminSectionC
 });
 
 const websiteFeatured = (runtime: WebsiteRuntimeData): string => renderAdminSectionCard({
-  title: "Website featured content",
-  note: "Choose published Projects and Tools for the next release.",
-  content: `<div class="admin-site-featured">
-    <h4>Projects</h4>
-    ${runtime.projects.map((item) => `<label><input type="checkbox" name="featured_project" value="${escapeHtml(item.id)}"${item.featured ? " checked" : ""}><span><strong>${escapeHtml(item.name.en)}</strong><small>${item.status} · ${escapeHtml(item.slug)}</small></span></label>`).join("")}
-    <h4>Automation tools</h4>
-    ${runtime.tools.map((item) => `<label><input type="checkbox" name="featured_tool" value="${escapeHtml(item.id)}"${item.featured ? " checked" : ""}><span><strong>${escapeHtml(item.name)}</strong><small>${item.status} · ${escapeHtml(item.slug)}</small></span></label>`).join("")}
+  title: "Website content selection",
+  note: "Choose Website content and Homepage highlights. Display order follows Projects and Automation Tools.",
+  content: `<div class="admin-site-content-selection">
+    <section><h4>Projects</h4><div class="admin-site-content-selection__list">
+      ${runtime.projects.map((item) => {
+        const ready = item.status === "published";
+        return `<article>
+          <span class="admin-site-content-selection__identity"><strong>${escapeHtml(item.name.en)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} · ${escapeHtml(item.slug)}</small></span>
+          <div class="admin-site-content-selection__checks">
+            <label class="admin-site-content-selection__toggle"><input type="checkbox" name="website_project" value="${escapeHtml(item.id)}"${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
+            <label class="admin-site-content-selection__toggle"><input type="checkbox" name="featured_project" value="${escapeHtml(item.id)}"${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
+          </div>
+        </article>`;
+      }).join("")}
+    </div></section>
+    <section><h4>Automation tools</h4><div class="admin-site-content-selection__list">
+      ${runtime.tools.map((item) => {
+        const ready = item.status === "published";
+        return `<article>
+          <span class="admin-site-content-selection__identity"><strong>${escapeHtml(item.name)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} · ${escapeHtml(item.slug)}</small></span>
+          <div class="admin-site-content-selection__checks">
+            <label class="admin-site-content-selection__toggle"><input type="checkbox" name="website_tool" value="${escapeHtml(item.id)}"${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
+            <label class="admin-site-content-selection__toggle"><input type="checkbox" name="featured_tool" value="${escapeHtml(item.id)}"${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
+          </div>
+        </article>`;
+      }).join("")}
+    </div></section>
   </div>`,
 });
 
 const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
   const current = state.runtime!;
   const form = new FormData(formElement);
+  const websiteProjectIds = new Set(form.getAll("website_project").map(String));
   const projectIds = new Set(form.getAll("featured_project").map(String));
+  const websiteToolIds = new Set(form.getAll("website_tool").map(String));
   const toolIds = new Set(form.getAll("featured_tool").map(String));
+  projectIds.forEach((id) => websiteProjectIds.add(id));
+  toolIds.forEach((id) => websiteToolIds.add(id));
+  const orderedWebsiteProjectIds = current.projects
+    .filter((item) => websiteProjectIds.has(item.id))
+    .map((item) => item.id);
+  const orderedWebsiteToolIds = current.tools
+    .filter((item) => websiteToolIds.has(item.id))
+    .map((item) => item.id);
+  const orderedProjectIds = orderedWebsiteProjectIds.filter((id) => projectIds.has(id));
+  const orderedToolIds = orderedWebsiteToolIds.filter((id) => toolIds.has(id));
   const content: WebsiteContent = {
     ...current.content,
     version: current.content.version || websiteContentSeed.version,
@@ -217,6 +253,12 @@ const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
     contactKicker: readLocalized(form, "contact_kicker"),
     contactTitle: readLocalized(form, "contact_title"),
     footerText: readLocalized(form, "footer_text"),
+    contentSelection: {
+      projectIds: orderedWebsiteProjectIds,
+      featuredProjectIds: orderedProjectIds,
+      toolIds: orderedWebsiteToolIds,
+      featuredToolIds: orderedToolIds,
+    },
     theme: readTheme(form),
     sections: {
       expertise: form.get("section_expertise") === "on",
@@ -229,8 +271,16 @@ const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
   return {
     content,
     professional: current.professional,
-    projects: current.projects.map((item) => ({ ...item, featured: projectIds.has(item.id) })),
-    tools: current.tools.map((item) => ({ ...item, featured: toolIds.has(item.id) })),
+    projects: current.projects.map((item) => ({
+      ...item,
+      websiteVisible: websiteProjectIds.has(item.id),
+      featured: projectIds.has(item.id),
+    })),
+    tools: current.tools.map((item) => ({
+      ...item,
+      websiteVisible: websiteToolIds.has(item.id),
+      featured: toolIds.has(item.id),
+    })),
   };
 };
 
@@ -348,15 +398,26 @@ const websiteView = (): string => {
   const releaseHistory = state.releases.length
     ? `<ol class="admin-release-history__list">${state.releases.map((item, index) => `<li><div><strong>${index === 0 ? "Latest release" : "Published release"}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
     : '<p class="admin-empty">No Website release has been published yet.</p>';
-  const viewportControls = renderAdminPreviewControlGroup({
+  const viewportControls = renderAdminPreviewSelect({
     label: "Website viewport",
     dataAttribute: "data-website-viewport",
     activeValue: state.viewport,
+    className: "admin-preview-toolbar__select--viewport",
     options: [
       { label: "Desktop", value: "desktop" },
       { label: "Laptop", value: "laptop" },
       { label: "Tablet", value: "tablet" },
       { label: "Mobile", value: "mobile" },
+    ],
+  });
+  const languageControls = renderAdminPreviewSelect({
+    label: "Website preview language",
+    dataAttribute: "data-website-language",
+    activeValue: state.previewLanguage,
+    className: "admin-preview-toolbar__select--language",
+    options: [
+      { label: "EN", value: "en" },
+      { label: "VI", value: "vi" },
     ],
   });
   const zoomControls = renderAdminPreviewControlGroup({
@@ -371,13 +432,13 @@ const websiteView = (): string => {
   });
   const previewToolbar = renderAdminPreviewToolbar({
     title: "Website preview",
-    meta: 'Live draft · <span data-preview-status>Connecting…</span>',
-    controls: `${viewportControls}${zoomControls}`,
+    meta: 'Live draft · <span data-preview-status data-kind="warning">Connecting…</span>',
+    controls: `${viewportControls}${languageControls}${zoomControls}`,
   });
   return `<section class="admin-site-workspace">
     <header class="admin-document-header"><div><p class="section-kicker">Website</p><h1>Homepage</h1><p><span class="status status--draft">Draft</span>${latest ? `Last published ${new Date(latest.publishedAt).toLocaleString()}` : "Not published yet"}</p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button><button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button><button class="button admin-action-publish" type="button" data-publish-website>Publish</button></div></header>
     <div class="admin-document-layout">
-      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Website editor sections">${([["general","General & SEO"],["sections","Sections"],["featured","Featured content"],["appearance","Appearance"]] as Array<[WebsiteTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-website-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav>
+      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Website editor sections">${([["general","General & SEO"],["sections","Sections"],["featured","Content selection"],["appearance","Appearance"]] as Array<[WebsiteTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-website-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav>
         <form id="website-editor-form" data-website-form>
           <section data-website-panel="general"${tab === "general" ? "" : " hidden"}>${websiteGeneral(content)}</section>
           <section data-website-panel="sections"${tab === "sections" ? "" : " hidden"}>${websiteSections(content)}</section>
@@ -458,25 +519,35 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   previewResizeObserver = previewFrame ? new ResizeObserver(syncWebsitePreviewScale) : undefined;
   if (previewFrame) previewResizeObserver?.observe(previewFrame);
   syncWebsitePreviewScale();
+  const setPreviewStatus = (label: string, kind: "success" | "warning" | "error"): void => {
+    const status = root.querySelector<HTMLElement>("[data-preview-status]");
+    if (!status) return;
+    status.textContent = label;
+    status.dataset.kind = kind;
+  };
   previewSender = previewIframe && websiteForm
-    ? bindPreviewSender(previewIframe, "website", () => readWebsiteForm(websiteForm), () => {
+    ? bindPreviewSender<WebsitePreviewData>(previewIframe, "website", () => ({
+        ...readWebsiteForm(websiteForm),
+        previewLanguage: state.previewLanguage,
+      }), () => {
         previewController?.refresh();
-        const status = root.querySelector<HTMLElement>("[data-preview-status]");
-        if (status) status.textContent = "Auto-updating";
+        setPreviewStatus("Synced", "success");
       })
     : undefined;
+  previewIframe?.addEventListener("error", () => setPreviewStatus("Disconnected", "error"));
   const markDirty = (): void => {
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-site-save-state]");
     if (status) status.textContent = "Unsaved changes";
     if (websiteForm && previewSender) {
+      setPreviewStatus("Updating…", "warning");
       if (previewTimer !== undefined) window.clearTimeout(previewTimer);
       previewTimer = window.setTimeout(sendPreview, 180);
     }
   };
   websiteForm?.addEventListener("input", markDirty);
   websiteForm?.addEventListener("change", (event) => {
-    const target = event.target as HTMLSelectElement;
+    const target = event.target as HTMLInputElement | HTMLSelectElement;
     if (target.name === "website_theme_preset" && target.value !== "custom") {
       const theme = documentThemes.find((item) => item.id === target.value);
       const primary = websiteForm.elements.namedItem("website_theme_primary");
@@ -485,6 +556,16 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
         primary.value = theme.tokens.primary;
         accent.value = theme.tokens.accent;
       }
+    }
+    if (target instanceof HTMLInputElement && target.type === "checkbox" && target.name.startsWith("featured_") && target.checked) {
+      const websiteName = target.name.replace("featured_", "website_");
+      const websiteToggle = websiteForm.querySelector<HTMLInputElement>(`input[name="${websiteName}"][value="${CSS.escape(target.value)}"]`);
+      if (websiteToggle) websiteToggle.checked = true;
+    }
+    if (target instanceof HTMLInputElement && target.type === "checkbox" && target.name.startsWith("website_") && !target.checked) {
+      const featuredName = target.name.replace("website_", "featured_");
+      const featuredToggle = websiteForm.querySelector<HTMLInputElement>(`input[name="${featuredName}"][value="${CSS.escape(target.value)}"]`);
+      if (featuredToggle) featuredToggle.checked = false;
     }
     markDirty();
   });
@@ -508,16 +589,16 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     });
     root.querySelectorAll<HTMLElement>("[data-profile-panel]").forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== state.profileTab; });
   }));
-  root.querySelectorAll<HTMLButtonElement>("[data-website-viewport]").forEach((button) => button.addEventListener("click", () => {
-    state.viewport = button.dataset.websiteViewport as WebsiteViewport;
+  root.querySelector<HTMLSelectElement>("[data-website-viewport]")?.addEventListener("change", (event) => {
+    state.viewport = (event.currentTarget as HTMLSelectElement).value as WebsiteViewport;
     if (previewFrame) previewFrame.dataset.viewport = state.viewport;
     syncWebsitePreviewScale();
-    root.querySelectorAll<HTMLButtonElement>("[data-website-viewport]").forEach((item) => {
-      const selected = item === button;
-      item.classList.toggle("is-active", selected);
-      item.setAttribute("aria-pressed", String(selected));
-    });
-  }));
+  });
+  root.querySelector<HTMLSelectElement>("[data-website-language]")?.addEventListener("change", (event) => {
+    state.previewLanguage = (event.currentTarget as HTMLSelectElement).value as Language;
+    setPreviewStatus("Updating…", "warning");
+    previewSender?.send();
+  });
   root.querySelectorAll<HTMLButtonElement>("[data-website-zoom]").forEach((button) => button.addEventListener("click", () => {
     state.previewZoom = button.dataset.websiteZoom as WebsitePreviewZoom;
     if (previewFrame) previewFrame.dataset.zoom = state.previewZoom;
@@ -537,7 +618,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     setButtonBusy(saveButton, true, "Saving…");
     void (async () => {
       const runtime = readWebsiteForm(websiteForm);
-      await Promise.all([saveWebsiteContent(runtime.content), saveWebsiteFeatured(runtime)]);
+      await saveWebsiteContent(runtime.content);
       state.runtime = runtime;
       callbacks.setDirty(false);
       callbacks.rerender();
@@ -563,8 +644,8 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });
   });
-  root.querySelector<HTMLButtonElement>("[data-publish-website]")?.addEventListener("click", (event) => {
-    if (!websiteForm || !window.confirm("Publish the current Website draft as a new public release? A version will be generated automatically.")) return;
+  root.querySelector<HTMLButtonElement>("[data-publish-website]")?.addEventListener("click", async (event) => {
+    if (!websiteForm || !(await confirmAdmin({ eyebrow: "Website release", title: "Publish this Website draft?", message: "A new public release will be created with an automatically generated version.", confirmLabel: "Publish Website" }))) return;
     const publishButton = event.currentTarget as HTMLButtonElement;
     setButtonBusy(publishButton, true, "Publishing…");
     void (async () => {
@@ -574,7 +655,6 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
         content: { ...draft.content, version: automaticWebsiteVersion() },
       };
       await saveWebsiteContent(runtime.content);
-      await saveWebsiteFeatured(runtime);
       state.runtime = runtime;
       await publishWebsiteRelease();
       state.releases = await listWebsiteReleases();

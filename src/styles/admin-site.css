@@ -173,52 +173,86 @@
   }
 }
 
-.admin-site-featured input {
-  width: auto !important;
-  margin-top: .15rem;
+.admin-site-content-selection {
+  container: site-selection / inline-size;
+  display: grid;
+  gap: 1.15rem;
 }
 
-.admin-site-featured span {
-  min-width: 0;
-}
-
-.admin-site-featured strong,
-.admin-site-featured small {
-  display: block;
-}
-
-.admin-site-featured strong {
-  color: var(--color-text);
-  font-size: var(--admin-text-sm);
-  font-weight: var(--admin-weight-semibold);
-}
-
-.admin-site-featured small {
-  margin-top: .15rem;
-  color: var(--color-text-muted);
-  font-size: var(--admin-text-xs);
-  font-weight: var(--admin-weight-regular);
-}
-
-.admin-site-featured {
+.admin-site-content-selection section,
+.admin-site-content-selection__list {
   display: grid;
   gap: .45rem;
 }
 
-.admin-site-featured h4 {
-  margin: .6rem 0 .15rem;
+.admin-site-content-selection h4 {
+  margin: 0 0 .15rem;
+  color: var(--color-primary-dark);
   font-size: var(--admin-text-sm);
 }
 
-.admin-site-featured label {
+.admin-site-content-selection article {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: .65rem;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  align-items: center;
+  gap: .7rem;
   padding: .65rem .75rem;
   border: 1px solid #e1e8eb;
   border-radius: .5rem;
   background: #fff;
+}
+
+.admin-site-content-selection__identity,
+.admin-site-content-selection__identity strong,
+.admin-site-content-selection__identity small {
+  display: block;
+  min-width: 0;
+}
+
+.admin-site-content-selection__identity strong {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-site-content-selection__identity small {
+  overflow: hidden;
+  margin-top: .15rem;
+  color: var(--color-text-muted);
+  font-size: var(--admin-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-site-content-selection__toggle {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center !important;
+  gap: .4rem !important;
+  white-space: nowrap;
+}
+
+.admin-site-content-selection__toggle input {
+  width: auto !important;
+}
+
+.admin-site-content-selection__checks {
+  display: grid;
+  justify-items: start;
+  gap: .25rem;
+}
+
+@container site-selection (max-width: 42rem) {
+  .admin-site-content-selection article {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .admin-site-content-selection__identity {
+    min-width: 0;
+  }
 }
 
 .admin-site-preview {

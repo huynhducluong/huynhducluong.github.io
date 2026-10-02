@@ -1,7 +1,7 @@
 import { professionalProfileSeed, websiteContentSeed } from "../data/websiteSeed";
 import { websiteNavigationLabels, type WebsiteNavigationLabels } from "../data/websiteNavigation";
 import type { DocumentReleaseSummary } from "../types/portfolio";
-import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
+import type { ProfessionalProfileContent, WebsiteContent, WebsiteContentSelection, WebsiteRuntimeData } from "../types/website";
 import { supabase } from "./supabaseClient";
 import {
   projectFromRow,
@@ -28,6 +28,7 @@ interface WebsiteContentRow {
   contact_title: WebsiteContent["contactTitle"];
   footer_text: WebsiteContent["footerText"];
   theme: WebsiteContent["theme"];
+  content_selection?: WebsiteContentSelection | null;
   sections: WebsiteContent["sections"];
 }
 
@@ -48,6 +49,7 @@ const websiteContentFromRow = (row: WebsiteContentRow): WebsiteContent => ({
   contactTitle: row.contact_title,
   footerText: row.footer_text,
   theme: row.theme ?? { presetId: "personal-blue" },
+  contentSelection: row.content_selection ?? structuredClone(websiteContentSeed.contentSelection),
   sections: row.sections ?? structuredClone(websiteContentSeed.sections),
 });
 
@@ -58,6 +60,10 @@ const websiteContentWithDefaults = (content: WebsiteContent): WebsiteContent => 
     ...supportedContent,
     projectsPage: supportedContent.projectsPage ?? structuredClone(websiteContentSeed.projectsPage),
     toolsPage: supportedContent.toolsPage ?? structuredClone(websiteContentSeed.toolsPage),
+    contentSelection: {
+      ...structuredClone(websiteContentSeed.contentSelection),
+      ...supportedContent.contentSelection,
+    },
     sections: {
       ...structuredClone(websiteContentSeed.sections),
       ...supportedContent.sections,
@@ -104,13 +110,37 @@ export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {
   if (contentResult.error) throw contentResult.error;
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
+  const contentRow = contentResult.data as WebsiteContentRow | null;
+  const content = contentRow ? websiteContentFromRow(contentRow) : structuredClone(websiteContentSeed);
+  const sourceProjects = (projectResult.data as ProjectRow[]).map(projectFromRow);
+  const sourceTools = (toolResult.data as ToolRow[]).map(toolFromRow);
+  if (!contentRow?.content_selection) {
+    content.contentSelection = {
+      projectIds: sourceProjects.filter((item) => item.status === "published").map((item) => item.id),
+      featuredProjectIds: sourceProjects.filter((item) => item.status === "published" && item.featured).map((item) => item.id),
+      toolIds: sourceTools.filter((item) => item.status === "published").map((item) => item.id),
+      featuredToolIds: sourceTools.filter((item) => item.status === "published" && item.featured).map((item) => item.id),
+    };
+  }
+  const selectedProjects = new Set(content.contentSelection.projectIds);
+  const featuredProjects = new Set(content.contentSelection.featuredProjectIds);
+  const selectedTools = new Set(content.contentSelection.toolIds);
+  const featuredTools = new Set(content.contentSelection.featuredToolIds);
   return {
-    content: contentResult.data
-      ? websiteContentFromRow(contentResult.data as WebsiteContentRow)
-      : structuredClone(websiteContentSeed),
+    content,
     professional,
-    projects: (projectResult.data as ProjectRow[]).map(projectFromRow),
-    tools: (toolResult.data as ToolRow[]).map(toolFromRow),
+    projects: sourceProjects.map((item) => ({
+      ...item,
+      websiteVisible: item.status === "published" && selectedProjects.has(item.id),
+      featured: item.status === "published" && featuredProjects.has(item.id),
+      displayOrder: item.displayOrder,
+    })),
+    tools: sourceTools.map((item) => ({
+      ...item,
+      websiteVisible: item.status === "published" && selectedTools.has(item.id),
+      featured: item.status === "published" && featuredTools.has(item.id),
+      displayOrder: item.displayOrder,
+    })),
   };
 };
 
@@ -134,18 +164,10 @@ export const saveWebsiteContent = async (content: WebsiteContent): Promise<void>
     contact_title: content.contactTitle,
     footer_text: content.footerText,
     theme: content.theme,
+    content_selection: content.contentSelection,
     sections: content.sections,
   });
   if (error) throw error;
-};
-
-export const saveWebsiteFeatured = async (runtime: WebsiteRuntimeData): Promise<void> => {
-  const results = await Promise.all([
-    ...runtime.projects.map((item) => supabase.from("projects").update({ featured: item.featured }).eq("id", item.id)),
-    ...runtime.tools.map((item) => supabase.from("automation_tools").update({ featured: item.featured }).eq("id", item.id)),
-  ]);
-  const failed = results.find((result) => result.error);
-  if (failed?.error) throw failed.error;
 };
 
 export const publishWebsiteRelease = async (): Promise<void> => {
@@ -153,8 +175,12 @@ export const publishWebsiteRelease = async (): Promise<void> => {
   const payload: WebsiteRuntimeData = {
     content: draft.content,
     professional: draft.professional,
-    projects: draft.projects.filter((item) => item.status === "published"),
-    tools: draft.tools.filter((item) => item.status === "published"),
+    projects: draft.projects
+      .filter((item) => item.websiteVisible !== false && item.status === "published")
+      .sort((left, right) => left.displayOrder - right.displayOrder),
+    tools: draft.tools
+      .filter((item) => item.websiteVisible !== false && item.status === "published")
+      .sort((left, right) => left.displayOrder - right.displayOrder),
   };
   const { data: authData, error: authError } = await supabase.auth.getUser();
   if (authError) throw authError;

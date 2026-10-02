@@ -11,19 +11,28 @@
 
 ## Data ownership
 
-Supabase is authoritative for shared website, CV, Portfolio, project, tool and media content. The bundled data files seed a new installation and remain a development fallback when the remote schema is unavailable. The public CV reads the latest published CV release; the authenticated Admin preview reads current editable content.
+Supabase is authoritative for shared website, CV, Portfolio, project, tool and media content. The bundled data files seed a new installation and remain a development fallback when the remote schema is unavailable. Public outputs read immutable releases; authenticated Admin previews read their current editable drafts.
 
-The website, project/tool routes and printable Portfolio all consume the same repository. This avoids a separate print-only copy of project data. Only published records are returned publicly. The Portfolio adds another explicit selection layer with `include_in_portfolio`, `portfolio_order` and `portfolio_layout`.
+Projects and Automation Tools are master content libraries. Their editors own facts, descriptions, responsibilities, technologies and media, but do not own output placement. The backend `published` value is presented as **Ready** in Admin: it means the item may be selected by an output, not that changing the item immediately changes a public page.
+
+Each output owns its composition:
+
+- Projects and Automation Tools own the canonical cross-channel `display_order`; the Admin master lists provide drag-and-drop plus keyboard/touch reorder controls.
+- Website draft content owns Website inclusion and Homepage highlighting in `website_content.content_selection`; its output follows the shared Project/Tool order.
+- Each CV document draft owns detailed/compact selection, summary visibility, responsibility bullets and tool selection; each Portfolio draft owns selection and project layout. Both consume the shared Project/Tool order.
+- Cover Letters keep their independent evidence references.
+
+Legacy Project/Tool distribution columns remain readable for migration and old-release compatibility, but current Admin editors no longer write them. Existing published releases remain immutable snapshots.
 
 ## Publishing workflow
 
-1. Create/import a record: status is `draft`.
-2. Edit text and upload sanitized public-ready images: status remains unchanged.
-3. Explicitly publish the record in Admin.
-4. Public website queries only `published` records.
-5. Printable Portfolio queries only published records that are also selected for the document.
+1. Create/import shared Project or Tool content: status is `draft`.
+2. Edit text and upload sanitized public-ready images.
+3. Mark the shared item **Ready**.
+4. Select Ready items per channel; change their shared order once in Projects or Automation Tools.
+5. Review that output's preview and publish its release.
 
-Archiving or returning a record to Draft removes it from public queries without deleting its history or media.
+Returning a shared item to Draft prevents it from being selected in new output drafts. Already published releases remain unchanged until that output is published again.
 
 ## Admin preview contract
 

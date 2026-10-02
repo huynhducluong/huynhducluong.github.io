@@ -16,7 +16,7 @@ import {
 import { escapeHtml } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes } from "../themes/documentThemes";
-import type { CvContent, CvRuntimeData } from "../types/cvContent";
+import type { CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
 import type { PortfolioContent, PortfolioRuntimeData } from "../types/portfolio";
 import type {
   ProfileDocumentKind,
@@ -27,6 +27,7 @@ import type {
 import type { StoredDocumentTheme } from "../types/theme";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
+import { confirmAdmin } from "./confirmDialog";
 import {
   renderAdminPreviewControlGroup,
   renderAdminPreviewToolbar,
@@ -82,7 +83,7 @@ const text = (form: FormData, name: string): string => String(form.get(name) ?? 
 const lines = (value: string): string[] => value.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 const commaList = (value: string): string[] => value.split(",").map((item) => item.trim()).filter(Boolean);
 const field = (label: string, name: string, value: string, type = "text"): string =>
-  `<label>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(value)}"></label>`;
+  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(value)}"></label>`;
 const area = (label: string, name: string, value: string, rows = 5): string =>
   `<label>${escapeHtml(label)}<textarea name="${escapeHtml(name)}" rows="${rows}">${escapeHtml(value)}</textarea></label>`;
 
@@ -134,10 +135,38 @@ const preferredDocument = (kind: ProfileDocumentKind, documents: ProfileDocument
     ?? null;
 };
 
-const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData): CvRuntimeData => ({
-  ...shared,
-  content: saved.content,
-});
+const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData): CvRuntimeData => {
+  const savedProjects = [...saved.detailedProjects, ...saved.compactProjects];
+  const savedProjectSelection = new Map(savedProjects.map((item) => [item.id, item]));
+  const savedToolSelection = new Map(saved.tools.map((item) => [item.id, item]));
+  const sharedProjects = shared.availableProjects ?? [...shared.detailedProjects, ...shared.compactProjects];
+  const sharedTools = shared.availableTools ?? shared.tools;
+  const availableProjects = sharedProjects.map((item) => {
+    const selection = savedProjectSelection.get(item.id);
+    const ready = item.status === undefined || item.status === "published";
+    return selection && ready ? {
+      ...item,
+      includeInCv: true,
+      cvOrder: item.cvOrder,
+      cvDisplay: selection.cvDisplay,
+      cvShowSummary: selection.cvShowSummary,
+      cvResponsibilityIds: selection.cvResponsibilityIds,
+    } : { ...item, includeInCv: false };
+  });
+  const availableTools = sharedTools.map((item) => {
+    const selection = savedToolSelection.get(item.id);
+    const ready = item.status === undefined || item.status === "published";
+    return selection && ready ? { ...item, includeInCv: true, cvOrder: item.cvOrder } : { ...item, includeInCv: false };
+  });
+  return {
+    content: saved.content,
+    detailedProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "detailed").sort((a, b) => a.cvOrder - b.cvOrder),
+    compactProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "compact").sort((a, b) => a.cvOrder - b.cvOrder),
+    tools: availableTools.filter((item) => item.includeInCv).sort((a, b) => a.cvOrder - b.cvOrder),
+    availableProjects,
+    availableTools,
+  };
+};
 
 const composePortfolioDraft = (saved: PortfolioRuntimeData, shared: PortfolioRuntimeData): PortfolioRuntimeData => {
   const savedProjects = new Map(saved.projects.map((item) => [item.id, item]));
@@ -147,20 +176,20 @@ const composePortfolioDraft = (saved: PortfolioRuntimeData, shared: PortfolioRun
     content: saved.content,
     projects: shared.projects.map((item) => {
       const selection = savedProjects.get(item.id);
-      return selection ? {
+      return selection && item.status === "published" ? {
         ...item,
         includeInPortfolio: selection.includeInPortfolio,
-        portfolioOrder: selection.portfolioOrder,
+        portfolioOrder: item.portfolioOrder,
         portfolioLayout: selection.portfolioLayout,
-      } : item;
+      } : { ...item, includeInPortfolio: false };
     }),
     tools: shared.tools.map((item) => {
       const selection = savedTools.get(item.id);
-      return selection ? {
+      return selection && item.status === "published" ? {
         ...item,
         includeInPortfolio: selection.includeInPortfolio,
-        portfolioOrder: selection.portfolioOrder,
-      } : item;
+        portfolioOrder: item.portfolioOrder,
+      } : { ...item, includeInPortfolio: false };
     }),
   };
 };
@@ -309,15 +338,45 @@ const cvEducationPanel = (content: CvContent): string => [
   }),
 ].join("");
 
-const cvSelectionPanel = (runtime: CvRuntimeData): string => renderAdminSectionCard({
-  title: "CV selection",
-  note: "Review Projects and Tools selected from their editors.",
-  content: `<div class="admin-document-summary-grid">
-    <article><strong>${runtime.detailedProjects.length}</strong><span>Detailed projects</span><ul>${runtime.detailedProjects.map((item) => `<li>${escapeHtml(item.name.en)}</li>`).join("")}</ul></article>
-    <article><strong>${runtime.compactProjects.length}</strong><span>Compact projects</span><ul>${runtime.compactProjects.map((item) => `<li>${escapeHtml(item.name.en)}</li>`).join("")}</ul></article>
-    <article><strong>${runtime.tools.length}</strong><span>Automation tools</span><ul>${runtime.tools.map((item) => `<li>${escapeHtml(item.name)}</li>`).join("")}</ul></article>
-  </div>`,
-});
+const cvSelectionPanel = (runtime: CvRuntimeData): string => {
+  const selectedProjects = new Map([...runtime.detailedProjects, ...runtime.compactProjects].map((item) => [item.id, item]));
+  const selectedTools = new Map(runtime.tools.map((item) => [item.id, item]));
+  const projects = runtime.availableProjects ?? [...runtime.detailedProjects, ...runtime.compactProjects];
+  const tools = runtime.availableTools ?? runtime.tools;
+  return renderAdminSectionCard({
+    title: "CV content selection",
+    note: "Choose projects, presentation, responsibilities and tools for this CV draft.",
+    content: `<div class="admin-cv-selection">
+      <section><h4>Projects</h4><div class="admin-cv-selection__list">
+        ${projects.map((item) => {
+          const selection = selectedProjects.get(item.id);
+          const display = selection?.cvDisplay ?? "excluded";
+          const ready = item.status === undefined || item.status === "published";
+          const displayStatus = ready ? "published" : item.status ?? "draft";
+          const responsibilityIds = new Set(selection?.cvResponsibilityIds ?? item.cvResponsibilityIds);
+          return `<article class="admin-cv-selection__project" data-cv-project-card>
+            <div class="admin-cv-selection__identity"><strong>${escapeHtml(item.name.en)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} Â· ${escapeHtml(item.location.en || item.id)}</small></div>
+            <label><span>Display</span><select name="cv_project_display_${escapeHtml(item.id)}" data-cv-project-display${ready ? "" : " disabled"}><option value="excluded"${display === "excluded" ? " selected" : ""}>Not included</option><option value="detailed"${display === "detailed" ? " selected" : ""}>Detailed</option><option value="compact"${display === "compact" ? " selected" : ""}>Compact</option></select></label>
+            <label class="admin-switch"><input type="checkbox" name="cv_project_summary_${escapeHtml(item.id)}"${selection?.cvShowSummary ? " checked" : ""}${ready ? "" : " disabled"}><span>Show summary</span></label>
+            <span class="status status--${displayStatus}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span>
+            <fieldset class="admin-cv-selection__responsibilities" data-cv-responsibilities${display === "detailed" ? "" : " hidden"}><legend>Responsibilities</legend>${item.responsibilities.length ? item.responsibilities.map((responsibility) => `<label><input type="checkbox" name="cv_project_responsibility_${escapeHtml(item.id)}" value="${escapeHtml(responsibility.id)}"${responsibilityIds.has(responsibility.id) ? " checked" : ""}${ready ? "" : " disabled"}><span>${escapeHtml(responsibility.text.en)}</span></label>`).join("") : '<p class="admin-empty">No responsibilities saved.</p>'}</fieldset>
+          </article>`;
+        }).join("")}
+      </div></section>
+      <section><h4>Automation tools</h4><div class="admin-cv-selection__list admin-cv-selection__list--tools">
+        ${tools.map((item) => {
+          const selection = selectedTools.get(item.id);
+          const ready = item.status === undefined || item.status === "published";
+          const displayStatus = ready ? "published" : item.status ?? "draft";
+          return `<article class="admin-cv-selection__tool">
+            <label class="admin-switch"><input type="checkbox" name="cv_tool" value="${escapeHtml(item.id)}"${selection ? " checked" : ""}${ready ? "" : " disabled"}><span>${escapeHtml(item.name)}</span></label>
+            <span class="status status--${displayStatus}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span>
+          </article>`;
+        }).join("")}
+      </div></section>
+    </div>`,
+  });
+};
 
 const readCvForm = (formElement: HTMLFormElement): CvContent => {
   const current = state.cv?.content ?? structuredClone(cvContentSeed);
@@ -375,6 +434,49 @@ const readCvForm = (formElement: HTMLFormElement): CvContent => {
   };
 };
 
+const readCvRuntimeForm = (formElement: HTMLFormElement): CvRuntimeData => {
+  const current = state.cv ?? {
+    content: structuredClone(cvContentSeed),
+    detailedProjects: [],
+    compactProjects: [],
+    tools: [],
+    availableProjects: [],
+    availableTools: [],
+  };
+  const form = new FormData(formElement);
+  const currentProjects = current.availableProjects ?? [...current.detailedProjects, ...current.compactProjects];
+  const currentTools = current.availableTools ?? current.tools;
+  const availableProjects: CvRuntimeProject[] = currentProjects.map((item) => {
+    const ready = item.status === undefined || item.status === "published";
+    const rawDisplay = String(form.get(`cv_project_display_${item.id}`) ?? "excluded");
+    const cvDisplay = rawDisplay === "detailed" ? "detailed" : "compact";
+    const includeInCv = ready && (rawDisplay === "detailed" || rawDisplay === "compact");
+    const selectedResponsibilityIds = new Set(form.getAll(`cv_project_responsibility_${item.id}`).map(String));
+    return {
+      ...item,
+      includeInCv,
+      cvDisplay,
+      cvOrder: item.cvOrder,
+      cvShowSummary: includeInCv && form.get(`cv_project_summary_${item.id}`) === "on",
+      cvResponsibilityIds: item.responsibilities.filter((responsibility) => selectedResponsibilityIds.has(responsibility.id)).map((responsibility) => responsibility.id),
+    };
+  });
+  const selectedToolIds = new Set(form.getAll("cv_tool").map(String));
+  const availableTools: CvRuntimeTool[] = currentTools.map((item) => ({
+    ...item,
+    includeInCv: (item.status === undefined || item.status === "published") && selectedToolIds.has(item.id),
+    cvOrder: item.cvOrder,
+  }));
+  return {
+    content: readCvForm(formElement),
+    detailedProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "detailed").sort((a, b) => a.cvOrder - b.cvOrder),
+    compactProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "compact").sort((a, b) => a.cvOrder - b.cvOrder),
+    tools: availableTools.filter((item) => item.includeInCv).sort((a, b) => a.cvOrder - b.cvOrder),
+    availableProjects,
+    availableTools,
+  };
+};
+
 const portfolioContentPanel = (content: PortfolioContent): string => [
   renderAdminSectionCard({
     title: "Portfolio cover",
@@ -406,13 +508,19 @@ const portfolioContentPanel = (content: PortfolioContent): string => [
 ].join("");
 
 const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => renderAdminSectionCard({
-  title: "Portfolio selection",
-  note: "Choose and order content for the next Portfolio release.",
+  title: "Portfolio content selection",
+  note: "Choose projects and tools. Display order follows Projects and Automation Tools.",
   content: `<div class="admin-document-selection">
     <h4>Projects</h4>
-    ${runtime.projects.map((item) => `<article><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${item.includeInPortfolio ? " checked" : ""}><span>${escapeHtml(item.name.en)}</span></label><input aria-label="Order" name="project_order_${escapeHtml(item.id)}" type="number" value="${item.portfolioOrder}"><select aria-label="Layout" name="project_layout_${escapeHtml(item.id)}"><option value="feature"${item.portfolioLayout === "feature" ? " selected" : ""}>Feature</option><option value="standard"${item.portfolioLayout === "standard" ? " selected" : ""}>Standard</option><option value="compact"${item.portfolioLayout === "compact" ? " selected" : ""}>Compact</option></select><span class="status status--${item.status}">${item.status}</span></article>`).join("")}
+    ${runtime.projects.map((item) => {
+      const ready = item.status === "published";
+      return `<article><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong>${escapeHtml(item.name.en)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} Â· ${escapeHtml(item.slug || item.id)}</small></span></label><select aria-label="Layout" name="project_layout_${escapeHtml(item.id)}"${ready ? "" : " disabled"}><option value="feature"${item.portfolioLayout === "feature" ? " selected" : ""}>Feature</option><option value="standard"${item.portfolioLayout === "standard" ? " selected" : ""}>Standard</option><option value="compact"${item.portfolioLayout === "compact" ? " selected" : ""}>Compact</option></select><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+    }).join("")}
     <h4>Automation tools</h4>
-    ${runtime.tools.map((item) => `<article><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}"${item.includeInPortfolio ? " checked" : ""}><span>${escapeHtml(item.name)}</span></label><input aria-label="Order" name="tool_order_${escapeHtml(item.id)}" type="number" value="${item.portfolioOrder}"><span></span><span class="status status--${item.status}">${item.status}</span></article>`).join("")}
+    ${runtime.tools.map((item) => {
+      const ready = item.status === "published";
+      return `<article><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong>${escapeHtml(item.name)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} Â· ${escapeHtml(item.slug || item.id)}</small></span></label><span></span><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+    }).join("")}
   </div>`,
 });
 
@@ -447,20 +555,20 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
     projects: current.projects.map((item) => ({
       ...item,
       includeInPortfolio: projectIds.has(item.id),
-      portfolioOrder: Number(form.get(`project_order_${item.id}`)) || 100,
+      portfolioOrder: item.portfolioOrder,
       portfolioLayout: String(form.get(`project_layout_${item.id}`) ?? item.portfolioLayout) as typeof item.portfolioLayout,
     })),
     tools: current.tools.map((item) => ({
       ...item,
       includeInPortfolio: toolIds.has(item.id),
-      portfolioOrder: Number(form.get(`tool_order_${item.id}`)) || 100,
+      portfolioOrder: item.portfolioOrder,
     })),
   };
 };
 
-const validation = (kind: ProfileDocumentKind): string[] => {
+const validation = (kind: ProfileDocumentKind, runtime?: CvRuntimeData | PortfolioRuntimeData | null): string[] => {
   if (kind === "cv") {
-    const data = state.cv;
+    const data = (runtime ?? state.cv) as CvRuntimeData | null;
     if (!data) return ["CV draft is not loaded."];
     return [
       !data.content.profile.name && "Full name is required.",
@@ -468,7 +576,7 @@ const validation = (kind: ProfileDocumentKind): string[] => {
       !data.detailedProjects.length && "Select at least one detailed CV project.",
     ].filter((item): item is string => Boolean(item));
   }
-  const data = state.portfolio;
+  const data = (runtime ?? state.portfolio) as PortfolioRuntimeData | null;
   if (!data) return ["Portfolio draft is not loaded."];
   return [
     !data.content.title && "Document title is required.",
@@ -540,7 +648,13 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   if (!runtime || !selected) return `<section class="admin-document-library">${documentCollectionView(kind)}<div class="admin-document-library__workspace">${emptyDocumentWorkspace(kind)}</div></section>`;
   const content = runtime.content;
   const activeTab = state.tab[kind];
-  const issues = validation(kind);
+  const issues = validation(kind, runtime);
+  const validationContent = issues.length
+    ? `<ul data-document-validation-list>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+    : '<p data-document-validation-ready>Required content and document selection are ready.</p>';
+  const releaseHistory = state.releases[kind].length
+    ? `<ol class="admin-release-history__list">${state.releases[kind].map((item) => `<li><div><strong>${item.isActive ? "Active release" : "Published release"}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
+    : `<p class="admin-empty">No ${documentLabel(kind)} release has been published yet.</p>`;
   const publicPath = kind === "cv" ? "cv/" : "portfolio/";
   const previewPath = `${publicPath}?preview=1&embedded=1`;
   const contentPanel = kind === "cv" ? cvContentPanel(content as CvContent) : portfolioContentPanel(content as PortfolioContent);
@@ -565,7 +679,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   });
   const previewToolbar = renderAdminPreviewToolbar({
     title: `${documentLabel(kind)} preview`,
-    meta: `${kind === "cv" ? "A4" : "A4 landscape"} · <span data-preview-page-count>${initialPageCount} pages</span> · <span data-kind="${issues.length ? "warning" : "success"}">${issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : "Ready"}</span>`,
+    meta: `${kind === "cv" ? "A4" : "A4 landscape"} · <span data-preview-page-count>${initialPageCount} pages</span> · <button type="button" class="admin-preview-status" data-document-validation-open data-kind="${issues.length ? "warning" : "success"}" aria-haspopup="dialog" aria-controls="${kind}-validation-dialog">${issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : "Ready"}</button>`,
     controls: zoomControls,
   });
   return `
@@ -575,6 +689,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
         <div class="admin-document-header__identity"><button class="admin-document-library__back" type="button" data-profile-document-close aria-label="Back to ${documentPlural(kind)}">← ${documentPlural(kind)}</button><p class="section-kicker">${documentLabel(kind)} document</p><h1>${escapeHtml(selected.internalTitle)}</h1><p><span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-active">Active public version</span>' : ""}<span>${latestRelease(kind)}</span></p></div>
         <div class="admin-document-actions">
           <span data-document-save-state>Saved</span>
+          <button class="button button--secondary admin-action-utility" type="button" data-document-history-open aria-haspopup="dialog" aria-controls="${kind}-release-history-dialog">History (${state.releases[kind].length})</button>
           <button class="button button--secondary admin-action-utility" type="button" data-document-print>Print / PDF</button>
           <details class="admin-document-more"><summary>More</summary><div><button type="button" data-profile-document-rename>Rename</button><button type="button" data-profile-document-duplicate>Duplicate</button>${!archived && !selected.isActive ? '<button type="button" data-profile-document-archive>Archive</button>' : ""}</div></details>
           ${archived ? "" : `<button class="button button--secondary admin-action-save" type="submit" form="${kind}-document-form">Save draft</button><button class="button admin-action-publish" type="button" data-document-publish>Publish & set active</button>`}
@@ -596,18 +711,15 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
         <aside class="admin-document-preview">
           ${previewToolbar}
           <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind]}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="no" tabindex="-1"></iframe></div></div>
-          <div class="admin-document-validation"><strong>Pre-publish check</strong>${issues.length ? `<ul>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : "<p>Required content and document selection are ready.</p>"}</div>
-          <details class="admin-document-releases"><summary>Release history (${state.releases[kind].length})</summary>${state.releases[kind].length ? `<ol>${state.releases[kind].map((item) => `<li><strong>${escapeHtml(item.version)}${item.isActive ? " · Active" : ""}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></li>`).join("")}</ol>` : "<p>No release has been published.</p>"}</details>
         </aside>
       </div>
+      <dialog id="${kind}-release-history-dialog" class="admin-dialog admin-release-history" data-document-history-dialog aria-labelledby="${kind}-release-history-title"><form method="dialog"><div><p class="section-kicker">${documentLabel(kind)}</p><h2 id="${kind}-release-history-title">Release history</h2><p>Published releases remain read-only snapshots.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-document-history-close>Close</button></div></form></dialog>
+      <dialog id="${kind}-validation-dialog" class="admin-dialog admin-document-check-dialog" data-document-validation-dialog aria-labelledby="${kind}-validation-title"><form method="dialog"><div><p class="section-kicker">${documentLabel(kind)}</p><h2 id="${kind}-validation-title">Pre-publish check</h2><p>Resolve required content issues before publishing.</p></div><div class="admin-document-check-dialog__content" data-document-validation-content>${validationContent}</div><div class="admin-actions"><button class="button button--secondary" type="button" data-document-validation-close>Close</button></div></form></dialog>
     </section></div></section>`;
 };
 
 const previewPayload = (kind: ProfileDocumentKind, form: HTMLFormElement): CvRuntimeData | PortfolioRuntimeData => {
-  if (kind === "cv") {
-    const runtime = state.cv!;
-    return { ...runtime, content: readCvForm(form) };
-  }
+  if (kind === "cv") return readCvRuntimeForm(form);
   return readPortfolioForm(form);
 };
 
@@ -667,8 +779,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     })
     : undefined;
 
-  const openDocument = (id: string): void => {
-    if (state.dirty[kind] && !window.confirm("Discard the unsaved changes and open another document?")) return;
+  const openDocument = async (id: string): Promise<void> => {
+    if (state.dirty[kind] && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: `Leave this ${documentLabel(kind)}?`, message: "Your unsaved changes will be discarded if you open another document.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     const next = state.documents[kind].find((item) => item.id === id);
     if (!next) return;
     void selectDocument(kind, next)
@@ -697,8 +809,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     state.filter[kind] = button.dataset.profileDocumentFilter as DocumentFilter;
     callbacks.rerender();
   }));
-  root.querySelectorAll<HTMLButtonElement>("[data-profile-document-new]").forEach((button) => button.addEventListener("click", () => {
-    if (state.dirty[kind] && !window.confirm("Create the new document from the current unsaved changes? The original document will stay unchanged.")) return;
+  root.querySelectorAll<HTMLButtonElement>("[data-profile-document-new]").forEach((button) => button.addEventListener("click", async () => {
+    if (state.dirty[kind] && !(await confirmAdmin({ eyebrow: `New ${documentLabel(kind)}`, title: "Keep the current document?", message: "A new document will be created from the current unsaved preview. The original document remains unchanged.", confirmLabel: "Create new document" }))) return;
     const title = window.prompt(`Name this ${documentLabel(kind)}`, `New ${documentLabel(kind)}`)?.trim();
     if (!title) return;
     const payload = form ? previewPayload(kind, form) : (kind === "cv" ? state.cv : state.portfolio)
@@ -717,8 +829,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (button.isConnected) setButtonBusy(button, false); });
   }));
-  root.querySelector<HTMLButtonElement>("[data-profile-document-close]")?.addEventListener("click", () => {
-    if (state.dirty[kind] && !window.confirm("Discard the unsaved changes and return to the document list?")) return;
+  root.querySelector<HTMLButtonElement>("[data-profile-document-close]")?.addEventListener("click", async () => {
+    if (state.dirty[kind] && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: `Close this ${documentLabel(kind)}?`, message: "Your unsaved changes will be discarded and you will return to the document list.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     void selectDocument(kind, null).then(() => {
       callbacks.setDirty(false);
       callbacks.rerender();
@@ -726,6 +838,12 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   });
 
   const activeDocument = selectedDocument(kind);
+  const historyDialog = root.querySelector<HTMLDialogElement>("[data-document-history-dialog]");
+  const validationDialog = root.querySelector<HTMLDialogElement>("[data-document-validation-dialog]");
+  root.querySelector<HTMLButtonElement>("[data-document-history-open]")?.addEventListener("click", () => historyDialog?.showModal());
+  root.querySelector<HTMLButtonElement>("[data-document-history-close]")?.addEventListener("click", () => historyDialog?.close());
+  root.querySelector<HTMLButtonElement>("[data-document-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
+  root.querySelector<HTMLButtonElement>("[data-document-validation-close]")?.addEventListener("click", () => validationDialog?.close());
   root.querySelector<HTMLButtonElement>("[data-profile-document-rename]")?.addEventListener("click", () => {
     if (!activeDocument) return;
     if (state.dirty[kind]) return callbacks.notify("Save the document before renaming it.", "info");
@@ -758,9 +876,9 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (button.isConnected) setButtonBusy(button, false); });
   });
-  root.querySelector<HTMLButtonElement>("[data-profile-document-archive]")?.addEventListener("click", () => {
+  root.querySelector<HTMLButtonElement>("[data-profile-document-archive]")?.addEventListener("click", async () => {
     if (state.dirty[kind]) return callbacks.notify("Save or discard the current changes before archiving.", "info");
-    if (!activeDocument || !window.confirm(`Archive “${activeDocument.internalTitle}”?`)) return;
+    if (!activeDocument || !(await confirmAdmin({ eyebrow: `${documentLabel(kind)} status`, title: `Archive ${activeDocument.internalTitle}?`, message: "The document will no longer be available as an active draft.", confirmLabel: "Archive document", tone: "danger" }))) return;
     void archiveProfileDocument(activeDocument.id)
       .then(async () => {
         await refreshDocuments(kind);
@@ -775,18 +893,32 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   if (activeDocument?.status === "archived") {
     form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement>("input, textarea, select, button").forEach((control) => { control.disabled = true; });
   }
+  const updateValidation = (issues: string[]): void => {
+    const status = root.querySelector<HTMLButtonElement>("[data-document-validation-open]");
+    const content = root.querySelector<HTMLElement>("[data-document-validation-content]");
+    if (status) {
+      status.dataset.kind = issues.length ? "warning" : "success";
+      status.textContent = issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : "Ready";
+    }
+    if (content) {
+      content.innerHTML = issues.length
+        ? `<ul data-document-validation-list>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
+        : '<p data-document-validation-ready>Required content and document selection are ready.</p>';
+    }
+  };
   const markDirty = (): void => {
     if (activeDocument?.status === "archived") return;
     state.dirty[kind] = true;
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-document-save-state]");
     if (status) status.textContent = "Unsaved changes";
+    updateValidation(validation(kind, previewPayload(kind, form)));
     if (previewTimer !== undefined) window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(() => sendPreview(kind, form), 180);
   };
   form.addEventListener("input", markDirty);
   form.addEventListener("change", (event) => {
-    const target = event.target as HTMLSelectElement;
+    const target = event.target as HTMLInputElement | HTMLSelectElement;
     if (target.name === "theme_preset" && target.value !== "custom") {
       const theme = documentThemes.find((item) => item.id === target.value);
       const primary = form.elements.namedItem("theme_primary");
@@ -795,6 +927,10 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
         primary.value = theme.tokens.primary;
         accent.value = theme.tokens.accent;
       }
+    }
+    if (target instanceof HTMLSelectElement && target.matches("[data-cv-project-display]")) {
+      const responsibilities = target.closest<HTMLElement>("[data-cv-project-card]")?.querySelector<HTMLElement>("[data-cv-responsibilities]");
+      if (responsibilities) responsibilities.hidden = target.value !== "detailed";
     }
     markDirty();
   });
@@ -870,12 +1006,20 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });
   });
-  root.querySelector<HTMLButtonElement>("[data-document-publish]")?.addEventListener("click", (event) => {
-    if (!activeDocument || !window.confirm(`Publish “${activeDocument.internalTitle}” and make it the active public ${documentLabel(kind)}?`)) return;
+  root.querySelector<HTMLButtonElement>("[data-document-publish]")?.addEventListener("click", async (event) => {
+    if (!activeDocument) return;
+    const payload = previewPayload(kind, form);
+    const issues = validation(kind, payload);
+    if (issues.length) {
+      updateValidation(issues);
+      validationDialog?.showModal();
+      callbacks.notify(`Resolve ${issues.length} pre-publish issue${issues.length === 1 ? "" : "s"} before publishing.`, "info");
+      return;
+    }
+    if (!(await confirmAdmin({ eyebrow: `${documentLabel(kind)} release`, title: `Publish ${activeDocument.internalTitle}?`, message: `This will become the active public ${documentLabel(kind)} release.`, confirmLabel: `Publish ${documentLabel(kind)}` }))) return;
     const publishButton = event.currentTarget as HTMLButtonElement;
     setButtonBusy(publishButton, true, "Publishing…");
     void (async () => {
-      const payload = previewPayload(kind, form);
       await saveProfileDocument(activeDocument.id, payload);
       await publishProfileDocument(activeDocument.id, payload.content.version, payload);
       await refreshDocuments(kind);
