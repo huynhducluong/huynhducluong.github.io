@@ -42,6 +42,7 @@ let dirty = false;
 let loaded = false;
 let loading: Promise<void> | null = null;
 let loadError = "";
+let stale = false;
 let editorTab: CoverLetterEditorTab = "application";
 let previewZoom: PreviewZoom = "fit";
 let sharedSender: CoverLetterSenderSnapshot = coverLetterSenderDefaults;
@@ -131,7 +132,7 @@ const selectRecord = (selected: CoverLetterRecord): void => {
 };
 
 export const ensureCoverLetterWorkspace = async (): Promise<void> => {
-  if (loaded) return;
+  if (loaded && !stale) return;
   if (loading) return loading;
   loading = (async () => {
     try {
@@ -148,6 +149,7 @@ export const ensureCoverLetterWorkspace = async (): Promise<void> => {
         syncUrl(initialRecord.id);
       }
       loaded = true;
+      stale = false;
       loadError = "";
     } catch (error) {
       loadError = error instanceof Error ? error.message : "Cover letters could not be loaded.";
@@ -301,7 +303,7 @@ const editorView = (): string => {
           </form>
         </section>
         <aside class="admin-cl-preview">
-          <div class="admin-cl-preview__heading"><div><strong>Live A4 preview</strong><small><span data-cl-word-count>${validation.wordCount} words</span> · <span data-cl-fit-state>Checking page…</span></small></div><div class="admin-cl-zoom"><button type="button" data-cl-zoom="fit" class="${previewZoom === "fit" ? "is-active" : ""}">Fit</button><button type="button" data-cl-zoom="75" class="${previewZoom === "75" ? "is-active" : ""}">75%</button><button type="button" data-cl-zoom="100" class="${previewZoom === "100" ? "is-active" : ""}">100%</button></div></div>
+          <div class="admin-cl-preview__heading"><div><strong>${isLocked ? "Final A4 snapshot" : "Live A4 preview"}</strong><small><span data-cl-word-count>${validation.wordCount} words</span> · <span data-cl-fit-state>Checking page…</span></small></div><div class="admin-cl-zoom"><button type="button" data-cl-zoom="fit" class="${previewZoom === "fit" ? "is-active" : ""}">Fit</button><button type="button" data-cl-zoom="75" class="${previewZoom === "75" ? "is-active" : ""}">75%</button><button type="button" data-cl-zoom="100" class="${previewZoom === "100" ? "is-active" : ""}">100%</button></div></div>
           <div class="admin-cl-preview-scroll"><div class="admin-cl-preview-stage zoom-${previewZoom}"><div data-cl-preview></div></div></div>
           <details class="admin-cl-validation" ${validation.errors.length ? "open" : ""}><summary><span>Validation</span><strong data-cl-validation-count>${validation.errors.length} errors · ${validation.warnings.length} warnings</strong></summary><div data-cl-validation>${validation.errors.map((item) => `<p class="is-error">${escapeHtml(item)}</p>`).concat(validation.warnings.map((item) => `<p>${escapeHtml(item)}</p>`)).join("") || "<p>Ready for final review.</p>"}</div></details>
         </aside>
@@ -388,6 +390,10 @@ export const discardCoverLetterChanges = (): void => {
   if (record) letter = structuredClone(record);
   else letter = createCoverLetterDraft();
   dirty = false;
+};
+
+export const markCoverLetterWorkspaceStale = (): void => {
+  stale = true;
 };
 
 const openRecord = (id: string, callbacks: WorkspaceCallbacks): void => {

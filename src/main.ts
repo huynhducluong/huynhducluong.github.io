@@ -7,6 +7,7 @@ import { getAdminAccess } from "./admin/auth";
 import { loadPublishedWebsiteRelease, loadWebsiteDraftData } from "./services/websiteRepository";
 import { resolveDocumentTheme } from "./themes/documentThemes";
 import type { WebsiteRuntimeData } from "./types/website";
+import { createPreviewReceiver } from "./shared/previewProtocol";
 import {
   escapeHtml,
   formatDate,
@@ -387,16 +388,18 @@ const renderPage = (language: Language): void => {
 const initialize = async (): Promise<void> => {
   const params = new URLSearchParams(window.location.search);
   const wantsPreview = params.get("preview") === "1";
+  const previewReceiver = wantsPreview ? createPreviewReceiver<WebsiteRuntimeData>("website") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
   websiteData = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
   renderPage(currentLanguage);
   if (adminPreview) {
-    window.addEventListener("message", (event: MessageEvent<{ type?: string; data?: WebsiteRuntimeData }>) => {
-      if (event.origin !== window.location.origin || event.data?.type !== "hdl:website-preview" || !event.data.data) return;
-      websiteData = event.data.data;
+    previewReceiver?.activate((previewData) => {
+      websiteData = previewData;
       renderPage(currentLanguage);
     });
+  } else {
+    previewReceiver?.disconnect();
   }
 };
 

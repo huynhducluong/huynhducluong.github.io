@@ -23,11 +23,13 @@ import {
   coverLetterWorkspaceView,
   discardCoverLetterChanges,
   ensureCoverLetterWorkspace,
+  markCoverLetterWorkspaceStale,
 } from "./coverLetterWorkspace";
 import {
   bindProfileDocumentWorkspace,
   discardProfileDocumentChanges,
   ensureProfileDocumentWorkspace,
+  markProfileDocumentWorkspaceStale,
   profileDocumentWorkspaceView,
   type ProfileDocumentKind,
 } from "./profileDocumentWorkspace";
@@ -35,6 +37,7 @@ import {
   bindSiteWorkspace,
   discardSiteChanges,
   ensureSiteWorkspace,
+  markSiteWorkspaceStale,
   siteWorkspaceView,
   type SiteWorkspaceKind,
 } from "./siteWorkspace";
@@ -707,6 +710,9 @@ const loadProjects = async (): Promise<void> => {
   tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
   if (selectedProjectWasPersisted) selectedProject = projects.find((item) => item.id === selectedProjectId) ?? null;
   if (selectedToolWasPersisted) selectedTool = tools.find((item) => item.id === selectedToolId) ?? null;
+  markSiteWorkspaceStale();
+  markProfileDocumentWorkspaceStale();
+  markCoverLetterWorkspaceStale();
 };
 
 const saveForm = async (formElement: HTMLFormElement): Promise<void> => {

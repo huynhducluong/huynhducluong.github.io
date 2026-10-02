@@ -438,7 +438,8 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 @media (max-width: 1480px) {
   .admin-document-layout,
-  .admin-site-workspace .admin-document-layout {
+  .admin-site-workspace .admin-document-layout,
+  .admin-profile-layout {
     grid-template-columns: minmax(26rem, .9fr) minmax(28rem, 1.1fr);
   }
 }

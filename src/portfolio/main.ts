@@ -7,6 +7,7 @@ import { loadPublishedPortfolioRelease } from "../services/documentRepository";
 import { loadPortfolioDraftData } from "../services/documentRepository";
 import { getAdminAccess } from "../admin/auth";
 import { applyDocumentTheme, resolveDocumentTheme } from "../themes/documentThemes";
+import { createPreviewReceiver } from "../shared/previewProtocol";
 import type { PortfolioRuntimeData } from "../types/portfolio";
 import { renderPortfolio } from "./renderPortfolio";
 
@@ -25,15 +26,15 @@ const render = (data: PortfolioRuntimeData): void => {
 const initialize = async (): Promise<void> => {
   const params = new URLSearchParams(window.location.search);
   const wantsPreview = params.get("preview") === "1";
+  const previewReceiver = wantsPreview ? createPreviewReceiver<PortfolioRuntimeData>("portfolio") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   if (params.get("embedded") === "1") document.body.classList.add("document-embedded");
   const data = adminPreview ? await loadPortfolioDraftData() : await loadPublishedPortfolioRelease();
   render(data);
   if (adminPreview) {
-    window.addEventListener("message", (event: MessageEvent<{ type?: string; data?: PortfolioRuntimeData }>) => {
-      if (event.origin !== window.location.origin || event.data?.type !== "hdl:portfolio-preview" || !event.data.data) return;
-      render(event.data.data);
-    });
+    previewReceiver?.activate(render);
+  } else {
+    previewReceiver?.disconnect();
   }
 };
 

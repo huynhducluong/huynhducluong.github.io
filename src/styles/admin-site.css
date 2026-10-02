@@ -143,7 +143,7 @@
 
 .admin-profile-layout {
   display: grid;
-  grid-template-columns: minmax(34rem, 1fr) 22rem;
+  grid-template-columns: minmax(30rem, .82fr) minmax(42rem, 1.18fr);
   align-items: start;
 }
 
@@ -192,6 +192,12 @@
   color: var(--color-text-muted);
   font-size: var(--admin-text-xs);
   line-height: 1.5;
+}
+
+.admin-profile-preview .admin-profile-usage {
+  position: static;
+  max-height: none;
+  margin-top: 1rem;
 }
 
 @media (max-width: 1480px) {

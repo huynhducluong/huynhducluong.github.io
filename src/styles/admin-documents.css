@@ -227,6 +227,12 @@
   min-height: calc(100vh - 8.75rem);
 }
 
+.admin-document-sync-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .65rem;
+}
+
 .admin-document-editor {
   min-width: 0;
   border-right: 1px solid var(--color-border);

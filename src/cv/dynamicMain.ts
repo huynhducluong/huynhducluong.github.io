@@ -7,6 +7,7 @@ import { getAdminAccess } from "../admin/auth";
 import { loadCvData } from "../services/cvRepository";
 import { applyDocumentTheme, resolveDocumentTheme } from "../themes/documentThemes";
 import type { CvRuntimeData } from "../types/cvContent";
+import { createPreviewReceiver } from "../shared/previewProtocol";
 import { renderDynamicCv } from "./renderDynamicCv";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -39,6 +40,7 @@ const checkOverflow = (): void => {
 const initialize = async (): Promise<void> => {
   const params = new URLSearchParams(window.location.search);
   const wantsPreview = params.get("preview") === "1";
+  const previewReceiver = wantsPreview ? createPreviewReceiver<CvRuntimeData>("cv") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   if (params.get("embedded") === "1") document.body.classList.add("document-embedded");
   const data = await loadCvData({ adminPreview, preferRelease: !adminPreview });
@@ -47,11 +49,12 @@ const initialize = async (): Promise<void> => {
   document.fonts.ready.then(checkOverflow).catch(checkOverflow);
   window.addEventListener("beforeprint", checkOverflow);
   if (adminPreview) {
-    window.addEventListener("message", (event: MessageEvent<{ type?: string; data?: CvRuntimeData }>) => {
-      if (event.origin !== window.location.origin || event.data?.type !== "hdl:cv-preview" || !event.data.data) return;
-      render(event.data.data);
+    previewReceiver?.activate((previewData) => {
+      render(previewData);
       requestAnimationFrame(checkOverflow);
     });
+  } else {
+    previewReceiver?.disconnect();
   }
 };
 

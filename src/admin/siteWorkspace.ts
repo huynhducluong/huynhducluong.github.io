@@ -8,6 +8,7 @@ import {
   saveWebsiteFeatured,
 } from "../services/websiteRepository";
 import { escapeHtml } from "../shared/format";
+import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
@@ -36,6 +37,7 @@ const state: {
   websiteTab: WebsiteTab;
   profileTab: ProfileTab;
   zoom: "desktop" | "laptop" | "tablet" | "mobile";
+  stale: boolean;
 } = {
   runtime: null,
   releases: [],
@@ -44,10 +46,12 @@ const state: {
   websiteTab: "general",
   profileTab: "identity",
   zoom: "desktop",
+  stale: false,
 };
 
 let previewTimer: number | undefined;
 let previewController: EmbeddedPreviewController | undefined;
+let previewSender: PreviewSender | undefined;
 const value = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const lines = (text: string): string[] => text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 const commaList = (text: string): string[] => text.split(",").map((item) => item.trim()).filter(Boolean);
@@ -81,7 +85,7 @@ const readTheme = (form: FormData): StoredDocumentTheme => {
 };
 
 export const ensureSiteWorkspace = async (): Promise<void> => {
-  if (state.loading || state.runtime) return;
+  if (state.loading || (state.runtime && !state.stale)) return;
   state.loading = true;
   state.error = "";
   try {
@@ -89,6 +93,7 @@ export const ensureSiteWorkspace = async (): Promise<void> => {
       loadWebsiteDraftData(),
       listWebsiteReleases(),
     ]);
+    state.stale = false;
   } catch (error) {
     state.error = error instanceof Error ? error.message : "Website workspace could not be loaded.";
   } finally {
@@ -309,7 +314,7 @@ const websiteView = (): string => {
           <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}><div class="admin-section-heading"><h3>Website appearance</h3><p>Use a controlled brand theme while preserving the existing layout.</p></div>${themeFields(content.theme)}</section>
         </form>
       </section>
-      <aside class="admin-site-preview"><div class="admin-document-preview__toolbar"><div><strong>Website draft preview</strong><span>Desktop-first preview with responsive checkpoints</span></div><div>${(["desktop","laptop","tablet","mobile"] as const).map((size) => `<button type="button" data-website-viewport="${size}" class="${state.zoom === size ? "is-active" : ""}">${size[0].toUpperCase() + size.slice(1)}</button>`).join("")}<a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">Public ↗</a></div></div><div class="admin-site-frame" data-viewport="${state.zoom}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="Website draft preview" src="${import.meta.env.BASE_URL}?preview=1&embedded=1" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div><details class="admin-document-releases"><summary>Website release history (${state.releases.length})</summary>${state.releases.length ? `<ol>${state.releases.map((item) => `<li><strong>${escapeHtml(item.version)}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></li>`).join("")}</ol>` : "<p>No release has been published.</p>"}</details></aside>
+      <aside class="admin-site-preview"><div class="admin-document-preview__toolbar"><div><strong>Website draft preview</strong><span data-preview-status>Connecting preview…</span></div><div>${(["desktop","laptop","tablet","mobile"] as const).map((size) => `<button type="button" data-website-viewport="${size}" class="${state.zoom === size ? "is-active" : ""}">${size[0].toUpperCase() + size.slice(1)}</button>`).join("")}<a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">Public ↗</a></div></div><div class="admin-site-frame" data-viewport="${state.zoom}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="Website draft preview" src="${import.meta.env.BASE_URL}?preview=1&embedded=1" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div><details class="admin-document-releases"><summary>Website release history (${state.releases.length})</summary>${state.releases.length ? `<ol>${state.releases.map((item) => `<li><strong>${escapeHtml(item.version)}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></li>`).join("")}</ol>` : "<p>No release has been published.</p>"}</details></aside>
     </div>
   </section>`;
 };
@@ -317,7 +322,17 @@ const websiteView = (): string => {
 const profileView = (): string => {
   const professional = state.runtime!.professional;
   const tab = state.profileTab;
-  return `<section class="admin-profile-workspace"><header class="admin-document-header"><div><p class="section-kicker">Shared content</p><h1>Professional Profile</h1><p>Single source for Website, Curriculum Vitae, Portfolio and Cover Letters</p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button></div></header><div class="admin-profile-layout"><section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["experience","Experience"],["education","Education"],["skills","Skills & languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section></form></section><aside class="admin-profile-usage"><p class="section-kicker">Used by</p><h2>One profile, four outputs</h2><div><article><strong>Website</strong><span>Applied when the next Website release is published.</span></article><article><strong>Curriculum Vitae</strong><span>Loaded into the CV working draft and frozen on publish.</span></article><article><strong>Portfolio</strong><span>Use “Sync from CV draft” before publishing when overrides are not needed.</span></article><article><strong>Cover Letters</strong><span>Provides the sender identity and reusable professional evidence.</span></article></div><p>Published releases remain unchanged until you publish each channel again.</p></aside></div></section>`;
+  return `<section class="admin-profile-workspace">
+    <header class="admin-document-header"><div><p class="section-kicker">Shared content</p><h1>Professional Profile</h1><p>Single source for Website, Curriculum Vitae, Portfolio and Cover Letters</p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button></div></header>
+    <div class="admin-profile-layout">
+      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["experience","Experience"],["education","Education"],["skills","Skills & languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section></form></section>
+      <aside class="admin-site-preview admin-profile-preview">
+        <div class="admin-document-preview__toolbar"><div><strong>Live Website preview</strong><span data-preview-status>Connecting preview…</span></div><div>${(["desktop","laptop","tablet","mobile"] as const).map((size) => `<button type="button" data-website-viewport="${size}" class="${state.zoom === size ? "is-active" : ""}">${size[0].toUpperCase() + size.slice(1)}</button>`).join("")}<a href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">Public ↗</a></div></div>
+        <div class="admin-site-frame" data-viewport="${state.zoom}" tabindex="0" aria-label="Scrollable website profile preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="Website profile preview" src="${import.meta.env.BASE_URL}?preview=1&embedded=1" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div>
+        <div class="admin-profile-usage"><p class="section-kicker">Used by</p><h2>One profile, four outputs</h2><div><article><strong>Website</strong><span>Previewed live here and applied to the next Website release.</span></article><article><strong>Curriculum Vitae</strong><span>Use “Sync from Professional Profile” in the CV draft before publishing.</span></article><article><strong>Portfolio</strong><span>Sync directly from the Professional Profile or from the active CV draft.</span></article><article><strong>Cover Letters</strong><span>Drafts use the saved profile; finalized letters retain their sender snapshot.</span></article></div><p>Published releases and finalized letters remain unchanged.</p></div>
+      </aside>
+    </div>
+  </section>`;
 };
 
 export const siteWorkspaceView = (kind: SiteWorkspaceKind): string => {
@@ -327,16 +342,18 @@ export const siteWorkspaceView = (kind: SiteWorkspaceKind): string => {
   return kind === "homepage" ? websiteView() : profileView();
 };
 
-const sendPreview = (form: HTMLFormElement): void => {
-  const iframe = document.querySelector<HTMLIFrameElement>("[data-website-iframe]");
-  iframe?.contentWindow?.postMessage({ type: "hdl:website-preview", data: readWebsiteForm(form) }, window.location.origin);
-  previewController?.refresh();
-};
+const sendPreview = (): void => previewSender?.send();
 
 export const discardSiteChanges = (): void => {
   if (previewTimer !== undefined) window.clearTimeout(previewTimer);
+  previewSender?.disconnect();
+  previewSender = undefined;
   previewController?.disconnect();
   previewController = undefined;
+};
+
+export const markSiteWorkspaceStale = (): void => {
+  state.stale = true;
 };
 
 export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, callbacks: WorkspaceCallbacks): void => {
@@ -344,17 +361,28 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const profileForm = root.querySelector<HTMLFormElement>("[data-profile-form]");
   const previewIframe = root.querySelector<HTMLIFrameElement>("[data-website-iframe]");
   const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
+  previewSender?.disconnect();
+  previewSender = undefined;
   previewController?.disconnect();
   previewController = previewIframe && previewStage
     ? bindEmbeddedPreview(previewIframe, previewStage, { measurementHeight: 900 })
+    : undefined;
+  previewSender = previewIframe && (websiteForm || profileForm)
+    ? bindPreviewSender(previewIframe, "website", () => websiteForm
+      ? readWebsiteForm(websiteForm)
+      : { ...state.runtime!, professional: readProfileForm(profileForm!) }, () => {
+        previewController?.refresh();
+        const status = root.querySelector<HTMLElement>("[data-preview-status]");
+        if (status) status.textContent = "Live unsaved draft";
+      })
     : undefined;
   const markDirty = (): void => {
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-site-save-state]");
     if (status) status.textContent = "Unsaved changes";
-    if (websiteForm) {
+    if (previewSender) {
       if (previewTimer !== undefined) window.clearTimeout(previewTimer);
-      previewTimer = window.setTimeout(() => sendPreview(websiteForm), 180);
+      previewTimer = window.setTimeout(sendPreview, 180);
     }
   };
   websiteForm?.addEventListener("input", markDirty);
@@ -373,9 +401,6 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   });
   profileForm?.addEventListener("input", markDirty);
   profileForm?.addEventListener("change", markDirty);
-  root.querySelector<HTMLIFrameElement>("[data-website-iframe]")?.addEventListener("load", () => {
-    if (websiteForm) sendPreview(websiteForm);
-  });
   root.querySelectorAll<HTMLButtonElement>("[data-website-tab]").forEach((button) => button.addEventListener("click", () => {
     state.websiteTab = button.dataset.websiteTab as WebsiteTab;
     root.querySelectorAll<HTMLButtonElement>("[data-website-tab]").forEach((item) => {
