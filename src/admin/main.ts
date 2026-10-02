@@ -463,17 +463,28 @@ const contentStatusLabel = (status: PublicationStatus): string =>
 
 const publicMediaUrl = (path: string): string => supabase.storage.from(supabaseConfig.storageBucket).getPublicUrl(path).data.publicUrl;
 
+const formatMediaSize = (bytes: number | null): string => bytes === null ? "Size unavailable" : `${(bytes / 1024 / 1024).toFixed(2)} MB`;
+
+const formatMediaType = (mimeType: string | null): string => mimeType?.split("/").at(-1)?.toUpperCase() || "IMAGE";
+
+const orderedProjectMedia = (media: AdminMediaRow[]): AdminMediaRow[] => [...media].sort((left, right) => {
+  if (left.kind !== right.kind) return left.kind === "cover" ? -1 : 1;
+  return left.display_order - right.display_order;
+});
+
 const mediaLibrary = (project: AdminProjectRow): string => {
-  const media = [...project.project_images].sort((a, b) => a.display_order - b.display_order);
+  const media = orderedProjectMedia(project.project_images);
   if (!media.length) return '<p class="admin-empty">No saved images yet.</p>';
-  return `<div class="admin-media-grid">${media.map((item, index) => `
-    <article class="admin-media-card" data-media-id="${escapeHtml(item.id)}">
-      <div class="admin-media-card__image"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
-      <label>Alt text (EN)<input value="${escapeHtml(item.alt.en)}" data-media-alt></label>
-      <div class="admin-media-card__actions">
-        <button type="button" data-media-cover ${item.kind === "cover" ? "disabled" : ""}>Set Cover</button>
-        <button type="button" data-media-move="up" ${index === 0 ? "disabled" : ""} aria-label="Move image earlier">↑</button>
-        <button type="button" data-media-move="down" ${index === media.length - 1 ? "disabled" : ""} aria-label="Move image later">↓</button>
+  const firstGalleryIndex = media[0]?.kind === "cover" ? 1 : 0;
+  return `<div class="admin-media-list">${media.map((item, index) => `
+    <article class="admin-media-row" data-media-id="${escapeHtml(item.id)}">
+      <div class="admin-media-row__preview"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
+      <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
+      <div class="admin-media-row__fields"><label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt.en)}" data-media-alt></label></div>
+      <div class="admin-media-row__actions">
+        <button type="button" data-media-cover ${item.kind === "cover" ? "disabled" : ""}>${item.kind === "cover" ? "Cover set" : "Set cover"}</button>
+        <button type="button" class="admin-media-action--icon" data-media-move="up" ${item.kind === "cover" || index === firstGalleryIndex ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button>
+        <button type="button" class="admin-media-action--icon" data-media-move="down" ${item.kind === "cover" || index === media.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button>
         <button type="button" data-media-save>Save</button>
         <button type="button" class="admin-danger" data-media-delete>Delete</button>
       </div>
@@ -519,8 +530,8 @@ const editor = (project: AdminProjectRow): string => `
       </section>
     </form>
     <div class="admin-media-panel" data-editor-panel="media" ${panelState("media")}>
-      <form class="admin-upload admin-form-section" data-upload-form><div class="admin-section-heading"><h3 class="admin-form-section__title">Project media</h3><p class="admin-form-section__note" title="Select JPEG, PNG, WebP or AVIF files up to 5 MB.">Select JPEG, PNG, WebP or AVIF files up to 5 MB.</p></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary" type="submit" data-upload-submit disabled>Upload selected images</button></form>
-      <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="Choose the cover image, alt text and gallery order.">Choose the cover image, alt text and gallery order.</p></div>${mediaLibrary(project)}</section>
+      <form class="admin-upload admin-form-section" data-upload-form><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Project media</h3><p class="admin-form-section__note" title="Select JPEG, PNG, WebP or AVIF files up to 5 MB.">Select JPEG, PNG, WebP or AVIF files up to 5 MB.</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload selected images</button></form>
+      <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="Choose the cover image, alt text and gallery order.">Choose the cover image, alt text and gallery order.</p><span class="admin-media-section-heading__count">${project.project_images.length} ${project.project_images.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(project)}</section>
     </div>
   </section>`;
 
@@ -848,16 +859,20 @@ const clearPendingMedia = (): void => {
 const renderUploadQueue = (): void => {
   const root = app.querySelector<HTMLElement>("[data-upload-queue]");
   const submit = app.querySelector<HTMLButtonElement>("[data-upload-submit]");
+  const count = app.querySelector<HTMLElement>("[data-upload-count]");
   if (!root || !submit) return;
   submit.disabled = !pendingMedia.length;
   submit.textContent = pendingMedia.length ? `Upload ${pendingMedia.length} ${pendingMedia.length === 1 ? "image" : "images"}` : "Upload selected images";
-  root.innerHTML = pendingMedia.length ? `<div class="admin-media-grid">${pendingMedia.map((item, index) => `
-    <article class="admin-media-card" data-pending-id="${item.id}">
-      <div class="admin-media-card__image"><img src="${item.previewUrl}" alt=""><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
-      <strong>${escapeHtml(item.file.name)}</strong><small>${(item.file.size / 1024 / 1024).toFixed(2)} MB</small>
-      <label>Use as<select data-pending-kind><option value="cover" ${item.kind === "cover" ? "selected" : ""}>Cover</option><option value="gallery" ${item.kind === "gallery" ? "selected" : ""}>Gallery</option></select></label>
-      <label>Alt text (EN)<input value="${escapeHtml(item.alt)}" data-pending-alt></label>
-      <div class="admin-media-card__actions"><button type="button" data-pending-move="up" ${index === 0 ? "disabled" : ""}>↑</button><button type="button" data-pending-move="down" ${index === pendingMedia.length - 1 ? "disabled" : ""}>↓</button><button type="button" class="admin-danger" data-pending-remove>Remove</button></div>
+  if (count) count.textContent = `${pendingMedia.length} selected`;
+  root.innerHTML = pendingMedia.length ? `<div class="admin-media-list">${pendingMedia.map((item, index) => `
+    <article class="admin-media-row admin-media-row--pending" data-pending-id="${item.id}">
+      <div class="admin-media-row__preview"><img src="${item.previewUrl}" alt=""><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
+      <div class="admin-media-row__details"><strong title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</strong><small>${formatMediaType(item.file.type)} · ${formatMediaSize(item.file.size)}</small></div>
+      <div class="admin-media-row__fields admin-media-row__fields--pending">
+        <label><span>Use as</span><select data-pending-kind><option value="cover" ${item.kind === "cover" ? "selected" : ""}>Cover</option><option value="gallery" ${item.kind === "gallery" ? "selected" : ""}>Gallery</option></select></label>
+        <label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt)}" data-pending-alt></label>
+      </div>
+      <div class="admin-media-row__actions"><button type="button" class="admin-media-action--icon" data-pending-move="up" ${index === 0 ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button><button type="button" class="admin-media-action--icon" data-pending-move="down" ${index === pendingMedia.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button><button type="button" class="admin-danger" data-pending-remove>Remove</button></div>
     </article>`).join("")}</div>` : '<p class="admin-empty">Selected images will appear here before upload.</p>';
   bindPendingMedia();
 };
@@ -868,6 +883,12 @@ const moveItem = <T,>(items: T[], index: number, direction: "up" | "down"): T[] 
   const copy = [...items];
   [copy[index], copy[destination]] = [copy[destination], copy[index]];
   return copy;
+};
+
+const persistProjectMediaOrder = async (ordered: Array<{ id: string }>): Promise<void> => {
+  const results = await Promise.all(ordered.map((item, index) => supabase.from("project_images").update({ display_order: index + 1 }).eq("id", item.id)));
+  const failure = results.find((result) => result.error)?.error;
+  if (failure) throw failure;
 };
 
 const masterOrder = (type: AdminItemType): Array<AdminProjectRow | AdminToolRow> =>
@@ -956,6 +977,7 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
   if (!pendingMedia.length) throw new Error("Choose one or more images.");
   const submitButton = formElement.querySelector<HTMLButtonElement>("[data-upload-submit]");
   const failures: Array<{ name: string; reason: string }> = [];
+  const uploadedMediaIds: string[] = [];
   const uploadedCoverIds: string[] = [];
   let uploaded = 0;
   if (submitButton) submitButton.disabled = true;
@@ -971,7 +993,9 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
         const currentMaxOrder = Math.max(0, ...selectedProject.project_images.map((media) => media.display_order));
         const { data, error: metadataError } = await supabase.from("project_images").insert({ project_id: selectedProject.id, storage_path: path, alt: { en: item.alt.trim(), vi: "" }, kind: "gallery", display_order: currentMaxOrder + index + 1, mime_type: item.file.type, file_size: item.file.size }).select("id").single();
         if (metadataError) { await supabase.storage.from(supabaseConfig.storageBucket).remove([path]); throw metadataError; }
-        if (item.kind === "cover") uploadedCoverIds.push(String(data.id));
+        const uploadedId = String(data.id);
+        uploadedMediaIds.push(uploadedId);
+        if (item.kind === "cover") uploadedCoverIds.push(uploadedId);
         uploaded += 1;
       } catch (error) {
         failures.push({ name: item.file.name, reason: error instanceof Error ? error.message : "Upload failed." });
@@ -981,6 +1005,12 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
     if (coverId) {
       const { error } = await supabase.rpc("set_project_image_cover", { target_image_id: coverId });
       if (error) throw error;
+      const existingMedia = orderedProjectMedia(selectedProject.project_images);
+      await persistProjectMediaOrder([
+        { id: coverId },
+        ...existingMedia.map((item) => ({ id: item.id })),
+        ...uploadedMediaIds.filter((id) => id !== coverId).map((id) => ({ id })),
+      ]);
     }
   } finally {
     if (submitButton) submitButton.disabled = false;
@@ -1004,8 +1034,12 @@ const refreshSelectedProject = async (projectId: string): Promise<void> => {
 const setMediaCover = async (mediaId: string): Promise<void> => {
   if (!selectedProject) return;
   const projectId = selectedProject.id;
+  const ordered = orderedProjectMedia(selectedProject.project_images);
+  const cover = ordered.find((item) => item.id === mediaId);
+  if (!cover) return;
   const { error } = await supabase.rpc("set_project_image_cover", { target_image_id: mediaId });
   if (error) throw error;
+  await persistProjectMediaOrder([cover, ...ordered.filter((item) => item.id !== mediaId)]);
   await refreshSelectedProject(projectId);
   message("Cover image updated.", "success");
 };
@@ -1024,12 +1058,13 @@ const saveMediaAlt = async (card: HTMLElement): Promise<void> => {
 const moveSavedMedia = async (mediaId: string, direction: "up" | "down"): Promise<void> => {
   if (!selectedProject) return;
   const projectId = selectedProject.id;
-  const ordered = [...selectedProject.project_images].sort((a, b) => a.display_order - b.display_order);
-  const index = ordered.findIndex((item) => item.id === mediaId);
-  const moved = moveItem(ordered, index, direction);
-  const results = await Promise.all(moved.map((item, order) => supabase.from("project_images").update({ display_order: order + 1 }).eq("id", item.id)));
-  const failure = results.find((result) => result.error)?.error;
-  if (failure) throw failure;
+  const ordered = orderedProjectMedia(selectedProject.project_images);
+  const cover = ordered.find((item) => item.kind === "cover");
+  if (cover?.id === mediaId) return;
+  const gallery = ordered.filter((item) => item.kind !== "cover");
+  const index = gallery.findIndex((item) => item.id === mediaId);
+  const moved = moveItem(gallery, index, direction);
+  await persistProjectMediaOrder(cover ? [cover, ...moved] : moved);
   await refreshSelectedProject(projectId);
   message("Image order updated.", "success");
 };

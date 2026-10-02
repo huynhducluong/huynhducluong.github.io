@@ -292,6 +292,37 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   min-width: 0;
 }
 
+@container admin-form (max-width: 64rem) {
+  .admin-media-row {
+    grid-template-columns: 5rem minmax(8rem, .55fr) minmax(14rem, 1.45fr);
+  }
+
+  .admin-media-row__actions {
+    grid-column: 2 / -1;
+    justify-content: flex-end;
+  }
+}
+
+@container admin-form (max-width: 42rem) {
+  .admin-media-row {
+    grid-template-columns: 4.5rem minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .admin-media-row__preview { width: 4.5rem; }
+  .admin-media-row__fields,
+  .admin-media-row__actions { grid-column: 2; }
+  .admin-media-row__fields--pending { grid-template-columns: minmax(6.75rem, .45fr) minmax(10rem, 1fr); }
+}
+
+@container admin-form (max-width: 32rem) {
+  .admin-media-section-heading { grid-template-columns: minmax(0, 1fr); }
+  .admin-media-section-heading__count { grid-column: 1; grid-row: auto; justify-self: start; }
+  .admin-media-row__fields--pending { grid-template-columns: 1fr; }
+  .admin-media-row__actions { justify-content: flex-start; }
+  .admin-media-upload-action { width: 100%; justify-self: stretch; }
+}
+
 @container admin-form (max-width: 40rem) {
   .admin-form-grid,
   .admin-site-bilingual {
@@ -704,6 +735,22 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   .admin-document-header,
   .admin-editor__heading,
   .admin-cl-editor__heading { gap: 1rem; padding-inline: 1rem; }
+}
+
+.admin-nav button,
+.admin-nav a {
+  white-space: nowrap;
+}
+
+@media (min-width: 901px) {
+  .admin-nav button,
+  .admin-nav a {
+    grid-template-columns: 1.7rem minmax(0, 1fr) auto;
+    gap: .35rem;
+    padding-inline: .45rem;
+    font-size: var(--admin-text-xs);
+    letter-spacing: -.01em;
+  }
 }
 
 @media (min-width: 901px) and (max-height: 760px) {
