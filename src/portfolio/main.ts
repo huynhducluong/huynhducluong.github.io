@@ -8,16 +8,19 @@ import { loadPortfolioDraftData } from "../services/documentRepository";
 import { getAdminAccess } from "../admin/auth";
 import { applyDocumentTheme, resolveDocumentTheme } from "../themes/documentThemes";
 import { createPreviewReceiver } from "../shared/previewProtocol";
+import type { Language } from "../shared/format";
 import type { PortfolioRuntimeData } from "../types/portfolio";
 import { renderPortfolio } from "./renderPortfolio";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
 
-const render = (data: PortfolioRuntimeData): void => {
-  document.documentElement.lang = "en";
+type PortfolioPreviewData = PortfolioRuntimeData & { previewLanguage?: Language };
+
+const render = (data: PortfolioRuntimeData, language: Language = "en"): void => {
+  document.documentElement.lang = language;
   document.title = `${data.content.profile.name} | Portfolio`;
-  app.innerHTML = `<main class="portfolio-preview-shell portfolio-preview-shell--public"><div class="portfolio-document" id="portfolio-document">${renderPortfolio(data)}</div></main>`;
+  app.innerHTML = `<main class="portfolio-preview-shell portfolio-preview-shell--public"><div class="portfolio-document" id="portfolio-document">${renderPortfolio(data, language)}</div></main>`;
   const documentRoot = app.querySelector<HTMLElement>("#portfolio-document");
   if (!documentRoot) throw new Error("Portfolio document was not found.");
   applyDocumentTheme(documentRoot, resolveDocumentTheme(data.content.theme));
@@ -33,13 +36,13 @@ const render = (data: PortfolioRuntimeData): void => {
 const initialize = async (): Promise<void> => {
   const params = new URLSearchParams(window.location.search);
   const wantsPreview = params.get("preview") === "1";
-  const previewReceiver = wantsPreview ? createPreviewReceiver<PortfolioRuntimeData>("portfolio") : null;
+  const previewReceiver = wantsPreview ? createPreviewReceiver<PortfolioPreviewData>("portfolio") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   if (params.get("embedded") === "1") document.body.classList.add("document-embedded");
   const data = adminPreview ? await loadPortfolioDraftData() : await loadPublishedPortfolioRelease();
   render(data);
   if (adminPreview) {
-    previewReceiver?.activate(render);
+    previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));
   } else {
     previewReceiver?.disconnect();
   }

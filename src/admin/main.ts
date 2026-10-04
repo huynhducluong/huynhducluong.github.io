@@ -11,7 +11,7 @@ import "../styles/admin-ui.css";
 import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
-import { bindAdminTablists, renderAdminSectionCard } from "./ui";
+import { bindAdminTablists, bindAdminYearPickers, renderAdminSectionCard } from "./ui";
 import { confirmAdmin } from "./confirmDialog";
 import { escapeHtml } from "../shared/format";
 import { supabase } from "../services/supabaseClient";
@@ -441,12 +441,12 @@ const contentList = (): string => {
     return `<li class="admin-empty">${activeView === "trash" ? "Trash is empty." : "No content matches this view."}</li>`;
   }
   return items.map((item) => `
-    <li class="admin-content-item ${isSelectedItem(item) ? "is-selected" : ""}">
+    <li class="admin-content-item${activeView === "trash" ? " admin-content-item--trash" : ""} ${isSelectedItem(item) ? "is-selected" : ""}">
       ${activeView !== "trash" && !item.deletedAt ? `<div class="admin-content-item__reorder" aria-label="Reorder ${escapeHtml(item.name)}"><span class="admin-content-item__drag" draggable="true" data-reorder-drag data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span><button type="button" data-reorder-direction="up" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} earlier">↑</button><button type="button" data-reorder-direction="down" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} later">↓</button></div>` : ""}
       <button class="admin-content-item__select" type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${item.type}" aria-pressed="${isSelectedItem(item)}">
         ${activeView === "trash" ? `<span class="admin-content-item__type">${item.type}</span>` : ""}
-        <strong>${escapeHtml(item.name)}</strong>
-        <small>${escapeHtml(item.slug)}</small>
+        <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
+        <small title="${escapeHtml(item.slug)}">${escapeHtml(item.slug)}</small>
       </button>
       <div class="admin-content-item__meta">
         <span class="status status--${item.status}">${contentStatusLabel(item.status)}</span>
@@ -579,7 +579,7 @@ const selectedTrashItem = (): AdminContentListItem | null => {
 
 const trashInspector = (item: AdminContentListItem): string => `
   <section class="admin-editor admin-trash-detail">
-    <div class="admin-editor__heading"><div><p class="section-kicker">${item.type} in Trash</p><h2>${escapeHtml(item.name)}</h2><p>This item is hidden from active Website, Portfolio and CV draft data.</p></div><span class="status status--archived">Trash</span></div>
+    <div class="admin-editor__heading"><div><p class="section-kicker">${item.type} in Trash</p><h2 title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</h2><p>This item is hidden from active Website, Portfolio and CV draft data.</p></div><span class="status status--archived">Trash</span></div>
     <dl><div><dt>Deleted</dt><dd>${item.deletedAt ? new Date(item.deletedAt).toLocaleString() : "Unknown"}</dd></div><div><dt>Permanent deletion</dt><dd>${item.purgeAfter ? new Date(item.purgeAfter).toLocaleString() : "Pending cleanup"} (${trashDaysRemaining(item.purgeAfter)})</dd></div></dl>
     <div class="admin-actions"><button class="button" type="button" data-restore-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Restore as draft</button><button class="button admin-button--danger" type="button" data-purge-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Delete permanently</button></div>
   </section>`;
@@ -684,6 +684,7 @@ const dashboardView = (): void => {
     </dialog>`;
   bindDashboard();
   bindAdminTablists(app);
+  bindAdminYearPickers(app);
 };
 
 const loadProjects = async (): Promise<void> => {

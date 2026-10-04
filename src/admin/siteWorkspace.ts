@@ -34,9 +34,12 @@ import {
   type PreviewZoomState,
 } from "./previewZoom";
 import {
+  bindAdminYearPickers,
+  renderAdminPreviewLanguageToggle,
   renderAdminPreviewSelect,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
+  renderAdminYearSelect,
   setButtonBusy,
 } from "./ui";
 
@@ -44,6 +47,7 @@ export type SiteWorkspaceKind = "homepage" | "profile";
 type WebsiteTab = "general" | "sections" | "featured" | "appearance";
 type ProfileTab = "identity" | "photos" | "experience" | "education" | "skills" | "languages";
 type WebsiteViewport = "desktop" | "laptop" | "tablet" | "mobile";
+type WebsitePreviewPage = "homepage" | "projects" | "tools";
 type WebsitePreviewData = WebsiteRuntimeData & { previewLanguage?: Language };
 
 interface WorkspaceCallbacks {
@@ -62,6 +66,7 @@ const state: {
   profileTab: ProfileTab;
   viewport: WebsiteViewport;
   previewLanguage: Language;
+  previewPage: WebsitePreviewPage;
   previewZoom: PreviewZoomState;
   stale: boolean;
 } = {
@@ -74,6 +79,7 @@ const state: {
   profileTab: "identity",
   viewport: "desktop",
   previewLanguage: "en",
+  previewPage: "homepage",
   previewZoom: createPreviewZoomState(),
   stale: false,
 };
@@ -88,6 +94,10 @@ const websiteViewportWidths: Record<WebsiteViewport, number> = {
   laptop: 1280,
   tablet: 768,
   mobile: 390,
+};
+const websitePreviewPath = (page: WebsitePreviewPage): string => {
+  const route = page === "homepage" ? "" : page === "projects" ? "projects/" : "tools/";
+  return `${import.meta.env.BASE_URL}${route}?preview=1&embedded=1`;
 };
 const value = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const lines = (text: string): string[] => text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
@@ -196,7 +206,6 @@ const themeFields = (theme: StoredDocumentTheme): string => renderDocumentThemeF
     primary: "website_theme_primary",
     accent: "website_theme_accent",
   },
-  helpText: "The website theme is frozen into the next release and does not affect document themes.",
 });
 
 const readTheme = (form: FormData): StoredDocumentTheme => {
@@ -292,7 +301,7 @@ const websiteFeatured = (runtime: WebsiteRuntimeData): string => renderAdminSect
       ${runtime.projects.map((item) => {
         const ready = item.status === "published";
         return `<article>
-          <span class="admin-site-content-selection__identity"><strong>${escapeHtml(item.name.en)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} · ${escapeHtml(item.slug)}</small></span>
+          <span class="admin-site-content-selection__identity"><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
           <div class="admin-site-content-selection__checks">
             <label class="admin-site-content-selection__toggle"><input type="checkbox" name="website_project" value="${escapeHtml(item.id)}"${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
             <label class="admin-site-content-selection__toggle"><input type="checkbox" name="featured_project" value="${escapeHtml(item.id)}"${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
@@ -304,7 +313,7 @@ const websiteFeatured = (runtime: WebsiteRuntimeData): string => renderAdminSect
       ${runtime.tools.map((item) => {
         const ready = item.status === "published";
         return `<article>
-          <span class="admin-site-content-selection__identity"><strong>${escapeHtml(item.name)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} · ${escapeHtml(item.slug)}</small></span>
+          <span class="admin-site-content-selection__identity"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
           <div class="admin-site-content-selection__checks">
             <label class="admin-site-content-selection__toggle"><input type="checkbox" name="website_tool" value="${escapeHtml(item.id)}"${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
             <label class="admin-site-content-selection__toggle"><input type="checkbox" name="featured_tool" value="${escapeHtml(item.id)}"${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
@@ -435,7 +444,7 @@ const experienceLocationCombobox = (item: Experience): string => {
     <div class="admin-location-combobox" data-location-combobox>
       <input id="${escapeHtml(inputId)}" name="${escapeHtml(experienceFieldName(item.id, "location_label"))}" value="${escapeHtml(displayValue)}" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${escapeHtml(listId)}" placeholder="Search country or region" data-location-input>
       <input name="${escapeHtml(experienceFieldName(item.id, "location_code"))}" value="${escapeHtml(selectedCode ?? "__legacy__")}" type="hidden" data-location-code>
-      <button class="admin-location-combobox__toggle" type="button" aria-label="Show country or region options" aria-expanded="false" tabindex="-1" data-location-toggle>&#9662;</button>
+      <button class="admin-location-combobox__toggle" type="button" aria-label="Show country or region options" aria-expanded="false" tabindex="-1" data-location-toggle><svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
       <div class="admin-location-combobox__list" id="${escapeHtml(listId)}" role="listbox" data-location-list hidden>
         ${experienceLocationOptions.map((option) => `<button class="admin-location-combobox__option" type="button" role="option" aria-selected="${option.code === selectedCode ? "true" : "false"}" data-location-option data-location-code="${escapeHtml(option.code)}" data-location-label="${escapeHtml(option.label)}">${escapeHtml(option.label)}</button>`).join("")}
         <p class="admin-location-combobox__empty" data-location-empty hidden>No matching country or region.</p>
@@ -521,8 +530,8 @@ const educationCard = (item: Education, index: number, total: number): string =>
         ${field("Degree classification (VI)", educationFieldName(item.id, "classification_vi"), degreeClassificationValue(item.classification?.vi ?? "", "vi"))}
       </div>
       <div class="admin-form-grid">
-        ${field("Start year", educationFieldName(item.id, "start"), item.startDate, "text", 'inputmode="numeric" pattern="\\d{4}" maxlength="4"')}
-        ${field("End year", educationFieldName(item.id, "end"), item.endDate, "text", 'inputmode="numeric" pattern="\\d{4}" maxlength="4"')}
+        ${renderAdminYearSelect({ label: "Start year", name: educationFieldName(item.id, "start"), value: item.startDate })}
+        ${renderAdminYearSelect({ label: "End year", name: educationFieldName(item.id, "end"), value: item.endDate })}
       </div>
     </div>
   </article>`;
@@ -735,21 +744,23 @@ const websiteView = (): string => {
       { label: "Mobile", value: "mobile" },
     ],
   });
-  const languageControls = renderAdminPreviewSelect({
-    label: "Website preview language",
-    dataAttribute: "data-website-language",
-    activeValue: state.previewLanguage,
-    className: "admin-preview-toolbar__select--language",
+  const pageControls = renderAdminPreviewSelect({
+    label: "Website preview page",
+    dataAttribute: "data-website-preview-page",
+    activeValue: state.previewPage,
+    className: "admin-preview-toolbar__select--page",
     options: [
-      { label: "EN", value: "en" },
-      { label: "VI", value: "vi" },
+      { label: "Homepage", value: "homepage" },
+      { label: "Projects", value: "projects" },
+      { label: "Automation", value: "tools" },
     ],
   });
+  const languageControls = renderAdminPreviewLanguageToggle(state.previewLanguage, "data-website-language-toggle");
   const zoomControls = renderPreviewZoomControls(state.previewZoom);
   const previewToolbar = renderAdminPreviewToolbar({
     title: "Website preview",
     meta: 'Live draft · <span data-preview-status data-kind="warning">Connecting…</span>',
-    controls: `${viewportControls}${languageControls}${zoomControls}`,
+    controls: `${pageControls}${viewportControls}${languageControls}${zoomControls}`,
   });
   return `<section class="admin-site-workspace">
     <header class="admin-document-header"><div class="admin-document-header__identity"><p class="section-kicker">Website</p><h1>Homepage</h1><p><span class="status status--draft">Draft</span><span>${latest ? `Last published ${new Date(latest.publishedAt).toLocaleString()}` : "Not published yet"}</span></p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button><button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button><button class="button admin-action-publish" type="button" data-publish-website>Publish</button></div></header>
@@ -759,10 +770,10 @@ const websiteView = (): string => {
           <section data-website-panel="general"${tab === "general" ? "" : " hidden"}>${websiteGeneral(content)}</section>
           <section data-website-panel="sections"${tab === "sections" ? "" : " hidden"}>${websiteSections(content)}</section>
           <section data-website-panel="featured"${tab === "featured" ? "" : " hidden"}>${websiteFeatured(runtime)}</section>
-          <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: "Homepage appearance", note: "Choose brand colors saved with this draft.", content: themeFields(content.theme) })}</section>
+          <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: "Homepage appearance", note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) })}</section>
         </form>
       </section>
-      <aside class="admin-site-preview">${previewToolbar}<div class="admin-site-frame" data-viewport="${state.viewport}" data-zoom="${state.previewZoom.mode}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="Website draft preview" src="${import.meta.env.BASE_URL}?preview=1&embedded=1" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div></aside>
+      <aside class="admin-site-preview">${previewToolbar}<div class="admin-site-frame" data-viewport="${state.viewport}" data-zoom="${state.previewZoom.mode}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${state.previewPage === "homepage" ? "Homepage" : state.previewPage === "projects" ? "Projects" : "Automation"} draft preview" src="${websitePreviewPath(state.previewPage)}" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div></aside>
     </div>
     <dialog class="admin-dialog admin-release-history" data-website-history-dialog aria-labelledby="website-release-history-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-release-history-title">Release history</h2><p>Versions are generated automatically when a release is published.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-website-history-close>Close</button></div></form></dialog>
   </section>`;
@@ -1070,6 +1081,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   };
   const bindEducationActions = (): void => {
     if (!profileForm || !state.runtime) return;
+    bindAdminYearPickers(root);
     root.querySelector<HTMLButtonElement>("[data-profile-education-new]")?.addEventListener("click", () => {
       const professional = commitProfileDraft();
       if (!professional || !state.runtime) return;
@@ -1413,8 +1425,24 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     if (previewFrame) previewFrame.dataset.viewport = state.viewport;
     previewZoomController?.resetFit();
   });
-  root.querySelector<HTMLSelectElement>("[data-website-language]")?.addEventListener("change", (event) => {
-    state.previewLanguage = (event.currentTarget as HTMLSelectElement).value as Language;
+  root.querySelector<HTMLSelectElement>("[data-website-preview-page]")?.addEventListener("change", (event) => {
+    const nextPage = (event.currentTarget as HTMLSelectElement).value as WebsitePreviewPage;
+    if (!previewIframe || nextPage === state.previewPage) return;
+    state.previewPage = nextPage;
+    setPreviewStatus("Loading…", "warning");
+    previewFrame?.scrollTo({ top: 0, left: 0 });
+    previewZoomController?.resetFit();
+    previewStage?.setAttribute("aria-busy", "true");
+    previewIframe.title = `${nextPage === "homepage" ? "Homepage" : nextPage === "projects" ? "Projects" : "Automation"} draft preview`;
+    previewIframe.src = websitePreviewPath(nextPage);
+  });
+  root.querySelector<HTMLButtonElement>("[data-website-language-toggle]")?.addEventListener("click", (event) => {
+    state.previewLanguage = state.previewLanguage === "en" ? "vi" : "en";
+    const button = event.currentTarget as HTMLButtonElement;
+    const targetLabel = state.previewLanguage === "en" ? "Vietnamese" : "English";
+    button.textContent = state.previewLanguage === "en" ? "VI" : "EN";
+    button.setAttribute("aria-label", `Preview in ${targetLabel}`);
+    button.title = `Preview in ${targetLabel}`;
     setPreviewStatus("Updating…", "warning");
     previewSender?.send();
   });

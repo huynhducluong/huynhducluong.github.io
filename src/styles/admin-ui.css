@@ -783,8 +783,33 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   width: 7rem;
 }
 
-.admin-preview-toolbar__select--language {
-  width: 5rem;
+.admin-preview-toolbar__select--page {
+  width: 8.75rem;
+}
+
+.admin-preview-toolbar__language-toggle {
+  min-width: 2.75rem;
+  min-height: 2.25rem;
+  padding: .45rem .55rem;
+  border: .2rem solid var(--admin-color-surface-muted);
+  border-radius: .45rem;
+  background: var(--admin-color-surface);
+  color: var(--color-primary-dark);
+  box-shadow: 0 1px 4px rgb(16 45 59 / 12%);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--admin-text-2xs);
+  font-weight: 800;
+  line-height: 1;
+}
+
+.admin-preview-toolbar__language-toggle:hover {
+  color: var(--color-primary);
+}
+
+.admin-preview-toolbar__language-toggle:focus-visible {
+  outline: 2px solid var(--admin-color-focus-ring);
+  outline-offset: 1px;
 }
 
 .admin-preview-toolbar__group button {
@@ -831,6 +856,17 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   cursor: not-allowed;
 }
 
+@container (max-width: 30rem) {
+  .admin-preview-toolbar:has(.admin-preview-toolbar__select--page) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-preview-toolbar:has(.admin-preview-toolbar__select--page) .admin-preview-toolbar__controls {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
+
 @container (max-width: 34rem) {
   .admin-preview-toolbar {
     gap: .35rem;
@@ -845,8 +881,8 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
     width: 6.25rem;
   }
 
-  .admin-preview-toolbar__select--language {
-    width: 4.5rem;
+  .admin-preview-toolbar__select--page {
+    width: 8rem;
   }
 
   .admin-preview-toolbar__group button {
@@ -988,6 +1024,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 .admin-document-check-dialog__content h3:first-child { margin-top: 0; }
 .admin-document-check-dialog__content ul.is-error { color: var(--admin-color-danger); }
+.admin-document-check-dialog__content li { overflow-wrap: anywhere; }
 
 .admin-cl-empty {
   height: auto;
@@ -1250,8 +1287,6 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   }
 
   .admin-document-actions > span { display: none; }
-  .admin-document-selection article { grid-template-columns: minmax(0, 1fr) 4.5rem; }
-  .admin-document-selection article > :nth-child(n + 3) { grid-column: auto; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -213,7 +213,7 @@ const evidenceChecks = (items: CoverLetterEvidenceOption[], name: "projectIds" |
   if (!items.length) return '<p class="admin-empty">No records available.</p>';
   return [...items]
     .sort((a, b) => Number(b.status === "published") - Number(a.status === "published"))
-    .map((item) => `<label class="evidence-option"><input type="checkbox" name="${name}" value="${escapeHtml(item.id)}" ${letter[name].includes(item.id) ? "checked" : ""}${disabled()}><span><strong>${escapeHtml(item.name)}</strong><small>${escapeHtml(item.status)}</small></span></label>`)
+    .map((item) => `<label class="evidence-option"><input type="checkbox" name="${name}" value="${escapeHtml(item.id)}" ${letter[name].includes(item.id) ? "checked" : ""}${disabled()}><span><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(item.status)}</small></span></label>`)
     .join("");
 };
 
@@ -308,18 +308,22 @@ const editorView = (): string => {
               ${renderAdminSectionCard({
                 title: "Supporting evidence",
                 note: "Private references only; published content appears first.",
-                content: `<div class="admin-cl-evidence-heading"><h4>Projects</h4><small>${letter.projectIds.length} selected</small></div><div class="evidence-grid">${evidenceChecks(projects, "projectIds")}</div>
-                  <div class="admin-cl-evidence-heading"><h4>Automation tools</h4><small>${letter.toolIds.length} selected</small></div><div class="evidence-grid">${evidenceChecks(tools, "toolIds")}</div>`,
+                className: "admin-cl-evidence-card",
+                content: `<div class="admin-cl-evidence">
+                  <div class="admin-cl-evidence-heading"><h4>Projects</h4><small>${letter.projectIds.length} selected</small></div>
+                  <div class="evidence-grid">${evidenceChecks(projects, "projectIds")}</div>
+                  <div class="admin-cl-evidence-heading"><h4>Automation tools</h4><small>${letter.toolIds.length} selected</small></div>
+                  <div class="evidence-grid">${evidenceChecks(tools, "toolIds")}</div>
+                </div>`,
               })}
             </section>
             <section class="admin-editor-panel" data-cl-panel="appearance" ${panelState("appearance")}>
               ${renderAdminSectionCard({
                 title: "Cover Letter appearance",
-                note: "Choose brand colors saved with this draft.",
+                note: "Choose draft colors; finalized letters keep their saved theme.",
                 content: renderDocumentThemeFields({
                   theme: letter.theme,
                   names: { preset: "themePreset", primary: "themePrimary", accent: "themeAccent" },
-                  helpText: "Colors are stored in this draft and frozen when the cover letter is finalized.",
                   disabled: isLocked,
                 }),
               })}

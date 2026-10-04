@@ -1,10 +1,46 @@
 import { documentThemes } from "../themes/documentThemes";
-import { assetUrl, escapeHtml, formatDegreeClassification, formatNumericDate, localize } from "../shared/format";
+import { assetUrl, escapeHtml, formatDegreeClassification, formatNumericDate, localize, type Language } from "../shared/format";
 import type { ContentPoint } from "../types/career";
 import type { CvRuntimeData, CvRuntimeProject } from "../types/cvContent";
 import { orderedCvBackground } from "./backgroundOrder";
 
-const language = "en" as const;
+const copy = {
+  en: {
+    contact: "Contact",
+    phone: "Phone",
+    email: "Email",
+    address: "Address",
+    education: "Education",
+    language: "Language",
+    experience: "Experience",
+    professionalSummary: "Professional Summary",
+    professionalExperience: "Professional Experience",
+    selectedProjects: "Selected Projects",
+    selectedTools: "Selected BIM Automation Tools",
+    pageTwoTitle: "Experience · Projects · Automation",
+    pageTwoSubtitle: "Selected professional record",
+    present: "Present",
+  },
+  vi: {
+    contact: "Liên hệ",
+    phone: "Điện thoại",
+    email: "Email",
+    address: "Địa chỉ",
+    education: "Học vấn",
+    language: "Ngôn ngữ",
+    experience: "Kinh nghiệm",
+    professionalSummary: "Tóm tắt chuyên môn",
+    professionalExperience: "Kinh nghiệm chuyên môn",
+    selectedProjects: "Dự án tiêu biểu",
+    selectedTools: "Công cụ tự động hóa BIM tiêu biểu",
+    pageTwoTitle: "Kinh nghiệm · Dự án · Tự động hóa",
+    pageTwoSubtitle: "Hồ sơ chuyên môn tiêu biểu",
+    present: "Hiện tại",
+  },
+} as const;
+
+const localized = (value: Parameters<typeof localize>[0], language: Language): string =>
+  localize(value, language) || localize(value, "en");
 
 const renderThemeOptions = (themeId: string): string => documentThemes.map((theme) =>
   `<option value="${escapeHtml(theme.id)}"${theme.id === themeId ? " selected" : ""}>${escapeHtml(theme.name)}</option>`,
@@ -12,9 +48,9 @@ const renderThemeOptions = (themeId: string): string => documentThemes.map((them
 
 const heading = (title: string): string => `<h2 class="cv-section-heading">${escapeHtml(title)}</h2>`;
 
-const formatRange = (startDate: string | undefined, endDate: string | null | undefined): string => {
+const formatRange = (startDate: string | undefined, endDate: string | null | undefined, language: Language): string => {
   if (!startDate) return "";
-  return `${formatNumericDate(startDate)} - ${endDate === null ? "Present" : endDate ? formatNumericDate(endDate) : ""}`;
+  return `${formatNumericDate(startDate)} - ${endDate === null ? copy[language].present : endDate ? formatNumericDate(endDate) : ""}`;
 };
 
 const selectedResponsibilities = (project: CvRuntimeProject): ContentPoint[] => {
@@ -23,19 +59,23 @@ const selectedResponsibilities = (project: CvRuntimeProject): ContentPoint[] => 
   return project.cvResponsibilityIds.map((id) => byId.get(id)).filter((item): item is ContentPoint => Boolean(item));
 };
 
-const renderProject = (project: CvRuntimeProject, compact = false): string => `
+const renderProject = (project: CvRuntimeProject, language: Language, compact = false): string => {
+  const location = localized(project.location, language);
+  return `
   <article class="cv-experience-item${compact ? " cv-experience-item--compact" : ""}">
-    <p class="cv-experience-item__date">${formatRange(project.startDate, project.endDate)}</p>
+    <p class="cv-experience-item__date">${formatRange(project.startDate, project.endDate, language)}</p>
     <div class="cv-experience-item__content">
-      ${project.role ? `<h3>${localize(project.role, language)}</h3>` : ""}
-      <p class="cv-experience-item__project">${localize(project.name, language)}, ${localize(project.location, language)}</p>
-      ${project.cvShowSummary && project.summary ? `<p class="cv-experience-item__summary">${localize(project.summary, language)}</p>` : ""}
-      <ul class="cv-bullet-list">${selectedResponsibilities(project).map((item) => `<li>${localize(item.text, language)}</li>`).join("")}</ul>
+      ${project.role ? `<h3>${localized(project.role, language)}</h3>` : ""}
+      <p class="cv-experience-item__project">${localized(project.name, language)}${location ? `, ${location}` : ""}</p>
+      ${project.cvShowSummary && project.summary ? `<p class="cv-experience-item__summary">${localized(project.summary, language)}</p>` : ""}
+      <ul class="cv-bullet-list">${selectedResponsibilities(project).map((item) => `<li>${localized(item.text, language)}</li>`).join("")}</ul>
     </div>
   </article>`;
+};
 
-export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false): string => {
+export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, language: Language = "en"): string => {
   const { content } = data;
+  const text = copy[language];
   const pageOneProjects = data.detailedProjects.slice(0, content.pageOneProjectCount);
   const pageTwoProjects = data.detailedProjects.slice(content.pageOneProjectCount);
   const profile = content.profile;
@@ -48,20 +88,20 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false): stri
         <img class="cv-photo__image" src="${escapeHtml(assetUrl(profile.photoPath))}" alt="Portrait of ${escapeHtml(profile.name)}" data-profile-photo>
       </div>
       <section class="cv-sidebar-section">
-        ${heading("Contact")}
+        ${heading(text.contact)}
         <address class="cv-contact">
-          <div><strong>Phone</strong><a href="tel:${escapeHtml(profile.phone)}">${escapeHtml(profile.phone)}</a></div>
-          <div><strong>Email</strong><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a></div>
-          <div><strong>Address</strong><span>${localize(profile.location, language)}</span></div>
+          <div><strong>${text.phone}</strong><a href="tel:${escapeHtml(profile.phone)}">${escapeHtml(profile.phone)}</a></div>
+          <div><strong>${text.email}</strong><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a></div>
+          <div><strong>${text.address}</strong><span>${localized(profile.location, language)}</span></div>
         </address>
       </section>
       <section class="cv-sidebar-section">
-        ${heading("Education")}
+        ${heading(text.education)}
         ${background.education.map((item) => {
           const classification = formatDegreeClassification(item.classification, language);
           return `<article class="cv-sidebar-entry">
-            <h3>${localize(item.field, language)}</h3>
-            <p>${localize(item.institution, language)}</p>
+            <h3>${localized(item.field, language)}</h3>
+            <p>${localized(item.institution, language)}</p>
             ${classification ? `<p class="cv-sidebar-entry__meta">${classification}</p>` : ""}
             <p class="cv-sidebar-entry__meta">${escapeHtml(item.startDate)} - ${escapeHtml(item.endDate)}</p>
           </article>`;
@@ -69,27 +109,30 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false): stri
       </section>
       ${background.skillGroups.map((group) => `
         <section class="cv-sidebar-section">
-          ${heading(localize(group.title, language))}
-          <ul class="cv-sidebar-list">${group.items.map((item) => `<li>${localize(item.label, language)}</li>`).join("")}</ul>
+          ${heading(localized(group.title, language))}
+          <ul class="cv-sidebar-list">${group.items.map((item) => `<li>${localized(item.label, language)}</li>`).join("")}</ul>
         </section>`).join("")}
       <section class="cv-sidebar-section">
-        ${heading("Language")}
-        <ul class="cv-sidebar-list cv-sidebar-list--compact">${background.languages.map((item) => `<li>${localize(item.name, language)}${item.proficiency ? ` - ${localize(item.proficiency, language)}` : ""}</li>`).join("")}</ul>
+        ${heading(text.language)}
+        <ul class="cv-sidebar-list cv-sidebar-list--compact">${background.languages.map((item) => `<li>${localized(item.name, language)}${item.proficiency ? ` - ${localized(item.proficiency, language)}` : ""}</li>`).join("")}</ul>
       </section>
       <section class="cv-sidebar-section cv-sidebar-section--employment">
-        ${heading("Experience")}
+        ${heading(text.experience)}
         <ul class="cv-employment-list">${background.experiences.map((item) => `
-          <li class="cv-employment"><strong>${escapeHtml(item.company)}</strong><span>${formatRange(item.startDate, item.endDate)}</span></li>`).join("")}</ul>
+          <li class="cv-employment"><strong>${escapeHtml(item.company)}</strong><span>${formatRange(item.startDate, item.endDate, language)}</span></li>`).join("")}</ul>
       </section>
     </aside>`;
 
-  const selectedProjects = data.compactProjects.map((project) => `
-    <li><span>${localize(project.name, language)}</span><small>${project.year ?? ""}${project.location.en !== "Viet Nam" ? ` · ${localize(project.location, language)}` : ""}</small></li>`).join("");
+  const selectedProjects = data.compactProjects.map((project) => {
+    const location = localized(project.location, language);
+    const meta = [project.year ? String(project.year) : "", project.location.en !== "Viet Nam" ? location : ""].filter(Boolean).join(" · ");
+    return `<li><span>${localized(project.name, language)}</span>${meta ? `<small>${meta}</small>` : ""}</li>`;
+  }).join("");
 
   const selectedTools = data.tools.map((tool) => `
     <article class="cv-tool">
       <h3>${escapeHtml(tool.name)}</h3>
-      <p>${localize(tool.solution, language)}</p>
+      <p>${localized(tool.solution, language)}</p>
       <ul class="cv-tool__technologies">${tool.technologies.map((technology) => `<li>${escapeHtml(technology)}</li>`).join("")}</ul>
     </article>`).join("");
 
@@ -121,22 +164,22 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false): stri
         <section class="cv-page cv-page--one" aria-label="CV page 1 of 2" data-cv-page>
           ${sidebar}
           <main class="cv-page-one-main">
-            <header class="cv-identity"><p class="cv-identity__name">${escapeHtml(profile.name)}</p><h1>${localize(profile.professionalTitle, language)}</h1></header>
-            <section class="cv-main-section cv-summary">${heading("Professional Summary")}<p>${localize(profile.summary, language)}</p></section>
-            <section class="cv-main-section cv-professional-experience">${heading("Professional Experience")}<div class="cv-experience-list">${pageOneProjects.map((project) => renderProject(project)).join("")}</div></section>
+            <header class="cv-identity"><p class="cv-identity__name">${escapeHtml(profile.name)}</p><h1>${localized(profile.professionalTitle, language)}</h1></header>
+            <section class="cv-main-section cv-summary">${heading(text.professionalSummary)}<p>${localized(profile.summary, language)}</p></section>
+            <section class="cv-main-section cv-professional-experience">${heading(text.professionalExperience)}<div class="cv-experience-list">${pageOneProjects.map((project) => renderProject(project, language)).join("")}</div></section>
           </main>
           <span class="cv-page-accent cv-page-accent--top" aria-hidden="true"></span><span class="cv-page-accent cv-page-accent--middle" aria-hidden="true"></span><span class="cv-page-accent cv-page-accent--bottom" aria-hidden="true"></span>
         </section>
         <section class="cv-page cv-page--two" aria-label="CV page 2 of 2" data-cv-page>
           <header class="cv-page-two-header">
-            <div class="cv-page-two-header__identity"><p>${escapeHtml(profile.name)}</p><span>${localize(profile.professionalTitle, language)}</span></div>
-            <div class="cv-page-two-header__title"><span>Experience · Projects · Automation</span><strong>Selected professional record</strong></div>
+            <div class="cv-page-two-header__identity"><p>${escapeHtml(profile.name)}</p><span>${localized(profile.professionalTitle, language)}</span></div>
+            <div class="cv-page-two-header__title"><span>${text.pageTwoTitle}</span><strong>${text.pageTwoSubtitle}</strong></div>
           </header>
           <main class="cv-page-two-main">
-            <section class="cv-main-section cv-professional-experience">${heading("Professional Experience")}<div class="cv-experience-list cv-experience-list--page-two">${pageTwoProjects.map((project) => renderProject(project, true)).join("")}</div></section>
+            <section class="cv-main-section cv-professional-experience">${heading(text.professionalExperience)}<div class="cv-experience-list cv-experience-list--page-two">${pageTwoProjects.map((project) => renderProject(project, language, true)).join("")}</div></section>
             <div class="cv-page-two-bottom">
-              <section class="cv-main-section cv-selected-projects">${heading("Selected Projects")}<ul>${selectedProjects}</ul></section>
-              <section class="cv-main-section cv-selected-tools">${heading("Selected BIM Automation Tools")}${selectedTools}</section>
+              <section class="cv-main-section cv-selected-projects">${heading(text.selectedProjects)}<ul>${selectedProjects}</ul></section>
+              <section class="cv-main-section cv-selected-tools">${heading(text.selectedTools)}${selectedTools}</section>
             </div>
           </main>
           <span class="cv-page-accent cv-page-accent--top" aria-hidden="true"></span><span class="cv-page-accent cv-page-accent--bottom" aria-hidden="true"></span>

@@ -1,3 +1,12 @@
+.website-embedded {
+  min-width: 0;
+  overflow: hidden;
+}
+
+body.website-embedded .page-nav .page-nav__admin {
+  display: none;
+}
+
 .page-header {
   position: sticky;
   z-index: 20;

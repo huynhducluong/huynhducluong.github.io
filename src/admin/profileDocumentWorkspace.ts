@@ -13,7 +13,7 @@ import {
   renameProfileDocument,
   saveProfileDocument,
 } from "../services/profileDocumentRepository";
-import { degreeClassificationValue, escapeHtml } from "../shared/format";
+import { degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes } from "../themes/documentThemes";
 import { backgroundOrderKey, orderedCvBackground, resolveCvBackgroundOrder } from "../cv/backgroundOrder";
@@ -39,7 +39,10 @@ import {
 } from "./previewZoom";
 import {
   renderAdminPreviewToolbar,
+  renderAdminPreviewLanguageToggle,
+  renderAdminSelectControl,
   renderAdminSectionCard,
+  renderAdminYearSelect,
   setButtonBusy,
 } from "./ui";
 
@@ -47,6 +50,8 @@ export type { ProfileDocumentKind } from "../types/profileDocument";
 type DocumentTab = "content" | "background" | "selection" | "appearance";
 type DocumentFilter = ProfileDocumentStatus | "all";
 type WorkspaceLoadPhase = "idle" | "loading" | "ready" | "error";
+type CvPreviewData = CvRuntimeData & { previewLanguage?: Language };
+type PortfolioPreviewData = PortfolioRuntimeData & { previewLanguage?: Language };
 
 interface WorkspaceCallbacks {
   rerender: () => void;
@@ -65,6 +70,7 @@ const state: {
   errors: Partial<Record<ProfileDocumentKind, string>>;
   tab: Record<ProfileDocumentKind, DocumentTab>;
   zoom: Record<ProfileDocumentKind, PreviewZoomState>;
+  previewLanguage: Record<ProfileDocumentKind, Language>;
   filter: Record<ProfileDocumentKind, DocumentFilter>;
   search: Record<ProfileDocumentKind, string>;
   dirty: Record<ProfileDocumentKind, boolean>;
@@ -79,6 +85,7 @@ const state: {
   errors: {},
   tab: { cv: "content", portfolio: "content" },
   zoom: { cv: createPreviewZoomState(), portfolio: createPreviewZoomState() },
+  previewLanguage: { cv: "en", portfolio: "en" },
   filter: { cv: "all", portfolio: "all" },
   search: { cv: "", portfolio: "" },
   dirty: { cv: false, portfolio: false },
@@ -102,7 +109,6 @@ const localizedAreas = (label: string, name: string, value: LocalizedText, rows 
 const themeFields = (theme: StoredDocumentTheme): string => renderDocumentThemeFields({
   theme,
   names: { preset: "theme_preset", primary: "theme_primary", accent: "theme_accent" },
-  helpText: "Colors are stored in the working draft and frozen inside every published release.",
 });
 
 const readTheme = (form: FormData): StoredDocumentTheme => {
@@ -388,7 +394,7 @@ const cvBackgroundPanel = (content: CvContent): string => {
   })).join("");
   return renderAdminSectionCard({
     title: "CV background",
-    note: "Content comes from Professional Profile. Drag within each group to control its order in this CV.",
+    note: "Content comes from Professional Profile.",
     className: "admin-cv-background",
     content: `<div class="admin-cv-background__groups">
         <section><header><div><h4>Experience</h4><p>Employment history shown in the CV sidebar.</p></div><span>${background.experiences.length}</span></header><div class="admin-cv-background__list" data-background-list="experiences">${experienceRows || '<p class="admin-empty">No experience entries in Professional Profile.</p>'}</div></section>
@@ -440,8 +446,12 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
           const displayStatus = ready ? "published" : item.status ?? "draft";
           const responsibilityIds = new Set(selection?.cvResponsibilityIds ?? item.cvResponsibilityIds);
           return `<article class="admin-cv-selection__project" data-cv-project-card>
-            <div class="admin-cv-selection__identity"><strong>${escapeHtml(item.name.en)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} Â· ${escapeHtml(item.location.en || item.id)}</small></div>
-            <label><span>Display</span><select name="cv_project_display_${escapeHtml(item.id)}" data-cv-project-display${ready ? "" : " disabled"}><option value="excluded"${display === "excluded" ? " selected" : ""}>Not included</option><option value="detailed"${display === "detailed" ? " selected" : ""}>Detailed</option><option value="compact"${display === "compact" ? " selected" : ""}>Compact</option></select></label>
+            <div class="admin-cv-selection__identity"><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.location.en || "Location not set")}">${escapeHtml(item.location.en || "Location not set")}</small></div>
+            <label><span>Display</span>${renderAdminSelectControl({
+              name: `cv_project_display_${item.id}`,
+              attributes: `data-cv-project-display${ready ? "" : " disabled"}`,
+              options: `<option value="excluded"${display === "excluded" ? " selected" : ""}>Not included</option><option value="detailed"${display === "detailed" ? " selected" : ""}>Detailed</option><option value="compact"${display === "compact" ? " selected" : ""}>Compact</option>`,
+            })}</label>
             <label class="admin-switch"><input type="checkbox" name="cv_project_summary_${escapeHtml(item.id)}"${selection?.cvShowSummary ? " checked" : ""}${ready ? "" : " disabled"}><span>Show summary</span></label>
             <span class="status status--${displayStatus}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span>
             <fieldset class="admin-cv-selection__responsibilities" data-cv-responsibilities${display === "detailed" ? "" : " hidden"}><legend>Responsibilities</legend>${item.responsibilities.length ? item.responsibilities.map((responsibility) => `<label><input type="checkbox" name="cv_project_responsibility_${escapeHtml(item.id)}" value="${escapeHtml(responsibility.id)}"${responsibilityIds.has(responsibility.id) ? " checked" : ""}${ready ? "" : " disabled"}><span>${escapeHtml(responsibility.text.en)}</span></label>`).join("") : '<p class="admin-empty">No responsibilities saved.</p>'}</fieldset>
@@ -454,7 +464,7 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
           const ready = item.status === undefined || item.status === "published";
           const displayStatus = ready ? "published" : item.status ?? "draft";
           return `<article class="admin-cv-selection__tool">
-            <label class="admin-switch"><input type="checkbox" name="cv_tool" value="${escapeHtml(item.id)}"${selection ? " checked" : ""}${ready ? "" : " disabled"}><span>${escapeHtml(item.name)}</span></label>
+            <label class="admin-switch"><input type="checkbox" name="cv_tool" value="${escapeHtml(item.id)}"${selection ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-cv-selection__identity"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong></span></label>
             <span class="status status--${displayStatus}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span>
           </article>`;
         }).join("")}
@@ -533,7 +543,7 @@ const portfolioContentPanel = (content: PortfolioContent): string => [
     note: "Control the document identity shown on the cover.",
     content: `<div class="admin-form-grid">
       ${field("Portfolio version", "portfolio_version", content.version)}
-      ${field("Cover year", "portfolio_year", content.year)}
+      ${renderAdminYearSelect({ label: "Cover year", name: "portfolio_year", value: content.year })}
     </div>
     ${field("Document title", "portfolio_title", content.title)}
     ${localizedFields("Cover kicker", "portfolio_kicker", content.kicker)}`,
@@ -563,12 +573,16 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
     <h4>Projects</h4>
     ${runtime.projects.map((item) => {
       const ready = item.status === "published";
-      return `<article><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong>${escapeHtml(item.name.en)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} Â· ${escapeHtml(item.slug || item.id)}</small></span></label><select aria-label="Layout" name="project_layout_${escapeHtml(item.id)}"${ready ? "" : " disabled"}><option value="feature"${item.portfolioLayout === "feature" ? " selected" : ""}>Feature</option><option value="standard"${item.portfolioLayout === "standard" ? " selected" : ""}>Standard</option><option value="compact"${item.portfolioLayout === "compact" ? " selected" : ""}>Compact</option></select><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+      return `<article class="admin-document-selection__item admin-document-selection__item--project"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label>${renderAdminSelectControl({
+        name: `project_layout_${item.id}`,
+        attributes: `aria-label="Layout"${ready ? "" : " disabled"}`,
+        options: `<option value="feature"${item.portfolioLayout === "feature" ? " selected" : ""}>Feature</option><option value="standard"${item.portfolioLayout === "standard" ? " selected" : ""}>Standard</option><option value="compact"${item.portfolioLayout === "compact" ? " selected" : ""}>Compact</option>`,
+      })}<span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
     <h4>Automation tools</h4>
     ${runtime.tools.map((item) => {
       const ready = item.status === "published";
-      return `<article><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong>${escapeHtml(item.name)}</strong><small>${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"} Â· ${escapeHtml(item.slug || item.id)}</small></span></label><span></span><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+      return `<article class="admin-document-selection__item admin-document-selection__item--tool"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
   </div>`,
 });
@@ -725,11 +739,12 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
     : 4
       + (runtime as PortfolioRuntimeData).projects.filter((item) => item.includeInPortfolio).length
       + ((runtime as PortfolioRuntimeData).tools.some((item) => item.includeInPortfolio) ? 1 : 0);
+  const languageControl = renderAdminPreviewLanguageToggle(state.previewLanguage[kind], "data-document-language-toggle");
   const zoomControls = renderPreviewZoomControls(state.zoom[kind]);
   const previewToolbar = renderAdminPreviewToolbar({
     title: `${documentLabel(kind)} preview`,
     meta: `${kind === "cv" ? "A4" : "A4 landscape"} · <span data-preview-page-count>${initialPageCount} pages</span> · <button type="button" class="admin-preview-status" data-document-validation-open data-kind="${issues.length ? "warning" : "success"}" aria-haspopup="dialog" aria-controls="${kind}-validation-dialog">${issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : "Ready"}</button>`,
-    controls: zoomControls,
+    controls: `${languageControl}${zoomControls}`,
   });
   return `
     <section class="admin-document-library is-editing"><button class="admin-library-scrim" type="button" data-profile-document-library-close aria-label="Close document library" tabindex="-1"></button>${documentCollectionView(kind)}<div class="admin-document-library__workspace">
@@ -757,7 +772,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
             <section data-document-panel="content"${activeTab === "content" ? "" : " hidden"}>${contentPanel}</section>
             ${kind === "cv" ? `<section data-document-panel="background"${activeTab === "background" ? "" : " hidden"}>${backgroundPanel}</section>` : ""}
             <section data-document-panel="selection"${activeTab === "selection" ? "" : " hidden"}>${selectionPanel}</section>
-            <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose brand colors saved with this draft.", content: themeFields(content.theme) })}</section>
+            <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) })}</section>
           </form>
         </section>
         <aside class="admin-document-preview">
@@ -775,6 +790,14 @@ const previewPayload = (kind: ProfileDocumentKind, form: HTMLFormElement): CvRun
   return readPortfolioForm(form);
 };
 
+const previewRenderPayload = (
+  kind: ProfileDocumentKind,
+  form: HTMLFormElement,
+): CvPreviewData | PortfolioPreviewData => ({
+  ...previewPayload(kind, form),
+  previewLanguage: state.previewLanguage[kind],
+});
+
 const sendPreview = (kind: ProfileDocumentKind, form: HTMLFormElement): void => {
   void kind;
   void form;
@@ -790,6 +813,7 @@ export const discardProfileDocumentChanges = (): void => {
   previewZoomController?.disconnect();
   previewZoomController = undefined;
   state.zoom = { cv: createPreviewZoomState(), portfolio: createPreviewZoomState() };
+  state.previewLanguage = { cv: "en", portfolio: "en" };
   const cvDocument = selectedDocument("cv");
   const portfolioDocument = selectedDocument("portfolio");
   state.cv = cvDocument?.draftPayload ? structuredClone(cvDocument.draftPayload as CvRuntimeData) : null;
@@ -813,6 +837,7 @@ export const invalidateProfileDocumentWorkspace = (): void => {
   state.loading = {};
   state.phase = { cv: "idle", portfolio: "idle" };
   state.errors = {};
+  state.previewLanguage = { cv: "en", portfolio: "en" };
 };
 
 export const markProfileDocumentWorkspaceStale = (): void => {
@@ -868,13 +893,22 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       })
     : undefined;
   previewSender = iframe && form
-    ? bindPreviewSender(iframe, kind, () => previewPayload(kind, form), () => {
+    ? bindPreviewSender(iframe, kind, () => previewRenderPayload(kind, form), () => {
       previewController?.refresh();
       const pageCount = iframe.contentDocument?.querySelectorAll(kind === "cv" ? ".cv-page" : ".portfolio-page").length ?? 0;
       const pageCountLabel = root.querySelector<HTMLElement>("[data-preview-page-count]");
       if (pageCountLabel && pageCount) pageCountLabel.textContent = `${pageCount} page${pageCount === 1 ? "" : "s"}`;
     })
     : undefined;
+  root.querySelector<HTMLButtonElement>("[data-document-language-toggle]")?.addEventListener("click", (event) => {
+    state.previewLanguage[kind] = state.previewLanguage[kind] === "en" ? "vi" : "en";
+    const button = event.currentTarget as HTMLButtonElement;
+    const targetLabel = state.previewLanguage[kind] === "en" ? "Vietnamese" : "English";
+    button.textContent = state.previewLanguage[kind] === "en" ? "VI" : "EN";
+    button.setAttribute("aria-label", `Preview in ${targetLabel}`);
+    button.title = `Preview in ${targetLabel}`;
+    previewSender?.send();
+  });
 
   const openDocument = async (id: string): Promise<void> => {
     if (state.dirty[kind] && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: `Leave this ${documentLabel(kind)}?`, message: "Your unsaved changes will be discarded if you open another document.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;

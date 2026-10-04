@@ -2,24 +2,57 @@ import "../styles/reset.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 import "../styles/content.css";
-import { loadPublishedWebsiteRelease } from "../services/websiteRepository";
+import { getAdminAccess } from "../admin/auth";
+import { loadPublishedWebsiteRelease, loadWebsiteDraftData } from "../services/websiteRepository";
+import { createPreviewReceiver } from "../shared/previewProtocol";
+import { localize, type Language } from "../shared/format";
 import { renderToolCard } from "../site/renderers";
 import { applyWebsiteTheme, siteFooter, siteHeader } from "../site/shell";
-import { escapeHtml, localize } from "../shared/format";
+import type { WebsiteRuntimeData } from "../types/website";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
 
-const render = async (): Promise<void> => {
-  const release = await loadPublishedWebsiteRelease();
-  applyWebsiteTheme(release.content);
-  const profile = release.professional.profile;
-  const tools = release.tools;
-  const page = release.content.toolsPage;
-  document.title = `${localize(page.title, "en")} | ${profile.name}`;
-  app.innerHTML = `${siteHeader(profile, release.content, "tools")}<main id="main-content"><section class="page-hero"><div class="container"><p class="section-kicker">${escapeHtml(localize(page.kicker, "en"))}</p><h1>${escapeHtml(localize(page.title, "en"))}</h1><p>${escapeHtml(localize(page.description, "en"))}</p></div></section><section class="section"><div class="container">${tools.length ? `<div class="listing-grid">${tools.map((tool) => renderToolCard(tool, "en")).join("")}</div>` : '<p class="status-message">No tools are included in the latest website release.</p>'}</div></section></main>${siteFooter(profile, release.content)}`;
+type WebsitePreviewData = WebsiteRuntimeData & { previewLanguage?: Language };
+
+const emptyCopy = {
+  en: "No automation tools are included in this Website view.",
+  vi: "Chưa có công cụ tự động hóa nào được chọn cho trang Website này.",
+} as const;
+
+const localized = (value: Parameters<typeof localize>[0], language: Language): string =>
+  localize(value, language) || localize(value, "en");
+
+const render = (data: WebsiteRuntimeData, language: Language = "en"): void => {
+  applyWebsiteTheme(data.content);
+  document.documentElement.lang = language;
+  const profile = data.professional.profile;
+  const tools = data.tools
+    .filter((item) => item.status === "published" && item.websiteVisible !== false)
+    .sort((left, right) => left.displayOrder - right.displayOrder);
+  const cards = tools.length
+    ? `<div class="listing-grid">${tools.map((tool) => renderToolCard(tool, language)).join("")}</div>`
+    : `<p class="status-message">${emptyCopy[language]}</p>`;
+  const page = data.content.toolsPage;
+  document.title = `${localized(page.title, language)} | ${profile.name}`;
+  app.innerHTML = `${siteHeader(profile, data.content, "tools", language)}<main id="main-content"><section class="page-hero"><div class="container"><p class="section-kicker">${localized(page.kicker, language)}</p><h1>${localized(page.title, language)}</h1><p>${localized(page.description, language)}</p></div></section><section class="section"><div class="container">${cards}</div></section></main>${siteFooter(profile, data.content, language)}`;
 };
 
-void render().catch(() => {
-  app.innerHTML = '<main class="website-load-state"><h1>Tools unavailable</h1><p>Please try again later.</p></main>';
+const initialize = async (): Promise<void> => {
+  const params = new URLSearchParams(window.location.search);
+  const wantsPreview = params.get("preview") === "1";
+  const previewReceiver = wantsPreview ? createPreviewReceiver<WebsitePreviewData>("website") : null;
+  const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
+  if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
+  const data = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
+  render(data);
+  if (adminPreview) {
+    previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));
+  } else {
+    previewReceiver?.disconnect();
+  }
+};
+
+void initialize().catch(() => {
+  app.innerHTML = '<main class="website-load-state"><h1>Automation unavailable</h1><p>Please try again later.</p></main>';
 });

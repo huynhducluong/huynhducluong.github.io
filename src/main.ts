@@ -352,7 +352,7 @@ const renderPage = (language: Language): void => {
         </div>
       </section>
 
-      <section class="section contact"${content.sections.contact ? "" : " hidden"}>
+      <section id="contact" class="section contact"${content.sections.contact ? "" : " hidden"}>
         <div class="container contact__inner">
           <div>
             <p class="section-kicker">${text.contactKicker}</p>

@@ -2,6 +2,26 @@ import { assetUrl, escapeHtml, localize, type Language } from "../shared/format"
 import type { PortfolioMedia, PortfolioProject, PortfolioTool } from "../types/portfolio";
 import { projectUrl, toolUrl } from "./shell";
 
+const copy = {
+  en: {
+    imagePlaceholder: "Project image placeholder",
+    imagePending: "Image will be added",
+    viewProject: "View case study",
+    automation: "BIM automation",
+    viewTool: "View tool",
+  },
+  vi: {
+    imagePlaceholder: "Vị trí hình ảnh dự án",
+    imagePending: "Hình ảnh sẽ được bổ sung",
+    viewProject: "Xem dự án",
+    automation: "Tự động hóa BIM",
+    viewTool: "Xem công cụ",
+  },
+} as const;
+
+const localized = (value: Parameters<typeof localize>[0], language: Language): string =>
+  localize(value, language) || localize(value, "en");
+
 export const renderTags = (items: string[]): string =>
   items.map((item) => `<li class="tag">${escapeHtml(item)}</li>`).join("");
 
@@ -19,9 +39,9 @@ export const renderMedia = (
 ): string => {
   const source = mediaSource(media);
   if (!source || !media) {
-    return `<div class="media-placeholder ${className}" aria-label="Project image placeholder"><span>Image will be added</span></div>`;
+    return `<div class="media-placeholder ${className}" aria-label="${copy[language].imagePlaceholder}"><span>${copy[language].imagePending}</span></div>`;
   }
-  return `<img class="${className}" src="${escapeHtml(source)}" alt="${localize(media.alt, language)}" loading="lazy">`;
+  return `<img class="${className}" src="${escapeHtml(source)}" alt="${localized(media.alt, language)}" loading="lazy">`;
 };
 
 export const renderProjectCard = (
@@ -33,21 +53,21 @@ export const renderProjectCard = (
       ${renderMedia(project.images[0], language, "listing-card__image")}
     </a>
     <div class="listing-card__body">
-      <p class="listing-card__eyebrow">${localize(project.location, language)}</p>
-      <h2><a href="${projectUrl(project.slug)}">${localize(project.name, language)}</a></h2>
-      ${project.summary ? `<p>${localize(project.summary, language)}</p>` : ""}
+      ${localized(project.location, language) ? `<p class="listing-card__eyebrow">${localized(project.location, language)}</p>` : ""}
+      <h2><a href="${projectUrl(project.slug)}">${localized(project.name, language)}</a></h2>
+      ${project.summary ? `<p>${localized(project.summary, language)}</p>` : ""}
       <ul class="tag-list">${renderTags(project.technologies)}</ul>
-      <a class="text-link" href="${projectUrl(project.slug)}">View case study →</a>
+      <a class="text-link" href="${projectUrl(project.slug)}">${copy[language].viewProject} →</a>
     </div>
   </article>`;
 
 export const renderToolCard = (tool: PortfolioTool, language: Language): string => `
   <article class="listing-card listing-card--tool">
     <div class="listing-card__body">
-      <p class="listing-card__eyebrow">BIM automation</p>
+      <p class="listing-card__eyebrow">${copy[language].automation}</p>
       <h2><a href="${toolUrl(tool.slug)}">${escapeHtml(tool.name)}</a></h2>
-      <p>${localize(tool.solution, language)}</p>
+      <p>${localized(tool.solution, language)}</p>
       <ul class="tag-list">${renderTags(tool.technologies)}</ul>
-      <a class="text-link" href="${toolUrl(tool.slug)}">View tool →</a>
+      <a class="text-link" href="${toolUrl(tool.slug)}">${copy[language].viewTool} →</a>
     </div>
   </article>`;

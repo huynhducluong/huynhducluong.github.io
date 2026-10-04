@@ -96,25 +96,38 @@
 
 .admin-location-combobox > [data-location-input] {
   width: 100%;
-  padding-right: 2.6rem !important;
+  padding-right: 3rem !important;
 }
 
 .admin-location-combobox__toggle {
   position: absolute;
-  top: 50%;
-  right: .3rem;
+  top: 1px;
+  right: 1px;
   display: grid;
-  width: 2rem;
-  height: 2rem;
+  width: 2.5rem;
+  height: calc(100% - 2px);
   padding: 0;
-  transform: translateY(-50%);
   place-items: center;
   border: 0;
-  border-radius: .35rem;
-  background: transparent;
+  border-radius: 0 calc(var(--admin-control-radius) - 1px) calc(var(--admin-control-radius) - 1px) 0;
+  background: linear-gradient(90deg, transparent, var(--admin-color-surface) 32%);
   color: var(--admin-color-text-muted);
   cursor: pointer;
-  font-size: 1rem;
+}
+
+.admin-location-combobox__toggle svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.75;
+  transition: transform 140ms ease;
+}
+
+.admin-location-combobox.is-open .admin-location-combobox__toggle svg {
+  transform: rotate(180deg);
 }
 
 .admin-location-combobox__toggle:hover {
@@ -162,6 +175,7 @@
   color: var(--admin-color-text);
   cursor: pointer;
   font: inherit;
+  overflow-wrap: anywhere;
   text-align: left;
 }
 
@@ -913,6 +927,7 @@ button.admin-profile-photo-control {
 
 .admin-release-history__list li {
   display: flex;
+  min-width: 0;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
@@ -922,9 +937,16 @@ button.admin-profile-photo-control {
   background: #f8fafb;
 }
 
+.admin-release-history__list li > div {
+  min-width: 0;
+}
+
 .admin-release-history__list strong,
 .admin-release-history__list span {
   display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-release-history__list span {
@@ -935,8 +957,12 @@ button.admin-profile-photo-control {
 
 .admin-release-history__list code {
   flex: none;
+  max-width: 45%;
+  overflow: hidden;
   color: var(--color-primary-dark);
   font-size: var(--admin-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .admin-site-frame {
