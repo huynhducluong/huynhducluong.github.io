@@ -61,12 +61,13 @@ export const ensureProfileDocumentLibrary = async <TPayload extends ProfileDocum
     documents = await listProfileDocuments<TPayload>(kind);
   }
 
-  const uninitialized = documents.find((item) => !item.draftPayload);
-  if (uninitialized) {
+  const hasUninitializedDocuments = documents.some((item) => !item.draftPayload);
+  if (hasUninitializedDocuments) {
     const { error } = await supabase
       .from("profile_documents")
       .update({ draft_payload: legacyPayload })
-      .eq("id", uninitialized.id);
+      .eq("kind", kind)
+      .is("draft_payload", null);
     if (error) throw error;
     documents = await listProfileDocuments<TPayload>(kind);
   }

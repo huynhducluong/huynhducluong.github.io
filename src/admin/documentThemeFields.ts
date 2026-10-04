@@ -29,10 +29,10 @@ export const renderDocumentThemeFields = ({
 
   return `
     <div class="admin-document-theme">
-      <label>Theme preset<select name="${escapeHtml(names.preset)}"${disabledAttribute}>
+      <label>Theme preset<span class="admin-select-control"><select name="${escapeHtml(names.preset)}"${disabledAttribute}>
         ${options}
         <option value="custom"${theme.presetId === "custom" ? " selected" : ""}>Custom</option>
-      </select></label>
+      </select><span class="admin-select-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></span></label>
       <label>Primary color<input name="${escapeHtml(names.primary)}" type="color" value="${escapeHtml(theme.primary ?? resolved.tokens.primary)}"${disabledAttribute}></label>
       <label>Accent color<input name="${escapeHtml(names.accent)}" type="color" value="${escapeHtml(theme.accent ?? resolved.tokens.accent)}"${disabledAttribute}></label>
     </div>

@@ -263,14 +263,12 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-cover-letter-form .evidence-option strong,
-.admin-cl-sender strong,
 .admin-cl-evidence-heading h4 {
   font-size: var(--admin-text-sm);
   font-weight: var(--admin-weight-semibold);
 }
 
 .admin-cover-letter-form .evidence-option small,
-.admin-cl-sender p,
 .admin-cl-evidence-heading small {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-regular);

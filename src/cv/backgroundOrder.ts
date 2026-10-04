@@ -1,6 +1,10 @@
 import type { CvBackgroundGroup, CvBackgroundOrder, CvContent } from "../types/cvContent";
 
-const reconcileIds = <T extends { id: string }>(savedIds: readonly string[] | undefined, items: readonly T[]): string[] => {
+const reconcileIds = <T extends { id: string }>(
+  savedIds: readonly string[] | undefined,
+  items: readonly T[],
+  addNew: "start" | "end" = "end",
+): string[] => {
   const available = new Set(items.map((item) => item.id));
   const seen = new Set<string>();
   const retained: string[] = [];
@@ -9,14 +13,15 @@ const reconcileIds = <T extends { id: string }>(savedIds: readonly string[] | un
     seen.add(id);
     retained.push(id);
   });
-  return [...retained, ...items.map((item) => item.id).filter((id) => !seen.has(id))];
+  const added = items.map((item) => item.id).filter((id) => !seen.has(id));
+  return addNew === "start" ? [...added, ...retained] : [...retained, ...added];
 };
 
 export const resolveCvBackgroundOrder = (content: CvContent): CvBackgroundOrder => ({
-  experienceIds: reconcileIds(content.backgroundOrder?.experienceIds, content.experiences),
-  educationIds: reconcileIds(content.backgroundOrder?.educationIds, content.education),
+  experienceIds: reconcileIds(content.backgroundOrder?.experienceIds, content.experiences, "start"),
+  educationIds: reconcileIds(content.backgroundOrder?.educationIds, content.education, "start"),
   skillGroupIds: reconcileIds(content.backgroundOrder?.skillGroupIds, content.skillGroups),
-  languageIds: reconcileIds(content.backgroundOrder?.languageIds, content.languages),
+  languageIds: reconcileIds(content.backgroundOrder?.languageIds, content.languages, "start"),
 });
 
 const orderItems = <T extends { id: string }>(items: readonly T[], ids: readonly string[]): T[] => {

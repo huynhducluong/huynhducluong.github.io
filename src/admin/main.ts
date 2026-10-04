@@ -137,6 +137,7 @@ let adminFormDirty = false;
 let pendingMedia: PendingMedia[] = [];
 let magicLinkCooldown: number | undefined;
 let reorderBusy = false;
+let navigationSequence = 0;
 
 window.addEventListener("beforeunload", (event) => {
   if (adminFormDirty) event.preventDefault();
@@ -501,7 +502,7 @@ const mediaPanel = (type: AdminItemType, media: AdminMediaRow[]): string => {
     ? "Choose the cover image, alt text and gallery order."
     : "Choose the primary tool visual, edit alt text and order supporting screenshots.";
   return `<div class="admin-media-panel" data-editor-panel="media" data-media-owner="${type}" ${panelState("media")}>
-    <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload selected images</button></form>
+    <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload</button></form>
     <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(media)}</section>
   </div>`;
 };
@@ -511,11 +512,16 @@ const editorTab = (tab: EditorTab, label: string): string =>
 
 const panelState = (tab: EditorTab): string => activeEditorTab === tab ? "" : "hidden";
 
+const editorMoreMenu = (type: AdminItemType, status: PublicationStatus): string => `<details class="admin-document-more admin-editor-more"><summary>More</summary><div>
+  <button type="button" data-selected-status data-item-type="${type}" data-next="${status === "published" ? "draft" : "published"}">${status === "published" ? "Return to draft" : "Mark ready"}</button>
+  <button class="admin-danger" type="button" data-delete-selected>Move to Trash</button>
+</div></details>`;
+
 const editor = (project: AdminProjectRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
-      <div><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2>${escapeHtml(project.name.en || "Untitled project")}</h2><div class="admin-editor__meta"><span class="status status--${project.status}">${contentStatusLabel(project.status)}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="project" data-next="${project.status === "published" ? "draft" : "published"}">${project.status === "published" ? "Return to draft" : "Mark ready"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move project to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
+      <div class="admin-editor__identity"><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2 title="${escapeHtml(project.name.en || "Untitled project")}">${escapeHtml(project.name.en || "Untitled project")}</h2><div class="admin-editor__meta"><span class="status status--${project.status}">${contentStatusLabel(project.status)}</span><small data-unsaved-state>Saved</small></div></div>
+      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) ? editorMoreMenu("project", project.status) : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
     </div>
     <nav class="admin-editor-tabs" role="tablist" aria-label="Project editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${project.project_images.length})`)}</nav>
     <form id="project-editor" class="admin-editor" data-project-form>
@@ -550,8 +556,8 @@ const editor = (project: AdminProjectRow): string => `
 const toolEditor = (tool: AdminToolRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
-      <div><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2>${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${contentStatusLabel(tool.status)}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) ? `<button type="button" class="button button--secondary admin-action-publish" data-selected-status data-item-type="tool" data-next="${tool.status === "published" ? "draft" : "published"}">${tool.status === "published" ? "Return to draft" : "Mark ready"}</button><button type="button" class="admin-icon-button admin-danger" data-delete-selected aria-label="Move tool to Trash">•••</button>` : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
+      <div class="admin-editor__identity"><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2 title="${escapeHtml(tool.name || "Untitled tool")}">${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${contentStatusLabel(tool.status)}</span><small data-unsaved-state>Saved</small></div></div>
+      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) ? editorMoreMenu("tool", tool.status) : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
     </div>
     <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${tool.tool_images.length})`)}</nav>
     <form id="tool-editor" class="admin-editor" data-tool-form>
@@ -875,7 +881,7 @@ const renderUploadQueue = (): void => {
   const count = app.querySelector<HTMLElement>("[data-upload-count]");
   if (!root || !submit) return;
   submit.disabled = !pendingMedia.length;
-  submit.textContent = pendingMedia.length ? `Upload ${pendingMedia.length} ${pendingMedia.length === 1 ? "image" : "images"}` : "Upload selected images";
+  submit.textContent = "Upload";
   if (count) count.textContent = `${pendingMedia.length} selected`;
   root.innerHTML = pendingMedia.length ? `<div class="admin-media-list">${pendingMedia.map((item, index) => `
     <article class="admin-media-row admin-media-row--pending" data-pending-id="${item.id}">
@@ -1039,7 +1045,7 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
   if (submitButton) submitButton.disabled = true;
   try {
     for (const [index, item] of pendingMedia.entries()) {
-      if (submitButton) submitButton.textContent = `Uploading ${index + 1} of ${pendingMedia.length}...`;
+      if (submitButton) submitButton.textContent = "Uploading…";
         message(`Uploading image ${index + 1} of ${pendingMedia.length}...`);
       try {
         const extension = item.file.name.split(".").pop()?.toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
@@ -1238,21 +1244,23 @@ const bindDashboard = (): void => {
       url.searchParams.delete("id");
     }
     window.history.replaceState({}, "", url);
+
+    const navigationId = ++navigationSequence;
+    const workspaceReady = nextView === "cover-letters"
+      ? ensureCoverLetterWorkspace()
+      : nextView === "cv" || nextView === "portfolio"
+        ? ensureProfileDocumentWorkspace(nextView)
+        : nextView === "homepage" || nextView === "profile"
+          ? ensureSiteWorkspace()
+          : null;
+
+    // Start loading before the first render so an unopened workspace can
+    // never be mistaken for a genuinely empty document library.
     dashboardView();
-    if (nextView === "cover-letters") {
-      void ensureCoverLetterWorkspace().then(() => {
-        if (activeView === "cover-letters") dashboardView();
-      });
-    }
-    if (nextView === "cv" || nextView === "portfolio") {
-      void ensureProfileDocumentWorkspace(nextView).then(() => {
-        if (activeView === nextView) dashboardView();
-      });
-    }
-    if (nextView === "homepage" || nextView === "profile") {
-      void ensureSiteWorkspace().then(() => {
-        if (activeView === nextView) dashboardView();
-      });
+    if (workspaceReady) {
+      await workspaceReady;
+      const loadingViewIsVisible = app.querySelector(".admin-workspace-loading, .admin-document-loading, .admin-cl-loading");
+      if (navigationId === navigationSequence && activeView === nextView && loadingViewIsVisible) dashboardView();
     }
   }));
   app.querySelectorAll<HTMLButtonElement>("[data-editor-tab]").forEach((button) => button.addEventListener("click", () => {

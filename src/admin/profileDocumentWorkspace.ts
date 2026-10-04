@@ -31,7 +31,13 @@ import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { confirmAdmin } from "./confirmDialog";
 import {
-  renderAdminPreviewControlGroup,
+  bindPreviewZoom,
+  createPreviewZoomState,
+  renderPreviewZoomControls,
+  type PreviewZoomController,
+  type PreviewZoomState,
+} from "./previewZoom";
+import {
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
   setButtonBusy,
@@ -40,6 +46,7 @@ import {
 export type { ProfileDocumentKind } from "../types/profileDocument";
 type DocumentTab = "content" | "background" | "selection" | "appearance";
 type DocumentFilter = ProfileDocumentStatus | "all";
+type WorkspaceLoadPhase = "idle" | "loading" | "ready" | "error";
 
 interface WorkspaceCallbacks {
   rerender: () => void;
@@ -53,11 +60,11 @@ const state: {
   documents: Record<ProfileDocumentKind, ProfileDocumentRecord[]>;
   selectedId: Record<ProfileDocumentKind, string | null>;
   releases: Record<ProfileDocumentKind, ProfileDocumentReleaseSummary[]>;
-  loading: Set<ProfileDocumentKind>;
-  loaded: Set<ProfileDocumentKind>;
+  loading: Partial<Record<ProfileDocumentKind, Promise<void>>>;
+  phase: Record<ProfileDocumentKind, WorkspaceLoadPhase>;
   errors: Partial<Record<ProfileDocumentKind, string>>;
   tab: Record<ProfileDocumentKind, DocumentTab>;
-  zoom: Record<ProfileDocumentKind, "fit" | "75" | "100">;
+  zoom: Record<ProfileDocumentKind, PreviewZoomState>;
   filter: Record<ProfileDocumentKind, DocumentFilter>;
   search: Record<ProfileDocumentKind, string>;
   dirty: Record<ProfileDocumentKind, boolean>;
@@ -67,11 +74,11 @@ const state: {
   documents: { cv: [], portfolio: [] },
   selectedId: { cv: null, portfolio: null },
   releases: { cv: [], portfolio: [] },
-  loading: new Set(),
-  loaded: new Set(),
+  loading: {},
+  phase: { cv: "idle", portfolio: "idle" },
   errors: {},
   tab: { cv: "content", portfolio: "content" },
-  zoom: { cv: "fit", portfolio: "fit" },
+  zoom: { cv: createPreviewZoomState(), portfolio: createPreviewZoomState() },
   filter: { cv: "all", portfolio: "all" },
   search: { cv: "", portfolio: "" },
   dirty: { cv: false, portfolio: false },
@@ -80,6 +87,7 @@ const state: {
 let previewTimer: number | undefined;
 let previewController: EmbeddedPreviewController | undefined;
 let previewSender: PreviewSender | undefined;
+let previewZoomController: PreviewZoomController | undefined;
 
 const text = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const field = (label: string, name: string, value: string, type = "text"): string =>
@@ -122,6 +130,7 @@ const setDocumentUrl = (kind: ProfileDocumentKind, id: string | null): void => {
 const selectDocument = async (kind: ProfileDocumentKind, document: ProfileDocumentRecord | null): Promise<void> => {
   state.selectedId[kind] = document?.id ?? null;
   state.dirty[kind] = false;
+  state.zoom[kind] = createPreviewZoomState();
   if (kind === "cv") state.cv = document?.draftPayload ? structuredClone(document.draftPayload as CvRuntimeData) : null;
   else state.portfolio = document?.draftPayload ? structuredClone(document.draftPayload as PortfolioRuntimeData) : null;
   state.releases[kind] = document ? await listProfileDocumentReleases(document.id) : [];
@@ -131,11 +140,12 @@ const selectDocument = async (kind: ProfileDocumentKind, document: ProfileDocume
 const preferredDocument = (kind: ProfileDocumentKind, documents: ProfileDocumentRecord[]): ProfileDocumentRecord | null => {
   const urlId = new URL(window.location.href).searchParams.get("document");
   const storedId = window.localStorage.getItem(selectionStorageKey(kind));
-  return documents.find((item) => item.id === urlId)
-    ?? documents.find((item) => item.id === storedId && item.status !== "archived")
-    ?? documents.find((item) => item.isActive)
-    ?? documents.find((item) => item.status !== "archived")
-    ?? documents[0]
+  const initialized = documents.filter((item) => Boolean(item.draftPayload));
+  return initialized.find((item) => item.id === urlId)
+    ?? initialized.find((item) => item.id === storedId && item.status !== "archived")
+    ?? initialized.find((item) => item.isActive)
+    ?? initialized.find((item) => item.status !== "archived")
+    ?? initialized[0]
     ?? null;
 };
 
@@ -235,39 +245,52 @@ const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
   }));
 };
 
-export const ensureProfileDocumentWorkspace = async (kind: ProfileDocumentKind): Promise<void> => {
-  if (state.loading.has(kind) || state.loaded.has(kind)) return;
-  state.loading.add(kind);
+export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promise<void> => {
+  if (state.phase[kind] === "ready") return Promise.resolve();
+  const pending = state.loading[kind];
+  if (pending) return pending;
+
+  state.phase[kind] = "loading";
   delete state.errors[kind];
-  try {
-    if (kind === "cv") {
-      const [shared, professional] = await Promise.all([
-        loadCvData({ adminPreview: true, preferRelease: false }),
-        loadProfessionalProfile(),
-      ]);
-      const documents = await ensureProfileDocumentLibrary<CvRuntimeData>(kind, shared);
-      state.documents.cv = documents.map((document) => ({
-        ...document,
-        draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared, professional.profile) : null,
-      }));
-    } else {
-      const [shared, professional] = await Promise.all([
-        loadPortfolioDraftData(),
-        loadProfessionalProfile(),
-      ]);
-      const documents = await ensureProfileDocumentLibrary<PortfolioRuntimeData>(kind, shared);
-      state.documents.portfolio = documents.map((document) => ({
-        ...document,
-        draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared, professional.profile) : null,
-      }));
+
+  let request!: Promise<void>;
+  request = (async () => {
+    try {
+      if (kind === "cv") {
+        const [shared, professional] = await Promise.all([
+          loadCvData({ adminPreview: true, preferRelease: false }),
+          loadProfessionalProfile(),
+        ]);
+        const documents = await ensureProfileDocumentLibrary<CvRuntimeData>(kind, shared);
+        state.documents.cv = documents.map((document) => ({
+          ...document,
+          draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared, professional.profile) : null,
+        }));
+      } else {
+        const [shared, professional] = await Promise.all([
+          loadPortfolioDraftData(),
+          loadProfessionalProfile(),
+        ]);
+        const documents = await ensureProfileDocumentLibrary<PortfolioRuntimeData>(kind, shared);
+        state.documents.portfolio = documents.map((document) => ({
+          ...document,
+          draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared, professional.profile) : null,
+        }));
+      }
+      const preferred = preferredDocument(kind, state.documents[kind]);
+      if (!preferred) throw new Error(`No initialized ${kind === "cv" ? "CV" : "Portfolio"} document is available.`);
+      await selectDocument(kind, preferred);
+      state.phase[kind] = "ready";
+    } catch (error) {
+      state.errors[kind] = error instanceof Error ? error.message : "Document workspace could not be loaded.";
+      state.phase[kind] = "error";
+    } finally {
+      if (state.loading[kind] === request) delete state.loading[kind];
     }
-    await selectDocument(kind, preferredDocument(kind, state.documents[kind]));
-    state.loaded.add(kind);
-  } catch (error) {
-    state.errors[kind] = error instanceof Error ? error.message : "Document workspace could not be loaded.";
-  } finally {
-    state.loading.delete(kind);
-  }
+  })();
+
+  state.loading[kind] = request;
+  return request;
 };
 
 const latestReleaseMeta = (kind: ProfileDocumentKind): string => {
@@ -367,8 +390,7 @@ const cvBackgroundPanel = (content: CvContent): string => {
     title: "CV background",
     note: "Content comes from Professional Profile. Drag within each group to control its order in this CV.",
     className: "admin-cv-background",
-    content: `<div class="admin-cv-background__source-note"><span class="admin-cv-background__source">Profile source</span><p>Changes here affect CV composition only. Edit content in Professional Profile.</p></div>
-      <div class="admin-cv-background__groups">
+    content: `<div class="admin-cv-background__groups">
         <section><header><div><h4>Experience</h4><p>Employment history shown in the CV sidebar.</p></div><span>${background.experiences.length}</span></header><div class="admin-cv-background__list" data-background-list="experiences">${experienceRows || '<p class="admin-empty">No experience entries in Professional Profile.</p>'}</div></section>
         <section><header><div><h4>Education</h4><p>Qualifications shown before skills.</p></div><span>${background.education.length}</span></header><div class="admin-cv-background__list" data-background-list="education">${educationRows || '<p class="admin-empty">No education entries in Professional Profile.</p>'}</div></section>
         <section><header><div><h4>Skills</h4><p>Skill groups and languages shown in the CV sidebar.</p></div><span>${background.skillGroups.length + background.languages.length}</span></header>
@@ -622,10 +644,6 @@ const formattedDate = (value: string): string => new Date(value).toLocaleDateStr
   year: "numeric",
 });
 
-const filterCount = (kind: ProfileDocumentKind, filter: DocumentFilter): number => filter === "all"
-  ? state.documents[kind].length
-  : state.documents[kind].filter((item) => item.status === filter).length;
-
 const visibleDocuments = (kind: ProfileDocumentKind): ProfileDocumentRecord[] => {
   const query = state.search[kind].trim().toLowerCase();
   return state.documents[kind].filter((item) => {
@@ -640,9 +658,9 @@ const documentListView = (kind: ProfileDocumentKind): string => {
   return !documents.length
     ? `<li class="admin-empty">No ${documentPlural(kind).toLowerCase()} match this view.</li>`
     : documents.map((item) => `
-      <li class="admin-content-item ${selected?.id === item.id ? "is-selected" : ""}">
+      <li class="admin-content-item admin-content-item--document ${selected?.id === item.id ? "is-selected" : ""}">
         <button class="admin-content-item__select" type="button" data-profile-document-select="${escapeHtml(item.id)}" aria-pressed="${selected?.id === item.id}">
-          <strong>${escapeHtml(item.internalTitle)}</strong>
+          <strong title="${escapeHtml(item.internalTitle)}">${escapeHtml(item.internalTitle)}</strong>
           <small>Version ${escapeHtml(item.draftPayload?.content.version || "not set")}</small>
           <small>Updated ${formattedDate(item.updatedAt)}</small>
         </button>
@@ -657,24 +675,34 @@ const documentCollectionView = (kind: ProfileDocumentKind): string => {
       <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>${state.documents[kind].length}</span></h2></div><div class="admin-collection__heading-actions"><button class="button admin-action-new" type="button" data-profile-document-new>+ New</button>${isDrawer ? '<button class="admin-drawer-close" type="button" data-profile-document-library-close aria-label="Close document library">×</button>' : ""}</div></div>
       <div class="admin-list-controls">
         <label class="admin-search"><span class="sr-only">Search ${documentPlural(kind)}</span><input type="search" placeholder="Search title or version..." value="${escapeHtml(state.search[kind])}" data-profile-document-search></label>
-        <div class="admin-filter-row" aria-label="${documentLabel(kind)} status">${(["all", "draft", "published", "archived"] as DocumentFilter[]).map((filter) => `<button type="button" data-profile-document-filter="${filter}" class="${state.filter[kind] === filter ? "is-active" : ""}"><span>${filter}</span><strong>${filterCount(kind, filter)}</strong></button>`).join("")}</div>
+        <div class="admin-filter-row" aria-label="${documentLabel(kind)} status">${(["all", "draft", "published", "archived"] as DocumentFilter[]).map((filter) => `<button type="button" data-profile-document-filter="${filter}" class="${state.filter[kind] === filter ? "is-active" : ""}">${filter}</button>`).join("")}</div>
       </div>
       <div class="admin-collection__scroll"><ul class="admin-content-list" data-profile-document-list>${documentListView(kind)}</ul></div>
     </aside>`;
 };
 
-const emptyDocumentWorkspace = (kind: ProfileDocumentKind): string => `
-  <section class="admin-document-library__empty">
-    <div><p class="section-kicker">Profile & documents</p><h1>Select a ${documentLabel(kind)}</h1><p>Choose a document from the list to edit it, or create a focused variant for a role, client or audience.</p></div>
-    <button class="button" type="button" data-profile-document-new>Create ${documentLabel(kind)}</button>
+const documentWorkspaceError = (kind: ProfileDocumentKind, message: string): string => `
+  <section class="admin-placeholder admin-placeholder--centered">
+    <div><p class="section-kicker">Document workspace</p><h2>Could not open ${kind === "cv" ? "Curriculum Vitae" : "Portfolio"}</h2><p>${escapeHtml(message)}</p></div>
+    <button class="button" type="button" data-profile-document-retry>Try again</button>
+  </section>`;
+
+const loadingDocumentWorkspace = (kind: ProfileDocumentKind): string => `
+  <section class="admin-document-library admin-workspace-loading" aria-busy="true" aria-label="Loading ${documentPlural(kind)}">
+    <aside class="admin-document-library__collection" aria-hidden="true">
+      <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>—</span></h2></div></div>
+      <div class="admin-workspace-loading__controls"><span></span><span></span></div>
+      <div class="admin-workspace-loading__list"><span></span><span></span><span></span></div>
+    </aside>
+    <div class="admin-document-library__workspace"><section class="admin-document-loading"><span></span><h2>Loading document workspace…</h2></section></div>
   </section>`;
 
 export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string => {
-  if (state.loading.has(kind)) return '<section class="admin-document-loading"><span></span><h2>Loading document workspace…</h2></section>';
-  if (state.errors[kind]) return `<section class="admin-placeholder"><p class="section-kicker">Document workspace</p><h2>Could not load ${kind === "cv" ? "Curriculum Vitae" : "Portfolio"}</h2><p>${escapeHtml(state.errors[kind] ?? "")}</p><p>Apply the latest Supabase migration, then reload Admin.</p></section>`;
+  if (state.phase[kind] === "idle" || state.phase[kind] === "loading") return loadingDocumentWorkspace(kind);
+  if (state.errors[kind]) return documentWorkspaceError(kind, state.errors[kind] ?? "Document workspace could not be loaded.");
   const runtime = kind === "cv" ? state.cv : state.portfolio;
   const selected = selectedDocument(kind);
-  if (!runtime || !selected) return `<section class="admin-document-library">${documentCollectionView(kind)}<div class="admin-document-library__workspace">${emptyDocumentWorkspace(kind)}</div></section>`;
+  if (!runtime || !selected) return documentWorkspaceError(kind, `No initialized ${documentLabel(kind)} document is available.`);
   const content = runtime.content;
   const availableTabs = tabs(kind);
   const activeTab = availableTabs.some(([id]) => id === state.tab[kind]) ? state.tab[kind] : availableTabs[0][0];
@@ -697,16 +725,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
     : 4
       + (runtime as PortfolioRuntimeData).projects.filter((item) => item.includeInPortfolio).length
       + ((runtime as PortfolioRuntimeData).tools.some((item) => item.includeInPortfolio) ? 1 : 0);
-  const zoomControls = renderAdminPreviewControlGroup({
-    label: "Preview zoom",
-    dataAttribute: "data-document-zoom",
-    activeValue: state.zoom[kind],
-    options: [
-      { label: "Fit", value: "fit" },
-      { label: "75%", value: "75" },
-      { label: "100%", value: "100" },
-    ],
-  });
+  const zoomControls = renderPreviewZoomControls(state.zoom[kind]);
   const previewToolbar = renderAdminPreviewToolbar({
     title: `${documentLabel(kind)} preview`,
     meta: `${kind === "cv" ? "A4" : "A4 landscape"} · <span data-preview-page-count>${initialPageCount} pages</span> · <button type="button" class="admin-preview-status" data-document-validation-open data-kind="${issues.length ? "warning" : "success"}" aria-haspopup="dialog" aria-controls="${kind}-validation-dialog">${issues.length ? `${issues.length} issue${issues.length === 1 ? "" : "s"}` : "Ready"}</button>`,
@@ -743,7 +762,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
         </section>
         <aside class="admin-document-preview">
           ${previewToolbar}
-          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind]}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="no" tabindex="-1"></iframe></div></div>
+          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind].mode}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="no" tabindex="-1"></iframe></div></div>
         </aside>
       </div>
       <dialog id="${kind}-release-history-dialog" class="admin-dialog admin-release-history" data-document-history-dialog aria-labelledby="${kind}-release-history-title"><form method="dialog"><div><p class="section-kicker">${documentLabel(kind)}</p><h2 id="${kind}-release-history-title">Release history</h2><p>Published releases remain read-only snapshots.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-document-history-close>Close</button></div></form></dialog>
@@ -768,6 +787,9 @@ export const discardProfileDocumentChanges = (): void => {
   previewSender = undefined;
   previewController?.disconnect();
   previewController = undefined;
+  previewZoomController?.disconnect();
+  previewZoomController = undefined;
+  state.zoom = { cv: createPreviewZoomState(), portfolio: createPreviewZoomState() };
   const cvDocument = selectedDocument("cv");
   const portfolioDocument = selectedDocument("portfolio");
   state.cv = cvDocument?.draftPayload ? structuredClone(cvDocument.draftPayload as CvRuntimeData) : null;
@@ -781,19 +803,31 @@ export const invalidateProfileDocumentWorkspace = (): void => {
   previewSender = undefined;
   previewController?.disconnect();
   previewController = undefined;
+  previewZoomController?.disconnect();
+  previewZoomController = undefined;
   state.cv = null;
   state.portfolio = null;
   state.documents = { cv: [], portfolio: [] };
   state.selectedId = { cv: null, portfolio: null };
   state.releases = { cv: [], portfolio: [] };
-  state.loaded.clear();
+  state.loading = {};
+  state.phase = { cv: "idle", portfolio: "idle" };
+  state.errors = {};
 };
 
 export const markProfileDocumentWorkspaceStale = (): void => {
-  state.loaded.clear();
+  state.phase = { cv: "idle", portfolio: "idle" };
+  state.errors = {};
 };
 
 export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocumentKind, callbacks: WorkspaceCallbacks): void => {
+  root.querySelector<HTMLButtonElement>("[data-profile-document-retry]")?.addEventListener("click", () => {
+    state.phase[kind] = "idle";
+    delete state.errors[kind];
+    const workspaceReady = ensureProfileDocumentWorkspace(kind);
+    callbacks.rerender();
+    void workspaceReady.then(callbacks.rerender);
+  });
   const libraryShell = root.querySelector<HTMLElement>(".admin-document-library.is-editing");
   const libraryDrawer = root.querySelector<HTMLElement>("[data-document-library-drawer]");
   const libraryWorkspace = libraryShell?.querySelector<HTMLElement>(".admin-document-library__workspace");
@@ -816,11 +850,22 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   const form = root.querySelector<HTMLFormElement>("[data-document-form]");
   const iframe = root.querySelector<HTMLIFrameElement>("[data-document-iframe]");
   const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
+  const previewFrame = root.querySelector<HTMLElement>(".admin-document-frame");
   previewSender?.disconnect();
   previewSender = undefined;
   previewController?.disconnect();
   previewController = iframe && previewStage
     ? bindEmbeddedPreview(iframe, previewStage, { measurementHeight: kind === "cv" ? 1123 : 794 })
+    : undefined;
+  previewZoomController?.disconnect();
+  previewZoomController = previewFrame && previewStage
+    ? bindPreviewZoom(root, {
+        frame: previewFrame,
+        stage: previewStage,
+        state: state.zoom[kind],
+        contentWidth: () => kind === "cv" ? 793.7 : 1122.5,
+        onScale: () => previewController?.refresh(),
+      })
     : undefined;
   previewSender = iframe && form
     ? bindPreviewSender(iframe, kind, () => previewPayload(kind, form), () => {
@@ -886,14 +931,6 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (button.isConnected) setButtonBusy(button, false); });
   }));
-  root.querySelector<HTMLButtonElement>("[data-profile-document-close]")?.addEventListener("click", async () => {
-    if (state.dirty[kind] && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: `Close this ${documentLabel(kind)}?`, message: "Your unsaved changes will be discarded and you will return to the document list.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
-    void selectDocument(kind, null).then(() => {
-      callbacks.setDirty(false);
-      callbacks.rerender();
-    });
-  });
-
   const activeDocument = selectedDocument(kind);
   const historyDialog = root.querySelector<HTMLDialogElement>("[data-document-history-dialog]");
   const validationDialog = root.querySelector<HTMLDialogElement>("[data-document-validation-dialog]");
@@ -1054,17 +1091,6 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       }
     });
   });
-  root.querySelectorAll<HTMLButtonElement>("[data-document-zoom]").forEach((button) => button.addEventListener("click", () => {
-    state.zoom[kind] = button.dataset.documentZoom as typeof state.zoom.cv;
-    const frameRoot = root.querySelector<HTMLElement>(".admin-document-frame");
-    if (frameRoot) frameRoot.dataset.zoom = state.zoom[kind];
-    previewController?.refresh();
-    root.querySelectorAll<HTMLButtonElement>("[data-document-zoom]").forEach((item) => {
-      const selected = item === button;
-      item.classList.toggle("is-active", selected);
-      item.setAttribute("aria-pressed", String(selected));
-    });
-  }));
   root.querySelector("[data-document-print]")?.addEventListener("click", () => iframe?.contentWindow?.print());
   root.querySelector("[data-sync-target-profile]")?.addEventListener("click", () => {
     void loadProfessionalProfile()
@@ -1116,7 +1142,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       .catch((error: Error) => callbacks.notify(error.message, "error"));
   }));
   root.querySelector("[data-sync-cv-profile]")?.addEventListener("click", async () => {
-    if (!state.loaded.has("cv")) await ensureProfileDocumentWorkspace("cv");
+    await ensureProfileDocumentWorkspace("cv");
     const source = state.documents.cv.find((item) => item.isActive)?.draftPayload
       ?? state.documents.cv.find((item) => item.status !== "archived")?.draftPayload;
     if (!state.portfolio || !source) return callbacks.notify("An active CV could not be loaded.", "error");

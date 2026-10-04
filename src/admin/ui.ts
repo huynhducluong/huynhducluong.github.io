@@ -6,6 +6,7 @@ interface AdminSectionCardOptions {
   title: string;
   note?: string;
   content: string;
+  headerActions?: string;
   actions?: string;
   className?: string;
 }
@@ -13,13 +14,6 @@ interface AdminSectionCardOptions {
 interface AdminPreviewControlOption {
   label: string;
   value: string;
-}
-
-interface AdminPreviewControlGroupOptions {
-  label: string;
-  dataAttribute: string;
-  activeValue: string;
-  options: AdminPreviewControlOption[];
 }
 
 interface AdminPreviewSelectOptions {
@@ -40,6 +34,7 @@ export const renderAdminSectionCard = ({
   title,
   note,
   content,
+  headerActions,
   actions,
   className = "",
 }: AdminSectionCardOptions): string => {
@@ -48,20 +43,12 @@ export const renderAdminSectionCard = ({
     <header class="admin-section-heading">
       <h3 class="admin-form-section__title">${escapeHtml(title)}</h3>
       ${note ? `<p class="admin-form-section__note" title="${escapeHtml(note)}">${escapeHtml(note)}</p>` : ""}
+      ${headerActions ? `<div class="admin-form-section__header-actions">${headerActions}</div>` : ""}
     </header>
     <div class="admin-form-section__body">${content}</div>
     ${actions ? `<footer class="admin-form-section__actions">${actions}</footer>` : ""}
   </section>`;
 };
-
-export const renderAdminPreviewControlGroup = ({
-  label,
-  dataAttribute,
-  activeValue,
-  options,
-}: AdminPreviewControlGroupOptions): string => `<div class="admin-preview-toolbar__group" role="group" aria-label="${escapeHtml(label)}">
-  ${options.map((option) => `<button type="button" ${escapeHtml(dataAttribute)}="${escapeHtml(option.value)}" class="${activeValue === option.value ? "is-active" : ""}" aria-pressed="${activeValue === option.value}">${escapeHtml(option.label)}</button>`).join("")}
-</div>`;
 
 export const renderAdminPreviewSelect = ({
   label,

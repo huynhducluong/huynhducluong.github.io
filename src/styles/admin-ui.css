@@ -148,6 +148,11 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   padding: 1rem 1.25rem;
 }
 
+.admin-editor__heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+}
+
 .admin-document-header h1,
 .admin-editor__heading h2 {
   margin: .15rem 0 .3rem;
@@ -157,6 +162,22 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-document-actions,
 .admin-editor__status {
   gap: .5rem;
+}
+
+.admin-editor__identity {
+  min-width: 0;
+  overflow: hidden;
+}
+
+.admin-editor__identity h2 {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-editor__status {
+  min-width: max-content;
+  justify-self: end;
 }
 
 .admin-document-actions > span {
@@ -322,6 +343,10 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   justify-content: center;
 }
 
+.admin-content-item--document {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
 .admin-editor__meta {
   display: flex;
   min-height: 1.4rem;
@@ -398,6 +423,23 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   gap: .15rem;
   padding: 0;
   border: 0;
+}
+
+.admin-form-section > .admin-section-heading:has(.admin-form-section__header-actions) {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1rem;
+}
+
+.admin-form-section > .admin-section-heading:has(.admin-form-section__header-actions) > :not(.admin-form-section__header-actions) {
+  grid-column: 1;
+}
+
+.admin-form-section__header-actions {
+  display: flex;
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-items: start;
+  justify-content: flex-end;
 }
 
 .admin-form-section > .admin-section-heading .admin-form-section__title {
@@ -486,6 +528,17 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   .admin-form-section {
     padding: .85rem;
   }
+
+  .admin-form-section > .admin-section-heading:has(.admin-form-section__header-actions) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .admin-form-section__header-actions {
+    grid-column: 1;
+    grid-row: auto;
+    justify-content: flex-start;
+    margin-top: .55rem;
+  }
 }
 
 .admin-document-tabs,
@@ -502,6 +555,36 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-layout > .admin-workspace { height: 100%; }
 
 .admin-workspace { overflow: auto; }
+
+.admin-workspace-loading__controls,
+.admin-workspace-loading__list {
+  display: grid;
+  gap: .7rem;
+  padding: 1rem;
+}
+
+.admin-workspace-loading__controls {
+  border-bottom: 1px solid var(--admin-color-border);
+}
+
+.admin-workspace-loading__controls span,
+.admin-workspace-loading__list span {
+  display: block;
+  border-radius: var(--admin-radius-sm);
+  background: linear-gradient(100deg, var(--admin-color-surface-muted) 25%, var(--admin-color-hover) 45%, var(--admin-color-surface-muted) 65%);
+  background-size: 220% 100%;
+  animation: admin-workspace-shimmer 1.2s ease-in-out infinite;
+}
+
+.admin-workspace-loading__controls span:first-child { height: var(--admin-control-height); }
+.admin-workspace-loading__controls span:last-child { width: 78%; height: var(--admin-control-height-sm); }
+.admin-workspace-loading__list span { height: 4.3rem; }
+.admin-workspace-loading__list span:nth-child(2) { width: 92%; }
+.admin-workspace-loading__list span:nth-child(3) { width: 84%; }
+
+@keyframes admin-workspace-shimmer {
+  to { background-position-x: -220%; }
+}
 
 .admin-workspace:has(> .admin-document-workspace),
 .admin-workspace:has(> .admin-site-workspace),
@@ -729,6 +812,25 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   box-shadow: 0 1px 4px rgb(16 45 59 / 12%);
 }
 
+.admin-preview-toolbar__group .admin-preview-toolbar__zoom-action {
+  width: 1.85rem;
+  padding-inline: 0;
+}
+
+.admin-preview-toolbar__zoom-action svg {
+  width: .9rem;
+  height: .9rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.8;
+}
+
+.admin-preview-toolbar__group button:disabled {
+  color: var(--admin-color-border-strong);
+  cursor: not-allowed;
+}
+
 @container (max-width: 34rem) {
   .admin-preview-toolbar {
     gap: .35rem;
@@ -878,8 +980,6 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   border-radius: 0;
 }
 
-.admin-cl-preview-stage { --preview-scale: .56; }
-
 .admin-document-check-dialog__content h3 {
   margin: .75rem 0 .35rem;
   color: var(--admin-color-text);
@@ -980,10 +1080,6 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   color: var(--color-primary-dark);
   font-size: var(--admin-title-sm);
   font-weight: var(--admin-weight-bold);
-}
-
-@media (max-width: 1480px) {
-  .admin-cl-preview-stage { --preview-scale: .48; }
 }
 
 @media (max-width: 1280px) {
@@ -1143,10 +1239,13 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
   .admin-document-header { grid-template-columns: minmax(0, 1fr); }
 
+  .admin-editor__heading { grid-template-columns: minmax(0, 1fr); }
+
   .admin-document-actions,
   .admin-editor__status {
     width: 100%;
     justify-content: flex-start;
+    justify-self: start;
     flex-wrap: wrap;
   }
 
@@ -1157,6 +1256,8 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .admin-document-loading span { animation: none; }
+  .admin-workspace-loading__controls span,
+  .admin-workspace-loading__list span { animation: none; }
   .admin-document-title-switcher,
   .admin-document-title-switcher__icon svg { transition: none; }
 }

@@ -22,6 +22,7 @@ export interface Experience {
   id: string;
   company: string;
   position: LocalizedText;
+  locationCode?: string;
   location: LocalizedText;
   startDate: string;
   endDate: string | null;
