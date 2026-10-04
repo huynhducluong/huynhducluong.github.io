@@ -36,7 +36,7 @@ export const renderPortfolio = (data: PortfolioRuntimeData): string => {
   const cover = numbered(`
     <div class="portfolio-cover__rail"></div>
     <div class="portfolio-cover__content">
-      <p class="portfolio-kicker">${escapeHtml(content.kicker)}</p>
+      <p class="portfolio-kicker">${localize(content.kicker, "en")}</p>
       <h1>${escapeHtml(content.title)}</h1>
       <div class="portfolio-cover__identity"><strong>${escapeHtml(profile.name)}</strong><span>${localize(profile.professionalTitle, "en")}</span></div>
       <p class="portfolio-cover__year">${escapeHtml(content.year)}</p>
@@ -55,8 +55,8 @@ export const renderPortfolio = (data: PortfolioRuntimeData): string => {
         <address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${localize(profile.location, "en")}</span></address>
       </aside>
       <div class="portfolio-about__main">
-        <p class="portfolio-kicker">${escapeHtml(content.aboutKicker)}</p>
-        <h2>${escapeHtml(content.aboutHeading)}</h2>
+        <p class="portfolio-kicker">${localize(content.aboutKicker, "en")}</p>
+        <h2>${localize(content.aboutHeading, "en")}</h2>
         <p class="portfolio-lead">${localize(profile.summary, "en")}</p>
         <div class="portfolio-skill-grid">${skillGroups.map((group) => `<section><h3>${localize(group.title, "en")}</h3><ul>${group.items.map((item) => `<li>${localize(item.label, "en")}</li>`).join("")}</ul></section>`).join("")}</div>
       </div>
@@ -89,9 +89,9 @@ export const renderPortfolio = (data: PortfolioRuntimeData): string => {
 
   const closing = numbered(`
     <div class="portfolio-closing">
-      <p class="portfolio-kicker">${escapeHtml(content.closingKicker)}</p>
-      <h2>${escapeHtml(content.closingHeading)}</h2>
-      <p>${escapeHtml(content.closingText)}</p>
+      <p class="portfolio-kicker">${localize(content.closingKicker, "en")}</p>
+      <h2>${localize(content.closingHeading, "en")}</h2>
+      <p>${localize(content.closingText, "en")}</p>
       <div><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span></div>
     </div>`, "portfolio-page--closing");
 

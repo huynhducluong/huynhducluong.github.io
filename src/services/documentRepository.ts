@@ -1,4 +1,5 @@
 import { portfolioContentSeed } from "../data/portfolioSeed";
+import type { LocalizedText } from "../types/career";
 import type {
   PortfolioContent,
   PortfolioRuntimeData,
@@ -16,27 +17,49 @@ interface PortfolioContentRow {
   version: string;
   title: string;
   year: string;
-  kicker: string;
-  about_kicker: string;
-  about_heading: string;
-  closing_kicker: string;
-  closing_heading: string;
-  closing_text: string;
+  kicker: LocalizedText | string;
+  about_kicker: LocalizedText | string;
+  about_heading: LocalizedText | string;
+  closing_kicker: LocalizedText | string;
+  closing_heading: LocalizedText | string;
+  closing_text: LocalizedText | string;
   theme: PortfolioContent["theme"];
   profile: PortfolioContent["profile"];
   skill_groups: PortfolioContent["skillGroups"];
 }
 
-const contentFromRow = (row: PortfolioContentRow): PortfolioContent => ({
+const localized = (value: LocalizedText | string | null | undefined, fallback: LocalizedText): LocalizedText => {
+  if (typeof value === "string") return { en: value, vi: "" };
+  return value
+    ? { en: String(value.en ?? ""), vi: String(value.vi ?? "") }
+    : structuredClone(fallback);
+};
+
+export const normalizePortfolioContent = (content: PortfolioContent): PortfolioContent => ({
+  ...content,
+  kicker: localized(content.kicker as LocalizedText | string, portfolioContentSeed.kicker),
+  aboutKicker: localized(content.aboutKicker as LocalizedText | string, portfolioContentSeed.aboutKicker),
+  aboutHeading: localized(content.aboutHeading as LocalizedText | string, portfolioContentSeed.aboutHeading),
+  closingKicker: localized(content.closingKicker as LocalizedText | string, portfolioContentSeed.closingKicker),
+  closingHeading: localized(content.closingHeading as LocalizedText | string, portfolioContentSeed.closingHeading),
+  closingText: localized(content.closingText as LocalizedText | string, portfolioContentSeed.closingText),
+});
+
+export const normalizePortfolioRuntimeData = (runtime: PortfolioRuntimeData): PortfolioRuntimeData => ({
+  ...runtime,
+  content: normalizePortfolioContent(runtime.content),
+});
+
+const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalizePortfolioContent({
   version: row.version,
   title: row.title,
   year: row.year,
-  kicker: row.kicker,
-  aboutKicker: row.about_kicker,
-  aboutHeading: row.about_heading,
-  closingKicker: row.closing_kicker,
-  closingHeading: row.closing_heading,
-  closingText: row.closing_text,
+  kicker: localized(row.kicker, portfolioContentSeed.kicker),
+  aboutKicker: localized(row.about_kicker, portfolioContentSeed.aboutKicker),
+  aboutHeading: localized(row.about_heading, portfolioContentSeed.aboutHeading),
+  closingKicker: localized(row.closing_kicker, portfolioContentSeed.closingKicker),
+  closingHeading: localized(row.closing_heading, portfolioContentSeed.closingHeading),
+  closingText: localized(row.closing_text, portfolioContentSeed.closingText),
   theme: row.theme ?? { presetId: "personal-blue" },
   profile: row.profile,
   skillGroups: row.skill_groups ?? [],
@@ -63,7 +86,7 @@ export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> =>
 export const loadPublishedPortfolioRelease = async (): Promise<PortfolioRuntimeData> => {
   try {
     const activeRelease = await loadActiveProfileDocumentRelease<PortfolioRuntimeData>("portfolio");
-    if (activeRelease) return activeRelease;
+    if (activeRelease) return normalizePortfolioRuntimeData(activeRelease);
   } catch {
     // Fall through to the legacy release table until the library migration is applied.
   }
@@ -75,5 +98,5 @@ export const loadPublishedPortfolioRelease = async (): Promise<PortfolioRuntimeD
     .maybeSingle();
   if (error) throw error;
   if (!data?.payload) throw new Error("No published Portfolio release is available.");
-  return data.payload as PortfolioRuntimeData;
+  return normalizePortfolioRuntimeData(data.payload as PortfolioRuntimeData);
 };

@@ -1,6 +1,6 @@
 import { cvContentSeed } from "../data/cvSeed";
 import { portfolioContentSeed } from "../data/portfolioSeed";
-import { loadPortfolioDraftData } from "../services/documentRepository";
+import { loadPortfolioDraftData, normalizePortfolioRuntimeData } from "../services/documentRepository";
 import { loadCvData } from "../services/cvRepository";
 import { loadProfessionalProfile } from "../services/websiteRepository";
 import {
@@ -13,10 +13,11 @@ import {
   renameProfileDocument,
   saveProfileDocument,
 } from "../services/profileDocumentRepository";
-import { assetUrl, degreeClassificationValue, escapeHtml } from "../shared/format";
+import { degreeClassificationValue, escapeHtml } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes } from "../themes/documentThemes";
 import { backgroundOrderKey, orderedCvBackground, resolveCvBackgroundOrder } from "../cv/backgroundOrder";
+import type { LocalizedText, Profile } from "../types/career";
 import type { CvBackgroundGroup, CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
 import type { PortfolioContent, PortfolioRuntimeData } from "../types/portfolio";
 import type {
@@ -85,6 +86,10 @@ const field = (label: string, name: string, value: string, type = "text"): strin
   `<label${type === "month" ? ' class="admin-date-field"' : ""}>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(value)}"></label>`;
 const area = (label: string, name: string, value: string, rows = 5): string =>
   `<label>${escapeHtml(label)}<textarea name="${escapeHtml(name)}" rows="${rows}">${escapeHtml(value)}</textarea></label>`;
+const localizedFields = (label: string, name: string, value: LocalizedText): string =>
+  `<div class="admin-site-bilingual">${field(`${label} (EN)`, `${name}_en`, value.en)}${field(`${label} (VI)`, `${name}_vi`, value.vi)}</div>`;
+const localizedAreas = (label: string, name: string, value: LocalizedText, rows = 5): string =>
+  `<div class="admin-site-bilingual">${area(`${label} (EN)`, `${name}_en`, value.en, rows)}${area(`${label} (VI)`, `${name}_vi`, value.vi, rows)}</div>`;
 
 const themeFields = (theme: StoredDocumentTheme): string => renderDocumentThemeFields({
   theme,
@@ -134,7 +139,13 @@ const preferredDocument = (kind: ProfileDocumentKind, documents: ProfileDocument
     ?? null;
 };
 
-const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData): CvRuntimeData => {
+const inheritSharedProfile = (shared: Profile, tailored: Profile): Profile => ({
+  ...structuredClone(shared),
+  professionalTitle: structuredClone(tailored.professionalTitle),
+  summary: structuredClone(tailored.summary),
+});
+
+const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData, sharedProfile: Profile): CvRuntimeData => {
   const savedProjects = [...saved.detailedProjects, ...saved.compactProjects];
   const savedProjectSelection = new Map(savedProjects.map((item) => [item.id, item]));
   const savedToolSelection = new Map(saved.tools.map((item) => [item.id, item]));
@@ -158,7 +169,10 @@ const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData): CvRuntimeD
     return selection && ready ? { ...item, includeInCv: true, cvOrder: item.cvOrder } : { ...item, includeInCv: false };
   });
   return {
-    content: saved.content,
+    content: {
+      ...saved.content,
+      profile: inheritSharedProfile(sharedProfile, saved.content.profile),
+    },
     detailedProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "detailed").sort((a, b) => a.cvOrder - b.cvOrder),
     compactProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "compact").sort((a, b) => a.cvOrder - b.cvOrder),
     tools: availableTools.filter((item) => item.includeInCv).sort((a, b) => a.cvOrder - b.cvOrder),
@@ -167,12 +181,16 @@ const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData): CvRuntimeD
   };
 };
 
-const composePortfolioDraft = (saved: PortfolioRuntimeData, shared: PortfolioRuntimeData): PortfolioRuntimeData => {
-  const savedProjects = new Map(saved.projects.map((item) => [item.id, item]));
-  const savedTools = new Map(saved.tools.map((item) => [item.id, item]));
+const composePortfolioDraft = (saved: PortfolioRuntimeData, shared: PortfolioRuntimeData, sharedProfile: Profile): PortfolioRuntimeData => {
+  const normalizedSaved = normalizePortfolioRuntimeData(saved);
+  const savedProjects = new Map(normalizedSaved.projects.map((item) => [item.id, item]));
+  const savedTools = new Map(normalizedSaved.tools.map((item) => [item.id, item]));
   return {
     ...shared,
-    content: saved.content,
+    content: {
+      ...normalizedSaved.content,
+      profile: inheritSharedProfile(sharedProfile, normalizedSaved.content.profile),
+    },
     projects: shared.projects.map((item) => {
       const selection = savedProjects.get(item.id);
       return selection && item.status === "published" ? {
@@ -195,23 +213,25 @@ const composePortfolioDraft = (saved: PortfolioRuntimeData, shared: PortfolioRun
 
 const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
   if (kind === "cv") {
-    const [documents, shared] = await Promise.all([
+    const [documents, shared, professional] = await Promise.all([
       listProfileDocuments<CvRuntimeData>(kind),
       loadCvData({ adminPreview: true, preferRelease: false }),
+      loadProfessionalProfile(),
     ]);
     state.documents.cv = documents.map((document) => ({
       ...document,
-      draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared) : null,
+      draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared, professional.profile) : null,
     }));
     return;
   }
-  const [documents, shared] = await Promise.all([
+  const [documents, shared, professional] = await Promise.all([
     listProfileDocuments<PortfolioRuntimeData>(kind),
     loadPortfolioDraftData(),
+    loadProfessionalProfile(),
   ]);
   state.documents.portfolio = documents.map((document) => ({
     ...document,
-    draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared) : null,
+    draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared, professional.profile) : null,
   }));
 };
 
@@ -221,18 +241,24 @@ export const ensureProfileDocumentWorkspace = async (kind: ProfileDocumentKind):
   delete state.errors[kind];
   try {
     if (kind === "cv") {
-      const shared = await loadCvData({ adminPreview: true, preferRelease: false });
+      const [shared, professional] = await Promise.all([
+        loadCvData({ adminPreview: true, preferRelease: false }),
+        loadProfessionalProfile(),
+      ]);
       const documents = await ensureProfileDocumentLibrary<CvRuntimeData>(kind, shared);
       state.documents.cv = documents.map((document) => ({
         ...document,
-        draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared) : null,
+        draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared, professional.profile) : null,
       }));
     } else {
-      const shared = await loadPortfolioDraftData();
+      const [shared, professional] = await Promise.all([
+        loadPortfolioDraftData(),
+        loadProfessionalProfile(),
+      ]);
       const documents = await ensureProfileDocumentLibrary<PortfolioRuntimeData>(kind, shared);
       state.documents.portfolio = documents.map((document) => ({
         ...document,
-        draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared) : null,
+        draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared, professional.profile) : null,
       }));
     }
     await selectDocument(kind, preferredDocument(kind, state.documents[kind]));
@@ -244,42 +270,11 @@ export const ensureProfileDocumentWorkspace = async (kind: ProfileDocumentKind):
   }
 };
 
-const latestRelease = (kind: ProfileDocumentKind): string => {
+const latestReleaseMeta = (kind: ProfileDocumentKind): string => {
   const release = state.releases[kind][0];
-  return release ? `Published ${new Date(release.publishedAt).toLocaleString()} · ${escapeHtml(release.version)}` : "Not published yet";
-};
-
-const profilePhotoName = (path: string): string => {
-  const name = path.split(/[?#]/, 1)[0].split("/").at(-1) || "No photo selected";
-  try {
-    return decodeURIComponent(name);
-  } catch {
-    return name;
-  }
-};
-
-const cvProfilePhoto = (content: CvContent): string => {
-  const initials = content.profile.name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 3)
-    .map((part) => part[0] ?? "")
-    .join("")
-    .toUpperCase() || "HDL";
-  return `<div class="admin-profile-photo-field admin-profile-photo-field--readonly">
-    <span class="admin-profile-photo-field__label">Profile photo</span>
-    <div class="admin-profile-photo-control">
-      <span class="admin-profile-photo-preview" data-profile-photo-frame aria-hidden="true">
-        <span>${escapeHtml(initials)}</span>
-        <img src="${escapeHtml(assetUrl(content.profile.photoPath))}" alt="" data-profile-photo-preview>
-      </span>
-      <span class="admin-profile-photo-identity">
-        <strong>${escapeHtml(profilePhotoName(content.profile.photoPath))}</strong>
-        <small>Synced from Professional Profile</small>
-      </span>
-      <span class="admin-profile-photo-source">Profile</span>
-    </div>
-  </div>`;
+  return release
+    ? `<span class="admin-document-meta__detail">Version ${escapeHtml(release.version)}</span><span class="admin-document-meta__detail">Published ${new Date(release.publishedAt).toLocaleString()}</span>`
+    : '<span class="admin-document-meta__detail">Not published yet</span>';
 };
 
 const cvContentPanel = (content: CvContent): string => [
@@ -292,21 +287,11 @@ const cvContentPanel = (content: CvContent): string => [
     </div>`,
   }),
   renderAdminSectionCard({
-    title: "CV profile",
-    note: "Edit or sync the profile snapshot stored in this CV draft.",
-    content: `<div class="admin-form-grid">
-      ${field("Full name", "profile_name", content.profile.name)}
-      ${field("Email", "profile_email", content.profile.email, "email")}
-      ${field("Phone", "profile_phone", content.profile.phone, "tel")}
-      ${cvProfilePhoto(content)}
-      ${field("Professional title (EN)", "profile_title_en", content.profile.professionalTitle.en)}
-      ${field("Professional title (VI)", "profile_title_vi", content.profile.professionalTitle.vi)}
-      ${field("Location (EN)", "profile_location_en", content.profile.location.en)}
-      ${field("Location (VI)", "profile_location_vi", content.profile.location.vi)}
-    </div>
-    ${area("Professional summary (EN)", "profile_summary_en", content.profile.summary.en)}
-    ${area("Professional summary (VI)", "profile_summary_vi", content.profile.summary.vi)}`,
-    actions: '<button class="button button--secondary" type="button" data-sync-professional-profile>Sync from Professional Profile</button>',
+    title: "Target profile",
+    note: "Tailor the title and summary for this CV and role.",
+    content: `${localizedFields("Professional title", "profile_title", content.profile.professionalTitle)}
+    ${localizedAreas("Professional summary", "profile_summary", content.profile.summary)}`,
+    actions: '<button class="button button--secondary" type="button" data-sync-target-profile>Sync from Professional Profile</button>',
   }),
 ].join("");
 
@@ -465,12 +450,8 @@ const readCvForm = (formElement: HTMLFormElement): CvContent => {
     theme: readTheme(form),
     pageOneProjectCount: Math.max(1, Number(form.get("page_one_project_count")) || 3),
     profile: {
-      name: text(form, "profile_name"),
+      ...current.profile,
       professionalTitle: { en: text(form, "profile_title_en"), vi: text(form, "profile_title_vi") },
-      email: text(form, "profile_email"),
-      phone: text(form, "profile_phone"),
-      photoPath: current.profile.photoPath,
-      location: { en: text(form, "profile_location_en"), vi: text(form, "profile_location_vi") },
       summary: { en: text(form, "profile_summary_en"), vi: text(form, "profile_summary_vi") },
     },
     experiences: current.experiences,
@@ -527,30 +508,29 @@ const readCvRuntimeForm = (formElement: HTMLFormElement): CvRuntimeData => {
 const portfolioContentPanel = (content: PortfolioContent): string => [
   renderAdminSectionCard({
     title: "Portfolio cover",
-    note: "Edit cover details and the profile used in this draft.",
+    note: "Control the document identity shown on the cover.",
     content: `<div class="admin-form-grid">
-    ${field("Portfolio version", "portfolio_version", content.version)}
-    ${field("Cover year", "portfolio_year", content.year)}
+      ${field("Portfolio version", "portfolio_version", content.version)}
+      ${field("Cover year", "portfolio_year", content.year)}
+    </div>
     ${field("Document title", "portfolio_title", content.title)}
-    ${field("Cover kicker", "portfolio_kicker", content.kicker)}
-    ${field("Full name", "portfolio_name", content.profile.name)}
-    ${field("Professional title", "portfolio_profile_title", content.profile.professionalTitle.en)}
-    ${field("Email", "portfolio_email", content.profile.email, "email")}
-    ${field("Phone", "portfolio_phone", content.profile.phone, "tel")}
-  </div>
-  ${area("Profile summary", "portfolio_summary", content.profile.summary.en)}`,
-    actions: '<div class="admin-document-sync-actions"><button class="button button--secondary" type="button" data-sync-professional-profile>Sync from Professional Profile</button><button class="button button--secondary" type="button" data-sync-cv-profile>Sync from active CV</button></div>',
+    ${localizedFields("Cover kicker", "portfolio_kicker", content.kicker)}`,
+  }),
+  renderAdminSectionCard({
+    title: "Target profile",
+    note: "Tailor the positioning used in this Portfolio.",
+    content: `${localizedFields("Professional title", "portfolio_profile_title", content.profile.professionalTitle)}
+    ${localizedAreas("Profile summary", "portfolio_summary", content.profile.summary)}`,
+    actions: '<div class="admin-document-sync-actions"><button class="button button--secondary" type="button" data-sync-target-profile>Sync from Professional Profile</button><button class="button button--secondary" type="button" data-sync-cv-profile>Sync from active CV</button></div>',
   }),
   renderAdminSectionCard({
     title: "Portfolio narrative",
     note: "Edit the About and closing page content.",
-    content: `<div class="admin-form-grid">
-    ${field("About kicker", "about_kicker", content.aboutKicker)}
-    ${field("About heading", "about_heading", content.aboutHeading)}
-    ${field("Closing kicker", "closing_kicker", content.closingKicker)}
-    ${field("Closing heading", "closing_heading", content.closingHeading)}
-  </div>
-  ${area("Closing text", "closing_text", content.closingText, 3)}`,
+    content: `${localizedFields("About kicker", "about_kicker", content.aboutKicker)}
+    ${localizedFields("About heading", "about_heading", content.aboutHeading)}
+    ${localizedFields("Closing kicker", "closing_kicker", content.closingKicker)}
+    ${localizedFields("Closing heading", "closing_heading", content.closingHeading)}
+    ${localizedAreas("Closing text", "closing_text", content.closingText, 3)}`,
   }),
 ].join("");
 
@@ -581,20 +561,17 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
     version: text(form, "portfolio_version") || current.content.version,
     year: text(form, "portfolio_year"),
     title: text(form, "portfolio_title"),
-    kicker: text(form, "portfolio_kicker"),
-    aboutKicker: text(form, "about_kicker"),
-    aboutHeading: text(form, "about_heading"),
-    closingKicker: text(form, "closing_kicker"),
-    closingHeading: text(form, "closing_heading"),
-    closingText: text(form, "closing_text"),
+    kicker: { en: text(form, "portfolio_kicker_en"), vi: text(form, "portfolio_kicker_vi") },
+    aboutKicker: { en: text(form, "about_kicker_en"), vi: text(form, "about_kicker_vi") },
+    aboutHeading: { en: text(form, "about_heading_en"), vi: text(form, "about_heading_vi") },
+    closingKicker: { en: text(form, "closing_kicker_en"), vi: text(form, "closing_kicker_vi") },
+    closingHeading: { en: text(form, "closing_heading_en"), vi: text(form, "closing_heading_vi") },
+    closingText: { en: text(form, "closing_text_en"), vi: text(form, "closing_text_vi") },
     theme: readTheme(form),
     profile: {
       ...current.content.profile,
-      name: text(form, "portfolio_name"),
-      professionalTitle: { ...current.content.profile.professionalTitle, en: text(form, "portfolio_profile_title") },
-      email: text(form, "portfolio_email"),
-      phone: text(form, "portfolio_phone"),
-      summary: { ...current.content.profile.summary, en: text(form, "portfolio_summary") },
+      professionalTitle: { en: text(form, "portfolio_profile_title_en"), vi: text(form, "portfolio_profile_title_vi") },
+      summary: { en: text(form, "portfolio_summary_en"), vi: text(form, "portfolio_summary_vi") },
     },
   };
   return {
@@ -618,14 +595,16 @@ const validation = (kind: ProfileDocumentKind, runtime?: CvRuntimeData | Portfol
     const data = (runtime ?? state.cv) as CvRuntimeData | null;
     if (!data) return ["CV draft is not loaded."];
     return [
-      !data.content.profile.name && "Full name is required.",
-      !data.content.profile.email && "Email is required.",
+      !data.content.profile.name && "Add a full name in Professional Profile.",
+      !data.content.profile.email && "Add an email address in Professional Profile.",
       !data.detailedProjects.length && "Select at least one detailed CV project.",
     ].filter((item): item is string => Boolean(item));
   }
   const data = (runtime ?? state.portfolio) as PortfolioRuntimeData | null;
   if (!data) return ["Portfolio draft is not loaded."];
   return [
+    !data.content.profile.name && "Add a full name in Professional Profile.",
+    !data.content.profile.email && "Add an email address in Professional Profile.",
     !data.content.title && "Document title is required.",
     !data.projects.some((item) => item.includeInPortfolio) && "Select at least one Portfolio project.",
   ].filter((item): item is string => Boolean(item));
@@ -671,15 +650,18 @@ const documentListView = (kind: ProfileDocumentKind): string => {
       </li>`).join("");
 };
 
-const documentCollectionView = (kind: ProfileDocumentKind): string => `
-    <aside class="admin-document-library__collection">
-      <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>${state.documents[kind].length}</span></h2></div><button class="button admin-action-new" type="button" data-profile-document-new>+ New</button></div>
+const documentCollectionView = (kind: ProfileDocumentKind): string => {
+  const isDrawer = Boolean(state.selectedId[kind]);
+  return `
+    <aside id="${kind}-document-library" class="admin-document-library__collection"${isDrawer ? ' data-document-library-drawer role="dialog" aria-label="Document library" aria-hidden="true" inert' : ""}>
+      <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>${state.documents[kind].length}</span></h2></div><div class="admin-collection__heading-actions"><button class="button admin-action-new" type="button" data-profile-document-new>+ New</button>${isDrawer ? '<button class="admin-drawer-close" type="button" data-profile-document-library-close aria-label="Close document library">×</button>' : ""}</div></div>
       <div class="admin-list-controls">
         <label class="admin-search"><span class="sr-only">Search ${documentPlural(kind)}</span><input type="search" placeholder="Search title or version..." value="${escapeHtml(state.search[kind])}" data-profile-document-search></label>
         <div class="admin-filter-row" aria-label="${documentLabel(kind)} status">${(["all", "draft", "published", "archived"] as DocumentFilter[]).map((filter) => `<button type="button" data-profile-document-filter="${filter}" class="${state.filter[kind] === filter ? "is-active" : ""}"><span>${filter}</span><strong>${filterCount(kind, filter)}</strong></button>`).join("")}</div>
       </div>
       <div class="admin-collection__scroll"><ul class="admin-content-list" data-profile-document-list>${documentListView(kind)}</ul></div>
     </aside>`;
+};
 
 const emptyDocumentWorkspace = (kind: ProfileDocumentKind): string => `
   <section class="admin-document-library__empty">
@@ -731,16 +713,19 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
     controls: zoomControls,
   });
   return `
-    <section class="admin-document-library is-editing">${documentCollectionView(kind)}<div class="admin-document-library__workspace">
+    <section class="admin-document-library is-editing"><button class="admin-library-scrim" type="button" data-profile-document-library-close aria-label="Close document library" tabindex="-1"></button>${documentCollectionView(kind)}<div class="admin-document-library__workspace">
     <section class="admin-document-workspace" data-document-kind="${kind}">
       <header class="admin-document-header">
-        <div class="admin-document-header__identity"><button class="admin-document-library__back" type="button" data-profile-document-close aria-label="Back to ${documentPlural(kind)}">← ${documentPlural(kind)}</button><p class="section-kicker">${documentLabel(kind)} document</p><h1>${escapeHtml(selected.internalTitle)}</h1><p><span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-active">Active public version</span>' : ""}<span>${latestRelease(kind)}</span></p></div>
+        <div class="admin-document-header__identity">
+          <p class="section-kicker">${documentLabel(kind)} document</p>
+          <h1 class="admin-document-title"><button class="admin-document-title-switcher" type="button" data-profile-document-library-open aria-haspopup="dialog" aria-controls="${kind}-document-library" aria-expanded="false" aria-label="Switch ${documentLabel(kind)}. Current document: ${escapeHtml(selected.internalTitle)}"><span class="admin-document-title-switcher__label">${escapeHtml(selected.internalTitle)}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button></h1>
+          <p class="admin-document-meta"><span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-meta__active">Active public version</span>' : ""}${latestReleaseMeta(kind)}</p>
+        </div>
         <div class="admin-document-actions">
           <span data-document-save-state>Saved</span>
           <button class="button button--secondary admin-action-utility" type="button" data-document-history-open aria-haspopup="dialog" aria-controls="${kind}-release-history-dialog">History (${state.releases[kind].length})</button>
-          <button class="button button--secondary admin-action-utility" type="button" data-document-print>Print / PDF</button>
-          <details class="admin-document-more"><summary>More</summary><div><button type="button" data-profile-document-rename>Rename</button><button type="button" data-profile-document-duplicate>Duplicate</button>${!archived && !selected.isActive ? '<button type="button" data-profile-document-archive>Archive</button>' : ""}</div></details>
-          ${archived ? "" : `<button class="button button--secondary admin-action-save" type="submit" form="${kind}-document-form">Save draft</button><button class="button admin-action-publish" type="button" data-document-publish>Publish & set active</button>`}
+          <details class="admin-document-more"><summary>More</summary><div><button type="button" data-document-print>Print / PDF</button><button type="button" data-profile-document-rename>Rename</button><button type="button" data-profile-document-duplicate>Duplicate</button>${!archived && !selected.isActive ? '<button type="button" data-profile-document-archive>Archive</button>' : ""}</div></details>
+          ${archived ? "" : `<button class="button button--secondary admin-action-save" type="submit" form="${kind}-document-form">Save draft</button><button class="button admin-action-publish" type="button" data-document-publish>Publish</button>`}
         </div>
       </header>
       ${archived ? '<div class="admin-document-lock"><strong>Archived document</strong><span>This snapshot is read-only. Duplicate it to create an editable draft.</span></div>' : ""}
@@ -809,14 +794,24 @@ export const markProfileDocumentWorkspaceStale = (): void => {
 };
 
 export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocumentKind, callbacks: WorkspaceCallbacks): void => {
-  root.querySelectorAll<HTMLImageElement>("[data-profile-photo-preview]").forEach((image) => {
-    const frame = image.closest<HTMLElement>("[data-profile-photo-frame]");
-    const update = (): void => {
-      frame?.classList.toggle("has-image", image.complete && image.naturalWidth > 0);
-    };
-    image.addEventListener("load", update);
-    image.addEventListener("error", update);
-    update();
+  const libraryShell = root.querySelector<HTMLElement>(".admin-document-library.is-editing");
+  const libraryDrawer = root.querySelector<HTMLElement>("[data-document-library-drawer]");
+  const libraryWorkspace = libraryShell?.querySelector<HTMLElement>(".admin-document-library__workspace");
+  const libraryTrigger = root.querySelector<HTMLButtonElement>("[data-profile-document-library-open]");
+  const setLibraryOpen = (open: boolean): void => {
+    if (!libraryShell || !libraryDrawer) return;
+    libraryShell.classList.toggle("is-library-open", open);
+    libraryDrawer.inert = !open;
+    if (libraryWorkspace) libraryWorkspace.inert = open;
+    libraryDrawer.setAttribute("aria-hidden", String(!open));
+    libraryTrigger?.setAttribute("aria-expanded", String(open));
+    if (open) requestAnimationFrame(() => libraryDrawer.querySelector<HTMLInputElement>("[data-profile-document-search]")?.focus());
+    else libraryTrigger?.focus();
+  };
+  libraryTrigger?.addEventListener("click", () => setLibraryOpen(true));
+  root.querySelectorAll<HTMLButtonElement>("[data-profile-document-library-close]").forEach((button) => button.addEventListener("click", () => setLibraryOpen(false)));
+  libraryDrawer?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setLibraryOpen(false);
   });
   const form = root.querySelector<HTMLFormElement>("[data-document-form]");
   const iframe = root.querySelector<HTMLIFrameElement>("[data-document-iframe]");
@@ -864,7 +859,12 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   });
   root.querySelectorAll<HTMLButtonElement>("[data-profile-document-filter]").forEach((button) => button.addEventListener("click", () => {
     state.filter[kind] = button.dataset.profileDocumentFilter as DocumentFilter;
-    callbacks.rerender();
+    root.querySelectorAll<HTMLButtonElement>("[data-profile-document-filter]").forEach((item) => item.classList.toggle("is-active", item === button));
+    const list = root.querySelector<HTMLElement>("[data-profile-document-list]");
+    if (list) {
+      list.innerHTML = documentListView(kind);
+      bindSelectionButtons(list);
+    }
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-profile-document-new]").forEach((button) => button.addEventListener("click", async () => {
     if (state.dirty[kind] && !(await confirmAdmin({ eyebrow: `New ${documentLabel(kind)}`, title: "Keep the current document?", message: "A new document will be created from the current unsaved preview. The original document remains unchanged.", confirmLabel: "Create new document" }))) return;
@@ -1066,6 +1066,32 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     });
   }));
   root.querySelector("[data-document-print]")?.addEventListener("click", () => iframe?.contentWindow?.print());
+  root.querySelector("[data-sync-target-profile]")?.addEventListener("click", () => {
+    void loadProfessionalProfile()
+      .then((professional) => {
+        if (kind === "cv" && state.cv) {
+          state.cv = readCvRuntimeForm(form);
+          state.cv.content.profile = {
+            ...state.cv.content.profile,
+            professionalTitle: structuredClone(professional.profile.professionalTitle),
+            summary: structuredClone(professional.profile.summary),
+          };
+          state.dirty.cv = true;
+        } else if (kind === "portfolio" && state.portfolio) {
+          state.portfolio = readPortfolioForm(form);
+          state.portfolio.content.profile = {
+            ...state.portfolio.content.profile,
+            professionalTitle: structuredClone(professional.profile.professionalTitle),
+            summary: structuredClone(professional.profile.summary),
+          };
+          state.dirty.portfolio = true;
+        }
+        callbacks.setDirty(true);
+        callbacks.rerender();
+        callbacks.notify(`${documentLabel(kind)} title and summary synced from Professional Profile.`, "success");
+      })
+      .catch((error: Error) => callbacks.notify(error.message, "error"));
+  });
   root.querySelectorAll("[data-sync-professional-profile]").forEach((button) => button.addEventListener("click", () => {
     void loadProfessionalProfile()
       .then((professional) => {
@@ -1073,7 +1099,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
           state.cv = readCvRuntimeForm(form);
           const nextContent: CvContent = {
             ...state.cv.content,
-            profile: structuredClone(professional.profile),
+            profile: inheritSharedProfile(professional.profile, state.cv.content.profile),
             experiences: structuredClone(professional.experiences),
             education: structuredClone(professional.education),
             skillGroups: structuredClone(professional.skillGroups),
@@ -1082,14 +1108,10 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
           nextContent.backgroundOrder = resolveCvBackgroundOrder(nextContent);
           state.cv.content = nextContent;
           state.dirty.cv = true;
-        } else if (kind === "portfolio" && state.portfolio) {
-          state.portfolio.content.profile = structuredClone(professional.profile);
-          state.portfolio.content.skillGroups = structuredClone(professional.skillGroups);
-          state.dirty.portfolio = true;
         }
         callbacks.setDirty(true);
         callbacks.rerender();
-        callbacks.notify(`${documentLabel(kind)} synced from the saved Professional Profile.`, "success");
+        callbacks.notify("CV background synced from Professional Profile.", "success");
       })
       .catch((error: Error) => callbacks.notify(error.message, "error"));
   }));
@@ -1098,12 +1120,17 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     const source = state.documents.cv.find((item) => item.isActive)?.draftPayload
       ?? state.documents.cv.find((item) => item.status !== "archived")?.draftPayload;
     if (!state.portfolio || !source) return callbacks.notify("An active CV could not be loaded.", "error");
-    state.portfolio.content.profile = structuredClone((source as CvRuntimeData).content.profile);
-    state.portfolio.content.skillGroups = structuredClone((source as CvRuntimeData).content.skillGroups);
+    state.portfolio = readPortfolioForm(form);
+    const sourceProfile = (source as CvRuntimeData).content.profile;
+    state.portfolio.content.profile = {
+      ...state.portfolio.content.profile,
+      professionalTitle: structuredClone(sourceProfile.professionalTitle),
+      summary: structuredClone(sourceProfile.summary),
+    };
     state.dirty.portfolio = true;
     callbacks.setDirty(true);
     callbacks.rerender();
-    callbacks.notify("Portfolio profile and skills synced from the active CV.", "success");
+    callbacks.notify("Portfolio title and summary copied from the active CV.", "success");
   });
   form.addEventListener("submit", (event) => {
     event.preventDefault();

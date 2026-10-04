@@ -29,7 +29,8 @@ html.admin-app {
   --admin-radius-lg: .8rem;
   --admin-shadow-card: 0 8px 24px rgb(16 45 59 / 6%);
   --admin-workspace-gutter: 1.25rem;
-  --admin-workspace-header-min-height: 6.5rem;
+  --admin-workspace-header-min-height: 6.75rem;
+  --admin-document-columns: minmax(0, 44fr) minmax(0, 56fr);
   --admin-tabs-height: 3.25rem;
 }
 
@@ -130,7 +131,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-shell .admin-action-new { min-width: 4.5rem; }
 .admin-shell .admin-action-save { min-width: 7rem; }
 .admin-shell .admin-action-publish { min-width: 8rem; }
-.admin-shell .admin-action-utility { min-width: 8.75rem; }
+.admin-shell .admin-action-utility { min-width: 7rem; }
 
 .admin-shell .admin-icon-button {
   width: var(--admin-control-height);
@@ -141,30 +142,184 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 }
 
 .admin-document-header,
-.admin-editor__heading,
-.admin-cl-editor__heading {
+.admin-editor__heading {
   min-height: var(--admin-workspace-header-min-height);
   gap: 1.5rem;
   padding: 1rem 1.25rem;
 }
 
 .admin-document-header h1,
-.admin-editor__heading h2,
-.admin-cl-editor__identity h1 {
+.admin-editor__heading h2 {
   margin: .15rem 0 .3rem;
   font-size: var(--admin-title-md);
 }
 
 .admin-document-actions,
-.admin-editor__status,
-.admin-cl-editor__actions {
+.admin-editor__status {
   gap: .5rem;
 }
 
 .admin-document-actions > span {
-  min-width: 7rem;
+  min-width: 5.5rem;
   margin-right: .25rem;
   text-align: right;
+}
+
+/* Shared document workspace chrome. Homepage, CV, Portfolio and Cover Letter
+   keep the same geometry while their content and available actions vary. */
+.admin-document-header {
+  display: grid;
+  height: var(--admin-workspace-header-min-height);
+  min-height: var(--admin-workspace-header-min-height);
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  align-items: center;
+}
+
+.admin-document-header__identity {
+  display: block;
+  min-width: 0;
+}
+
+.admin-document-header__identity > .section-kicker {
+  margin: 0;
+}
+
+.admin-document-header__identity > h1 {
+  overflow: hidden;
+  margin: .15rem 0 .3rem;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-document-header__identity > p:last-child {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.admin-document-header__identity > p:last-child > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-document-title {
+  width: fit-content;
+  max-width: min(100%, 34rem);
+  overflow: visible !important;
+}
+
+.admin-document-title-switcher {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: 2.35rem;
+  grid-template-columns: minmax(0, 1fr) 1.85rem;
+  align-items: center;
+  justify-content: start;
+  gap: .55rem;
+  margin: 0;
+  padding: .18rem .25rem .18rem .4rem;
+  border: 1px solid transparent;
+  border-radius: var(--admin-radius-md);
+  background: transparent;
+  color: var(--admin-color-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  text-align: left;
+  transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease, box-shadow 140ms ease;
+}
+
+.admin-document-title-switcher:hover,
+.admin-document-title-switcher[aria-expanded="true"] {
+  border-color: var(--admin-color-border);
+  background: var(--admin-color-surface);
+  color: var(--color-primary-dark);
+  box-shadow: 0 2px 8px rgb(16 45 59 / 6%);
+}
+
+.admin-document-title-switcher:focus-visible {
+  border-color: var(--admin-color-focus);
+  outline: 3px solid var(--admin-color-focus-ring);
+  outline-offset: 1px;
+}
+
+.admin-document-title-switcher__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-document-title-switcher__icon {
+  display: grid;
+  width: 1.85rem;
+  height: 1.85rem;
+  place-items: center;
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-color-surface-muted);
+  color: var(--color-primary-dark);
+}
+
+.admin-document-title-switcher__icon svg {
+  width: .9rem;
+  height: .9rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  transition: transform 140ms ease;
+}
+
+.admin-document-title-switcher[aria-expanded="true"] .admin-document-title-switcher__icon svg {
+  transform: rotate(180deg);
+}
+
+.admin-document-meta__active {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  color: var(--admin-color-success);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-document-meta__active::before {
+  width: .42rem;
+  height: .42rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: currentcolor;
+  content: "";
+}
+
+.admin-document-meta__detail {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.admin-document-meta__detail::before {
+  flex: 0 0 auto;
+  margin-right: .55rem;
+  color: var(--admin-color-border-strong);
+  content: "·";
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-document-actions {
+  flex-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.admin-document-more summary {
+  min-width: 4.75rem;
+  justify-content: center;
 }
 
 .admin-editor__meta {
@@ -175,8 +330,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   margin-top: .25rem;
 }
 
-.admin-editor__meta small,
-.admin-cl-editor__identity .admin-editor__meta small {
+.admin-editor__meta small {
   display: block;
   margin: 0;
   color: var(--color-text-muted);
@@ -403,6 +557,10 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   min-height: 0;
 }
 
+.admin-document-layout {
+  grid-template-columns: var(--admin-document-columns);
+}
+
 .admin-site-preview { grid-template-rows: auto minmax(0, 1fr); }
 
 .admin-profile-usage {
@@ -420,7 +578,6 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-site-frame,
 .admin-document-frame,
 .admin-cl-preview-scroll,
-.admin-cl-form-pane,
 .admin-collection__scroll,
 .admin-nav {
   overscroll-behavior: contain;
@@ -428,8 +585,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 }
 
 .admin-site-preview,
-.admin-document-preview,
-.admin-cl-preview {
+.admin-document-preview {
   container-type: inline-size;
 }
 
@@ -624,6 +780,115 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 .admin-cl-workspace:has(.admin-cl-empty) { overflow-y: auto; }
 
+/* Overlay libraries keep the editing canvas at the same width in every
+   workspace while preserving search, filters and document management. */
+.admin-document-library,
+.admin-cl-shell {
+  position: relative;
+  isolation: isolate;
+}
+
+.admin-workspace:has(> .admin-document-library),
+.admin-workspace:has(> .admin-cl-shell) {
+  padding: 0 var(--admin-workspace-gutter) var(--admin-workspace-gutter);
+}
+
+.admin-document-library.is-editing,
+.admin-cl-shell.is-editing {
+  grid-template-columns: minmax(0, 1fr);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.admin-document-library.is-editing > .admin-document-library__collection,
+.admin-cl-shell.is-editing > .admin-cl-collection {
+  position: absolute;
+  z-index: 51;
+  inset: 0 auto 0 0;
+  display: grid;
+  width: min(22rem, calc(100% - 3rem));
+  border-right: 1px solid var(--admin-color-border);
+  box-shadow: 1rem 0 2rem rgb(16 45 59 / 18%);
+  opacity: 0;
+  transform: translateX(-104%);
+  transition: transform 180ms ease, opacity 180ms ease, visibility 180ms;
+  visibility: hidden;
+}
+
+.admin-document-library.is-library-open > .admin-document-library__collection,
+.admin-cl-shell.is-library-open > .admin-cl-collection {
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+}
+
+.admin-library-scrim {
+  position: absolute;
+  z-index: 50;
+  inset: 0;
+  border: 0;
+  background: rgb(16 45 59 / 36%);
+  cursor: default;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+}
+
+.is-library-open > .admin-library-scrim {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.admin-collection__heading-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: .4rem;
+}
+
+.admin-drawer-close {
+  display: grid;
+  width: var(--admin-control-height);
+  height: var(--admin-control-height);
+  place-items: center;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-control-radius);
+  background: var(--admin-color-surface);
+  color: var(--admin-color-text-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--admin-text-lg);
+  line-height: 1;
+}
+
+.admin-drawer-close:hover {
+  border-color: var(--admin-color-border-strong);
+  background: var(--admin-color-hover);
+  color: var(--admin-color-text);
+}
+
+[data-cover-letter-workspace]:has(> .cover-letter-lock) {
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+
+.admin-cl-preview-scroll {
+  margin: 0;
+  padding: 1.15rem;
+  border-radius: 0;
+}
+
+.admin-cl-preview-stage { --preview-scale: .56; }
+
+.admin-document-check-dialog__content h3 {
+  margin: .75rem 0 .35rem;
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-document-check-dialog__content h3:first-child { margin-top: 0; }
+.admin-document-check-dialog__content ul.is-error { color: var(--admin-color-danger); }
+
 .admin-cl-empty {
   height: auto;
   min-height: 100%;
@@ -718,10 +983,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 }
 
 @media (max-width: 1480px) {
-  .admin-document-layout,
-  .admin-site-workspace .admin-document-layout {
-    grid-template-columns: minmax(26rem, .9fr) minmax(28rem, 1.1fr);
-  }
+  .admin-cl-preview-stage { --preview-scale: .48; }
 }
 
 @media (max-width: 1280px) {
@@ -733,8 +995,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   .admin-cl-shell { grid-template-columns: 19rem minmax(0, 1fr); }
   .admin-channel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-document-header,
-  .admin-editor__heading,
-  .admin-cl-editor__heading { gap: 1rem; padding-inline: 1rem; }
+  .admin-editor__heading { gap: 1rem; padding-inline: 1rem; }
 }
 
 .admin-nav button,
@@ -873,16 +1134,17 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   .admin-document-summary-grid { grid-template-columns: 1fr; }
 
   .admin-document-header,
-  .admin-editor__heading,
-  .admin-cl-editor__heading {
+  .admin-editor__heading {
+    height: auto;
     min-height: 0;
     align-items: flex-start;
     flex-direction: column;
   }
 
+  .admin-document-header { grid-template-columns: minmax(0, 1fr); }
+
   .admin-document-actions,
-  .admin-editor__status,
-  .admin-cl-editor__actions {
+  .admin-editor__status {
     width: 100%;
     justify-content: flex-start;
     flex-wrap: wrap;
@@ -895,6 +1157,8 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
 @media (prefers-reduced-motion: reduce) {
   .admin-document-loading span { animation: none; }
+  .admin-document-title-switcher,
+  .admin-document-title-switcher__icon svg { transition: none; }
 }
 
 /* Fixed workspace chrome: keep identity/actions/tabs visible while the active pane scrolls. */
@@ -957,7 +1221,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
     display: grid;
     height: 100%;
     min-height: 0;
-    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    grid-template-columns: var(--admin-document-columns);
     overflow: hidden;
   }
 
@@ -1013,13 +1277,4 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
     border-top: 0;
   }
 
-  .admin-cl-editor__body {
-    grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(24rem, 50rem);
-  }
-
-  .admin-cl-form-pane {
-    border-right: 0;
-    border-bottom: 1px solid var(--color-border);
-  }
 }

@@ -12,31 +12,26 @@ interface DocumentThemeFieldsOptions {
   theme: StoredDocumentTheme;
   names: DocumentThemeFieldNames;
   helpText: string;
-  compact?: boolean;
   disabled?: boolean;
-  customLabel?: string;
 }
 
 export const renderDocumentThemeFields = ({
   theme,
   names,
   helpText,
-  compact = false,
   disabled = false,
-  customLabel = "Custom",
 }: DocumentThemeFieldsOptions): string => {
   const resolved = resolveDocumentTheme(theme);
   const disabledAttribute = disabled ? " disabled" : "";
-  const className = `admin-document-theme${compact ? " admin-document-theme--compact" : ""}`;
   const options = documentThemes
     .map((item) => `<option value="${escapeHtml(item.id)}"${theme.presetId === item.id ? " selected" : ""}>${escapeHtml(item.name)}</option>`)
     .join("");
 
   return `
-    <div class="${className}">
+    <div class="admin-document-theme">
       <label>Theme preset<select name="${escapeHtml(names.preset)}"${disabledAttribute}>
         ${options}
-        <option value="custom"${theme.presetId === "custom" ? " selected" : ""}>${escapeHtml(customLabel)}</option>
+        <option value="custom"${theme.presetId === "custom" ? " selected" : ""}>Custom</option>
       </select></label>
       <label>Primary color<input name="${escapeHtml(names.primary)}" type="color" value="${escapeHtml(theme.primary ?? resolved.tokens.primary)}"${disabledAttribute}></label>
       <label>Accent color<input name="${escapeHtml(names.accent)}" type="color" value="${escapeHtml(theme.accent ?? resolved.tokens.accent)}"${disabledAttribute}></label>

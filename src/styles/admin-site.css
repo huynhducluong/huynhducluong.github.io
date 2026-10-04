@@ -3,10 +3,6 @@
   min-width: 0;
 }
 
-.admin-site-workspace .admin-document-layout {
-  grid-template-columns: minmax(30rem, .82fr) minmax(42rem, 1.18fr);
-}
-
 .admin-site-workspace .admin-document-editor [data-website-panel],
 .admin-profile-workspace .admin-document-editor [data-profile-panel] {
   display: grid;

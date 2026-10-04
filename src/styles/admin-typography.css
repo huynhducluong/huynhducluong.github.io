@@ -262,34 +262,14 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-size: var(--admin-text-sm);
 }
 
-.admin-cl-editor__identity small,
-.admin-cl-validation summary,
-.admin-cl-validation p {
-  font-size: var(--admin-text-xs);
-}
-
-.admin-cl-validation summary {
-  font-weight: var(--admin-weight-semibold);
-}
-
-.admin-cl-editor__identity h1 {
-  font-size: var(--admin-title-sm);
-}
-
-.admin-cl-back,
-.admin-cl-editor__actions .button {
-  font-size: var(--admin-text-xs);
-  font-weight: var(--admin-weight-semibold);
-}
-
-.admin-cl-form-pane .evidence-option strong,
+.admin-cover-letter-form .evidence-option strong,
 .admin-cl-sender strong,
 .admin-cl-evidence-heading h4 {
   font-size: var(--admin-text-sm);
   font-weight: var(--admin-weight-semibold);
 }
 
-.admin-cl-form-pane .evidence-option small,
+.admin-cover-letter-form .evidence-option small,
 .admin-cl-sender p,
 .admin-cl-evidence-heading small {
   font-size: var(--admin-text-xs);

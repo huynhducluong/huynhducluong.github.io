@@ -9,12 +9,12 @@ export interface PortfolioContent {
   version: string;
   title: string;
   year: string;
-  kicker: string;
-  aboutKicker: string;
-  aboutHeading: string;
-  closingKicker: string;
-  closingHeading: string;
-  closingText: string;
+  kicker: LocalizedText;
+  aboutKicker: LocalizedText;
+  aboutHeading: LocalizedText;
+  closingKicker: LocalizedText;
+  closingHeading: LocalizedText;
+  closingText: LocalizedText;
   theme: StoredDocumentTheme;
   profile: Profile;
   skillGroups: SkillGroup[];

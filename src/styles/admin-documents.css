@@ -222,7 +222,6 @@
 
 .admin-document-layout {
   display: grid;
-  grid-template-columns: minmax(31rem, .88fr) minmax(40rem, 1.12fr);
   align-items: start;
   min-height: calc(100vh - 8.75rem);
 }
@@ -383,27 +382,9 @@
   min-width: 0;
 }
 
-.admin-document-theme--compact {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.admin-document-theme--compact > label:first-child {
-  grid-column: 1 / -1;
-}
-
 .admin-document-theme input[type="color"] {
   min-height: 2.65rem;
   padding: .25rem;
-}
-
-@container admin-cover-letter-form (min-width: 34rem) {
-  .admin-document-theme--compact {
-    grid-template-columns: 1.5fr 1fr 1fr;
-  }
-
-  .admin-document-theme--compact > label:first-child {
-    grid-column: auto;
-  }
 }
 
 .admin-form-help {
@@ -877,24 +858,9 @@
   to { transform: rotate(360deg); }
 }
 
-@media (max-width: 1699px) {
-  .admin-document-library.is-editing { grid-template-columns: 1fr; }
-  .admin-document-library.is-editing .admin-document-library__collection { display: none; }
-  .admin-document-library__back { display: inline-flex; }
-}
-
 @media (max-width: 1480px) {
   .admin-document-header {
     align-items: flex-start;
-  }
-
-  .admin-document-actions {
-    flex-wrap: wrap;
-  }
-
-  .admin-document-actions > span {
-    width: 100%;
-    text-align: right;
   }
 
   .admin-document-frame[data-zoom="fit"].admin-document-frame--cv .admin-embedded-preview-stage { --preview-scale: .48; }

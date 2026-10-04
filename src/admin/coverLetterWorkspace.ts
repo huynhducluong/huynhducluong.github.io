@@ -215,8 +215,8 @@ const evidenceChecks = (items: CoverLetterEvidenceOption[], name: "projectIds" |
 };
 
 const collectionView = (): string => `
-  <aside class="admin-cl-collection">
-    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${records.length}</span></h2></div>${records.length ? '<button class="button admin-action-new" type="button" data-cl-new>+ New</button>' : ""}</div>
+  <aside id="cover-letter-library" class="admin-cl-collection"${editorOpen ? ' data-cl-library-drawer role="dialog" aria-label="Cover letter library" aria-hidden="true" inert' : ""}>
+    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${records.length}</span></h2></div><div class="admin-collection__heading-actions">${records.length ? '<button class="button admin-action-new" type="button" data-cl-new>+ New</button>' : ""}${editorOpen ? '<button class="admin-drawer-close" type="button" data-cl-library-close aria-label="Close cover letter library">×</button>' : ""}</div></div>
     <div class="admin-list-controls">
       <label class="admin-search"><span class="sr-only">Search cover letters</span><input type="search" placeholder="Search company, role or title..." value="${escapeHtml(search)}" data-cl-search></label>
       <div class="admin-filter-row" aria-label="Cover letter status">${(["all", "draft", "final", "archived"] as CoverLetterFilter[]).map((item) => `<button type="button" data-cl-filter="${item}" class="${filter === item ? "is-active" : ""}"><span>${item}</span><strong>${filterCount(item)}</strong></button>`).join("")}</div>
@@ -253,6 +253,9 @@ const emptyWorkspace = (): string => {
 const editorView = (): string => {
   const isLocked = locked();
   const validation = validateCoverLetter(letter);
+  const validationContent = validation.errors.length || validation.warnings.length
+    ? `${validation.errors.length ? `<h3>Errors</h3><ul class="is-error">${validation.errors.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}${validation.warnings.length ? `<h3>Warnings</h3><ul>${validation.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}`
+    : "<p>Required content is ready for final review.</p>";
   const zoomControls = renderAdminPreviewControlGroup({
     label: "Preview zoom",
     dataAttribute: "data-cl-zoom",
@@ -265,25 +268,30 @@ const editorView = (): string => {
   });
   const previewToolbar = renderAdminPreviewToolbar({
     title: isLocked ? "Cover Letter snapshot" : "Cover Letter preview",
-    meta: `A4 · <span data-cl-word-count>${validation.wordCount} words</span> · <span data-cl-fit-state>Checking page…</span>`,
+    meta: `A4 · <span data-cl-word-count>${validation.wordCount} words</span> · <span data-cl-fit-state>Checking page…</span> · <button type="button" class="admin-preview-status" data-cl-validation-open data-kind="${validation.errors.length ? "error" : validation.warnings.length ? "warning" : "success"}" aria-haspopup="dialog" aria-controls="cover-letter-validation-dialog"><span data-cl-validation-count>${validation.errors.length ? `${validation.errors.length} error${validation.errors.length === 1 ? "" : "s"}` : validation.warnings.length ? `${validation.warnings.length} warning${validation.warnings.length === 1 ? "" : "s"}` : "Ready"}</span></button>`,
     controls: zoomControls,
   });
   return `
-    <section class="admin-cl-editor">
-      <header class="admin-cl-editor__heading">
-        <div class="admin-cl-editor__identity"><button type="button" class="admin-cl-back" data-cl-close>‹ Letters</button><div><p class="section-kicker">Applications</p><h1>${escapeHtml(letter.internalTitle)}</h1><div class="admin-editor__meta"><span class="status status--${status()}">${status()}</span><small data-cl-dirty-state>${dirty ? "Unsaved changes" : "Saved"}</small></div></div></div>
-        <div class="admin-cl-editor__actions">
+    <section class="admin-document-workspace" data-cover-letter-workspace>
+      <header class="admin-document-header">
+        <div class="admin-document-header__identity">
+          <p class="section-kicker">Applications</p>
+          <h1 class="admin-document-title"><button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button></h1>
+          <p class="admin-document-meta"><span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${date(record.updatedAt)}` : "New application"}</span></p>
+        </div>
+        <div class="admin-document-actions">
+          <span data-cl-dirty-state>${dirty ? "Unsaved changes" : isLocked ? "Locked" : "Saved"}</span>
           ${record ? `<a class="button button--secondary admin-action-utility" href="${base}cover-letter/?id=${encodeURIComponent(record.id)}" target="_blank" rel="noreferrer">Print view</a>` : ""}
-          ${record?.status === "draft" ? '<button class="admin-icon-button admin-danger" type="button" data-cl-delete aria-label="Delete draft">•••</button>' : ""}
+          ${record ? `<details class="admin-document-more"><summary>More</summary><div>${record.status === "draft" ? '<button class="admin-danger" type="button" data-cl-delete>Delete draft</button>' : record.status === "final" ? '<button type="button" data-cl-archive>Archive</button>' : ""}</div></details>` : ""}
           ${isLocked
-            ? (record?.status === "final" ? '<button class="button button--secondary" type="button" data-cl-archive>Archive</button>' : "") + '<button class="button" type="button" data-cl-duplicate>Duplicate as draft</button>'
-            : '<button class="button button--secondary admin-action-publish" type="button" data-cl-finalize>Finalize</button><button class="button admin-action-save" type="submit" form="admin-cover-letter-form">Save draft</button>'}
+            ? '<button class="button admin-action-publish" type="button" data-cl-duplicate>Duplicate as draft</button>'
+            : '<button class="button button--secondary admin-action-save" type="submit" form="admin-cover-letter-form">Save draft</button><button class="button admin-action-publish" type="button" data-cl-finalize>Finalize</button>'}
         </div>
       </header>
       ${isLocked ? '<div class="cover-letter-lock"><strong>Final content is locked.</strong><span>Duplicate this letter to create an editable draft.</span></div>' : ""}
-      <div class="admin-cl-editor__body">
-        <section class="admin-cl-form-pane">
-          <nav class="admin-editor-tabs" role="tablist" aria-label="Cover letter sections">${tabButton("content", "Content")}${tabButton("evidence", "Evidence")}${tabButton("appearance", "Appearance")}${tabButton("notes", "Notes")}</nav>
+      <div class="admin-document-layout">
+        <section class="admin-cover-letter-form admin-document-editor">
+          <nav class="admin-document-tabs" role="tablist" aria-label="Cover letter sections">${tabButton("content", "Content")}${tabButton("evidence", "Evidence")}${tabButton("appearance", "Appearance")}${tabButton("notes", "Notes")}</nav>
           <form id="admin-cover-letter-form" data-cl-form>
             <section class="admin-editor-panel" data-cl-panel="content" ${panelState("content")}>
               ${renderAdminSectionCard({
@@ -315,15 +323,13 @@ const editorView = (): string => {
             </section>
             <section class="admin-editor-panel" data-cl-panel="appearance" ${panelState("appearance")}>
               ${renderAdminSectionCard({
-                title: "Document appearance",
-                note: "Choose a preset or verified company colors.",
+                title: "Cover Letter appearance",
+                note: "Choose brand colors saved with this draft.",
                 content: renderDocumentThemeFields({
                   theme: letter.theme,
                   names: { preset: "themePreset", primary: "themePrimary", accent: "themeAccent" },
                   helpText: "Colors are stored in this draft and frozen when the cover letter is finalized.",
-                  compact: true,
                   disabled: isLocked,
-                  customLabel: "Custom company colors",
                 }),
               })}
             </section>
@@ -332,19 +338,19 @@ const editorView = (): string => {
             </section>
           </form>
         </section>
-        <aside class="admin-cl-preview">
+        <aside class="admin-document-preview">
           ${previewToolbar}
           <div class="admin-cl-preview-scroll"><div class="admin-cl-preview-stage zoom-${previewZoom}"><div data-cl-preview></div></div></div>
-          <details class="admin-cl-validation" ${validation.errors.length ? "open" : ""}><summary><span>Validation</span><strong data-cl-validation-count>${validation.errors.length} errors · ${validation.warnings.length} warnings</strong></summary><div data-cl-validation>${validation.errors.map((item) => `<p class="is-error">${escapeHtml(item)}</p>`).concat(validation.warnings.map((item) => `<p>${escapeHtml(item)}</p>`)).join("") || "<p>Ready for final review.</p>"}</div></details>
         </aside>
       </div>
+      <dialog id="cover-letter-validation-dialog" class="admin-dialog admin-document-check-dialog" data-cl-validation-dialog aria-labelledby="cover-letter-validation-title"><form method="dialog"><div><p class="section-kicker">Cover Letter</p><h2 id="cover-letter-validation-title">Final review</h2><p>Resolve errors before finalizing; warnings should be reviewed.</p></div><div class="admin-document-check-dialog__content" data-cl-validation>${validationContent}</div><div class="admin-actions"><button class="button button--secondary" type="button" data-cl-validation-close>Close</button></div></form></dialog>
     </section>`;
 };
 
 export const coverLetterWorkspaceView = (): string => {
   if (!loaded && !loadError) return '<section class="admin-cl-loading"><strong>Loading Cover Letters…</strong><p>Preparing applications and supporting evidence.</p></section>';
   if (loadError) return `<section class="admin-cl-loading"><strong>Cover Letter workspace unavailable</strong><p>${escapeHtml(loadError)}</p><button class="button" type="button" data-cl-retry>Try again</button></section>`;
-  return `<section class="admin-cl-shell ${editorOpen ? "is-editing" : ""}">${collectionView()}<div class="admin-cl-workspace">${editorOpen ? editorView() : emptyWorkspace()}</div></section>`;
+  return `<section class="admin-cl-shell ${editorOpen ? "is-editing" : ""}">${editorOpen ? '<button class="admin-library-scrim" type="button" data-cl-library-close aria-label="Close cover letter library" tabindex="-1"></button>' : ""}${collectionView()}<div class="admin-cl-workspace">${editorOpen ? editorView() : emptyWorkspace()}</div></section>`;
 };
 
 const selectedValues = (form: HTMLFormElement, name: string): string[] =>
@@ -388,9 +394,19 @@ const updatePreview = (root: ParentNode): void => {
   const wordCount = root.querySelector<HTMLElement>("[data-cl-word-count]");
   if (wordCount) wordCount.textContent = `${validation.wordCount} words`;
   const validationCount = root.querySelector<HTMLElement>("[data-cl-validation-count]");
-  if (validationCount) validationCount.textContent = `${validation.errors.length} errors · ${validation.warnings.length} warnings`;
+  if (validationCount) {
+    validationCount.textContent = validation.errors.length
+      ? `${validation.errors.length} error${validation.errors.length === 1 ? "" : "s"}`
+      : validation.warnings.length
+        ? `${validation.warnings.length} warning${validation.warnings.length === 1 ? "" : "s"}`
+        : "Ready";
+    const validationButton = validationCount.closest<HTMLElement>("[data-cl-validation-open]");
+    if (validationButton) validationButton.dataset.kind = validation.errors.length ? "error" : validation.warnings.length ? "warning" : "success";
+  }
   const validationList = root.querySelector<HTMLElement>("[data-cl-validation]");
-  if (validationList) validationList.innerHTML = validation.errors.map((item) => `<p class="is-error">${escapeHtml(item)}</p>`).concat(validation.warnings.map((item) => `<p>${escapeHtml(item)}</p>`)).join("") || "<p>Ready for final review.</p>";
+  if (validationList) validationList.innerHTML = validation.errors.length || validation.warnings.length
+    ? `${validation.errors.length ? `<h3>Errors</h3><ul class="is-error">${validation.errors.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}${validation.warnings.length ? `<h3>Warnings</h3><ul>${validation.warnings.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}`
+    : "<p>Required content is ready for final review.</p>";
   requestAnimationFrame(() => {
     const overflow = page ? coverLetterOverflows(page) : false;
     const fitState = root.querySelector<HTMLElement>("[data-cl-fit-state]");
@@ -495,6 +511,25 @@ const bindRecordButtons = (root: ParentNode, callbacks: WorkspaceCallbacks): voi
 };
 
 export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: WorkspaceCallbacks): void => {
+  const libraryShell = root.querySelector<HTMLElement>(".admin-cl-shell.is-editing");
+  const libraryDrawer = root.querySelector<HTMLElement>("[data-cl-library-drawer]");
+  const libraryWorkspace = libraryShell?.querySelector<HTMLElement>(".admin-cl-workspace");
+  const libraryTrigger = root.querySelector<HTMLButtonElement>("[data-cl-library-open]");
+  const setLibraryOpen = (open: boolean): void => {
+    if (!libraryShell || !libraryDrawer) return;
+    libraryShell.classList.toggle("is-library-open", open);
+    libraryDrawer.inert = !open;
+    if (libraryWorkspace) libraryWorkspace.inert = open;
+    libraryDrawer.setAttribute("aria-hidden", String(!open));
+    libraryTrigger?.setAttribute("aria-expanded", String(open));
+    if (open) requestAnimationFrame(() => libraryDrawer.querySelector<HTMLInputElement>("[data-cl-search]")?.focus());
+    else libraryTrigger?.focus();
+  };
+  libraryTrigger?.addEventListener("click", () => setLibraryOpen(true));
+  root.querySelectorAll<HTMLButtonElement>("[data-cl-library-close]").forEach((button) => button.addEventListener("click", () => setLibraryOpen(false)));
+  libraryDrawer?.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setLibraryOpen(false);
+  });
   root.querySelector("[data-cl-retry]")?.addEventListener("click", () => {
     loadError = "";
     loaded = false;
@@ -513,7 +548,12 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   });
   root.querySelectorAll<HTMLButtonElement>("[data-cl-filter]").forEach((button) => button.addEventListener("click", () => {
     filter = button.dataset.clFilter as CoverLetterFilter;
-    callbacks.rerender();
+    root.querySelectorAll<HTMLButtonElement>("[data-cl-filter]").forEach((item) => item.classList.toggle("is-active", item === button));
+    const list = root.querySelector<HTMLElement>("[data-cl-list]");
+    if (list) {
+      list.innerHTML = recordList();
+      bindRecordButtons(list, callbacks);
+    }
   }));
   root.querySelector("[data-cl-close]")?.addEventListener("click", async () => {
     if (dirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Close this cover letter?", message: "Your unsaved changes will be discarded and you will return to the letter list.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
@@ -543,6 +583,9 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
     const stage = root.querySelector<HTMLElement>(".admin-cl-preview-stage");
     if (stage) stage.className = `admin-cl-preview-stage zoom-${previewZoom}`;
   }));
+  const validationDialog = root.querySelector<HTMLDialogElement>("[data-cl-validation-dialog]");
+  root.querySelector<HTMLButtonElement>("[data-cl-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
+  root.querySelector<HTMLButtonElement>("[data-cl-validation-close]")?.addEventListener("click", () => validationDialog?.close());
 
   const form = root.querySelector<HTMLFormElement>("[data-cl-form]");
   form?.addEventListener("input", () => { markDirty(root, callbacks); updatePreview(root); });
