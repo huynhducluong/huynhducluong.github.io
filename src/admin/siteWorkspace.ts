@@ -295,7 +295,7 @@ const websiteSections = (content: WebsiteContent): string => renderAdminSectionC
 
 const websiteFeatured = (runtime: WebsiteRuntimeData): string => renderAdminSectionCard({
   title: "Website content selection",
-  note: "Choose Website content and Homepage highlights. Display order follows Projects and Automation Tools.",
+  note: "Choose Website content and Homepage highlights.",
   content: `<div class="admin-site-content-selection">
     <section><h4>Projects</h4><div class="admin-site-content-selection__list">
       ${runtime.projects.map((item) => {

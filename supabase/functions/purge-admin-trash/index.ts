@@ -14,7 +14,7 @@ const admin = createClient(supabaseUrl, serviceRoleKey, {
 
 interface ExpiredItem {
   id: string;
-  project_images?: Array<{ storage_path: string }>;
+  project_images?: Array<{ storage_path: string; project_image_crops?: Array<{ storage_path: string }> }>;
   tool_images?: Array<{ storage_path: string }>;
 }
 
@@ -22,9 +22,12 @@ const purgeRows = async (
   table: "projects" | "automation_tools",
   relation: "project_images" | "tool_images",
 ): Promise<{ deleted: number; failures: string[] }> => {
+  const selection = relation === "project_images"
+    ? "id, project_images(storage_path, project_image_crops(storage_path))"
+    : "id, tool_images(storage_path)";
   const { data, error } = await admin
     .from(table)
-    .select(`id, ${relation}(storage_path)`)
+    .select(selection)
     .not("deleted_at", "is", null)
     .lte("purge_after", new Date().toISOString())
     .limit(100);
@@ -36,7 +39,10 @@ const purgeRows = async (
   for (const item of (data ?? []) as unknown as ExpiredItem[]) {
     try {
       const images = relation === "project_images" ? item.project_images ?? [] : item.tool_images ?? [];
-      const paths = images.map((image) => image.storage_path);
+      const paths = images.flatMap((image) => [
+        image.storage_path,
+        ...("project_image_crops" in image ? (image.project_image_crops ?? []).map((crop) => crop.storage_path) : []),
+      ]);
       if (paths.length) {
         const { error: storageError } = await admin.storage.from(storageBucket).remove(paths);
         if (storageError) throw storageError;

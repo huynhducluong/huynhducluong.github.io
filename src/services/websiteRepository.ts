@@ -3,6 +3,7 @@ import { websiteNavigationLabels, type WebsiteNavigationLabels } from "../data/w
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteContentSelection, WebsiteRuntimeData } from "../types/website";
 import { supabase } from "./supabaseClient";
+import { withoutTrashed } from "./activeContent";
 import {
   projectFromRow,
   toolFromRow,
@@ -112,8 +113,8 @@ export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {
   if (toolResult.error) throw toolResult.error;
   const contentRow = contentResult.data as WebsiteContentRow | null;
   const content = contentRow ? websiteContentFromRow(contentRow) : structuredClone(websiteContentSeed);
-  const sourceProjects = (projectResult.data as ProjectRow[]).map(projectFromRow);
-  const sourceTools = (toolResult.data as ToolRow[]).map(toolFromRow);
+  const sourceProjects = withoutTrashed(projectResult.data as ProjectRow[]).map(projectFromRow);
+  const sourceTools = withoutTrashed(toolResult.data as ToolRow[]).map(toolFromRow);
   if (!contentRow?.content_selection) {
     content.contentSelection = {
       projectIds: sourceProjects.filter((item) => item.status === "published").map((item) => item.id),

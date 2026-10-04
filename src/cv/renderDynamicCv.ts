@@ -54,13 +54,13 @@ const formatRange = (startDate: string | undefined, endDate: string | null | und
 };
 
 const selectedResponsibilities = (project: CvRuntimeProject): ContentPoint[] => {
-  if (!project.cvResponsibilityIds.length) return project.responsibilities;
   const byId = new Map(project.responsibilities.map((item) => [item.id, item]));
   return project.cvResponsibilityIds.map((id) => byId.get(id)).filter((item): item is ContentPoint => Boolean(item));
 };
 
 const renderProject = (project: CvRuntimeProject, language: Language, compact = false): string => {
   const location = localized(project.location, language);
+  const responsibilities = selectedResponsibilities(project);
   return `
   <article class="cv-experience-item${compact ? " cv-experience-item--compact" : ""}">
     <p class="cv-experience-item__date">${formatRange(project.startDate, project.endDate, language)}</p>
@@ -68,7 +68,7 @@ const renderProject = (project: CvRuntimeProject, language: Language, compact = 
       ${project.role ? `<h3>${localized(project.role, language)}</h3>` : ""}
       <p class="cv-experience-item__project">${localized(project.name, language)}${location ? `, ${location}` : ""}</p>
       ${project.cvShowSummary && project.summary ? `<p class="cv-experience-item__summary">${localized(project.summary, language)}</p>` : ""}
-      <ul class="cv-bullet-list">${selectedResponsibilities(project).map((item) => `<li>${localized(item.text, language)}</li>`).join("")}</ul>
+      ${responsibilities.length ? `<ul class="cv-bullet-list">${responsibilities.map((item) => `<li>${localized(item.text, language)}</li>`).join("")}</ul>` : ""}
     </div>
   </article>`;
 };

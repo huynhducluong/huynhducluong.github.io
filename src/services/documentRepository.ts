@@ -12,6 +12,7 @@ import {
   type ToolRow,
 } from "./supabasePortfolioRepository";
 import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
+import { withoutTrashed } from "./activeContent";
 
 interface PortfolioContentRow {
   version: string;
@@ -68,7 +69,7 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalize
 export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> => {
   const [contentResult, projectResult, toolResult] = await Promise.all([
     supabase.from("portfolio_content").select("*").eq("id", "primary").maybeSingle(),
-    supabase.from("projects").select("*, project_images(*)").is("deleted_at", null).order("portfolio_order"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("portfolio_order"),
     supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("portfolio_order"),
   ]);
   if (contentResult.error) throw contentResult.error;
@@ -79,8 +80,8 @@ export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> =>
     content: contentResult.data
       ? contentFromRow(contentResult.data as PortfolioContentRow)
       : structuredClone(portfolioContentSeed),
-    projects: (projectResult.data as ProjectRow[]).map(projectFromRow),
-    tools: (toolResult.data as ToolRow[]).map(toolFromRow),
+    projects: withoutTrashed(projectResult.data as ProjectRow[]).map(projectFromRow),
+    tools: withoutTrashed(toolResult.data as ToolRow[]).map(toolFromRow),
   };
 };
 export const loadPublishedPortfolioRelease = async (): Promise<PortfolioRuntimeData> => {

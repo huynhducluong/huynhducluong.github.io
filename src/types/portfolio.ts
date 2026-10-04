@@ -40,6 +40,22 @@ export interface PortfolioMedia {
   caption?: LocalizedText;
   kind: "cover" | "gallery";
   displayOrder: number;
+  crops?: Partial<Record<PortfolioLayout, PortfolioMediaCrop>>;
+}
+
+export interface PortfolioMediaCrop {
+  id: string;
+  layout: PortfolioLayout;
+  storagePath: string;
+  publicUrl?: string;
+  cropX: number;
+  cropY: number;
+  cropWidth: number;
+  cropHeight: number;
+  width: number;
+  height: number;
+  mimeType: string;
+  fileSize: number;
 }
 
 export interface PortfolioProject {

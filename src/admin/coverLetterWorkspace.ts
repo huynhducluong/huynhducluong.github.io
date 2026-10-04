@@ -150,9 +150,15 @@ export const ensureCoverLetterWorkspace = async (): Promise<void> => {
   loading = (async () => {
     try {
       const [letterRecords, evidence, professional] = await Promise.all([listCoverLetters(), listCoverLetterEvidence(), loadProfessionalProfile()]);
-      records = letterRecords;
       projects = evidence.projects;
       tools = evidence.tools;
+      const activeProjectIds = new Set(projects.map((item) => item.id));
+      const activeToolIds = new Set(tools.map((item) => item.id));
+      records = letterRecords.map((item) => ({
+        ...item,
+        projectIds: item.projectIds.filter((id) => activeProjectIds.has(id)),
+        toolIds: item.toolIds.filter((id) => activeToolIds.has(id)),
+      }));
       updateCoverLetterSharedProfile(professional);
       const requestedId = new URLSearchParams(window.location.search).get("id");
       const requested = requestedId ? records.find((item) => item.id === requestedId) : null;

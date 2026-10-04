@@ -41,7 +41,10 @@ const image = (project: PortfolioProject, language: Language): string => {
   if (!media) {
     return `<div class="portfolio-image-placeholder"><span>${copy[language].imagePlaceholder}</span></div>`;
   }
-  const source = media.publicUrl ?? (/^https?:\/\//i.test(media.storagePath) ? media.storagePath : assetUrl(media.storagePath));
+  const crop = media.crops?.[project.portfolioLayout];
+  const source = crop
+    ? crop.publicUrl ?? (/^https?:\/\//i.test(crop.storagePath) ? crop.storagePath : assetUrl(crop.storagePath))
+    : media.publicUrl ?? (/^https?:\/\//i.test(media.storagePath) ? media.storagePath : assetUrl(media.storagePath));
   return `<img class="portfolio-project-image" src="${escapeHtml(source)}" alt="${localized(media.alt, language)}">`;
 };
 

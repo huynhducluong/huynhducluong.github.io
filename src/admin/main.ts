@@ -13,8 +13,10 @@ import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import { bindAdminTablists, bindAdminYearPickers, renderAdminSectionCard } from "./ui";
 import { confirmAdmin } from "./confirmDialog";
+import { bindProjectCoverCropper, renderProjectCoverCropDialog } from "./projectCoverCropper";
 import { escapeHtml } from "../shared/format";
 import { supabase } from "../services/supabaseClient";
+import { downloadStoredMedia, type ProjectImageCropRow } from "../services/projectCoverCropRepository";
 import type { CvProjectDisplay } from "../types/cvContent";
 import type { PublicationStatus } from "../types/portfolio";
 import {
@@ -50,6 +52,7 @@ interface AdminMediaRow {
   display_order: number;
   mime_type: string | null;
   file_size: number | null;
+  project_image_crops?: ProjectImageCropRow[];
 }
 
 interface AdminProjectRow {
@@ -118,6 +121,16 @@ type AdminItemType = "project" | "tool";
 type ContentFilter = "all" | "project" | "tool";
 type ContentStatusFilter = "all" | PublicationStatus;
 type EditorTab = "overview" | "content" | "media";
+type CollectionView = "projects" | "tools" | "trash";
+type ReorderMovement = "up" | "down" | "first" | "last" | { targetId: string };
+type CollectionFocusTarget = "select" | "up" | "down" | "more";
+
+interface CollectionRevealIntent {
+  view: CollectionView;
+  itemId: string;
+  align: "nearest" | "center";
+  focus: CollectionFocusTarget;
+}
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
@@ -138,6 +151,65 @@ let pendingMedia: PendingMedia[] = [];
 let magicLinkCooldown: number | undefined;
 let reorderBusy = false;
 let navigationSequence = 0;
+let dashboardRenderSequence = 0;
+let pendingCollectionReveal: CollectionRevealIntent | null = null;
+const collectionScrollPositions: Record<CollectionView, number> = { projects: 0, tools: 0, trash: 0 };
+
+const captureCollectionScroll = (): void => {
+  const scroller = app.querySelector<HTMLElement>("[data-collection-view]");
+  const view = scroller?.dataset.collectionView as CollectionView | undefined;
+  if (scroller && view && view in collectionScrollPositions) collectionScrollPositions[view] = scroller.scrollTop;
+};
+
+const resetCurrentCollectionScroll = (): void => {
+  const scroller = app.querySelector<HTMLElement>("[data-collection-view]");
+  const view = scroller?.dataset.collectionView as CollectionView | undefined;
+  if (!scroller || !view || !(view in collectionScrollPositions)) return;
+  scroller.scrollTop = 0;
+  collectionScrollPositions[view] = 0;
+};
+
+const ensureCollectionItemVisible = (
+  scroller: HTMLElement,
+  row: HTMLElement,
+  align: CollectionRevealIntent["align"],
+): void => {
+  const viewport = scroller.getBoundingClientRect();
+  const bounds = row.getBoundingClientRect();
+  if (align === "center") {
+    scroller.scrollTop += bounds.top - viewport.top - ((scroller.clientHeight - bounds.height) / 2);
+    return;
+  }
+  const inset = 8;
+  if (bounds.top < viewport.top + inset) scroller.scrollTop += bounds.top - viewport.top - inset;
+  else if (bounds.bottom > viewport.bottom - inset) scroller.scrollTop += bounds.bottom - viewport.bottom + inset;
+};
+
+const restoreCollectionScroll = (renderId: number): void => {
+  const view = activeView as CollectionView;
+  if (!(view in collectionScrollPositions)) return;
+  requestAnimationFrame(() => {
+    if (renderId !== dashboardRenderSequence || activeView !== view) return;
+    const scroller = app.querySelector<HTMLElement>(`[data-collection-view="${view}"]`);
+    if (!scroller) return;
+    scroller.scrollTop = collectionScrollPositions[view];
+    const intent = pendingCollectionReveal?.view === view ? pendingCollectionReveal : null;
+    if (!intent) return;
+    const row = Array.from(scroller.querySelectorAll<HTMLElement>("[data-content-item]")).find((item) => item.dataset.contentItem === intent.itemId);
+    if (row) {
+      ensureCollectionItemVisible(scroller, row, intent.align);
+      const focusSelector: Record<CollectionFocusTarget, string> = {
+        select: "[data-select-item]",
+        up: '[data-reorder-direction="up"]',
+        down: '[data-reorder-direction="down"]',
+        more: "[data-reorder-menu-trigger]",
+      };
+      row.querySelector<HTMLElement>(focusSelector[intent.focus])?.focus({ preventScroll: true });
+      collectionScrollPositions[view] = scroller.scrollTop;
+    }
+    pendingCollectionReveal = null;
+  });
+};
 
 window.addEventListener("beforeunload", (event) => {
   if (adminFormDirty) event.preventDefault();
@@ -435,14 +507,25 @@ const isSelectedItem = (item: AdminContentListItem): boolean =>
   selectedItemType === item.type
   && (item.type === "project" ? selectedProject?.id === item.id : selectedTool?.id === item.id);
 
+const itemOrderPosition = (item: AdminContentListItem): { first: boolean; last: boolean; only: boolean } => {
+  const orderedIds = (item.type === "project" ? projects : tools)
+    .filter((entry) => !entry.deleted_at)
+    .sort((left, right) => left.display_order - right.display_order)
+    .map((entry) => entry.id);
+  const index = orderedIds.indexOf(item.id);
+  return { first: index === 0, last: index === orderedIds.length - 1, only: orderedIds.length <= 1 };
+};
+
 const contentList = (): string => {
   const items = visibleContentItems();
   if (!items.length) {
     return `<li class="admin-empty">${activeView === "trash" ? "Trash is empty." : "No content matches this view."}</li>`;
   }
-  return items.map((item) => `
-    <li class="admin-content-item${activeView === "trash" ? " admin-content-item--trash" : ""} ${isSelectedItem(item) ? "is-selected" : ""}">
-      ${activeView !== "trash" && !item.deletedAt ? `<div class="admin-content-item__reorder" aria-label="Reorder ${escapeHtml(item.name)}"><span class="admin-content-item__drag" draggable="true" data-reorder-drag data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span><button type="button" data-reorder-direction="up" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} earlier">↑</button><button type="button" data-reorder-direction="down" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} later">↓</button></div>` : ""}
+  return items.map((item) => {
+    const position = itemOrderPosition(item);
+    return `
+    <li class="admin-content-item${activeView === "trash" ? " admin-content-item--trash" : ""} ${isSelectedItem(item) ? "is-selected" : ""}" data-content-item="${escapeHtml(item.id)}">
+      ${activeView !== "trash" && !item.deletedAt ? `<div class="admin-content-item__reorder" aria-label="Reorder ${escapeHtml(item.name)}"><span class="admin-content-item__drag" draggable="true" data-reorder-drag data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span><button type="button" data-reorder-direction="up" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} earlier" title="Move earlier"${position.first ? " disabled" : ""}>↑</button><button type="button" data-reorder-direction="down" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} later" title="Move later"${position.last ? " disabled" : ""}>↓</button><button type="button" data-reorder-menu-trigger data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="More reorder actions for ${escapeHtml(item.name)}" aria-haspopup="menu" aria-expanded="false" title="More reorder actions"${position.only ? " disabled" : ""}>⋯</button></div>` : ""}
       <button class="admin-content-item__select" type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${item.type}" aria-pressed="${isSelectedItem(item)}">
         ${activeView === "trash" ? `<span class="admin-content-item__type">${item.type}</span>` : ""}
         <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
@@ -453,7 +536,8 @@ const contentList = (): string => {
         ${item.deletedAt ? `<small>${trashDaysRemaining(item.purgeAfter)}</small>` : ""}
       </div>
       ${item.deletedAt ? `<div class="admin-content-item__actions"><button type="button" data-restore-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Restore</button><button class="admin-danger" type="button" data-purge-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Delete permanently</button></div>` : ""}
-    </li>`).join("");
+    </li>`;
+  }).join("");
 };
 
 const field = (label: string, name: string, value = "", type = "text"): string =>
@@ -473,7 +557,9 @@ const orderedProjectMedia = (media: AdminMediaRow[]): AdminMediaRow[] => [...med
   return left.display_order - right.display_order;
 });
 
-const mediaLibrary = (mediaRows: AdminMediaRow[]): string => {
+const downloadIcon = `<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>`;
+
+const mediaLibrary = (type: AdminItemType, mediaRows: AdminMediaRow[]): string => {
   const media = orderedProjectMedia(mediaRows);
   if (!media.length) return '<p class="admin-empty">No saved images yet.</p>';
   const firstGalleryIndex = media[0]?.kind === "cover" ? 1 : 0;
@@ -483,9 +569,11 @@ const mediaLibrary = (mediaRows: AdminMediaRow[]): string => {
       <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
       <div class="admin-media-row__fields"><label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt.en)}" data-media-alt></label></div>
       <div class="admin-media-row__actions">
-        <button type="button" data-media-cover ${item.kind === "cover" ? "disabled" : ""}>${item.kind === "cover" ? "Cover set" : "Set cover"}</button>
-        <button type="button" class="admin-media-action--icon" data-media-move="up" ${item.kind === "cover" || index === firstGalleryIndex ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button>
-        <button type="button" class="admin-media-action--icon" data-media-move="down" ${item.kind === "cover" || index === media.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button>
+        ${type === "project" ? `<button type="button" class="admin-media-action--icon" data-media-download aria-label="Download original image" title="Download original">${downloadIcon}</button>` : ""}
+        ${type === "project" && item.kind === "cover" ? `<button type="button" data-media-crops>Adjust crops <small>${item.project_image_crops?.length ?? 0}/3</small></button>` : ""}
+        ${item.kind === "cover" ? "" : `<button type="button" data-media-cover>Set cover</button>
+        <button type="button" class="admin-media-action--icon" data-media-move="up" ${index === firstGalleryIndex ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button>
+        <button type="button" class="admin-media-action--icon" data-media-move="down" ${index === media.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button>`}
         <button type="button" data-media-save>Save</button>
         <button type="button" class="admin-danger" data-media-delete>Delete</button>
       </div>
@@ -503,7 +591,7 @@ const mediaPanel = (type: AdminItemType, media: AdminMediaRow[]): string => {
     : "Choose the primary tool visual, edit alt text and order supporting screenshots.";
   return `<div class="admin-media-panel" data-editor-panel="media" data-media-owner="${type}" ${panelState("media")}>
     <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload</button></form>
-    <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(media)}</section>
+    <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(type, media)}</section>
   </div>`;
 };
 
@@ -605,7 +693,7 @@ const overviewView = (): string => {
       </div>
       <div class="admin-overview-grid">
         <section class="admin-overview-card admin-overview-card--attention${needsAttention.length ? "" : " is-empty"}"><div class="admin-card-heading"><div><h2>Needs attention</h2><p>Draft and archived content that is not public.</p></div><span>${needsAttention.length}</span></div>
-          <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong>${escapeHtml(itemName)}</strong><small>${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${contentStatusLabel(item.status)}</span></button>`; }).join("") : '<div class="admin-empty-state"><span aria-hidden="true">&#10003;</span><div><strong>Everything is ready</strong><small>No draft or archived content needs attention.</small></div></div>'}</div>
+          <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong title="${escapeHtml(itemName)}">${escapeHtml(itemName)}</strong><small title="${escapeHtml(item.slug)}">${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${contentStatusLabel(item.status)}</span></button>`; }).join("") : '<div class="admin-empty-state"><span aria-hidden="true">&#10003;</span><div><strong>Everything is ready</strong><small>No draft or archived content needs attention.</small></div></div>'}</div>
         </section>
         <section class="admin-overview-card"><div class="admin-card-heading"><div><h2>Publishing workflow</h2><p>A shared path for Website, CV and Portfolio.</p></div></div><ol class="admin-workflow"><li><span>1</span><div><strong>Edit shared content</strong><small>Update Professional Profile, projects and tools once.</small></div></li><li><span>2</span><div><strong>Review channel preview</strong><small>Check Website or document output inside Admin.</small></div></li><li><span>3</span><div><strong>Publish release</strong><small>Freeze a new read-only public snapshot.</small></div></li></ol></section>
       </div>
@@ -638,6 +726,8 @@ const selectedContentSummary = (): { type: AdminItemType; name: string; status: 
 };
 
 const dashboardView = (): void => {
+  captureCollectionScroll();
+  const renderId = ++dashboardRenderSequence;
   const trashCount = projects.filter((item) => item.deleted_at).length + tools.filter((item) => item.deleted_at).length;
   const showCollection = activeView === "projects" || activeView === "tools" || activeView === "trash";
   const viewTitle: Record<AdminView, string> = { overview: "Overview", homepage: "Homepage", projects: "Projects", tools: "Automation tools", profile: "Professional Profile", cv: "Curriculum Vitae", portfolio: "Portfolio", "cover-letters": "Cover letters", trash: "Trash" };
@@ -666,7 +756,7 @@ const dashboardView = (): void => {
               <label class="admin-search"><span class="sr-only">Search content</span><input type="search" placeholder="Search by name or slug..." value="${escapeHtml(contentSearch)}" data-content-search></label>
               ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
             </div>
-            <div class="admin-collection__scroll"><ul class="admin-content-list" data-content-list>${contentList()}</ul></div>
+            <div class="admin-collection__scroll" data-collection-view="${activeView}"><ul class="admin-content-list" data-content-list>${contentList()}</ul></div>
           </aside>` : ""}
           <section class="admin-workspace">${workspaceView()}</section>
         </div>
@@ -681,10 +771,16 @@ const dashboardView = (): void => {
         <p class="admin-message" data-password-message role="status"></p>
         <div class="admin-actions"><button class="button" type="submit" data-password-update-submit>Save password</button><button class="button button--secondary" type="button" data-password-close>Cancel</button></div>
       </form>
-    </dialog>`;
+    </dialog>
+    ${renderProjectCoverCropDialog()}
+    <div class="admin-reorder-menu" data-reorder-menu popover="auto" role="menu" aria-label="Reorder item">
+      <button type="button" role="menuitem" data-reorder-edge="first"><span aria-hidden="true">⇈</span>Move to first</button>
+      <button type="button" role="menuitem" data-reorder-edge="last"><span aria-hidden="true">⇊</span>Move to last</button>
+    </div>`;
   bindDashboard();
   bindAdminTablists(app);
   bindAdminYearPickers(app);
+  restoreCollectionScroll(renderId);
 };
 
 const loadProjects = async (): Promise<void> => {
@@ -693,12 +789,12 @@ const loadProjects = async (): Promise<void> => {
   const selectedProjectWasPersisted = Boolean(selectedProjectId && projects.some((item) => item.id === selectedProjectId));
   const selectedToolWasPersisted = Boolean(selectedToolId && tools.some((item) => item.id === selectedToolId));
   const [projectResult, toolResult] = await Promise.all([
-    supabase.from("projects").select("*, project_images(*)").order("display_order"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").order("display_order"),
     supabase.from("automation_tools").select("*, tool_images(*)").order("display_order"),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
-  projects = (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
+  projects = (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, project_images: item.project_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
   tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
   if (selectedProjectWasPersisted) selectedProject = projects.find((item) => item.id === selectedProjectId) ?? null;
   if (selectedToolWasPersisted) selectedTool = tools.find((item) => item.id === selectedToolId) ?? null;
@@ -962,29 +1058,39 @@ const persistMasterOrder = async (type: AdminItemType, ordered: Array<AdminProje
   if (failure) throw failure;
 };
 
-const reorderMasterItem = async (type: AdminItemType, id: string, direction: "up" | "down" | string): Promise<void> => {
+const reorderMasterItem = async (type: AdminItemType, id: string, movement: ReorderMovement): Promise<void> => {
   if (reorderBusy) return;
   if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Reorder content?", message: "Your current editor changes will remain open while the shared order is updated.", confirmLabel: "Reorder", cancelLabel: "Keep editing" }))) return;
   const ordered = masterOrder(type);
   const index = ordered.findIndex((item) => item.id === id);
   if (index < 0) return;
-  const next = direction === "up" || direction === "down"
-    ? moveItem(ordered, index, direction)
-    : (() => {
-      const target = ordered.findIndex((item) => item.id === direction);
-      if (target < 0 || target === index) return ordered;
-      const copy = [...ordered];
-      const [item] = copy.splice(index, 1);
-      copy.splice(target, 0, item);
-      return copy;
-    })();
+  const next = (() => {
+    if (movement === "up" || movement === "down") return moveItem(ordered, index, movement);
+    const target = movement === "first"
+      ? 0
+      : movement === "last"
+        ? ordered.length - 1
+        : ordered.findIndex((item) => item.id === movement.targetId);
+    if (target < 0 || target === index) return ordered;
+    const copy = [...ordered];
+    const [item] = copy.splice(index, 1);
+    copy.splice(target, 0, item);
+    return copy;
+  })();
   if (next.every((item, position) => item.id === ordered[position]?.id)) return;
   reorderBusy = true;
   try {
     await persistMasterOrder(type, next);
     await loadProjects();
+    pendingCollectionReveal = {
+      view: type === "project" ? "projects" : "tools",
+      itemId: id,
+      align: movement === "first" || movement === "last" ? "center" : "nearest",
+      focus: movement === "up" || movement === "down" ? movement : movement === "first" || movement === "last" ? "more" : "select",
+    };
     dashboardView();
-    message(`${type === "project" ? "Project" : "Tool"} order updated.`, "success");
+    const position = movement === "first" ? " moved to first position" : movement === "last" ? " moved to last position" : " order updated";
+    message(`${type === "project" ? "Project" : "Tool"}${position}.`, "success");
   } finally {
     reorderBusy = false;
   }
@@ -1103,7 +1209,42 @@ const setMediaCover = async (type: AdminItemType, mediaId: string): Promise<void
   if (error) throw error;
   await persistMediaOrder(type, [cover, ...ordered.filter((item) => item.id !== mediaId)]);
   await refreshSelectedMediaOwner(type, owner.id);
-  message(`${owner.label} cover image updated.`, "success");
+  message(`${owner.label} cover image updated.${type === "project" ? " Adjust its Portfolio crops when needed." : ""}`, "success");
+};
+
+const mediaFileExtension = (media: AdminMediaRow): string => {
+  const fromPath = media.storage_path.split(".").at(-1)?.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (fromPath) return fromPath;
+  const mimeExtension: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/avif": "avif" };
+  return media.mime_type ? mimeExtension[media.mime_type] ?? "image" : "image";
+};
+
+const downloadSavedMedia = async (type: AdminItemType, mediaId: string, button: HTMLButtonElement): Promise<void> => {
+  const owner = selectedMediaOwner(type);
+  const media = owner?.media.find((item) => item.id === mediaId);
+  if (!owner || !media) return;
+  const idleContent = button.innerHTML;
+  button.disabled = true;
+  button.setAttribute("aria-busy", "true");
+  button.textContent = "…";
+  try {
+    const blob = await downloadStoredMedia(media.storage_path);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${slugify(owner.name) || type}-${media.kind}.${mediaFileExtension(media)}`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 30_000);
+    message("Original image downloaded.", "success");
+  } finally {
+    if (button.isConnected) {
+      button.innerHTML = idleContent;
+      button.disabled = false;
+      button.setAttribute("aria-busy", "false");
+    }
+  }
 };
 
 const saveMediaAlt = async (type: AdminItemType, card: HTMLElement): Promise<void> => {
@@ -1138,7 +1279,8 @@ const deleteSavedMedia = async (type: AdminItemType, mediaId: string): Promise<v
   if (!media || !(await confirmAdmin({ eyebrow: `${owner.label} media`, title: "Delete this image?", message: "The image record and its stored file will be removed.", confirmLabel: "Delete image", tone: "danger" }))) return;
   const { error: metadataError } = await supabase.from(owner.table).delete().eq("id", mediaId);
   if (metadataError) throw metadataError;
-  const { error: storageError } = await supabase.storage.from(supabaseConfig.storageBucket).remove([media.storage_path]);
+  const cropPaths = type === "project" ? (media.project_image_crops ?? []).map((crop) => crop.storage_path) : [];
+  const { error: storageError } = await supabase.storage.from(supabaseConfig.storageBucket).remove([media.storage_path, ...cropPaths]);
   await refreshSelectedMediaOwner(type, owner.id);
   if (storageError) throw new Error(`Image record deleted, but Storage cleanup failed: ${storageError.message}`);
   message("Image deleted.", "success");
@@ -1153,6 +1295,11 @@ const bindContentItemActions = (root: ParentNode = app): void => {
     const type = button.dataset.itemType as AdminItemType;
     const id = button.dataset.selectItem;
     if (!id) return;
+    const fromCollection = Boolean(button.closest("[data-collection-view]"));
+    if (!fromCollection) {
+      contentStatusFilter = "all";
+      contentSearch = "";
+    }
     adminFormDirty = false;
     activeEditorTab = "overview";
     activeView = type === "project" ? "projects" : "tools";
@@ -1165,6 +1312,12 @@ const bindContentItemActions = (root: ParentNode = app): void => {
       selectedTool = tools.find((item) => item.id === id) ?? null;
       selectedProject = null;
     }
+    pendingCollectionReveal = {
+      view: type === "project" ? "projects" : "tools",
+      itemId: id,
+      align: fromCollection ? "nearest" : "center",
+      focus: "select",
+    };
     dashboardView();
   }));
   root.querySelectorAll<HTMLElement>("[data-restore-item]").forEach((button) => button.addEventListener("click", () => {
@@ -1182,6 +1335,37 @@ const bindContentItemActions = (root: ParentNode = app): void => {
     const id = button.dataset.reorderItem;
     const direction = button.dataset.reorderDirection;
     if (id && (direction === "up" || direction === "down")) void reorderMasterItem(type, id, direction).catch((error: Error) => message(error.message, "error"));
+  }));
+  root.querySelectorAll<HTMLButtonElement>("[data-reorder-menu-trigger]").forEach((button) => button.addEventListener("click", () => {
+    const menu = app.querySelector<HTMLElement>("[data-reorder-menu]");
+    const type = button.dataset.reorderType as AdminItemType | undefined;
+    const id = button.dataset.reorderItem;
+    if (!menu || !type || !id) return;
+    if (menu.matches(":popover-open")) menu.hidePopover();
+    app.querySelectorAll<HTMLElement>("[data-reorder-menu-trigger]").forEach((trigger) => trigger.setAttribute("aria-expanded", "false"));
+    const ordered = masterOrder(type);
+    const index = ordered.findIndex((item) => item.id === id);
+    menu.dataset.reorderType = type;
+    menu.dataset.reorderItem = id;
+    const first = menu.querySelector<HTMLButtonElement>('[data-reorder-edge="first"]');
+    const last = menu.querySelector<HTMLButtonElement>('[data-reorder-edge="last"]');
+    if (first) first.disabled = index <= 0;
+    if (last) last.disabled = index < 0 || index === ordered.length - 1;
+    button.setAttribute("aria-expanded", "true");
+    menu.showPopover();
+    requestAnimationFrame(() => {
+      if (!menu.matches(":popover-open")) return;
+      const triggerBounds = button.getBoundingClientRect();
+      const menuBounds = menu.getBoundingClientRect();
+      const gap = 6;
+      const left = Math.min(window.innerWidth - menuBounds.width - 8, Math.max(8, triggerBounds.right - menuBounds.width));
+      const below = triggerBounds.bottom + gap;
+      const top = below + menuBounds.height <= window.innerHeight - 8
+        ? below
+        : Math.max(8, triggerBounds.top - menuBounds.height - gap);
+      menu.style.left = `${left}px`;
+      menu.style.top = `${top}px`;
+    });
   }));
   let dragged: { type: AdminItemType; id: string } | null = null;
   root.querySelectorAll<HTMLElement>("[data-reorder-drag]").forEach((handle) => {
@@ -1210,7 +1394,7 @@ const bindContentItemActions = (root: ParentNode = app): void => {
       event.preventDefault();
       row.classList.remove("is-drag-over");
       const target = row.querySelector<HTMLElement>("[data-reorder-item]")?.dataset.reorderItem;
-      if (dragged && target && target !== dragged.id) void reorderMasterItem(dragged.type, dragged.id, target).catch((error: Error) => message(error.message, "error"));
+      if (dragged && target && target !== dragged.id) void reorderMasterItem(dragged.type, dragged.id, { targetId: target }).catch((error: Error) => message(error.message, "error"));
       dragged = null;
     });
   });
@@ -1218,6 +1402,27 @@ const bindContentItemActions = (root: ParentNode = app): void => {
 
 const bindDashboard = (): void => {
   const passwordDialog = app.querySelector<HTMLDialogElement>("[data-password-dialog]");
+  const reorderMenu = app.querySelector<HTMLElement>("[data-reorder-menu]");
+  reorderMenu?.addEventListener("toggle", () => {
+    if (!reorderMenu.matches(":popover-open")) {
+      app.querySelectorAll<HTMLElement>("[data-reorder-menu-trigger]").forEach((trigger) => trigger.setAttribute("aria-expanded", "false"));
+    }
+  });
+  reorderMenu?.querySelectorAll<HTMLButtonElement>("[data-reorder-edge]").forEach((button) => button.addEventListener("click", () => {
+    const type = reorderMenu.dataset.reorderType as AdminItemType | undefined;
+    const id = reorderMenu.dataset.reorderItem;
+    const edge = button.dataset.reorderEdge as "first" | "last" | undefined;
+    if (!type || !id || !edge) return;
+    reorderMenu.hidePopover();
+    void reorderMasterItem(type, id, edge).catch((error: Error) => message(error.message, "error"));
+  }));
+  const coverCropper = bindProjectCoverCropper(app, {
+    notify: message,
+    onSaved: async () => {
+      const projectId = selectedProject?.id;
+      if (projectId) await refreshSelectedMediaOwner("project", projectId);
+    },
+  });
   app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", async () => {
     if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you leave this workspace.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     if (activeView === "cover-letters") discardCoverLetterChanges();
@@ -1298,6 +1503,31 @@ const bindDashboard = (): void => {
     const mediaId = card.dataset.mediaId;
     const type = card.closest<HTMLElement>("[data-media-owner]")?.dataset.mediaOwner as AdminItemType | undefined;
     if (!mediaId || !type) return;
+    card.querySelector<HTMLButtonElement>("[data-media-download]")?.addEventListener("click", (event) => {
+      void downloadSavedMedia(type, mediaId, event.currentTarget as HTMLButtonElement).catch((error: Error) => message(error.message, "error"));
+    });
+    card.querySelector<HTMLButtonElement>("[data-media-crops]")?.addEventListener("click", (event) => {
+      const project = selectedProject;
+      const media = project?.project_images.find((item) => item.id === mediaId);
+      if (!project || !media || media.kind !== "cover") return;
+      const button = event.currentTarget as HTMLButtonElement;
+      const idleContent = button.innerHTML;
+      button.disabled = true;
+      button.textContent = "Loading…";
+      void coverCropper.open({
+          projectId: project.id,
+          imageId: media.id,
+          storagePath: media.storage_path,
+          preferredLayout: project.portfolio_layout,
+          crops: media.project_image_crops ?? [],
+        })
+        .catch((error: Error) => message(error.message, "error"))
+        .finally(() => {
+          if (!button.isConnected) return;
+          button.innerHTML = idleContent;
+          button.disabled = false;
+        });
+    });
     card.querySelector("[data-media-cover]")?.addEventListener("click", () => { void setMediaCover(type, mediaId).catch((error: Error) => message(error.message, "error")); });
     card.querySelector("[data-media-save]")?.addEventListener("click", () => { void saveMediaAlt(type, card).catch((error: Error) => message(error.message, "error")); });
     card.querySelector("[data-media-delete]")?.addEventListener("click", () => { void deleteSavedMedia(type, mediaId).catch((error: Error) => message(error.message, "error")); });
@@ -1349,13 +1579,14 @@ const bindDashboard = (): void => {
     clearPendingMedia(); adminFormDirty = false; activeEditorTab = "overview"; activeView = "tools"; selectedItemType = "tool"; selectedProject = null; selectedTool = blankTool(); dashboardView();
   });
   app.querySelector("[data-delete-selected]")?.addEventListener("click", () => { void moveSelectedToTrash().catch((error: Error) => message(error.message, "error")); });
-  app.querySelectorAll<HTMLButtonElement>("[data-content-filter]").forEach((button) => button.addEventListener("click", () => { contentFilter = button.dataset.contentFilter as ContentFilter; dashboardView(); }));
-  app.querySelectorAll<HTMLButtonElement>("[data-status-filter]").forEach((button) => button.addEventListener("click", () => { contentStatusFilter = button.dataset.statusFilter as ContentStatusFilter; dashboardView(); }));
+  app.querySelectorAll<HTMLButtonElement>("[data-content-filter]").forEach((button) => button.addEventListener("click", () => { contentFilter = button.dataset.contentFilter as ContentFilter; resetCurrentCollectionScroll(); dashboardView(); }));
+  app.querySelectorAll<HTMLButtonElement>("[data-status-filter]").forEach((button) => button.addEventListener("click", () => { contentStatusFilter = button.dataset.statusFilter as ContentStatusFilter; resetCurrentCollectionScroll(); dashboardView(); }));
   app.querySelector<HTMLInputElement>("[data-content-search]")?.addEventListener("input", (event) => {
     contentSearch = (event.currentTarget as HTMLInputElement).value;
     const list = app.querySelector<HTMLElement>("[data-content-list]");
     if (list) {
       list.innerHTML = contentList();
+      resetCurrentCollectionScroll();
       bindContentItemActions(list);
     }
   });

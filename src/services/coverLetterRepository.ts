@@ -1,4 +1,5 @@
 import { supabase } from "./supabaseClient";
+import { withoutTrashed } from "./activeContent";
 import type {
   CoverLetterEvidenceOption,
   CoverLetterInput,
@@ -160,13 +161,13 @@ export const duplicateCoverLetter = async (record: CoverLetterRecord): Promise<C
 
 export const listCoverLetterEvidence = async (): Promise<{ projects: CoverLetterEvidenceOption[]; tools: CoverLetterEvidenceOption[] }> => {
   const [projectResult, toolResult] = await Promise.all([
-    supabase.from("projects").select("id, name, status").is("deleted_at", null).order("display_order"),
-    supabase.from("automation_tools").select("id, name, status").is("deleted_at", null).order("display_order"),
+    supabase.from("projects").select("id, name, status, deleted_at").is("deleted_at", null).order("display_order"),
+    supabase.from("automation_tools").select("id, name, status, deleted_at").is("deleted_at", null).order("display_order"),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
   return {
-    projects: (projectResult.data ?? []).map((item) => ({ id: String(item.id), name: String((item.name as { en?: string }).en ?? "Untitled project"), status: String(item.status) })),
-    tools: (toolResult.data ?? []).map((item) => ({ id: String(item.id), name: String(item.name), status: String(item.status) })),
+    projects: withoutTrashed(projectResult.data).map((item) => ({ id: String(item.id), name: String((item.name as { en?: string }).en ?? "Untitled project"), status: String(item.status) })),
+    tools: withoutTrashed(toolResult.data).map((item) => ({ id: String(item.id), name: String(item.name), status: String(item.status) })),
   };
 };

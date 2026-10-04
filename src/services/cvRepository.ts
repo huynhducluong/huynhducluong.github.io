@@ -10,6 +10,7 @@ import type {
   CvRuntimeTool,
 } from "../types/cvContent";
 import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
+import { withoutTrashed } from "./activeContent";
 
 interface CvContentRow {
   version: string;
@@ -43,6 +44,7 @@ interface CvProjectRow {
   cv_responsibility_ids: string[];
   include_in_cv: boolean;
   status: PublicationStatus;
+  deleted_at: string | null;
 }
 
 interface CvToolRow {
@@ -56,6 +58,7 @@ interface CvToolRow {
   cv_order: number;
   include_in_cv: boolean;
   status: PublicationStatus;
+  deleted_at: string | null;
 }
 
 const contentFromRow = (row: CvContentRow): CvContent => ({
@@ -111,8 +114,8 @@ const toolFromRow = (row: CvToolRow): CvRuntimeTool => ({
 });
 
 const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => {
-  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_order,cv_display,cv_show_summary,cv_responsibility_ids,include_in_cv,status").is("deleted_at", null);
-  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,display_order,cv_order,include_in_cv,status").is("deleted_at", null);
+  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_order,cv_display,cv_show_summary,cv_responsibility_ids,include_in_cv,status,deleted_at").is("deleted_at", null);
+  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,display_order,cv_order,include_in_cv,status,deleted_at").is("deleted_at", null);
   if (!adminPreview) {
     projectQuery = projectQuery.eq("include_in_cv", true).eq("status", "published");
     toolQuery = toolQuery.eq("include_in_cv", true).eq("status", "published");
@@ -140,9 +143,9 @@ const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => 
     content.skillGroups = (professionalResult.data.skill_groups ?? []) as CvContent["skillGroups"];
     content.languages = (professionalResult.data.languages ?? []) as CvContent["languages"];
   }
-  const projects = (projectResult.data as CvProjectRow[]).map(projectFromRow);
+  const projects = withoutTrashed(projectResult.data as CvProjectRow[]).map(projectFromRow);
   const selectedProjects = projects.filter((project) => project.includeInCv);
-  const tools = (toolResult.data as CvToolRow[]).map(toolFromRow);
+  const tools = withoutTrashed(toolResult.data as CvToolRow[]).map(toolFromRow);
   const selectedTools = tools.filter((tool) => tool.includeInCv);
 
   return {
