@@ -34,11 +34,15 @@ const nextFrame = (): Promise<void> => new Promise((resolve) => window.requestAn
 const waitForPreviewAssets = async (): Promise<void> => {
   const images = [...document.images];
   const imageReady = Promise.all(images.map(async (image) => {
-    if (image.complete) return;
-    await new Promise<void>((resolve) => {
-      image.addEventListener("load", () => resolve(), { once: true });
-      image.addEventListener("error", () => resolve(), { once: true });
-    });
+    if (!image.complete) {
+      await new Promise<void>((resolve) => {
+        image.addEventListener("load", () => resolve(), { once: true });
+        image.addEventListener("error", () => resolve(), { once: true });
+      });
+    }
+    if (image.naturalWidth > 0 && typeof image.decode === "function") {
+      await image.decode().catch(() => undefined);
+    }
   }));
   const assetsReady = Promise.all([document.fonts?.ready.catch(() => undefined), imageReady]);
   await Promise.race([
@@ -52,20 +56,29 @@ const waitForPreviewAssets = async (): Promise<void> => {
 export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> => {
   let pending: PreviewUpdate<T> | null = null;
   let renderPreview: ((data: T) => void | Promise<void>) | null = null;
+  let rendering = false;
 
-  const render = async (message: PreviewUpdate<T>): Promise<void> => {
-    if (!renderPreview) {
-      pending = message;
-      return;
+  const drain = async (): Promise<void> => {
+    if (rendering || !renderPreview) return;
+    rendering = true;
+    try {
+      while (pending) {
+        const message = pending;
+        pending = null;
+        await renderPreview(message.data);
+        await waitForPreviewAssets();
+        if (pending) continue;
+        const rendered: PreviewRendered = {
+          type: "hdl:preview-rendered",
+          kind,
+          sequence: message.sequence ?? 0,
+        };
+        window.parent.postMessage(rendered, window.location.origin);
+      }
+    } finally {
+      rendering = false;
+      if (pending) void drain();
     }
-    await renderPreview(message.data);
-    await waitForPreviewAssets();
-    const rendered: PreviewRendered = {
-      type: "hdl:preview-rendered",
-      kind,
-      sequence: message.sequence ?? 0,
-    };
-    window.parent.postMessage(rendered, window.location.origin);
   };
 
   const receive = (event: MessageEvent<PreviewUpdate<T>>): void => {
@@ -75,7 +88,8 @@ export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> 
       || event.data?.type !== updateType(kind)
       || !event.data.data
     ) return;
-    void render(event.data);
+    pending = event.data;
+    void drain();
   };
 
   window.addEventListener("message", receive);
@@ -84,9 +98,7 @@ export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> 
     activate: (nextRender) => {
       renderPreview = nextRender;
       if (pending) {
-        const queued = pending;
-        pending = null;
-        void render(queued);
+        void drain();
         return;
       }
       const ready: PreviewReady = { type: "hdl:preview-ready", kind };

@@ -2,6 +2,7 @@ import { portfolioContentSeed } from "../data/portfolioSeed";
 import type { LocalizedText } from "../types/career";
 import type {
   PortfolioContent,
+  PortfolioImageOverlay,
   PortfolioRuntimeData,
 } from "../types/portfolio";
 import { supabase } from "./supabaseClient";
@@ -37,6 +38,18 @@ const localized = (value: LocalizedText | string | null | undefined, fallback: L
     : structuredClone(fallback);
 };
 
+const normalizeImageOverlay = (
+  value: Partial<PortfolioImageOverlay> | null | undefined,
+): PortfolioImageOverlay => {
+  const opacity = Number(value?.opacity);
+  return {
+    enabled: value?.enabled ?? portfolioContentSeed.imageOverlay.enabled,
+    opacity: Number.isFinite(opacity)
+      ? Math.min(1, Math.max(0, opacity))
+      : portfolioContentSeed.imageOverlay.opacity,
+  };
+};
+
 export const normalizePortfolioContent = (content: PortfolioContent): PortfolioContent => ({
   ...content,
   kicker: localized(content.kicker as LocalizedText | string, portfolioContentSeed.kicker),
@@ -45,6 +58,7 @@ export const normalizePortfolioContent = (content: PortfolioContent): PortfolioC
   closingKicker: localized(content.closingKicker as LocalizedText | string, portfolioContentSeed.closingKicker),
   closingHeading: localized(content.closingHeading as LocalizedText | string, portfolioContentSeed.closingHeading),
   closingText: localized(content.closingText as LocalizedText | string, portfolioContentSeed.closingText),
+  imageOverlay: normalizeImageOverlay((content as Partial<PortfolioContent>).imageOverlay),
   profile: normalizeProfile(content.profile),
 });
 
@@ -64,6 +78,7 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalize
   closingHeading: localized(row.closing_heading, portfolioContentSeed.closingHeading),
   closingText: localized(row.closing_text, portfolioContentSeed.closingText),
   theme: row.theme ?? { presetId: "personal-blue" },
+  imageOverlay: structuredClone(portfolioContentSeed.imageOverlay),
   profile: normalizeProfile(row.profile),
   skillGroups: row.skill_groups ?? [],
 });

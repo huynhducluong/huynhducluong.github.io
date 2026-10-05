@@ -26,6 +26,7 @@ export const portfolioContentSeed: PortfolioContent = {
     vi: "Điều phối BIM hạ tầng · Chất lượng mô hình · Tự động hóa",
   },
   theme: { presetId: "personal-blue" },
+  imageOverlay: { enabled: true, opacity: 0.28 },
   profile,
   skillGroups,
 };

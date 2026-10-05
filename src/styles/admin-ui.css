@@ -1205,10 +1205,6 @@ html.admin-app button.is-busy::before {
   color: var(--admin-color-text);
 }
 
-[data-cover-letter-workspace]:has(> .cover-letter-lock) {
-  grid-template-rows: auto auto minmax(0, 1fr);
-}
-
 .admin-cl-preview-scroll {
   margin: 0;
   padding: 1.15rem;

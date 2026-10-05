@@ -102,6 +102,47 @@
 
 .admin-document-lock strong { color: var(--admin-color-text); }
 
+.admin-document-lock--final {
+  min-height: 3.25rem;
+  padding: .55rem 1.25rem .55rem calc(1.25rem - 3px);
+  border-left: 3px solid var(--color-primary);
+  background: var(--admin-color-selected);
+}
+
+.admin-document-lock__icon {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 1.75rem;
+  place-items: center;
+  border-radius: .4rem;
+  background: var(--admin-color-surface);
+  color: var(--color-primary-dark);
+}
+
+.admin-document-lock__icon svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+}
+
+.admin-document-lock__copy {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: .2rem .5rem;
+  line-height: 1.4;
+}
+
+.admin-document-lock__copy > span {
+  color: var(--admin-color-text-muted);
+}
+
 .admin-document-workspace {
   min-width: 0;
 }
@@ -530,6 +571,276 @@
 .admin-document-theme input[type="color"] {
   min-height: 2.65rem;
   padding: .25rem;
+}
+
+.admin-image-treatment-card {
+  gap: .9rem;
+}
+
+.admin-image-treatment {
+  display: grid;
+  min-width: 0;
+  gap: .9rem;
+}
+
+.admin-image-treatment__top {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+}
+
+.admin-image-treatment__copy {
+  display: grid;
+  min-width: 0;
+  gap: .18rem;
+}
+
+.admin-image-treatment__copy strong {
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-image-treatment__copy span {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+  line-height: 1.45;
+}
+
+.admin-document-editor .admin-image-treatment__switch {
+  position: relative;
+  display: flex;
+  grid-template-columns: none;
+  align-items: center;
+  gap: .5rem;
+  color: var(--admin-color-text);
+  cursor: pointer;
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+  white-space: nowrap;
+}
+
+.admin-image-treatment__switch input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+.admin-image-treatment__switch-track {
+  position: relative;
+  width: 2.25rem;
+  height: 1.25rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--admin-color-border-strong);
+  border-radius: 999px;
+  background: var(--admin-color-surface-muted);
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.admin-image-treatment__switch-track::after {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(1.25rem - 6px);
+  height: calc(1.25rem - 6px);
+  border-radius: 50%;
+  background: var(--admin-color-surface);
+  box-shadow: 0 1px 3px rgb(16 45 59 / 24%);
+  content: "";
+  transition: transform 160ms ease;
+}
+
+.admin-image-treatment__switch input:checked + .admin-image-treatment__switch-track {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+}
+
+.admin-image-treatment__switch input:checked + .admin-image-treatment__switch-track::after {
+  transform: translateX(1rem);
+}
+
+.admin-image-treatment__switch input:focus-visible + .admin-image-treatment__switch-track {
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--admin-color-focus-ring);
+}
+
+.admin-image-treatment__switch input:disabled + .admin-image-treatment__switch-track {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+.admin-image-treatment__settings {
+  display: grid;
+  min-width: 0;
+  gap: .7rem;
+  padding: .8rem .9rem;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-radius-md);
+  background: var(--admin-color-surface-muted);
+  transition: opacity 160ms ease;
+}
+
+.admin-image-treatment__settings.is-disabled {
+  opacity: .52;
+}
+
+.admin-image-treatment__label-row,
+.admin-image-treatment__footer,
+.admin-image-treatment__color {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+}
+
+.admin-image-treatment__label-row {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.admin-document-editor .admin-image-treatment__label-row label {
+  display: block;
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-image-treatment__label-row output {
+  min-width: 3rem;
+  padding: .22rem .45rem;
+  border-radius: .35rem;
+  background: var(--admin-color-surface);
+  color: var(--color-primary-dark);
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-bold);
+  text-align: center;
+}
+
+.admin-image-treatment input[type="range"] {
+  width: 100%;
+  height: 1.25rem;
+  margin: 0;
+  padding: 0;
+  appearance: none;
+  background: transparent;
+  cursor: pointer;
+  -webkit-appearance: none;
+}
+
+.admin-image-treatment input[type="range"]::-webkit-slider-runnable-track {
+  height: .35rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--admin-overlay-color, var(--color-primary)) var(--admin-overlay-progress), var(--admin-color-border) var(--admin-overlay-progress));
+}
+
+.admin-image-treatment input[type="range"]::-moz-range-track {
+  height: .35rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--admin-overlay-color, var(--color-primary)) var(--admin-overlay-progress), var(--admin-color-border) var(--admin-overlay-progress));
+}
+
+.admin-image-treatment input[type="range"]::-webkit-slider-thumb {
+  width: 1rem;
+  height: 1rem;
+  margin-top: -.325rem;
+  border: 2px solid var(--admin-color-surface);
+  border-radius: 50%;
+  appearance: none;
+  background: var(--admin-overlay-color, var(--color-primary));
+  box-shadow: 0 0 0 1px var(--admin-overlay-color, var(--color-primary)), 0 2px 5px rgb(16 45 59 / 22%);
+  -webkit-appearance: none;
+}
+
+.admin-image-treatment input[type="range"]::-moz-range-thumb {
+  width: .75rem;
+  height: .75rem;
+  border: 2px solid var(--admin-color-surface);
+  border-radius: 50%;
+  background: var(--admin-overlay-color, var(--color-primary));
+  box-shadow: 0 0 0 1px var(--admin-overlay-color, var(--color-primary)), 0 2px 5px rgb(16 45 59 / 22%);
+}
+
+.admin-image-treatment input[type="range"]:focus-visible {
+  outline: 0;
+}
+
+.admin-image-treatment input[type="range"]:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--admin-color-focus-ring), 0 0 0 1px var(--color-primary);
+}
+
+.admin-image-treatment__settings.is-disabled input[type="range"] {
+  cursor: default;
+  pointer-events: none;
+}
+
+.admin-image-treatment__footer {
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.admin-image-treatment__color {
+  gap: .4rem;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+}
+
+.admin-image-treatment__color i {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
+  border: 2px solid var(--admin-color-surface);
+  border-radius: .25rem;
+  background: var(--admin-overlay-color);
+  box-shadow: 0 0 0 1px var(--admin-color-border-strong);
+}
+
+.admin-image-treatment__color code {
+  color: var(--admin-color-text);
+  font-family: inherit;
+  font-size: inherit;
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-image-treatment__reset {
+  min-height: 2rem;
+  flex: 0 0 auto;
+  padding: .35rem .6rem;
+  border: 1px solid var(--admin-color-border-strong);
+  border-radius: .4rem;
+  background: var(--admin-color-surface);
+  color: var(--color-primary-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-image-treatment__reset:hover:not(:disabled) {
+  border-color: var(--color-primary);
+  background: var(--admin-color-hover);
+}
+
+.admin-image-treatment__reset:focus-visible {
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--admin-color-focus-ring);
+}
+
+.admin-image-treatment__reset:disabled {
+  cursor: not-allowed;
+  opacity: .55;
+}
+
+@container admin-form (max-width: 30rem) {
+  .admin-image-treatment__top {
+    grid-template-columns: 1fr;
+    gap: .7rem;
+  }
+
+  .admin-image-treatment__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }
 
 .admin-form-help {
@@ -974,6 +1285,16 @@
   text-decoration: underline;
   text-decoration-color: transparent;
   text-underline-offset: .16rem;
+}
+
+.admin-document-frame[data-preview-scroll="internal"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.admin-embedded-preview-stage[data-preview-scroll="internal"] iframe {
+  overflow: auto;
+  pointer-events: auto;
 }
 
 .admin-preview-status:hover,

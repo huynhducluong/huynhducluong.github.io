@@ -5,6 +5,11 @@ export type PublicationStatus = "draft" | "published" | "archived";
 export type PortfolioLayout = "feature" | "standard" | "compact";
 export type CvProjectDisplay = "detailed" | "compact";
 
+export interface PortfolioImageOverlay {
+  enabled: boolean;
+  opacity: number;
+}
+
 export interface PortfolioContent {
   version: string;
   title: string;
@@ -16,6 +21,7 @@ export interface PortfolioContent {
   closingHeading: LocalizedText;
   closingText: LocalizedText;
   theme: StoredDocumentTheme;
+  imageOverlay: PortfolioImageOverlay;
   profile: Profile;
   skillGroups: SkillGroup[];
 }

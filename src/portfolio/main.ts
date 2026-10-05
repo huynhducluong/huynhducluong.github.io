@@ -10,12 +10,32 @@ import { applyDocumentTheme, resolveDocumentTheme } from "../themes/documentThem
 import { createPreviewReceiver } from "../shared/previewProtocol";
 import { profileName, type Language } from "../shared/format";
 import type { PortfolioRuntimeData } from "../types/portfolio";
+import type { StoredDocumentTheme } from "../types/theme";
 import { renderPortfolio } from "./renderPortfolio";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
 
 type PortfolioPreviewData = PortfolioRuntimeData & { previewLanguage?: Language };
+interface PortfolioAppearancePreview {
+  type: "hdl:portfolio-appearance-preview";
+  theme: StoredDocumentTheme;
+  imageOverlay: PortfolioRuntimeData["content"]["imageOverlay"];
+}
+
+const applyPortfolioAppearance = (
+  documentRoot: HTMLElement,
+  theme: StoredDocumentTheme,
+  imageOverlay: PortfolioRuntimeData["content"]["imageOverlay"],
+): void => {
+  applyDocumentTheme(documentRoot, resolveDocumentTheme(theme));
+  const overlayOpacity = Number(imageOverlay?.opacity);
+  const normalizedOverlayOpacity = Number.isFinite(overlayOpacity)
+    ? Math.min(1, Math.max(0, overlayOpacity))
+    : 0.28;
+  documentRoot.dataset.imageOverlay = imageOverlay?.enabled === false ? "off" : "on";
+  documentRoot.style.setProperty("--portfolio-image-overlay-opacity", String(normalizedOverlayOpacity));
+};
 
 const render = (data: PortfolioRuntimeData, language: Language = "en"): void => {
   document.documentElement.lang = language;
@@ -23,7 +43,7 @@ const render = (data: PortfolioRuntimeData, language: Language = "en"): void => 
   app.innerHTML = `<main class="portfolio-preview-shell portfolio-preview-shell--public"><div class="portfolio-document" id="portfolio-document">${renderPortfolio(data, language)}</div></main>`;
   const documentRoot = app.querySelector<HTMLElement>("#portfolio-document");
   if (!documentRoot) throw new Error("Portfolio document was not found.");
-  applyDocumentTheme(documentRoot, resolveDocumentTheme(data.content.theme));
+  applyPortfolioAppearance(documentRoot, data.content.theme, data.content.imageOverlay);
   const photo = app.querySelector<HTMLImageElement>("[data-portfolio-profile-photo]");
   const updatePhoto = (): void => {
     photo?.closest("[data-portfolio-profile-photo-frame]")?.classList.toggle("has-image", Boolean(photo.complete && photo.naturalWidth > 0));
@@ -40,7 +60,20 @@ const initialize = async (): Promise<void> => {
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   const embeddedPreview = adminPreview && params.get("embedded") === "1";
   if (params.get("embedded") === "1") document.body.classList.add("document-embedded");
+  if (embeddedPreview && params.get("scroll") === "internal") {
+    document.documentElement.classList.add("document-preview-scroll");
+    document.body.classList.add("document-preview-scroll");
+  }
   if (embeddedPreview) {
+    window.addEventListener("message", (event: MessageEvent<PortfolioAppearancePreview>) => {
+      if (
+        event.origin !== window.location.origin
+        || event.source !== window.parent
+        || event.data?.type !== "hdl:portfolio-appearance-preview"
+      ) return;
+      const documentRoot = app.querySelector<HTMLElement>("#portfolio-document");
+      if (documentRoot) applyPortfolioAppearance(documentRoot, event.data.theme, event.data.imageOverlay);
+    });
     previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));
     return;
   }

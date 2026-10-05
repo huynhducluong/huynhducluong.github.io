@@ -288,7 +288,7 @@ const editorView = (): string => {
         saveActions: isLocked ? "" : '<button class="button button--secondary admin-action-save" type="submit" form="admin-cover-letter-form">Save draft</button>',
         primaryActions: isLocked ? '<button class="button admin-action-publish" type="button" data-cl-duplicate>Duplicate as draft</button>' : '<button class="button admin-action-publish" type="button" data-cl-finalize>Finalize</button>',
       })}
-      ${isLocked ? '<div class="cover-letter-lock"><strong>Final content is locked.</strong><span>Duplicate this letter to create an editable draft.</span></div>' : ""}
+      ${isLocked ? '<div class="admin-document-lock admin-document-lock--final" role="status"><span class="admin-document-lock__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><rect x="3.5" y="7" width="9" height="6.5" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg></span><span class="admin-document-lock__copy"><strong>Final content is locked.</strong><span>Duplicate as draft to make changes.</span></span></div>' : ""}
       <div class="admin-document-layout">
         <section class="admin-cover-letter-form admin-document-editor">
           <nav class="admin-document-tabs" role="tablist" aria-label="Cover letter sections">${tabButton("content", "Content")}${tabButton("evidence", "Evidence")}${tabButton("appearance", "Appearance")}${tabButton("notes", "Notes")}</nav>

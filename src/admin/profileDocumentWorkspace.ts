@@ -15,7 +15,7 @@ import {
 } from "../services/profileDocumentRepository";
 import { degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
-import { documentThemes } from "../themes/documentThemes";
+import { documentThemes, resolveDocumentTheme } from "../themes/documentThemes";
 import { backgroundOrderKey, orderedCvBackground, resolveCvBackgroundOrder } from "../cv/backgroundOrder";
 import type { LocalizedText, Profile } from "../types/career";
 import type { CvBackgroundGroup, CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
@@ -116,6 +116,41 @@ const themeFields = (theme: StoredDocumentTheme): string => renderDocumentThemeF
   theme,
   names: { preset: "theme_preset", primary: "theme_primary", accent: "theme_accent" },
 });
+
+const portfolioImageTreatmentFields = (content: PortfolioContent): string => {
+  const rawOpacity = Number(content.imageOverlay?.opacity);
+  const opacity = Math.round((Number.isFinite(rawOpacity)
+    ? Math.min(1, Math.max(0, rawOpacity))
+    : portfolioContentSeed.imageOverlay.opacity) * 100);
+  const primary = resolveDocumentTheme(content.theme).tokens.primary.toUpperCase();
+  const enabled = content.imageOverlay?.enabled !== false;
+  return renderAdminSectionCard({
+    title: "Project image treatment",
+    note: "Control the Primary color tint applied to project feature images.",
+    className: "admin-image-treatment-card",
+    content: `<div class="admin-image-treatment" data-image-overlay-control>
+      <div class="admin-image-treatment__top">
+        <div class="admin-image-treatment__copy"><strong>Primary color overlay</strong><span id="portfolio-image-overlay-help">Adds a consistent theme tint while keeping the original image visible.</span></div>
+        <label class="admin-image-treatment__switch">
+          <input type="checkbox" name="portfolio_image_overlay_enabled" data-image-overlay-toggle aria-describedby="portfolio-image-overlay-help"${enabled ? " checked" : ""}>
+          <span class="admin-image-treatment__switch-track" aria-hidden="true"></span>
+          <span>Apply overlay</span>
+        </label>
+      </div>
+      <div class="admin-image-treatment__settings" data-image-overlay-settings>
+        <div class="admin-image-treatment__label-row">
+          <label for="portfolio-image-overlay-opacity">Overlay opacity</label>
+          <output for="portfolio-image-overlay-opacity" data-image-overlay-output>${opacity}%</output>
+        </div>
+        <input id="portfolio-image-overlay-opacity" name="portfolio_image_overlay_opacity" type="range" min="0" max="100" step="1" value="${opacity}" data-image-overlay-range aria-label="Overlay opacity" style="--admin-overlay-color: ${escapeHtml(primary)}; --admin-overlay-progress: ${opacity}%">
+        <div class="admin-image-treatment__footer">
+          <span class="admin-image-treatment__color"><i data-image-overlay-swatch style="--admin-overlay-color: ${escapeHtml(primary)}"></i><span>Using Primary</span><code data-image-overlay-primary>${escapeHtml(primary)}</code></span>
+          <button class="admin-image-treatment__reset" type="button" data-image-overlay-reset>Reset to 28%</button>
+        </div>
+      </div>
+    </div>`,
+  });
+};
 
 const readTheme = (form: FormData): StoredDocumentTheme => {
   const presetId = text(form, "theme_preset") || "personal-blue";
@@ -594,6 +629,7 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
   const form = new FormData(formElement);
   const projectIds = new Set(form.getAll("portfolio_project").map(String));
   const toolIds = new Set(form.getAll("portfolio_tool").map(String));
+  const rawOverlayOpacity = Number(form.get("portfolio_image_overlay_opacity"));
   const content: PortfolioContent = {
     ...current.content,
     version: text(form, "portfolio_version") || current.content.version,
@@ -606,6 +642,12 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
     closingHeading: { en: text(form, "closing_heading_en"), vi: text(form, "closing_heading_vi") },
     closingText: { en: text(form, "closing_text_en"), vi: text(form, "closing_text_vi") },
     theme: readTheme(form),
+    imageOverlay: {
+      enabled: form.get("portfolio_image_overlay_enabled") === "on",
+      opacity: Number.isFinite(rawOverlayOpacity)
+        ? Math.min(100, Math.max(0, rawOverlayOpacity)) / 100
+        : portfolioContentSeed.imageOverlay.opacity,
+    },
     profile: {
       ...current.content.profile,
       professionalTitle: { en: text(form, "portfolio_profile_title_en"), vi: text(form, "portfolio_profile_title_vi") },
@@ -726,10 +768,11 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
     ? `<ol class="admin-release-history__list">${state.releases[kind].map((item) => `<li><div><strong>${item.isActive ? "Active release" : "Published release"}</strong><span>${formatAdminDateTime(item.publishedAt)}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
     : `<p class="admin-empty">No ${documentLabel(kind)} release has been published yet.</p>`;
   const publicPath = kind === "cv" ? "cv/" : "portfolio/";
-  const previewPath = `${publicPath}?preview=1&embedded=1`;
+  const previewPath = `${publicPath}?preview=1&embedded=1${kind === "portfolio" ? "&scroll=internal" : ""}`;
   const contentPanel = kind === "cv" ? cvContentPanel(content as CvContent) : portfolioContentPanel(content as PortfolioContent);
   const selectionPanel = kind === "cv" ? cvSelectionPanel(runtime as CvRuntimeData) : portfolioSelectionPanel(runtime as PortfolioRuntimeData);
   const backgroundPanel = kind === "cv" ? cvBackgroundPanel(content as CvContent) : "";
+  const appearancePanel = `${renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) })}${kind === "portfolio" ? portfolioImageTreatmentFields(content as PortfolioContent) : ""}`;
   const archived = selected.status === "archived";
   const initialPageCount = kind === "cv"
     ? 2
@@ -767,12 +810,12 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
             <section data-document-panel="content"${activeTab === "content" ? "" : " hidden"}>${contentPanel}</section>
             ${kind === "cv" ? `<section data-document-panel="background"${activeTab === "background" ? "" : " hidden"}>${backgroundPanel}</section>` : ""}
             <section data-document-panel="selection"${activeTab === "selection" ? "" : " hidden"}>${selectionPanel}</section>
-            <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) })}</section>
+            <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}>${appearancePanel}</section>
           </form>
         </section>
         <aside class="admin-document-preview">
           ${previewToolbar}
-          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind].mode}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="no" tabindex="-1"></iframe></div></div>
+          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind].mode}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="${kind === "portfolio" ? "yes" : "no"}" tabindex="-1"></iframe></div></div>
         </aside>
       </div>
       <dialog id="${kind}-release-history-dialog" class="admin-dialog admin-release-history" data-document-history-dialog aria-labelledby="${kind}-release-history-title"><form method="dialog"><div><p class="section-kicker">${documentLabel(kind)}</p><h2 id="${kind}-release-history-title">Release history</h2><p>Published releases remain read-only snapshots.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-document-history-close>Close</button></div></form></dialog>
@@ -875,7 +918,10 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   previewSender = undefined;
   previewController?.disconnect();
   previewController = iframe && previewStage
-    ? bindEmbeddedPreview(iframe, previewStage, { measurementHeight: kind === "cv" ? 1123 : 794 })
+    ? bindEmbeddedPreview(iframe, previewStage, {
+        measurementHeight: kind === "cv" ? 1123 : 794,
+        scrollMode: kind === "portfolio" ? "internal" : "outer",
+      })
     : undefined;
   previewZoomController?.disconnect();
   previewZoomController = previewFrame && previewStage
@@ -1043,6 +1089,55 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   if (activeDocument?.status === "archived") {
     form.querySelectorAll<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | HTMLButtonElement>("input, textarea, select, button").forEach((control) => { control.disabled = true; });
   }
+  const overlayToggle = form.querySelector<HTMLInputElement>("[data-image-overlay-toggle]");
+  const overlayRange = form.querySelector<HTMLInputElement>("[data-image-overlay-range]");
+  const overlayOutput = form.querySelector<HTMLOutputElement>("[data-image-overlay-output]");
+  const overlaySettings = form.querySelector<HTMLElement>("[data-image-overlay-settings]");
+  const overlayReset = form.querySelector<HTMLButtonElement>("[data-image-overlay-reset]");
+  const overlaySwatch = form.querySelector<HTMLElement>("[data-image-overlay-swatch]");
+  const overlayPrimary = form.querySelector<HTMLElement>("[data-image-overlay-primary]");
+  const syncImageOverlayControl = (): void => {
+    if (!overlayToggle || !overlayRange) return;
+    const enabled = overlayToggle.checked;
+    const opacity = Math.min(100, Math.max(0, Number(overlayRange.value) || 0));
+    overlayOutput?.replaceChildren(`${Math.round(opacity)}%`);
+    overlayRange.style.setProperty("--admin-overlay-progress", `${opacity}%`);
+    overlaySettings?.classList.toggle("is-disabled", !enabled);
+    overlayRange.setAttribute("aria-disabled", String(!enabled));
+    overlayRange.tabIndex = enabled ? 0 : -1;
+    if (overlayReset) overlayReset.disabled = !enabled || activeDocument?.status === "archived";
+    const primaryInput = form.elements.namedItem("theme_primary");
+    if (primaryInput instanceof HTMLInputElement) {
+      const primary = primaryInput.value.toUpperCase();
+      overlayRange.style.setProperty("--admin-overlay-color", primary);
+      overlaySwatch?.style.setProperty("--admin-overlay-color", primary);
+      if (overlayPrimary) overlayPrimary.textContent = primary;
+    }
+  };
+  syncImageOverlayControl();
+  let appearancePreviewFrame: number | undefined;
+  const schedulePortfolioAppearancePreview = (): void => {
+    if (kind !== "portfolio" || !iframe || appearancePreviewFrame !== undefined) return;
+    appearancePreviewFrame = window.requestAnimationFrame(() => {
+      appearancePreviewFrame = undefined;
+      if (!iframe.isConnected) return;
+      const content = readPortfolioForm(form).content;
+      iframe.contentWindow?.postMessage({
+        type: "hdl:portfolio-appearance-preview",
+        theme: content.theme,
+        imageOverlay: content.imageOverlay,
+      }, window.location.origin);
+    });
+  };
+  const isPortfolioAppearanceControl = (target: EventTarget | null): boolean => kind === "portfolio" && (
+    target instanceof HTMLInputElement && [
+      "theme_primary",
+      "theme_accent",
+      "portfolio_image_overlay_enabled",
+      "portfolio_image_overlay_opacity",
+    ].includes(target.name)
+    || target instanceof HTMLSelectElement && target.name === "theme_preset"
+  );
   const updateValidation = (issues: string[]): void => {
     const status = root.querySelector<HTMLButtonElement>("[data-document-validation-open]");
     const content = root.querySelector<HTMLElement>("[data-document-validation-content]");
@@ -1056,7 +1151,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
         : '<p data-document-validation-ready>Required content and document selection are ready.</p>';
     }
   };
-  const markDirty = (): void => {
+  const markDirty = (previewMode: "full" | "appearance" = "full"): void => {
     if (activeDocument?.status === "archived") return;
     state.dirty[kind] = true;
     callbacks.setDirty(true);
@@ -1066,10 +1161,17 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       status.dataset.dirty = "true";
     }
     updateValidation(validation(kind, previewPayload(kind, form)));
+    if (previewMode === "appearance") {
+      schedulePortfolioAppearancePreview();
+      return;
+    }
     if (previewTimer !== undefined) window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(() => sendPreview(kind, form), 180);
   };
-  form.addEventListener("input", markDirty);
+  form.addEventListener("input", (event) => {
+    syncImageOverlayControl();
+    markDirty(isPortfolioAppearanceControl(event.target) ? "appearance" : "full");
+  });
   form.addEventListener("change", (event) => {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
     if (target.name === "theme_preset" && target.value !== "custom") {
@@ -1085,7 +1187,14 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       const responsibilities = target.closest<HTMLElement>("[data-cv-project-card]")?.querySelector<HTMLElement>("[data-cv-responsibilities]");
       if (responsibilities) responsibilities.hidden = target.value !== "detailed";
     }
-    markDirty();
+    syncImageOverlayControl();
+    markDirty(isPortfolioAppearanceControl(event.target) ? "appearance" : "full");
+  });
+  overlayReset?.addEventListener("click", () => {
+    if (!overlayRange || activeDocument?.status === "archived") return;
+    overlayRange.value = "28";
+    syncImageOverlayControl();
+    markDirty("appearance");
   });
   root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((button) => button.addEventListener("click", () => {
     state.tab[kind] = button.dataset.documentTab as DocumentTab;
