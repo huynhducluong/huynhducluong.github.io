@@ -92,7 +92,7 @@ export const validateWebsitePublish = (runtime: WebsiteRuntimeData): ContentVali
   requireLocalized(content.heroEyebrow, "Hero eyebrow", errors);
   requireLocalized(content.focus, "Professional focus", errors);
   requireLocalized(content.specialization, "Specialization", errors);
-  if (!hasText(professional.profile.name)) errors.push("Professional Profile name is required.");
+  if (!hasText(professional.profile.name.en) || !hasText(professional.profile.name.vi)) errors.push("Professional Profile name is required.");
   if (!hasText(professional.profile.email)) errors.push("Professional Profile email is required.");
 
   const selectedProjects = runtime.projects.filter((item) => item.websiteVisible !== false);

@@ -4,6 +4,7 @@ import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteContentSelection, WebsiteRuntimeData } from "../types/website";
 import { supabase } from "./supabaseClient";
 import { withoutTrashed } from "./activeContent";
+import { normalizeProfile } from "../shared/format";
 import {
   projectFromRow,
   toolFromRow,
@@ -81,7 +82,7 @@ export const loadProfessionalProfile = async (): Promise<ProfessionalProfileCont
   if (error) throw error;
   if (!data) return structuredClone(professionalProfileSeed);
   return {
-    profile: data.profile as ProfessionalProfileContent["profile"],
+    profile: normalizeProfile(data.profile as ProfessionalProfileContent["profile"]),
     experiences: (data.experiences ?? []) as ProfessionalProfileContent["experiences"],
     education: (data.education ?? []) as ProfessionalProfileContent["education"],
     skillGroups: (data.skill_groups ?? []) as ProfessionalProfileContent["skillGroups"],
@@ -207,6 +208,10 @@ export const loadPublishedWebsiteRelease = async (): Promise<WebsiteRuntimeData>
   return {
     ...payload,
     content: websiteContentWithDefaults(payload.content),
+    professional: {
+      ...payload.professional,
+      profile: normalizeProfile(payload.professional.profile),
+    },
   };
 };
 

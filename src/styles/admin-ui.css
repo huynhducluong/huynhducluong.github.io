@@ -1052,6 +1052,61 @@ html.admin-app button.is-busy::before {
   pointer-events: none;
   transform: scale(var(--preview-scale));
   transform-origin: top left;
+  transition: opacity 160ms ease;
+}
+
+.admin-site-frame,
+.admin-document-frame {
+  position: relative;
+  isolation: isolate;
+}
+
+.admin-site-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::before,
+.admin-document-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::before {
+  position: absolute;
+  z-index: 5;
+  inset: 1rem;
+  min-height: 12rem;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-radius-md);
+  background: linear-gradient(135deg, var(--admin-color-surface) 0%, var(--admin-color-surface-muted) 100%);
+  box-shadow: var(--admin-shadow-card);
+  content: "";
+}
+
+.admin-site-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::after,
+.admin-document-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::after {
+  position: absolute;
+  z-index: 6;
+  top: 50%;
+  left: 50%;
+  max-width: min(22rem, calc(100% - 4rem));
+  padding-top: 2.1rem;
+  color: var(--admin-color-text-muted);
+  content: attr(data-preview-message);
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+  text-align: center;
+  transform: translate(-50%, -50%);
+}
+
+.admin-site-frame:has(> .admin-embedded-preview-stage[data-preview-state="loading"])::after,
+.admin-document-frame:has(> .admin-embedded-preview-stage[data-preview-state="loading"])::after {
+  background: radial-gradient(circle at 50% .5rem, var(--color-primary) 0 .28rem, transparent .32rem);
+  animation: admin-preview-pulse 1.2s ease-in-out infinite;
+}
+
+.admin-embedded-preview-stage[aria-busy="true"] iframe { opacity: 0; }
+
+@keyframes admin-preview-pulse {
+  0%, 100% { opacity: .62; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-embedded-preview-stage iframe { transition: none; }
+  .admin-site-frame:has(> .admin-embedded-preview-stage[data-preview-state="loading"])::after,
+  .admin-document-frame:has(> .admin-embedded-preview-stage[data-preview-state="loading"])::after { animation: none; }
 }
 
 .admin-site-frame:focus-visible,

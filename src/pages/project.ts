@@ -6,7 +6,7 @@ import { getAdminAccess } from "../admin/auth";
 import { loadPublishedWebsiteRelease, loadWebsiteDraftData } from "../services/websiteRepository";
 import { renderMedia, renderMediaFigure, renderTags } from "../site/renderers";
 import { applyWebsiteTheme, readSlug, readWebsiteLanguage, siteFooter, siteHeader, withWebsiteLanguage } from "../site/shell";
-import { escapeHtml, localize, type Language } from "../shared/format";
+import { escapeHtml, localize, profileName, type Language } from "../shared/format";
 import { createPreviewReceiver } from "../shared/previewProtocol";
 import type { WebsiteRuntimeData } from "../types/website";
 
@@ -31,11 +31,11 @@ const render = (release: WebsiteRuntimeData, language: Language): void => {
   const text = copy[language];
   app.innerHTML = `${siteHeader(profile, release.content, "projects", language)}<main id="main-content"></main>${siteFooter(profile, release.content, language)}`;
   if (!project) {
-    document.title = `${text.unavailable} | ${profile.name}`;
+    document.title = `${text.unavailable} | ${profileName(profile.name, language)}`;
     app.querySelector("main")!.innerHTML = `<section class="page-hero"><div class="container"><p class="section-kicker">404</p><h1>${text.unavailable}</h1><p>${text.unavailableNote}</p><a class="button" href="${withWebsiteLanguage(`${import.meta.env.BASE_URL}projects/`, language)}">${text.back}</a></div></section>`;
     return;
   }
-  document.title = `${localized(project.name, language)} | ${profile.name}`;
+  document.title = `${localized(project.name, language)} | ${profileName(profile.name, language)}`;
   app.querySelector("main")!.innerHTML = `
     <article>
       <header class="detail-hero"><div class="container detail-hero__grid"><div><p class="section-kicker">${localized(project.location, language)}</p><h1>${localized(project.name, language)}</h1>${project.role ? `<p class="detail-hero__role">${localized(project.role, language)}</p>` : ""}${project.summary ? `<p class="detail-hero__summary">${localized(project.summary, language)}</p>` : ""}<ul class="tag-list">${renderTags(project.technologies)}</ul>${project.youtubeUrl ? `<div class="detail-hero__actions"><a class="button" href="${escapeHtml(project.youtubeUrl)}" target="_blank" rel="noopener noreferrer">${text.watch}</a></div>` : ""}</div>${renderMedia(project.images[0], language, "detail-hero__image")}</div></header>
@@ -54,7 +54,12 @@ const initialize = async (): Promise<void> => {
   const wantsPreview = params.get("preview") === "1";
   const previewReceiver = wantsPreview ? createPreviewReceiver<WebsitePreviewData>("website") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
+  const embeddedPreview = adminPreview && params.get("embedded") === "1";
   if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
+  if (embeddedPreview) {
+    previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));
+    return;
+  }
   const data = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
   render(data, readWebsiteLanguage());
   if (adminPreview) previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));

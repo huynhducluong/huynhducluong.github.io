@@ -1,7 +1,10 @@
 import type { Profile } from "../types/career";
 
 export const profile: Profile = {
-  name: "HUYNH DUC LUONG",
+  name: {
+    en: "HUYNH DUC LUONG",
+    vi: "HUỲNH ĐỨC LƯƠNG",
+  },
   professionalTitle: {
     en: "BIM Coordinator - Infrastructure",
     vi: "Điều phối viên BIM - Hạ tầng",

@@ -633,7 +633,7 @@ const validation = (kind: ProfileDocumentKind, runtime?: CvRuntimeData | Portfol
     const data = (runtime ?? state.cv) as CvRuntimeData | null;
     if (!data) return ["CV draft is not loaded."];
     return [
-      !data.content.profile.name && "Add a full name in Professional Profile.",
+      !data.content.profile.name.en && "Add a full name in Professional Profile.",
       !data.content.profile.email && "Add an email address in Professional Profile.",
       !data.detailedProjects.length && "Select at least one detailed CV project.",
     ].filter((item): item is string => Boolean(item));
@@ -641,7 +641,7 @@ const validation = (kind: ProfileDocumentKind, runtime?: CvRuntimeData | Portfol
   const data = (runtime ?? state.portfolio) as PortfolioRuntimeData | null;
   if (!data) return ["Portfolio draft is not loaded."];
   return [
-    !data.content.profile.name && "Add a full name in Professional Profile.",
+    !data.content.profile.name.en && "Add a full name in Professional Profile.",
     !data.content.profile.email && "Add an email address in Professional Profile.",
     !data.content.title && "Document title is required.",
     !data.projects.some((item) => item.includeInPortfolio) && "Select at least one Portfolio project.",
@@ -890,11 +890,13 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   previewSender = iframe && form
     ? bindPreviewSender(iframe, kind, () => previewRenderPayload(kind, form), () => {
       previewController?.refresh();
+      previewController?.reveal();
       const pageCount = iframe.contentDocument?.querySelectorAll(kind === "cv" ? ".cv-page" : ".portfolio-page").length ?? 0;
       const pageCountLabel = root.querySelector<HTMLElement>("[data-preview-page-count]");
       if (pageCountLabel && pageCount) pageCountLabel.textContent = `${pageCount} page${pageCount === 1 ? "" : "s"}`;
     })
     : undefined;
+  iframe?.addEventListener("error", () => previewController?.setError(`${documentLabel(kind)} preview is unavailable.`));
   root.querySelector<HTMLButtonElement>("[data-document-language-toggle]")?.addEventListener("click", (event) => {
     state.previewLanguage[kind] = state.previewLanguage[kind] === "en" ? "vi" : "en";
     const button = event.currentTarget as HTMLButtonElement;

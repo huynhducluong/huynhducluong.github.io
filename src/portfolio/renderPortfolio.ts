@@ -1,4 +1,4 @@
-import { assetUrl, escapeHtml, localize, type Language } from "../shared/format";
+import { assetUrl, escapeHtml, localize, profileName, type Language } from "../shared/format";
 import type { PortfolioProject, PortfolioRuntimeData } from "../types/portfolio";
 
 const copy = {
@@ -55,7 +55,8 @@ export const renderPortfolio = (data: PortfolioRuntimeData, language: Language =
   const { content, projects, tools } = data;
   const text = copy[language];
   const { profile, skillGroups } = content;
-  const profileInitials = profile.name.trim().split(/\s+/).slice(0, 3).map((part) => part[0] ?? "").join("").toUpperCase() || "HDL";
+  const displayName = profileName(profile.name, language);
+  const profileInitials = displayName.trim().split(/\s+/).slice(0, 3).map((part) => part[0] ?? "").join("").toUpperCase() || "HDL";
   const selectedProjects = projects
     .filter((project) => project.includeInPortfolio)
     .sort((a, b) => a.portfolioOrder - b.portfolioOrder);
@@ -74,7 +75,7 @@ export const renderPortfolio = (data: PortfolioRuntimeData, language: Language =
     <div class="portfolio-cover__content">
       <p class="portfolio-kicker">${localized(content.kicker, language)}</p>
       <h1>${escapeHtml(content.title)}</h1>
-      <div class="portfolio-cover__identity"><strong>${escapeHtml(profile.name)}</strong><span>${localized(profile.professionalTitle, language)}</span></div>
+      <div class="portfolio-cover__identity"><strong>${escapeHtml(displayName)}</strong><span>${localized(profile.professionalTitle, language)}</span></div>
       <p class="portfolio-cover__year">${escapeHtml(content.year)}</p>
     </div>`, "portfolio-page--cover");
 
@@ -83,10 +84,10 @@ export const renderPortfolio = (data: PortfolioRuntimeData, language: Language =
       <aside class="portfolio-about__aside">
         <div class="portfolio-about__photo" data-portfolio-profile-photo-frame>
           <span aria-hidden="true">${escapeHtml(profileInitials)}</span>
-          <img src="${escapeHtml(assetUrl(profile.photoPath))}" alt="${escapeHtml(profile.name)}" data-portfolio-profile-photo>
+          <img src="${escapeHtml(assetUrl(profile.photoPath))}" alt="${escapeHtml(displayName)}" data-portfolio-profile-photo>
         </div>
         <p class="portfolio-kicker">${text.profile}</p>
-        <h2>${escapeHtml(profile.name)}</h2>
+        <h2>${escapeHtml(displayName)}</h2>
         <p>${localized(profile.professionalTitle, language)}</p>
         <address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${localized(profile.location, language)}</span></address>
       </aside>

@@ -1,5 +1,5 @@
 import { documentThemes } from "../themes/documentThemes";
-import { assetUrl, escapeHtml, formatDegreeClassification, formatNumericDate, localize, type Language } from "../shared/format";
+import { assetUrl, escapeHtml, formatDegreeClassification, formatNumericDate, localize, profileName, type Language } from "../shared/format";
 import type { ContentPoint } from "../types/career";
 import type { CvRuntimeData, CvRuntimeProject } from "../types/cvContent";
 import { orderedCvBackground } from "./backgroundOrder";
@@ -79,13 +79,14 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
   const pageOneProjects = data.detailedProjects.slice(0, content.pageOneProjectCount);
   const pageTwoProjects = data.detailedProjects.slice(content.pageOneProjectCount);
   const profile = content.profile;
+  const displayName = profileName(profile.name, language);
   const background = orderedCvBackground(content);
 
   const sidebar = `
     <aside class="cv-sidebar">
       <div class="cv-photo">
         <div class="cv-photo__placeholder" aria-hidden="true">HDL</div>
-        <img class="cv-photo__image" src="${escapeHtml(assetUrl(profile.photoPath))}" alt="Portrait of ${escapeHtml(profile.name)}" data-profile-photo>
+        <img class="cv-photo__image" src="${escapeHtml(assetUrl(profile.photoPath))}" alt="Portrait of ${escapeHtml(displayName)}" data-profile-photo>
       </div>
       <section class="cv-sidebar-section">
         ${heading(text.contact)}
@@ -164,7 +165,7 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
         <section class="cv-page cv-page--one" aria-label="CV page 1 of 2" data-cv-page>
           ${sidebar}
           <main class="cv-page-one-main">
-            <header class="cv-identity"><p class="cv-identity__name">${escapeHtml(profile.name)}</p><h1>${localized(profile.professionalTitle, language)}</h1></header>
+            <header class="cv-identity"><p class="cv-identity__name">${escapeHtml(displayName)}</p><h1>${localized(profile.professionalTitle, language)}</h1></header>
             <section class="cv-main-section cv-summary">${heading(text.professionalSummary)}<p>${localized(profile.summary, language)}</p></section>
             <section class="cv-main-section cv-professional-experience">${heading(text.professionalExperience)}<div class="cv-experience-list">${pageOneProjects.map((project) => renderProject(project, language)).join("")}</div></section>
           </main>
@@ -172,7 +173,7 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
         </section>
         <section class="cv-page cv-page--two" aria-label="CV page 2 of 2" data-cv-page>
           <header class="cv-page-two-header">
-            <div class="cv-page-two-header__identity"><p>${escapeHtml(profile.name)}</p><span>${localized(profile.professionalTitle, language)}</span></div>
+            <div class="cv-page-two-header__identity"><p>${escapeHtml(displayName)}</p><span>${localized(profile.professionalTitle, language)}</span></div>
             <div class="cv-page-two-header__title"><span>${text.pageTwoTitle}</span><strong>${text.pageTwoSubtitle}</strong></div>
           </header>
           <main class="cv-page-two-main">

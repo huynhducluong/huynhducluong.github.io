@@ -13,6 +13,7 @@ import {
 } from "./supabasePortfolioRepository";
 import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
 import { withoutTrashed } from "./activeContent";
+import { normalizeProfile } from "../shared/format";
 
 interface PortfolioContentRow {
   version: string;
@@ -44,6 +45,7 @@ export const normalizePortfolioContent = (content: PortfolioContent): PortfolioC
   closingKicker: localized(content.closingKicker as LocalizedText | string, portfolioContentSeed.closingKicker),
   closingHeading: localized(content.closingHeading as LocalizedText | string, portfolioContentSeed.closingHeading),
   closingText: localized(content.closingText as LocalizedText | string, portfolioContentSeed.closingText),
+  profile: normalizeProfile(content.profile),
 });
 
 export const normalizePortfolioRuntimeData = (runtime: PortfolioRuntimeData): PortfolioRuntimeData => ({
@@ -62,7 +64,7 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalize
   closingHeading: localized(row.closing_heading, portfolioContentSeed.closingHeading),
   closingText: localized(row.closing_text, portfolioContentSeed.closingText),
   theme: row.theme ?? { presetId: "personal-blue" },
-  profile: row.profile,
+  profile: normalizeProfile(row.profile),
   skillGroups: row.skill_groups ?? [],
 });
 

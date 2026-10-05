@@ -13,6 +13,7 @@ import {
   escapeHtml,
   formatDate,
   localize,
+  profileName,
   type Language,
 } from "./shared/format";
 import { readWebsiteLanguage, withWebsiteLanguage } from "./site/shell";
@@ -27,7 +28,7 @@ const copy = {
   en: {
     skip: "Skip to content",
     primaryNavigation: "Primary navigation",
-    adminLabel: "Open Portfolio administration",
+    adminLabel: "Open Career Hub Admin",
     professionalOverview: "Professional overview",
     eyebrow: "BIM · Infrastructure · Automation",
     viewProjects: "View projects",
@@ -157,7 +158,7 @@ const renderPage = (language: Language): void => {
 
     <header class="site-header">
       <div class="container site-header__inner">
-        <a class="site-logo" href="#top" aria-label="${escapeHtml(profile.name)}">
+        <a class="site-logo" href="#top" aria-label="${escapeHtml(profileName(profile.name, language))}">
           HDL
         </a>
 
@@ -192,7 +193,7 @@ const renderPage = (language: Language): void => {
         <div class="container hero__layout">
           <div>
             <p class="hero__eyebrow">${text.eyebrow}</p>
-            <h1 class="hero__name">${escapeHtml(profile.name)}</h1>
+            <h1 class="hero__name">${escapeHtml(profileName(profile.name, language))}</h1>
             <p class="hero__title">${localize(profile.professionalTitle, language)}</p>
             <p class="hero__summary">${localize(profile.summary, language)}</p>
 
@@ -369,7 +370,7 @@ const renderPage = (language: Language): void => {
 
     <footer class="site-footer">
       <div class="container site-footer__inner">
-        <p>© ${new Date().getFullYear()} ${escapeHtml(profile.name)}</p>
+        <p>© ${new Date().getFullYear()} ${escapeHtml(profileName(profile.name, language))}</p>
         <p>${text.footer}</p>
       </div>
     </footer>
@@ -393,8 +394,17 @@ const initialize = async (): Promise<void> => {
   const wantsPreview = params.get("preview") === "1";
   const previewReceiver = wantsPreview ? createPreviewReceiver<WebsitePreviewData>("website") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
+  const embeddedPreview = adminPreview && params.get("embedded") === "1";
   if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
   currentLanguage = readWebsiteLanguage(currentLanguage);
+  if (embeddedPreview) {
+    previewReceiver?.activate((previewData) => {
+      websiteData = previewData;
+      currentLanguage = previewData.previewLanguage ?? currentLanguage;
+      renderPage(currentLanguage);
+    });
+    return;
+  }
   websiteData = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
   renderPage(currentLanguage);
   if (adminPreview) {

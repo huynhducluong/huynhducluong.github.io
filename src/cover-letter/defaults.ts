@@ -1,9 +1,10 @@
 import { profile } from "../data/profile";
 import { documentThemes } from "../themes/documentThemes";
 import type { CoverLetterInput, CoverLetterSenderSnapshot } from "../types/coverLetter";
+import { profileName } from "../shared/format";
 
 export const coverLetterSenderDefaults: CoverLetterSenderSnapshot = {
-  name: profile.name,
+  name: profileName(profile.name, "en"),
   professionalTitle: "BIM Coordinator - Infrastructure",
   email: profile.email,
   phone: profile.phone,

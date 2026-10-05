@@ -21,6 +21,46 @@
   gap: .75rem;
 }
 
+.admin-derived-field {
+  display: grid;
+  min-width: 0;
+  gap: .4rem;
+}
+
+.admin-derived-field__heading {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .75rem;
+}
+
+.admin-derived-field__output {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-regular);
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-derived-field__output strong {
+  color: var(--admin-color-text);
+  font-weight: var(--admin-weight-semibold);
+}
+
+@container admin-form (max-width: 24rem) {
+  .admin-derived-field__heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: .15rem;
+  }
+
+  .admin-derived-field__output { max-width: 100%; }
+}
+
 .admin-profile-entry-card__heading {
   display: flex;
   min-width: 0;

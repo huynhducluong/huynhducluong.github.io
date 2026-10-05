@@ -11,7 +11,7 @@ import {
   listCoverLetters,
   updateCoverLetterDraft,
 } from "../services/coverLetterRepository";
-import { escapeHtml } from "../shared/format";
+import { escapeHtml, profileName } from "../shared/format";
 import { loadProfessionalProfile } from "../services/websiteRepository";
 import { applyDocumentTheme, createCustomDocumentTheme, findDocumentTheme } from "../themes/documentThemes";
 import type { CoverLetterEvidenceOption, CoverLetterInput, CoverLetterRecord, CoverLetterSenderSnapshot, CoverLetterStatus } from "../types/coverLetter";
@@ -65,7 +65,7 @@ const lastOpenedStorageKey = "hdl-admin-cover-letter-last-opened";
 
 export const updateCoverLetterSharedProfile = (professional: ProfessionalProfileContent): void => {
   sharedSender = {
-    name: professional.profile.name,
+    name: profileName(professional.profile.name, "en"),
     professionalTitle: professional.profile.professionalTitle.en,
     email: professional.profile.email,
     phone: professional.profile.phone,

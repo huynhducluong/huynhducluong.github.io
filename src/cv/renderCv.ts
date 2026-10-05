@@ -12,6 +12,7 @@ import {
   escapeHtml,
   formatNumericDate,
   localize,
+  profileName,
 } from "../shared/format";
 import type { Project } from "../types/career";
 import type { CvProjectSelection } from "../types/documents";
@@ -19,6 +20,7 @@ import { documentThemes } from "../themes/documentThemes";
 import { findRequired } from "./validateCv";
 
 const language = englishCvConfig.language;
+const displayName = profileName(profile.name, language);
 
 const renderThemeOptions = (): string =>
   documentThemes
@@ -199,7 +201,7 @@ const renderSidebar = (): string => `
       <img
         class="cv-photo__image"
         src="${escapeHtml(assetUrl(profile.photoPath))}"
-        alt="Portrait of ${escapeHtml(profile.name)}"
+        alt="Portrait of ${escapeHtml(displayName)}"
         data-profile-photo
       >
     </div>
@@ -240,7 +242,7 @@ const renderPageOne = (): string => {
       ${renderSidebar()}
       <main class="cv-page-one-main">
         <header class="cv-identity">
-          <p class="cv-identity__name">${escapeHtml(profile.name)}</p>
+          <p class="cv-identity__name">${escapeHtml(displayName)}</p>
           <h1>${localize(profile.professionalTitle, language)}</h1>
         </header>
 
@@ -272,7 +274,7 @@ const renderPageTwo = (): string => {
     <section class="cv-page cv-page--two" aria-label="CV page 2 of 2" data-cv-page>
       <header class="cv-page-two-header">
         <div class="cv-page-two-header__identity">
-          <p>${escapeHtml(profile.name)}</p>
+          <p>${escapeHtml(displayName)}</p>
           <span>${localize(profile.professionalTitle, language)}</span>
         </div>
         <div class="cv-page-two-header__title">

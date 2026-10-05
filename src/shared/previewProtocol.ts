@@ -18,7 +18,7 @@ interface PreviewRendered {
 }
 
 export interface PreviewReceiver<T> {
-  activate: (render: (data: T) => void) => void;
+  activate: (render: (data: T) => void | Promise<void>) => void;
   disconnect: () => void;
 }
 
@@ -29,16 +29,37 @@ export interface PreviewSender {
 
 const updateType = (kind: PreviewKind): string => `hdl:${kind}-preview`;
 
+const nextFrame = (): Promise<void> => new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+
+const waitForPreviewAssets = async (): Promise<void> => {
+  const images = [...document.images];
+  const imageReady = Promise.all(images.map(async (image) => {
+    if (image.complete) return;
+    await new Promise<void>((resolve) => {
+      image.addEventListener("load", () => resolve(), { once: true });
+      image.addEventListener("error", () => resolve(), { once: true });
+    });
+  }));
+  const assetsReady = Promise.all([document.fonts?.ready.catch(() => undefined), imageReady]);
+  await Promise.race([
+    assetsReady,
+    new Promise<void>((resolve) => window.setTimeout(resolve, 4000)),
+  ]);
+  await nextFrame();
+  await nextFrame();
+};
+
 export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> => {
   let pending: PreviewUpdate<T> | null = null;
-  let renderPreview: ((data: T) => void) | null = null;
+  let renderPreview: ((data: T) => void | Promise<void>) | null = null;
 
-  const render = (message: PreviewUpdate<T>): void => {
+  const render = async (message: PreviewUpdate<T>): Promise<void> => {
     if (!renderPreview) {
       pending = message;
       return;
     }
-    renderPreview(message.data);
+    await renderPreview(message.data);
+    await waitForPreviewAssets();
     const rendered: PreviewRendered = {
       type: "hdl:preview-rendered",
       kind,
@@ -54,7 +75,7 @@ export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> 
       || event.data?.type !== updateType(kind)
       || !event.data.data
     ) return;
-    render(event.data);
+    void render(event.data);
   };
 
   window.addEventListener("message", receive);
@@ -65,7 +86,8 @@ export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> 
       if (pending) {
         const queued = pending;
         pending = null;
-        render(queued);
+        void render(queued);
+        return;
       }
       const ready: PreviewReady = { type: "hdl:preview-ready", kind };
       window.parent.postMessage(ready, window.location.origin);
@@ -78,14 +100,16 @@ export const bindPreviewSender = <T>(
   iframe: HTMLIFrameElement,
   kind: PreviewKind,
   payload: () => T,
-  onRendered?: () => void,
+  onRendered?: (sequence: number) => void,
 ): PreviewSender => {
   let sequence = 0;
+  let latestSequence = 0;
   let disconnected = false;
 
   const send = (): void => {
     if (disconnected) return;
     sequence += 1;
+    latestSequence = sequence;
     iframe.contentWindow?.postMessage({
       type: updateType(kind),
       data: payload(),
@@ -96,7 +120,7 @@ export const bindPreviewSender = <T>(
   const receive = (event: MessageEvent<PreviewReady | PreviewRendered>): void => {
     if (event.origin !== window.location.origin || event.source !== iframe.contentWindow || event.data?.kind !== kind) return;
     if (event.data.type === "hdl:preview-ready") send();
-    if (event.data.type === "hdl:preview-rendered") onRendered?.();
+    if (event.data.type === "hdl:preview-rendered" && event.data.sequence === latestSequence) onRendered?.(event.data.sequence);
   };
 
   const handleLoad = (): void => send();

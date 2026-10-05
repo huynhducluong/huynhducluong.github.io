@@ -11,6 +11,7 @@ import type {
 } from "../types/cvContent";
 import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
 import { withoutTrashed } from "./activeContent";
+import { normalizeProfile } from "../shared/format";
 
 interface CvContentRow {
   version: string;
@@ -66,7 +67,7 @@ const contentFromRow = (row: CvContentRow): CvContent => ({
   themeId: row.theme_id,
   theme: row.theme ?? { presetId: row.theme_id },
   pageOneProjectCount: row.page_one_project_count,
-  profile: row.profile,
+  profile: normalizeProfile(row.profile),
   experiences: row.experiences ?? [],
   education: row.education ?? [],
   skillGroups: row.skill_groups ?? [],
@@ -137,7 +138,7 @@ const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => 
     ? contentFromRow(contentResult.data as CvContentRow)
     : structuredClone(cvContentSeed);
   if (professionalResult.data) {
-    content.profile = professionalResult.data.profile as CvContent["profile"];
+    content.profile = normalizeProfile(professionalResult.data.profile as CvContent["profile"]);
     content.experiences = (professionalResult.data.experiences ?? []) as CvContent["experiences"];
     content.education = (professionalResult.data.education ?? []) as CvContent["education"];
     content.skillGroups = (professionalResult.data.skill_groups ?? []) as CvContent["skillGroups"];
@@ -168,6 +169,7 @@ export const loadCvData = async (options: { adminPreview?: boolean; preferReleas
         const activeRelease = await loadActiveProfileDocumentRelease<CvRuntimeData>("cv");
         if (activeRelease) {
           activeRelease.content.theme ??= { presetId: activeRelease.content.themeId };
+          activeRelease.content.profile = normalizeProfile(activeRelease.content.profile);
           return activeRelease;
         }
       } catch {
@@ -183,6 +185,7 @@ export const loadCvData = async (options: { adminPreview?: boolean; preferReleas
       if (data?.payload) {
         const runtime = data.payload as CvRuntimeData;
         runtime.content.theme ??= { presetId: runtime.content.themeId };
+        runtime.content.profile = normalizeProfile(runtime.content.profile);
         return runtime;
       }
       throw new Error("No published CV release is available.");

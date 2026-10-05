@@ -1,4 +1,4 @@
-import { escapeHtml, localize, type Language } from "../shared/format";
+import { escapeHtml, localize, profileName, type Language } from "../shared/format";
 import { websiteNavigationLabels } from "../data/websiteNavigation";
 import type { Profile } from "../types/career";
 import type { WebsiteContent } from "../types/website";
@@ -55,7 +55,7 @@ export const siteHeader = (profile: Profile, _content: WebsiteContent, active?: 
   <a class="skip-link" href="#main-content">${text.skip}</a>
   <header class="page-header">
     <div class="container page-header__inner">
-      <a class="site-logo" href="${withWebsiteLanguage(rootUrl(), language)}" aria-label="${escapeHtml(profile.name)} ${text.home}">HDL</a>
+      <a class="site-logo" href="${withWebsiteLanguage(rootUrl(), language)}" aria-label="${escapeHtml(profileName(profile.name, language))} ${text.home}">HDL</a>
       <nav class="page-nav" aria-label="${text.navigation}">
         <a ${active === "projects" ? 'aria-current="page"' : ""} href="${withWebsiteLanguage(rootUrl("projects/"), language)}">${localized(websiteNavigationLabels.projects, language)}</a>
         <a ${active === "tools" ? 'aria-current="page"' : ""} href="${withWebsiteLanguage(rootUrl("tools/"), language)}">${localized(websiteNavigationLabels.automation, language)}</a>
@@ -74,7 +74,7 @@ export const siteHeader = (profile: Profile, _content: WebsiteContent, active?: 
 export const siteFooter = (profile: Profile, content: WebsiteContent, language: Language = "en"): string => `
   <footer class="page-footer">
     <div class="container page-footer__inner">
-      <p>© ${new Date().getFullYear()} ${escapeHtml(profile.name)} · ${localized(content.footerText, language)}</p>
+      <p>© ${new Date().getFullYear()} ${escapeHtml(profileName(profile.name, language))} · ${localized(content.footerText, language)}</p>
       <a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a>
     </div>
   </footer>

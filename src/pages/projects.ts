@@ -5,7 +5,7 @@ import "../styles/content.css";
 import { getAdminAccess } from "../admin/auth";
 import { loadPublishedWebsiteRelease, loadWebsiteDraftData } from "../services/websiteRepository";
 import { createPreviewReceiver } from "../shared/previewProtocol";
-import { localize, type Language } from "../shared/format";
+import { localize, profileName, type Language } from "../shared/format";
 import { renderProjectCard } from "../site/renderers";
 import { applyWebsiteTheme, readWebsiteLanguage, siteFooter, siteHeader } from "../site/shell";
 import type { WebsiteRuntimeData } from "../types/website";
@@ -34,7 +34,7 @@ const render = (data: WebsiteRuntimeData, language: Language = "en"): void => {
     ? `<div class="listing-grid">${projects.map((item) => renderProjectCard(item, language)).join("")}</div>`
     : `<p class="status-message">${emptyCopy[language]}</p>`;
   const page = data.content.projectsPage;
-  document.title = `${localized(page.title, language)} | ${profile.name}`;
+  document.title = `${localized(page.title, language)} | ${profileName(profile.name, language)}`;
   app.innerHTML = `${siteHeader(profile, data.content, "projects", language)}<main id="main-content"><section class="page-hero"><div class="container"><p class="section-kicker">${localized(page.kicker, language)}</p><h1>${localized(page.title, language)}</h1><p>${localized(page.description, language)}</p></div></section><section class="section"><div class="container">${cards}</div></section></main>${siteFooter(profile, data.content, language)}`;
 };
 
@@ -43,7 +43,12 @@ const initialize = async (): Promise<void> => {
   const wantsPreview = params.get("preview") === "1";
   const previewReceiver = wantsPreview ? createPreviewReceiver<WebsitePreviewData>("website") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
+  const embeddedPreview = adminPreview && params.get("embedded") === "1";
   if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
+  if (embeddedPreview) {
+    previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));
+    return;
+  }
   const data = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
   render(data, readWebsiteLanguage());
   if (adminPreview) {

@@ -12,14 +12,14 @@ import {
   saveWebsiteContent,
 } from "../services/websiteRepository";
 import { archiveProfilePhoto, listProfilePhotos, renameProfilePhoto } from "../services/profilePhotoRepository";
-import { assetUrl, degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
+import { assetUrl, degreeClassificationValue, escapeHtml, normalizeProfileName, profileName, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { validateWebsitePublish } from "./contentValidation";
 import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfilePhotoAsset } from "../types/profilePhoto";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
-import type { Education, Experience, LanguageSkill } from "../types/career";
+import type { Education, Experience, LanguageSkill, Profile } from "../types/career";
 import type { StoredDocumentTheme } from "../types/theme";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { invalidateProfileDocumentWorkspace } from "./profileDocumentWorkspace";
@@ -60,6 +60,7 @@ interface WorkspaceCallbacks {
   rerender: () => void;
   setDirty: (value: boolean) => void;
   notify: (message: string, kind?: "info" | "error" | "success") => void;
+  updateAdminIdentity: (profile: Profile, persist?: boolean) => void;
 }
 
 const state: {
@@ -165,7 +166,7 @@ const profilePhotoControl = (professional: ProfessionalProfileContent, photos: P
     <div class="admin-profile-photo-picker" data-profile-photo-picker>
       <button class="admin-profile-photo-control" type="button" role="combobox" aria-labelledby="profile-photo-label" aria-expanded="false" aria-controls="profile-photo-options" data-profile-photo-trigger>
         <span class="admin-profile-photo-preview" data-profile-photo-frame aria-hidden="true">
-          <span>${escapeHtml(profileInitials(professional.profile.name))}</span>
+          <span>${escapeHtml(profileInitials(profileName(professional.profile.name, "vi")))}</span>
           ${path ? `<img src="${escapeHtml(assetUrl(path))}" alt="" data-profile-photo-preview>` : ""}
         </span>
         <span class="admin-profile-photo-identity">
@@ -175,7 +176,7 @@ const profilePhotoControl = (professional: ProfessionalProfileContent, photos: P
       </button>
       <div class="admin-profile-photo-options" id="profile-photo-options" role="listbox" data-profile-photo-options hidden>
         <button class="admin-profile-photo-option" type="button" role="option" aria-selected="${path ? "false" : "true"}" data-profile-photo-option data-photo-value="" data-photo-name="No photo">
-          <span class="admin-profile-photo-option__thumb admin-profile-photo-option__initials">${escapeHtml(profileInitials(professional.profile.name))}</span><strong>No photo</strong>
+          <span class="admin-profile-photo-option__thumb admin-profile-photo-option__initials">${escapeHtml(profileInitials(profileName(professional.profile.name, "vi")))}</span><strong>No photo</strong>
         </button>
         ${legacyOption}${photoOptions}
       </div>
@@ -421,7 +422,7 @@ const profileIdentity = (professional: ProfessionalProfileContent, photos: Profi
   title: "Profile identity",
   note: "Shared contact and profile details used across all outputs.",
   content: `<div class="admin-form-grid">
-    ${field("Full name", "profile_name", professional.profile.name)}
+    <label class="admin-derived-field"><span class="admin-derived-field__heading"><span>Full name</span><span class="admin-derived-field__output" id="profile-name-english">EN <span aria-hidden="true">·</span> <strong data-profile-name-english>${escapeHtml(profileName(professional.profile.name, "en"))}</strong></span></span><input name="profile_name" type="text" value="${escapeHtml(profileName(professional.profile.name, "vi"))}" aria-describedby="profile-name-english" data-profile-name-input></label>
     ${field("Email", "profile_email", professional.profile.email, "email")}
     ${field("Phone", "profile_phone", professional.profile.phone, "tel")}
     ${profilePhotoControl(professional, photos)}
@@ -623,7 +624,7 @@ const readProfileForm = (formElement: HTMLFormElement): ProfessionalProfileConte
   const languageIds = form.getAll("profile_language_order").map((item) => String(item));
   return {
     profile: {
-      name: value(form, "profile_name"),
+      name: normalizeProfileName(value(form, "profile_name")),
       email: value(form, "profile_email"),
       phone: value(form, "profile_phone"),
       photoPath: value(form, "profile_photo"),
@@ -931,11 +932,15 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
         ...readWebsiteForm(websiteForm),
         previewLanguage: state.previewLanguage,
       }), () => {
-        previewController?.refresh();
-        setPreviewStatus("Synced", "success");
+      previewController?.refresh();
+      previewController?.reveal();
+      setPreviewStatus("Synced", "success");
       })
     : undefined;
-  previewIframe?.addEventListener("error", () => setPreviewStatus("Disconnected", "error"));
+  previewIframe?.addEventListener("error", () => {
+    previewController?.setError("Website preview is unavailable.");
+    setPreviewStatus("Disconnected", "error");
+  });
   const markDirty = (): void => {
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-site-save-state]");
@@ -1276,6 +1281,16 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const photoPicker = profileForm?.querySelector<HTMLElement>("[data-profile-photo-picker]");
   const photoTrigger = profileForm?.querySelector<HTMLButtonElement>("[data-profile-photo-trigger]");
   const photoOptions = profileForm?.querySelector<HTMLElement>("[data-profile-photo-options]");
+  const profileNameInput = profileForm?.querySelector<HTMLInputElement>("[data-profile-name-input]");
+  const profileNameEnglish = profileForm?.querySelector<HTMLElement>("[data-profile-name-english]");
+  const previewAdminIdentity = (photoOverride?: string): void => {
+    if (!state.runtime) return;
+    callbacks.updateAdminIdentity({
+      ...state.runtime.professional.profile,
+      name: normalizeProfileName(profileNameInput?.value ?? profileName(state.runtime.professional.profile.name, "vi")),
+      photoPath: photoOverride ?? photoPath?.value ?? state.runtime.professional.profile.photoPath,
+    });
+  };
   const closePhotoPicker = (): void => {
     if (!photoOptions || !photoTrigger) return;
     photoOptions.hidden = true;
@@ -1312,6 +1327,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     });
     closePhotoPicker();
     markDirty();
+    previewAdminIdentity(path);
   };
   const photoImage = photoFrame?.querySelector<HTMLImageElement>("img");
   if (photoImage) {
@@ -1329,6 +1345,11 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     photoTrigger.setAttribute("aria-expanded", String(open));
     photoPicker?.classList.toggle("is-open", open);
     if (open) photoOptions.querySelector<HTMLButtonElement>('[aria-selected="true"]')?.focus({ preventScroll: true });
+  });
+  profileNameInput?.addEventListener("input", () => {
+    const localizedName = normalizeProfileName(profileNameInput.value);
+    if (profileNameEnglish) profileNameEnglish.textContent = localizedName.en;
+    previewAdminIdentity();
   });
   photoTrigger?.addEventListener("keydown", (event) => {
     if (event.key !== "ArrowDown") return;
@@ -1510,7 +1531,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     setPreviewStatus("Loading…", "warning");
     previewFrame?.scrollTo({ top: 0, left: 0 });
     previewZoomController?.resetFit();
-    previewStage?.setAttribute("aria-busy", "true");
+    previewController?.setLoading(`Preparing ${websitePreviewTitle(nextPage)} preview…`);
     previewIframe.title = `${websitePreviewTitle(nextPage)} draft preview`;
     previewIframe.src = websitePreviewPath(nextPage, state.runtime);
   });
@@ -1559,6 +1580,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       if (languageError) throw new Error(languageError);
       await saveProfessionalProfile(professional);
       state.runtime = { ...state.runtime!, professional };
+      callbacks.updateAdminIdentity(professional.profile, true);
       profileStructuralSnapshot = null;
       invalidateProfileDocumentWorkspace();
       updateCoverLetterSharedProfile(professional);

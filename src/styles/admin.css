@@ -175,16 +175,30 @@ body:has(.admin-shell) {
 }
 
 .admin-brand > span {
+  position: relative;
   display: grid;
   width: 2.4rem;
   height: 2.4rem;
+  overflow: hidden;
   place-items: center;
-  border-radius: .65rem;
+  border: 1px solid rgb(255 255 255 / 28%);
+  border-radius: 50%;
   background: var(--color-primary);
   font-size: var(--admin-text-xs);
   font-weight: 900;
   letter-spacing: .06em;
 }
+
+.admin-brand__avatar img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  object-fit: cover;
+}
+
+.admin-brand__avatar.has-image img { opacity: 1; }
 
 .admin-brand div,
 .admin-brand strong,

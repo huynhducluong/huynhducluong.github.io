@@ -9,7 +9,7 @@ export interface ContentPoint {
 }
 
 export interface Profile {
-  name: string;
+  name: LocalizedText;
   professionalTitle: LocalizedText;
   email: string;
   phone: string;

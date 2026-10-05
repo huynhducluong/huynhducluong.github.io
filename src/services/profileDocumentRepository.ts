@@ -8,6 +8,7 @@ import type {
   ProfileDocumentStatus,
 } from "../types/profileDocument";
 import { supabase } from "./supabaseClient";
+import { normalizeProfile } from "../shared/format";
 
 interface ProfileDocumentRow {
   id: string;
@@ -21,13 +22,24 @@ interface ProfileDocumentRow {
   updated_at: string;
 }
 
+const normalizePayload = <TPayload extends ProfileDocumentPayload>(payload: TPayload | null): TPayload | null => {
+  if (!payload) return null;
+  return {
+    ...payload,
+    content: {
+      ...payload.content,
+      profile: normalizeProfile(payload.content.profile),
+    },
+  } as TPayload;
+};
+
 const fromRow = <TPayload extends ProfileDocumentPayload>(row: ProfileDocumentRow): ProfileDocumentRecord<TPayload> => ({
   id: row.id,
   kind: row.kind,
   internalTitle: row.internal_title,
   status: row.status,
   isActive: row.is_active,
-  draftPayload: row.draft_payload as TPayload | null,
+  draftPayload: normalizePayload(row.draft_payload as TPayload | null),
   lastPublishedAt: row.last_published_at,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
@@ -164,7 +176,7 @@ export const loadActiveProfileDocumentRelease = async <TPayload extends ProfileD
     .limit(1)
     .maybeSingle();
   if (error) throw error;
-  return (data?.payload as TPayload | undefined) ?? null;
+  return normalizePayload((data?.payload as TPayload | undefined) ?? null);
 };
 
 export type CvProfileDocument = ProfileDocumentRecord<CvRuntimeData>;

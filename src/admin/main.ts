@@ -31,14 +31,16 @@ import {
   type AdminDirtyScope,
 } from "./dirtyState";
 import { bindProjectCoverCropper, renderProjectCoverCropDialog } from "./projectCoverCropper";
-import { escapeHtml } from "../shared/format";
+import { assetUrl, escapeHtml, profileName } from "../shared/format";
 import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
+import { loadProfessionalProfile } from "../services/websiteRepository";
 import { downloadStoredMedia, type ProjectImageCropRow } from "../services/projectCoverCropRepository";
 import { loadAdminSchemaHealth, removeUnreferencedStoragePaths, type AdminSchemaHealth } from "../services/adminSystemRepository";
 import { projectFromRow, toolFromRow, type ProjectRow, type ToolRow } from "../services/supabasePortfolioRepository";
 import type { CvProjectDisplay } from "../types/cvContent";
 import type { PublicationStatus } from "../types/portfolio";
+import type { Profile } from "../types/career";
 import { validateProjectReadiness, validateToolReadiness, type ContentValidationResult } from "./contentValidation";
 import {
   bindCoverLetterWorkspace,
@@ -64,6 +66,7 @@ import {
   siteWorkspaceView,
   type SiteWorkspaceKind,
 } from "./siteWorkspace";
+import { adminBrand, adminDocumentTitle } from "./brand";
 
 interface AdminMediaRow {
   id: string;
@@ -165,6 +168,7 @@ interface CollectionRevealIntent {
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
 document.documentElement.classList.add("admin-app");
+document.title = adminDocumentTitle();
 
 let projects: AdminProjectRow[] = [];
 let tools: AdminToolRow[] = [];
@@ -184,6 +188,40 @@ let magicLinkCooldown: number | undefined;
 let reorderBusy = false;
 let navigationSequence = 0;
 let dashboardRenderSequence = 0;
+let adminIdentity: Profile | null = null;
+
+const identityInitials = (profile: Profile | null): string => (profile ? profileName(profile.name, "vi") : "HDL")
+  .split(/\s+/)
+  .filter(Boolean)
+  .slice(0, 3)
+  .map((part) => part[0] ?? "")
+  .join("")
+  .toUpperCase() || "HDL";
+
+const adminAvatarContent = (profile: Profile | null): string => {
+  const photoPath = profile?.photoPath.trim() ?? "";
+  return `<span aria-hidden="true">${escapeHtml(identityInitials(profile))}</span>${photoPath ? `<img src="${escapeHtml(assetUrl(photoPath))}" alt="">` : ""}`;
+};
+
+const bindAdminAvatarImage = (avatar: HTMLElement | null): void => {
+  const image = avatar?.querySelector<HTMLImageElement>("img");
+  if (!avatar || !image) return;
+  const sync = (): void => {
+    avatar.classList.toggle("has-image", image.complete && image.naturalWidth > 0);
+  };
+  image.addEventListener("load", sync, { once: true });
+  image.addEventListener("error", sync, { once: true });
+  sync();
+};
+
+const updateAdminIdentity = (profile: Profile, persist = false): void => {
+  if (persist) adminIdentity = structuredClone(profile);
+  const avatar = app.querySelector<HTMLElement>("[data-admin-brand-avatar]");
+  if (!avatar) return;
+  avatar.classList.remove("has-image");
+  avatar.innerHTML = adminAvatarContent(profile);
+  bindAdminAvatarImage(avatar);
+};
 let pendingCollectionReveal: CollectionRevealIntent | null = null;
 const collectionScrollPositions: Record<CollectionView, number> = { projects: 0, tools: 0, trash: 0 };
 
@@ -387,7 +425,7 @@ const loginView = (): void => {
     <main class="admin-login">
       <section class="admin-login__card">
         <p class="section-kicker">Private CMS</p>
-        <h1>Content administration</h1>
+        <h1>${adminBrand.name}</h1>
         <p>Sign in with your password, or use a one-time Magic Link as a backup.</p>
         <label class="admin-login__email">Email<input type="email" autocomplete="username" value="${escapeHtml(supabaseConfig.adminEmail)}" readonly></label>
         <div class="admin-auth-tabs" role="tablist" aria-label="Sign-in method">
@@ -848,7 +886,7 @@ const dashboardView = (): void => {
     <a class="admin-skip-link" href="#admin-workspace">Skip to workspace</a>
     <main class="admin-shell">
       <aside class="admin-rail">
-        <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span>HDL</span><div><strong>Content Admin</strong><small>Portfolio workspace</small></div></a>
+        <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span class="admin-brand__avatar" data-admin-brand-avatar>${adminAvatarContent(adminIdentity)}</span><div><strong>${adminBrand.name}</strong><small>${adminBrand.workspace}</small></div></a>
         <nav class="admin-nav" aria-label="Admin sections">
           <p>Overview</p>${navButton("overview", "Dashboard", "01")}
           <p>Website</p>${navButton("homepage", "Homepage", "02")}${navButton("projects", "Projects", "03")}${navButton("tools", "Automation tools", "04")}
@@ -859,7 +897,7 @@ const dashboardView = (): void => {
         <div class="admin-rail__footer"><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div>
       </aside>
       <section class="admin-main">
-        <header class="admin-header"><div><small>HDL Admin /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message sr-only" data-admin-message></p><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></header>
+        <header class="admin-header"><div><small>${adminBrand.breadcrumb} /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message sr-only" data-admin-message></p><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></header>
         <div class="admin-layout ${showCollection ? "has-collection" : ""}">
           ${showCollection ? `<aside class="admin-collection">
             <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
@@ -888,6 +926,7 @@ const dashboardView = (): void => {
       <button type="button" role="menuitem" data-reorder-edge="first"><span aria-hidden="true">⇈</span>Move to first</button>
       <button type="button" role="menuitem" data-reorder-edge="last"><span aria-hidden="true">⇊</span>Move to last</button>
     </div>`;
+  bindAdminAvatarImage(app.querySelector<HTMLElement>("[data-admin-brand-avatar]"));
   bindDashboard();
   bindAdminTablists(app);
   bindAdminYearPickers(app);
@@ -1851,6 +1890,7 @@ const bindDashboard = (): void => {
       rerender: dashboardView,
       setDirty: (value) => { setAdminDirty(siteScope, value); },
       notify: message,
+      updateAdminIdentity,
     });
   }
 };
@@ -1861,7 +1901,7 @@ const initialize = async (): Promise<void> => {
   if (access === "forbidden") {
     await supabase.auth.signOut();
     loginView();
-    message("This account is not in the Portfolio admin allowlist.", "error");
+    message(`This account is not in the ${adminBrand.name} allowlist.`, "error");
     return;
   }
 
@@ -1872,7 +1912,11 @@ const initialize = async (): Promise<void> => {
   }
 
   try {
-    await loadProjects();
+    const [, professional] = await Promise.all([
+      loadProjects(),
+      loadProfessionalProfile().catch(() => null),
+    ]);
+    adminIdentity = professional?.profile ?? null;
     const route = readAdminRoute();
     const availableViews: AdminView[] = ["overview", "homepage", "projects", "tools", "profile", "cv", "portfolio", "cover-letters", "trash"];
     if (route.view && availableViews.includes(route.view as AdminView)) activeView = route.view as AdminView;
