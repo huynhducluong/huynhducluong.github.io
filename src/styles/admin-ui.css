@@ -1446,6 +1446,93 @@ html.admin-app button.is-busy::before {
   .admin-toast[data-progress="true"] .admin-toast__icon svg { animation: none; }
 }
 
+/* Shared Phase 3 workspace states and accessibility helpers. */
+.admin-skip-link {
+  position: fixed;
+  z-index: 1000;
+  top: .75rem;
+  left: .75rem;
+  padding: .65rem .9rem;
+  border-radius: var(--admin-radius-sm);
+  background: var(--color-primary-dark);
+  color: #fff;
+  font-weight: var(--admin-weight-semibold);
+  transform: translateY(calc(-100% - 1rem));
+  transition: transform .16s ease;
+}
+
+.admin-skip-link:focus { transform: translateY(0); }
+.admin-workspace:focus { outline: none; }
+
+.admin-workspace-state {
+  display: grid;
+  width: min(100%, 42rem);
+  min-height: min(32rem, 100%);
+  margin: auto;
+  grid-template-columns: auto minmax(0, 1fr);
+  place-content: center;
+  gap: 1rem;
+  padding: clamp(1.5rem, 4vw, 3rem);
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-radius-lg);
+  background: var(--admin-color-surface);
+  box-shadow: var(--admin-shadow-card);
+}
+
+.admin-workspace-state h2 {
+  margin-block: .25rem .45rem;
+  font-size: var(--admin-title-md);
+}
+
+.admin-workspace-state p:last-of-type {
+  max-width: 42rem;
+  color: var(--color-text-muted);
+}
+
+.admin-workspace-state__icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--admin-color-surface-muted);
+  color: var(--color-primary-dark);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-workspace-state[data-state="error"] .admin-workspace-state__icon {
+  background: rgb(180 35 24 / 10%);
+  color: #b42318;
+}
+
+.admin-workspace-state[data-state="loading"] .admin-workspace-state__icon {
+  border: 3px solid var(--admin-color-border);
+  border-top-color: var(--color-primary);
+  background: transparent;
+  animation: admin-state-spin .8s linear infinite;
+}
+
+[data-unsaved-state][data-dirty="true"],
+[data-document-save-state][data-dirty="true"],
+[data-site-save-state][data-dirty="true"],
+[data-cl-dirty-state][data-dirty="true"] {
+  color: #9a6700;
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-text-input-dialog__form input { width: 100%; }
+
+@keyframes admin-state-spin { to { transform: rotate(360deg); } }
+
+@media (max-width: 560px) {
+  .admin-workspace-state { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-skip-link { transition: none; }
+  .admin-workspace-state[data-state="loading"] .admin-workspace-state__icon { animation: none; }
+}
+
 /* Fixed workspace chrome: keep identity/actions/tabs visible while the active pane scrolls. */
 .admin-workspace:has(> .admin-editor-shell) {
   display: flex;

@@ -19,11 +19,14 @@ import type { ProfessionalProfileContent } from "../types/website";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import {
   formatAdminDate,
+  renderAdminDocumentHeader,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
+  renderAdminWorkspaceState,
   setButtonBusy,
 } from "./ui";
 import { confirmAdmin } from "./confirmDialog";
+import { readAdminRoute, updateAdminRoute } from "./adminRoute";
 import {
   bindPreviewZoom,
   createPreviewZoomState,
@@ -84,12 +87,7 @@ const textarea = (label: string, name: keyof CoverLetterInput, rows: number, req
   `<label>${label}<textarea name="${name}" rows="${rows}"${required ? " required" : ""}${disabled()}>${fieldValue(name)}</textarea></label>`;
 
 const syncUrl = (id?: string): void => {
-  const url = new URL(window.location.href);
-  url.pathname = `${base}admin/`;
-  url.searchParams.set("view", "cover-letters");
-  if (id) url.searchParams.set("id", id);
-  else url.searchParams.delete("id");
-  window.history.replaceState({}, "", url);
+  updateAdminRoute({ view: "cover-letters", item: id ?? (editorOpen ? "new" : null), tab: editorOpen ? editorTab : null });
 };
 
 const upsertLocalRecord = (next: CoverLetterRecord): void => {
@@ -136,7 +134,8 @@ const selectRecord = (selected: CoverLetterRecord): void => {
   letter = structuredClone(selected);
   editorOpen = true;
   dirty = false;
-  editorTab = "content";
+  const routeTab = readAdminRoute().tab;
+  editorTab = routeTab === "content" || routeTab === "evidence" || routeTab === "appearance" || routeTab === "notes" ? routeTab : "content";
   previewZoom = createPreviewZoomState();
   rememberRecord(selected.id);
 };
@@ -158,10 +157,18 @@ export const ensureCoverLetterWorkspace = async (): Promise<void> => {
         toolIds: item.toolIds.filter((id) => activeToolIds.has(id)),
       }));
       updateCoverLetterSharedProfile(professional);
-      const requestedId = new URLSearchParams(window.location.search).get("id");
+      const route = readAdminRoute();
+      const requestedId = route.item;
       const requested = requestedId ? records.find((item) => item.id === requestedId) : null;
       const initialRecord = requested ?? preferredRecord();
-      if (initialRecord) {
+      if (requestedId === "new") {
+        record = null;
+        letter = createCoverLetterDraft();
+        editorOpen = true;
+        dirty = false;
+        editorTab = route.tab === "evidence" || route.tab === "appearance" || route.tab === "notes" ? route.tab : "content";
+        syncUrl();
+      } else if (initialRecord) {
         selectRecord(initialRecord);
         syncUrl(initialRecord.id);
       }
@@ -226,7 +233,7 @@ const collectionView = (): string => `
     <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${records.length}</span></h2></div><div class="admin-collection__heading-actions">${records.length ? '<button class="button admin-action-new" type="button" data-cl-new>+ New</button>' : ""}${editorOpen ? '<button class="admin-drawer-close" type="button" data-cl-library-close aria-label="Close cover letter library">×</button>' : ""}</div></div>
     <div class="admin-list-controls">
       <label class="admin-search"><span class="sr-only">Search cover letters</span><input type="search" placeholder="Search company, role or title..." value="${escapeHtml(search)}" data-cl-search></label>
-      <div class="admin-filter-row" aria-label="Cover letter status">${(["all", "draft", "final", "archived"] as CoverLetterFilter[]).map((item) => `<button type="button" data-cl-filter="${item}" class="${filter === item ? "is-active" : ""}">${item}</button>`).join("")}</div>
+      <div class="admin-filter-row" aria-label="Cover letter status">${(["all", "draft", "final", "archived"] as CoverLetterFilter[]).map((item) => `<button type="button" data-cl-filter="${item}" class="${filter === item ? "is-active" : ""}" aria-pressed="${filter === item}">${item}</button>`).join("")}</div>
     </div>
     <div class="admin-collection__scroll"><ul class="admin-content-list" data-cl-list>${recordList()}</ul></div>
   </aside>`;
@@ -235,7 +242,7 @@ const emptyWorkspace = (): string => {
   if (records.length) {
     const recent = preferredRecord() ?? records[0];
     return `
-      <section class="admin-cl-empty admin-cl-empty--selection">
+      <section class="admin-cl-empty admin-cl-empty--selection" data-state="empty" role="status">
         <div><p class="section-kicker">Applications</p><h1>Select a cover letter</h1><p>Choose a letter from the list or continue with the most recently updated application.</p></div>
         <article class="admin-cl-recent">
           <div><span>Recently updated</span><strong>${escapeHtml(recent.internalTitle)}</strong><small>${escapeHtml(recent.positionTitle || "Position not set")} · ${escapeHtml(recent.companyName || "Company not set")} · ${formatAdminDate(recent.updatedAt)}</small></div>
@@ -246,7 +253,7 @@ const emptyWorkspace = (): string => {
   }
 
   return `
-    <section class="admin-cl-empty admin-cl-empty--onboarding">
+    <section class="admin-cl-empty admin-cl-empty--onboarding" data-state="empty" role="status">
       <div><p class="section-kicker">Applications</p><h1>Cover letter workspace</h1><p>Create tailored one-page letters using the same profile, projects and automation tools managed in this Admin.</p></div>
       <ol class="admin-cl-steps">
         <li><span>1</span><div><strong>Application</strong><small>Add the company, role and recipient.</small></div></li>
@@ -271,20 +278,16 @@ const editorView = (): string => {
   });
   return `
     <section class="admin-document-workspace" data-cover-letter-workspace>
-      <header class="admin-document-header">
-        <div class="admin-document-header__identity">
-          <p class="section-kicker">Applications</p>
-          <h1 class="admin-document-title"><button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button></h1>
-          <p class="admin-document-meta"><span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${formatAdminDate(record.updatedAt)}` : "New application"}</span></p>
-        </div>
-        <div class="admin-document-actions">
-          <span data-cl-dirty-state>${dirty ? "Unsaved changes" : isLocked ? "Locked" : "Saved"}</span>
-          ${record ? `<details class="admin-document-more"><summary>More</summary><div><a href="${base}cover-letter/?id=${encodeURIComponent(record.id)}" target="_blank" rel="noreferrer">Print / PDF</a>${record.status === "draft" ? '<button class="admin-danger" type="button" data-cl-delete>Delete draft</button>' : record.status === "final" ? '<button type="button" data-cl-archive>Archive</button>' : ""}</div></details>` : ""}
-          ${isLocked
-            ? '<button class="button admin-action-publish" type="button" data-cl-duplicate>Duplicate as draft</button>'
-            : '<button class="button button--secondary admin-action-save" type="submit" form="admin-cover-letter-form">Save draft</button><button class="button admin-action-publish" type="button" data-cl-finalize>Finalize</button>'}
-        </div>
-      </header>
+      ${renderAdminDocumentHeader({
+        eyebrow: "Applications",
+        title: letter.internalTitle || "Untitled cover letter",
+        titleContent: `<button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button>`,
+        meta: `<span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${formatAdminDate(record.updatedAt)}` : "New application"}</span>`,
+        saveState: `<span data-cl-dirty-state data-dirty="${dirty}" aria-live="polite">${dirty ? "Unsaved changes" : isLocked ? "Locked" : "Saved"}</span>`,
+        moreActions: record ? `<details class="admin-document-more"><summary>More</summary><div><a href="${base}cover-letter/?id=${encodeURIComponent(record.id)}" target="_blank" rel="noreferrer">Print / PDF</a>${record.status === "draft" ? '<button class="admin-danger" type="button" data-cl-delete>Delete draft</button>' : record.status === "final" ? '<button type="button" data-cl-archive>Archive</button>' : ""}</div></details>` : "",
+        saveActions: isLocked ? "" : '<button class="button button--secondary admin-action-save" type="submit" form="admin-cover-letter-form">Save draft</button>',
+        primaryActions: isLocked ? '<button class="button admin-action-publish" type="button" data-cl-duplicate>Duplicate as draft</button>' : '<button class="button admin-action-publish" type="button" data-cl-finalize>Finalize</button>',
+      })}
       ${isLocked ? '<div class="cover-letter-lock"><strong>Final content is locked.</strong><span>Duplicate this letter to create an editable draft.</span></div>' : ""}
       <div class="admin-document-layout">
         <section class="admin-cover-letter-form admin-document-editor">
@@ -346,19 +349,16 @@ const editorView = (): string => {
     </section>`;
 };
 
-const loadingCoverLetterWorkspace = (): string => `
-  <section class="admin-cl-shell admin-workspace-loading" aria-busy="true" aria-label="Loading Cover Letters">
-    <aside class="admin-cl-collection" aria-hidden="true">
-      <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>—</span></h2></div></div>
-      <div class="admin-workspace-loading__controls"><span></span><span></span></div>
-      <div class="admin-workspace-loading__list"><span></span><span></span><span></span></div>
-    </aside>
-    <div class="admin-cl-workspace"><section class="admin-cl-loading"><strong>Loading Cover Letters…</strong><p>Preparing applications and supporting evidence.</p></section></div>
-  </section>`;
+const loadingCoverLetterWorkspace = (): string => renderAdminWorkspaceState({
+  kind: "loading",
+  eyebrow: "Applications",
+  title: "Loading Cover Letters",
+  message: "Preparing applications and supporting evidence.",
+});
 
 export const coverLetterWorkspaceView = (): string => {
   if (!loaded && !loadError) return loadingCoverLetterWorkspace();
-  if (loadError) return `<section class="admin-cl-loading"><strong>Cover Letter workspace unavailable</strong><p>${escapeHtml(loadError)}</p><button class="button" type="button" data-cl-retry>Try again</button></section>`;
+  if (loadError) return renderAdminWorkspaceState({ kind: "error", eyebrow: "Applications", title: "Cover Letter workspace unavailable", message: loadError, actions: '<button class="button" type="button" data-cl-retry>Try again</button>' });
   return `<section class="admin-cl-shell ${editorOpen ? "is-editing" : ""}">${editorOpen ? '<button class="admin-library-scrim" type="button" data-cl-library-close aria-label="Close cover letter library" tabindex="-1"></button>' : ""}${collectionView()}<div class="admin-cl-workspace">${editorOpen ? editorView() : emptyWorkspace()}</div></section>`;
 };
 
@@ -430,7 +430,10 @@ const markDirty = (root: ParentNode, callbacks: WorkspaceCallbacks): void => {
   dirty = true;
   callbacks.setDirty(true);
   const state = root.querySelector<HTMLElement>("[data-cl-dirty-state]");
-  if (state) state.textContent = "Unsaved changes";
+  if (state) {
+    state.textContent = "Unsaved changes";
+    state.dataset.dirty = "true";
+  }
 };
 
 const resetEditor = (): void => {
@@ -563,7 +566,11 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   });
   root.querySelectorAll<HTMLButtonElement>("[data-cl-filter]").forEach((button) => button.addEventListener("click", () => {
     filter = button.dataset.clFilter as CoverLetterFilter;
-    root.querySelectorAll<HTMLButtonElement>("[data-cl-filter]").forEach((item) => item.classList.toggle("is-active", item === button));
+    root.querySelectorAll<HTMLButtonElement>("[data-cl-filter]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
     const list = root.querySelector<HTMLElement>("[data-cl-list]");
     if (list) {
       list.innerHTML = recordList();
@@ -579,6 +586,7 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   });
   root.querySelectorAll<HTMLButtonElement>("[data-cl-tab]").forEach((button) => button.addEventListener("click", () => {
     editorTab = button.dataset.clTab as CoverLetterEditorTab;
+    syncUrl(record?.id);
     root.querySelectorAll<HTMLButtonElement>("[data-cl-tab]").forEach((tab) => {
       const active = tab === button;
       tab.classList.toggle("is-active", active);

@@ -25,6 +25,7 @@ import { renderDocumentThemeFields } from "./documentThemeFields";
 import { invalidateProfileDocumentWorkspace } from "./profileDocumentWorkspace";
 import { updateCoverLetterSharedProfile } from "./coverLetterWorkspace";
 import { confirmAdmin } from "./confirmDialog";
+import { readAdminRoute, updateAdminRoute } from "./adminRoute";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { bindProfilePhotoCropper, renderProfilePhotoCropDialog } from "./profilePhotoCropper";
 import {
@@ -38,11 +39,13 @@ import {
   bindAdminYearPickers,
   formatAdminDate,
   formatAdminDateTime,
+  renderAdminDocumentHeader,
   renderAdminPreviewLanguageToggle,
   renderAdminPreviewSelect,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
   renderAdminYearSelect,
+  renderAdminWorkspaceState,
   setButtonBusy,
 } from "./ui";
 
@@ -788,7 +791,15 @@ const websiteView = (): string => {
     controls: `${pageControls}${viewportControls}${languageControls}${zoomControls}`,
   });
   return `<section class="admin-site-workspace">
-    <header class="admin-document-header"><div class="admin-document-header__identity"><p class="section-kicker">Website</p><h1>Homepage</h1><p><span class="status status--draft">Draft</span><span>${latest ? `Last published ${formatAdminDateTime(latest.publishedAt)}` : "Not published yet"}</span></p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button><button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button><button class="button admin-action-publish" type="button" data-publish-website>Publish</button></div></header>
+    ${renderAdminDocumentHeader({
+      eyebrow: "Website",
+      title: "Homepage",
+      meta: `<span class="status status--draft">Draft</span><span>${latest ? `Last published ${formatAdminDateTime(latest.publishedAt)}` : "Not published yet"}</span>`,
+      saveState: '<span data-site-save-state data-dirty="false" aria-live="polite">Saved</span>',
+      utilityActions: `<button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button>`,
+      saveActions: '<button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button>',
+      primaryActions: '<button class="button admin-action-publish" type="button" data-publish-website>Publish</button>',
+    })}
     <div class="admin-document-layout">
       <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Website editor sections">${([["general","General & SEO"],["sections","Sections"],["featured","Content selection"],["appearance","Appearance"]] as Array<[WebsiteTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-website-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav>
         <form id="website-editor-form" data-website-form>
@@ -809,7 +820,13 @@ const profileView = (): string => {
   const professional = state.runtime!.professional;
   const tab = state.profileTab;
   return `<section class="admin-profile-workspace">
-    <header class="admin-document-header"><div><p class="section-kicker">Shared content</p><h1>Professional Profile</h1><p>Single source for Website, Curriculum Vitae, Portfolio and Cover Letters</p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button></div></header>
+    ${renderAdminDocumentHeader({
+      eyebrow: "Shared content",
+      title: "Professional Profile",
+      meta: "Single source for Website, Curriculum Vitae, Portfolio and Cover Letters",
+      saveState: '<span data-site-save-state data-dirty="false" aria-live="polite">Saved</span>',
+      saveActions: '<button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button>',
+    })}
     <div class="admin-profile-layout">
       <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["photos","Photos"],["experience","Experience"],["education","Education"],["skills","Skills"],["languages","Languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional, state.photos)}</section><section data-profile-panel="photos"${tab === "photos" ? "" : " hidden"}>${profilePhotos(state.photos)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section><section data-profile-panel="languages"${tab === "languages" ? "" : " hidden"}>${profileLanguages(professional)}</section></form></section>
       <aside class="admin-profile-usage"><p class="section-kicker">Used by</p><h2>One profile, four outputs</h2><div><article><strong>Website</strong><span>Applied when the next Website release is published.</span></article><article><strong>Curriculum Vitae</strong><span>Use “Sync from Professional Profile” in the CV draft before publishing.</span></article><article><strong>Portfolio</strong><span>Sync from the Professional Profile or from the active CV draft.</span></article><article><strong>Cover Letters</strong><span>Drafts use the saved profile; finalized letters retain their sender snapshot.</span></article></div><p>Published releases and finalized letters remain unchanged.</p></aside>
@@ -820,9 +837,16 @@ const profileView = (): string => {
 };
 
 export const siteWorkspaceView = (kind: SiteWorkspaceKind): string => {
-  if (state.loading) return '<section class="admin-document-loading"><span></span><h2>Loading website workspace…</h2></section>';
-  if (state.error) return `<section class="admin-placeholder"><p class="section-kicker">Website CMS</p><h2>Could not load workspace</h2><p>${escapeHtml(state.error)}</p><p>Apply the latest Supabase migration, then reload Admin.</p></section>`;
-  if (!state.runtime) return '<section class="admin-document-loading"><span></span><h2>Preparing workspace…</h2></section>';
+  if (state.loading) return renderAdminWorkspaceState({ kind: "loading", eyebrow: "Website CMS", title: "Loading website workspace", message: "Preparing shared content, release history and previews." });
+  if (state.error) return renderAdminWorkspaceState({ kind: "error", eyebrow: "Website CMS", title: "Could not load workspace", message: `${state.error} Apply the latest Supabase migration, then reload Admin.`, actions: '<button class="button" type="button" data-site-retry>Try again</button>' });
+  if (!state.runtime) return renderAdminWorkspaceState({ kind: "loading", eyebrow: "Website CMS", title: "Preparing workspace", message: "Loading the latest saved draft." });
+  const route = readAdminRoute();
+  const websiteTabs: WebsiteTab[] = ["general", "sections", "featured", "appearance"];
+  const profileTabs: ProfileTab[] = ["identity", "photos", "experience", "education", "skills", "languages"];
+  if (route.view === kind && route.tab) {
+    if (kind === "homepage" && websiteTabs.includes(route.tab as WebsiteTab)) state.websiteTab = route.tab as WebsiteTab;
+    if (kind === "profile" && profileTabs.includes(route.tab as ProfileTab)) state.profileTab = route.tab as ProfileTab;
+  }
   return kind === "homepage" ? websiteView() : profileView();
 };
 
@@ -853,6 +877,12 @@ export const markSiteWorkspaceStale = (): void => {
 };
 
 export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, callbacks: WorkspaceCallbacks): void => {
+  root.querySelector<HTMLButtonElement>("[data-site-retry]")?.addEventListener("click", () => {
+    state.stale = true;
+    const reload = ensureSiteWorkspace();
+    callbacks.rerender();
+    void reload.then(callbacks.rerender);
+  });
   const websiteForm = root.querySelector<HTMLFormElement>("[data-website-form]");
   const profileForm = root.querySelector<HTMLFormElement>("[data-profile-form]");
   const previewIframe = root.querySelector<HTMLIFrameElement>("[data-website-iframe]");
@@ -909,7 +939,10 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const markDirty = (): void => {
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-site-save-state]");
-    if (status) status.textContent = "Unsaved changes";
+    if (status) {
+      status.textContent = "Unsaved changes";
+      status.dataset.dirty = "true";
+    }
     updateWebsiteValidation();
     if (websiteForm && previewSender) {
       setPreviewStatus("Updating…", "warning");
@@ -1447,6 +1480,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   });
   root.querySelectorAll<HTMLButtonElement>("[data-website-tab]").forEach((button) => button.addEventListener("click", () => {
     state.websiteTab = button.dataset.websiteTab as WebsiteTab;
+    updateAdminRoute({ view: "homepage", item: null, tab: state.websiteTab });
     root.querySelectorAll<HTMLButtonElement>("[data-website-tab]").forEach((item) => {
       const selected = item === button;
       item.classList.toggle("is-active", selected);
@@ -1456,6 +1490,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]").forEach((button) => button.addEventListener("click", () => {
     state.profileTab = button.dataset.profileTab as ProfileTab;
+    updateAdminRoute({ view: "profile", item: null, tab: state.profileTab });
     root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]").forEach((item) => {
       const selected = item === button;
       item.classList.toggle("is-active", selected);

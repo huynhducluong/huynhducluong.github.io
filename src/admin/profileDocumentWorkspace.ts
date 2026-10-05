@@ -30,6 +30,8 @@ import type { StoredDocumentTheme } from "../types/theme";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { confirmAdmin } from "./confirmDialog";
+import { readAdminRoute, updateAdminRoute } from "./adminRoute";
+import { requestAdminText } from "./textInputDialog";
 import {
   bindPreviewZoom,
   createPreviewZoomState,
@@ -40,11 +42,13 @@ import {
 import {
   formatAdminDate,
   formatAdminDateTime,
+  renderAdminDocumentHeader,
   renderAdminPreviewToolbar,
   renderAdminPreviewLanguageToggle,
   renderAdminSelectControl,
   renderAdminSectionCard,
   renderAdminYearSelect,
+  renderAdminWorkspaceState,
   setButtonBusy,
 } from "./ui";
 
@@ -126,12 +130,7 @@ const selectedDocument = (kind: ProfileDocumentKind): ProfileDocumentRecord | nu
   state.documents[kind].find((item) => item.id === state.selectedId[kind]) ?? null;
 
 const setDocumentUrl = (kind: ProfileDocumentKind, id: string | null): void => {
-  const url = new URL(window.location.href);
-  if (url.searchParams.get("view") === kind) {
-    if (id) url.searchParams.set("document", id);
-    else url.searchParams.delete("document");
-    window.history.replaceState({}, "", `${url.pathname}${url.search}${url.hash}`);
-  }
+  updateAdminRoute({ view: kind, item: id, tab: state.tab[kind] });
   if (id) window.localStorage.setItem(selectionStorageKey(kind), id);
 };
 
@@ -146,7 +145,8 @@ const selectDocument = async (kind: ProfileDocumentKind, document: ProfileDocume
 };
 
 const preferredDocument = (kind: ProfileDocumentKind, documents: ProfileDocumentRecord[]): ProfileDocumentRecord | null => {
-  const urlId = new URL(window.location.href).searchParams.get("document");
+  const route = readAdminRoute();
+  const urlId = route.view === kind ? route.item : null;
   const storedId = window.localStorage.getItem(selectionStorageKey(kind));
   const initialized = documents.filter((item) => Boolean(item.draftPayload));
   return initialized.find((item) => item.id === urlId)
@@ -685,36 +685,37 @@ const documentCollectionView = (kind: ProfileDocumentKind): string => {
       <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>${state.documents[kind].length}</span></h2></div><div class="admin-collection__heading-actions"><button class="button admin-action-new" type="button" data-profile-document-new>+ New</button>${isDrawer ? '<button class="admin-drawer-close" type="button" data-profile-document-library-close aria-label="Close document library">×</button>' : ""}</div></div>
       <div class="admin-list-controls">
         <label class="admin-search"><span class="sr-only">Search ${documentPlural(kind)}</span><input type="search" placeholder="Search title or version..." value="${escapeHtml(state.search[kind])}" data-profile-document-search></label>
-        <div class="admin-filter-row" aria-label="${documentLabel(kind)} status">${(["all", "draft", "published", "archived"] as DocumentFilter[]).map((filter) => `<button type="button" data-profile-document-filter="${filter}" class="${state.filter[kind] === filter ? "is-active" : ""}">${filter}</button>`).join("")}</div>
+        <div class="admin-filter-row" aria-label="${documentLabel(kind)} status">${(["all", "draft", "published", "archived"] as DocumentFilter[]).map((filter) => `<button type="button" data-profile-document-filter="${filter}" class="${state.filter[kind] === filter ? "is-active" : ""}" aria-pressed="${state.filter[kind] === filter}">${filter}</button>`).join("")}</div>
       </div>
       <div class="admin-collection__scroll"><ul class="admin-content-list" data-profile-document-list>${documentListView(kind)}</ul></div>
     </aside>`;
 };
 
-const documentWorkspaceError = (kind: ProfileDocumentKind, message: string): string => `
-  <section class="admin-placeholder admin-placeholder--centered">
-    <div><p class="section-kicker">Document workspace</p><h2>Could not open ${kind === "cv" ? "Curriculum Vitae" : "Portfolio"}</h2><p>${escapeHtml(message)}</p></div>
-    <button class="button" type="button" data-profile-document-retry>Try again</button>
-  </section>`;
+const documentWorkspaceError = (kind: ProfileDocumentKind, message: string): string => renderAdminWorkspaceState({
+  kind: "error",
+  eyebrow: "Document workspace",
+  title: `Could not open ${kind === "cv" ? "Curriculum Vitae" : "Portfolio"}`,
+  message,
+  actions: '<button class="button" type="button" data-profile-document-retry>Try again</button>',
+});
 
-const loadingDocumentWorkspace = (kind: ProfileDocumentKind): string => `
-  <section class="admin-document-library admin-workspace-loading" aria-busy="true" aria-label="Loading ${documentPlural(kind)}">
-    <aside class="admin-document-library__collection" aria-hidden="true">
-      <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>—</span></h2></div></div>
-      <div class="admin-workspace-loading__controls"><span></span><span></span></div>
-      <div class="admin-workspace-loading__list"><span></span><span></span><span></span></div>
-    </aside>
-    <div class="admin-document-library__workspace"><section class="admin-document-loading"><span></span><h2>Loading document workspace…</h2></section></div>
-  </section>`;
+const loadingDocumentWorkspace = (kind: ProfileDocumentKind): string => renderAdminWorkspaceState({
+  kind: "loading",
+  eyebrow: "Document workspace",
+  title: `Loading ${documentPlural(kind)}`,
+  message: "Preparing the document library, editor and preview.",
+});
 
 export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string => {
   if (state.phase[kind] === "idle" || state.phase[kind] === "loading") return loadingDocumentWorkspace(kind);
   if (state.errors[kind]) return documentWorkspaceError(kind, state.errors[kind] ?? "Document workspace could not be loaded.");
   const runtime = kind === "cv" ? state.cv : state.portfolio;
   const selected = selectedDocument(kind);
-  if (!runtime || !selected) return documentWorkspaceError(kind, `No initialized ${documentLabel(kind)} document is available.`);
+  if (!runtime || !selected) return renderAdminWorkspaceState({ kind: "empty", eyebrow: "Document workspace", title: `No ${documentLabel(kind)} document yet`, message: `Create a ${documentLabel(kind)} document to start editing and publishing.` });
   const content = runtime.content;
   const availableTabs = tabs(kind);
+  const route = readAdminRoute();
+  if (route.view === kind && route.tab && availableTabs.some(([id]) => id === route.tab)) state.tab[kind] = route.tab as DocumentTab;
   const activeTab = availableTabs.some(([id]) => id === state.tab[kind]) ? state.tab[kind] : availableTabs[0][0];
   state.tab[kind] = activeTab;
   const issues = validation(kind, runtime);
@@ -745,19 +746,17 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   return `
     <section class="admin-document-library is-editing"><button class="admin-library-scrim" type="button" data-profile-document-library-close aria-label="Close document library" tabindex="-1"></button>${documentCollectionView(kind)}<div class="admin-document-library__workspace">
     <section class="admin-document-workspace" data-document-kind="${kind}">
-      <header class="admin-document-header">
-        <div class="admin-document-header__identity">
-          <p class="section-kicker">${documentLabel(kind)} document</p>
-          <h1 class="admin-document-title"><button class="admin-document-title-switcher" type="button" data-profile-document-library-open aria-haspopup="dialog" aria-controls="${kind}-document-library" aria-expanded="false" aria-label="Switch ${documentLabel(kind)}. Current document: ${escapeHtml(selected.internalTitle)}"><span class="admin-document-title-switcher__label">${escapeHtml(selected.internalTitle)}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button></h1>
-          <p class="admin-document-meta"><span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-meta__active">Active public version</span>' : ""}${latestReleaseMeta(kind)}</p>
-        </div>
-        <div class="admin-document-actions">
-          <span data-document-save-state>Saved</span>
-          <button class="button button--secondary admin-action-utility" type="button" data-document-history-open aria-haspopup="dialog" aria-controls="${kind}-release-history-dialog">History (${state.releases[kind].length})</button>
-          <details class="admin-document-more"><summary>More</summary><div><button type="button" data-document-print>Print / PDF</button><button type="button" data-profile-document-rename>Rename</button><button type="button" data-profile-document-duplicate>Duplicate</button>${!archived && !selected.isActive ? '<button type="button" data-profile-document-archive>Archive</button>' : ""}</div></details>
-          ${archived ? "" : `<button class="button button--secondary admin-action-save" type="submit" form="${kind}-document-form">Save draft</button><button class="button admin-action-publish" type="button" data-document-publish>Publish</button>`}
-        </div>
-      </header>
+      ${renderAdminDocumentHeader({
+        eyebrow: `${documentLabel(kind)} document`,
+        title: selected.internalTitle,
+        titleContent: `<button class="admin-document-title-switcher" type="button" data-profile-document-library-open aria-haspopup="dialog" aria-controls="${kind}-document-library" aria-expanded="false" aria-label="Switch ${documentLabel(kind)}. Current document: ${escapeHtml(selected.internalTitle)}"><span class="admin-document-title-switcher__label">${escapeHtml(selected.internalTitle)}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button>`,
+        meta: `<span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-meta__active">Active public version</span>' : ""}${latestReleaseMeta(kind)}`,
+        saveState: '<span data-document-save-state data-dirty="false" aria-live="polite">Saved</span>',
+        utilityActions: `<button class="button button--secondary admin-action-utility" type="button" data-document-history-open aria-haspopup="dialog" aria-controls="${kind}-release-history-dialog">History (${state.releases[kind].length})</button>`,
+        moreActions: `<details class="admin-document-more"><summary>More</summary><div><button type="button" data-document-print>Print / PDF</button><button type="button" data-profile-document-rename>Rename</button><button type="button" data-profile-document-duplicate>Duplicate</button>${!archived && !selected.isActive ? '<button type="button" data-profile-document-archive>Archive</button>' : ""}</div></details>`,
+        saveActions: archived ? "" : `<button class="button button--secondary admin-action-save" type="submit" form="${kind}-document-form">Save draft</button>`,
+        primaryActions: archived ? "" : '<button class="button admin-action-publish" type="button" data-document-publish>Publish</button>',
+      })}
       ${archived ? '<div class="admin-document-lock"><strong>Archived document</strong><span>This snapshot is read-only. Duplicate it to create an editable draft.</span></div>' : ""}
       <div class="admin-document-layout">
         <section class="admin-document-editor">
@@ -934,7 +933,11 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   });
   root.querySelectorAll<HTMLButtonElement>("[data-profile-document-filter]").forEach((button) => button.addEventListener("click", () => {
     state.filter[kind] = button.dataset.profileDocumentFilter as DocumentFilter;
-    root.querySelectorAll<HTMLButtonElement>("[data-profile-document-filter]").forEach((item) => item.classList.toggle("is-active", item === button));
+    root.querySelectorAll<HTMLButtonElement>("[data-profile-document-filter]").forEach((item) => {
+      const selected = item === button;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-pressed", String(selected));
+    });
     const list = root.querySelector<HTMLElement>("[data-profile-document-list]");
     if (list) {
       list.innerHTML = documentListView(kind);
@@ -943,7 +946,14 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-profile-document-new]").forEach((button) => button.addEventListener("click", async () => {
     if (state.dirty[kind] && !(await confirmAdmin({ eyebrow: `New ${documentLabel(kind)}`, title: "Keep the current document?", message: "A new document will be created from the current unsaved preview. The original document remains unchanged.", confirmLabel: "Create new document" }))) return;
-    const title = window.prompt(`Name this ${documentLabel(kind)}`, `New ${documentLabel(kind)}`)?.trim();
+    const title = await requestAdminText({
+      eyebrow: `New ${documentLabel(kind)}`,
+      title: `Name this ${documentLabel(kind)}`,
+      description: "Use an internal name that makes this version easy to find later.",
+      label: "Document name",
+      initialValue: `New ${documentLabel(kind)}`,
+      submitLabel: "Create document",
+    });
     if (!title) return;
     const payload = form ? previewPayload(kind, form) : (kind === "cv" ? state.cv : state.portfolio)
       ?? state.documents[kind].find((item) => item.isActive)?.draftPayload
@@ -968,10 +978,17 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   root.querySelector<HTMLButtonElement>("[data-document-history-close]")?.addEventListener("click", () => historyDialog?.close());
   root.querySelector<HTMLButtonElement>("[data-document-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
   root.querySelector<HTMLButtonElement>("[data-document-validation-close]")?.addEventListener("click", () => validationDialog?.close());
-  root.querySelector<HTMLButtonElement>("[data-profile-document-rename]")?.addEventListener("click", () => {
+  root.querySelector<HTMLButtonElement>("[data-profile-document-rename]")?.addEventListener("click", async () => {
     if (!activeDocument) return;
     if (state.dirty[kind]) return callbacks.notify("Save the document before renaming it.", "info");
-    const title = window.prompt(`Rename this ${documentLabel(kind)}`, activeDocument.internalTitle)?.trim();
+    const title = await requestAdminText({
+      eyebrow: `Rename ${documentLabel(kind)}`,
+      title: "Choose a clear internal name",
+      description: "This changes the Admin library name only; published releases remain unchanged.",
+      label: "Document name",
+      initialValue: activeDocument.internalTitle,
+      submitLabel: "Rename",
+    });
     if (!title || title === activeDocument.internalTitle) return;
     void renameProfileDocument(activeDocument.id, title)
       .then(async () => {
@@ -982,10 +999,17 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       })
       .catch((error: Error) => callbacks.notify(error.message, "error"));
   });
-  root.querySelector<HTMLButtonElement>("[data-profile-document-duplicate]")?.addEventListener("click", (event) => {
+  root.querySelector<HTMLButtonElement>("[data-profile-document-duplicate]")?.addEventListener("click", async (event) => {
     if (!activeDocument?.draftPayload) return;
     const payload = form && state.dirty[kind] ? previewPayload(kind, form) : activeDocument.draftPayload;
-    const title = window.prompt(`Name the duplicated ${documentLabel(kind)}`, `${activeDocument.internalTitle} copy`)?.trim();
+    const title = await requestAdminText({
+      eyebrow: `Duplicate ${documentLabel(kind)}`,
+      title: "Name the new draft",
+      description: "The duplicate is independent and can be edited without changing the original.",
+      label: "Document name",
+      initialValue: `${activeDocument.internalTitle} copy`,
+      submitLabel: "Duplicate",
+    });
     if (!title) return;
     const button = event.currentTarget as HTMLButtonElement;
     setButtonBusy(button, true, "Duplicating…");
@@ -1035,7 +1059,10 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     state.dirty[kind] = true;
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-document-save-state]");
-    if (status) status.textContent = "Unsaved changes";
+    if (status) {
+      status.textContent = "Unsaved changes";
+      status.dataset.dirty = "true";
+    }
     updateValidation(validation(kind, previewPayload(kind, form)));
     if (previewTimer !== undefined) window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(() => sendPreview(kind, form), 180);
@@ -1060,6 +1087,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   });
   root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((button) => button.addEventListener("click", () => {
     state.tab[kind] = button.dataset.documentTab as DocumentTab;
+    updateAdminRoute({ view: kind, item: state.selectedId[kind], tab: state.tab[kind] });
     root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((item) => {
       const selected = item === button;
       item.classList.toggle("is-active", selected);

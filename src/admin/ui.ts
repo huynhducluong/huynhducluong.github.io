@@ -58,6 +58,81 @@ interface AdminSelectControlOptions {
   className?: string;
 }
 
+interface AdminWorkspaceStateOptions {
+  kind: "loading" | "empty" | "error";
+  title: string;
+  message: string;
+  eyebrow?: string;
+  actions?: string;
+}
+
+interface AdminDocumentHeaderOptions {
+  eyebrow: string;
+  title: string;
+  titleContent?: string;
+  meta: string;
+  saveState?: string;
+  utilityActions?: string;
+  moreActions?: string;
+  saveActions?: string;
+  primaryActions?: string;
+}
+
+interface AdminEditorHeaderOptions {
+  eyebrow: string;
+  title: string;
+  meta: string;
+  utilityActions?: string;
+  moreActions?: string;
+  saveActions?: string;
+  primaryActions?: string;
+}
+
+export const renderAdminWorkspaceState = ({
+  kind,
+  title,
+  message,
+  eyebrow = "Admin workspace",
+  actions = "",
+}: AdminWorkspaceStateOptions): string => `<section class="admin-workspace-state" data-state="${kind}"${kind === "loading" ? ' aria-busy="true" role="status"' : kind === "error" ? ' role="alert"' : ' role="status"'}>
+  <span class="admin-workspace-state__icon" aria-hidden="true">${kind === "loading" ? "" : kind === "error" ? "!" : "\u2713"}</span>
+  <div><p class="section-kicker">${escapeHtml(eyebrow)}</p><h2>${escapeHtml(title)}</h2><p>${escapeHtml(message)}</p>${actions ? `<div class="admin-actions">${actions}</div>` : ""}</div>
+</section>`;
+
+export const renderAdminDocumentHeader = ({
+  eyebrow,
+  title,
+  titleContent,
+  meta,
+  saveState = "",
+  utilityActions = "",
+  moreActions = "",
+  saveActions = "",
+  primaryActions = "",
+}: AdminDocumentHeaderOptions): string => `<header class="admin-document-header" data-page-shell="document">
+  <div class="admin-document-header__identity">
+    <p class="section-kicker">${escapeHtml(eyebrow)}</p>
+    <h1 class="admin-document-title"${titleContent ? "" : ` title="${escapeHtml(title)}"`}>${titleContent ?? escapeHtml(title)}</h1>
+    <p class="admin-document-meta">${meta}</p>
+  </div>
+  <div class="admin-document-actions">
+    ${saveState}${utilityActions}${moreActions}${saveActions}${primaryActions}
+  </div>
+</header>`;
+
+export const renderAdminEditorHeader = ({
+  eyebrow,
+  title,
+  meta,
+  utilityActions = "",
+  moreActions = "",
+  saveActions = "",
+  primaryActions = "",
+}: AdminEditorHeaderOptions): string => `<div class="admin-editor__heading" data-page-shell="editor">
+  <div class="admin-editor__identity"><p class="section-kicker">${escapeHtml(eyebrow)}</p><h2 title="${escapeHtml(title)}">${escapeHtml(title)}</h2><div class="admin-editor__meta">${meta}</div></div>
+  <div class="admin-editor__status">${utilityActions}${moreActions}${saveActions}${primaryActions}</div>
+</div>`;
+
 export const renderAdminSectionCard = ({
   title,
   note,

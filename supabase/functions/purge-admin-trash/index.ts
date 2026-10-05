@@ -5,9 +5,9 @@ const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
 const purgeSecret = Deno.env.get("ADMIN_TRASH_PURGE_SECRET");
 const storageBucket = Deno.env.get("PORTFOLIO_STORAGE_BUCKET") ?? "portfolio-public";
 
-if (!supabaseUrl || !serviceRoleKey || !purgeSecret) {
+if (!supabaseUrl || !serviceRoleKey) {
   throw new Error(
-    "SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY and ADMIN_TRASH_PURGE_SECRET are required.",
+    "SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.",
   );
 }
 
@@ -104,7 +104,17 @@ Deno.serve(async (request) => {
   if (request.method !== "GET" && request.method !== "POST") {
     return new Response("Method not allowed", { status: 405 });
   }
-  if (request.headers.get("x-admin-purge-secret") !== purgeSecret) {
+  const suppliedSecret = request.headers.get("x-admin-purge-secret") ?? "";
+  let authorized = Boolean(purgeSecret && suppliedSecret === purgeSecret);
+  if (!authorized && suppliedSecret) {
+    const { data: vaultAuthorized, error: vaultError } = await admin.rpc(
+      "verify_admin_trash_purge_secret",
+      { candidate_secret: suppliedSecret },
+    );
+    if (vaultError) console.error("Cannot verify Vault purge secret", errorMessage(vaultError));
+    authorized = Boolean(vaultAuthorized);
+  }
+  if (!authorized) {
     return new Response("Unauthorized", { status: 401 });
   }
   if (request.method === "GET") {
@@ -117,10 +127,12 @@ Deno.serve(async (request) => {
       projects: projects.error ? errorMessage(projects.error) : "ok",
       tools: tools.error ? errorMessage(tools.error) : "ok",
     };
+    const { data: cron, error: cronError } = await admin.rpc("admin_trash_cron_health");
     return Response.json({
       ok: !projects.error && !tools.error,
       function: "purge-admin-trash",
       checks,
+      cron: cronError ? { scheduled: false, error: errorMessage(cronError) } : cron,
     });
   }
 

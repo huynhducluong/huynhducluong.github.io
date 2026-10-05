@@ -11,9 +11,25 @@ import "../styles/admin-ui.css";
 import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
-import { bindAdminTablists, bindAdminYearPickers, formatAdminDateTime, renderAdminSectionCard } from "./ui";
+import {
+  bindAdminTablists,
+  bindAdminYearPickers,
+  formatAdminDateTime,
+  renderAdminEditorHeader,
+  renderAdminSectionCard,
+  renderAdminWorkspaceState,
+} from "./ui";
 import { clearAdminToasts, showAdminToast } from "./toast";
 import { confirmAdmin } from "./confirmDialog";
+import { readAdminRoute, updateAdminRoute } from "./adminRoute";
+import {
+  bindAdminBeforeUnload,
+  clearAdminDirty,
+  hasAnyAdminDirtyState,
+  isAdminDirty,
+  setAdminDirty,
+  type AdminDirtyScope,
+} from "./dirtyState";
 import { bindProjectCoverCropper, renderProjectCoverCropDialog } from "./projectCoverCropper";
 import { escapeHtml } from "../shared/format";
 import { normalizeYouTubeUrl } from "../shared/youtube";
@@ -160,7 +176,6 @@ let contentFilter: ContentFilter = "all";
 let contentStatusFilter: ContentStatusFilter = "all";
 let contentSearch = "";
 let activeEditorTab: EditorTab = "overview";
-let adminFormDirty = false;
 let contentEditorDirty = false;
 let dirtyMediaIds = new Set<string>();
 let pendingMedia: PendingMedia[] = [];
@@ -228,24 +243,34 @@ const restoreCollectionScroll = (renderId: number): void => {
   });
 };
 
-window.addEventListener("beforeunload", (event) => {
-  if (adminFormDirty) event.preventDefault();
-});
+bindAdminBeforeUnload();
+
+const dirtyScopeForView = (view: AdminView): AdminDirtyScope | null => {
+  if (view === "projects" || view === "tools") return "content";
+  if (view === "homepage" || view === "profile" || view === "cv" || view === "portfolio" || view === "cover-letters") return view;
+  return null;
+};
+
+const activeWorkspaceDirty = (): boolean => {
+  const scope = dirtyScopeForView(activeView);
+  return scope ? isAdminDirty(scope) : false;
+};
 
 const syncContentDirtyState = (): void => {
   if (activeView !== "projects" && activeView !== "tools") return;
-  adminFormDirty = contentEditorDirty || dirtyMediaIds.size > 0 || pendingMedia.length > 0;
+  const dirty = contentEditorDirty || dirtyMediaIds.size > 0 || pendingMedia.length > 0;
+  setAdminDirty("content", dirty);
   const state = app.querySelector<HTMLElement>("[data-unsaved-state]");
   if (state) {
-    state.textContent = adminFormDirty ? "Unsaved changes" : "Saved";
-    state.dataset.dirty = adminFormDirty ? "true" : "false";
+    state.textContent = dirty ? "Unsaved changes" : "Saved";
+    state.dataset.dirty = dirty ? "true" : "false";
   }
 };
 
 const resetContentDirtyState = (): void => {
   contentEditorDirty = false;
   dirtyMediaIds = new Set<string>();
-  adminFormDirty = false;
+  clearAdminDirty("content");
 };
 
 const resetMagicLinkButton = (button: HTMLButtonElement): void => {
@@ -672,10 +697,14 @@ const savedDetailPreviewUrl = (type: AdminItemType, slug: string): string =>
 
 const editor = (project: AdminProjectRow): string => `
   <section class="admin-editor-shell">
-    <div class="admin-editor__heading">
-      <div class="admin-editor__identity"><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2 title="${escapeHtml(project.name.en || "Untitled project")}">${escapeHtml(project.name.en || "Untitled project")}</h2><div class="admin-editor__meta"><span class="status status--${project.status}">${contentStatusLabel(project.status)}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) && project.slug ? `<a class="button button--secondary" href="${savedDetailPreviewUrl("project", project.slug)}" target="_blank" rel="noreferrer">Preview detail</a>` : ""}${projects.some((item) => item.id === project.id) ? editorMoreMenu("project", project.status) : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
-    </div>
+    ${renderAdminEditorHeader({
+      eyebrow: project.name.en ? "Edit project" : "New project",
+      title: project.name.en || "Untitled project",
+      meta: `<span class="status status--${project.status}">${contentStatusLabel(project.status)}</span><small data-unsaved-state data-dirty="false" aria-live="polite">Saved</small>`,
+      utilityActions: projects.some((item) => item.id === project.id) && project.slug ? `<a class="button button--secondary" href="${savedDetailPreviewUrl("project", project.slug)}" target="_blank" rel="noreferrer">Preview detail</a>` : "",
+      moreActions: projects.some((item) => item.id === project.id) ? editorMoreMenu("project", project.status) : "",
+      saveActions: '<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button>',
+    })}
     <nav class="admin-editor-tabs" role="tablist" aria-label="Project editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${project.project_images.length})`)}</nav>
     <form id="project-editor" class="admin-editor" data-project-form>
       <input name="id" type="hidden" value="${escapeHtml(project.id)}">
@@ -713,10 +742,14 @@ const editor = (project: AdminProjectRow): string => `
 
 const toolEditor = (tool: AdminToolRow): string => `
   <section class="admin-editor-shell">
-    <div class="admin-editor__heading">
-      <div class="admin-editor__identity"><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2 title="${escapeHtml(tool.name || "Untitled tool")}">${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${contentStatusLabel(tool.status)}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) && tool.slug ? `<a class="button button--secondary" href="${savedDetailPreviewUrl("tool", tool.slug)}" target="_blank" rel="noreferrer">Preview detail</a>` : ""}${tools.some((item) => item.id === tool.id) ? editorMoreMenu("tool", tool.status) : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
-    </div>
+    ${renderAdminEditorHeader({
+      eyebrow: tool.name ? "Edit tool" : "New tool",
+      title: tool.name || "Untitled tool",
+      meta: `<span class="status status--${tool.status}">${contentStatusLabel(tool.status)}</span><small data-unsaved-state data-dirty="false" aria-live="polite">Saved</small>`,
+      utilityActions: tools.some((item) => item.id === tool.id) && tool.slug ? `<a class="button button--secondary" href="${savedDetailPreviewUrl("tool", tool.slug)}" target="_blank" rel="noreferrer">Preview detail</a>` : "",
+      moreActions: tools.some((item) => item.id === tool.id) ? editorMoreMenu("tool", tool.status) : "",
+      saveActions: '<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button>',
+    })}
     <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${tool.tool_images.length})`)}</nav>
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
@@ -781,7 +814,12 @@ const workspaceView = (): string => {
   if (activeView === "cover-letters") return coverLetterWorkspaceView();
   if (activeView === "trash") {
     const item = selectedTrashItem();
-    return item ? trashInspector(item) : '<section class="admin-placeholder admin-placeholder--centered"><div class="admin-placeholder__icon" aria-hidden="true">↺</div><div><p class="section-kicker">Trash</p><h2>Select an item to review</h2><p>Restore it as a draft or delete it permanently.</p></div></section>';
+    return item ? trashInspector(item) : renderAdminWorkspaceState({
+      kind: "empty",
+      eyebrow: "Trash",
+      title: "Select an item to review",
+      message: "Restore it as a draft or delete it permanently.",
+    });
   }
   if (activeView === "tools") return toolEditor(selectedTool ?? blankTool());
   return editor(selectedProject ?? blankProject());
@@ -805,8 +843,9 @@ const dashboardView = (): void => {
   const viewTitle: Record<AdminView, string> = { overview: "Overview", homepage: "Homepage", projects: "Projects", tools: "Automation tools", profile: "Professional Profile", cv: "Curriculum Vitae", portfolio: "Portfolio", "cover-letters": "Cover letters", trash: "Trash" };
   const collectionTitle = activeView === "projects" ? "Projects" : activeView === "tools" ? "Tools" : "Deleted items";
   const collectionCount = visibleContentItems().length;
-  const navButton = (view: AdminView, label: string, marker: string): string => `<button type="button" data-admin-view="${view}" class="${activeView === view ? "is-active" : ""}"><span aria-hidden="true">${marker}</span>${label}${view === "trash" && trashCount ? `<b>${trashCount}</b>` : ""}</button>`;
+  const navButton = (view: AdminView, label: string, marker: string): string => `<button type="button" data-admin-view="${view}" class="${activeView === view ? "is-active" : ""}"${activeView === view ? ' aria-current="page"' : ""}><span aria-hidden="true">${marker}</span>${label}${view === "trash" && trashCount ? `<b>${trashCount}</b>` : ""}</button>`;
   app.innerHTML = `
+    <a class="admin-skip-link" href="#admin-workspace">Skip to workspace</a>
     <main class="admin-shell">
       <aside class="admin-rail">
         <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span>HDL</span><div><strong>Content Admin</strong><small>Portfolio workspace</small></div></a>
@@ -826,11 +865,11 @@ const dashboardView = (): void => {
             <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
             <div class="admin-list-controls">
               <label class="admin-search"><span class="sr-only">Search content</span><input type="search" placeholder="Search by name or slug..." value="${escapeHtml(contentSearch)}" data-content-search></label>
-              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
+              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}" aria-pressed="${contentFilter === filter}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}" aria-pressed="${contentStatusFilter === filter}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
             </div>
             <div class="admin-collection__scroll" data-collection-view="${activeView}"><ul class="admin-content-list" data-content-list>${contentList()}</ul></div>
           </aside>` : ""}
-          <section class="admin-workspace">${workspaceView()}</section>
+          <section class="admin-workspace" id="admin-workspace" tabindex="-1">${workspaceView()}</section>
         </div>
       </section>
     </main>
@@ -948,6 +987,7 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
   syncContentDirtyState();
   await loadProjects();
   selectedProject = projects.find((item) => item.id === payload.id) ?? payload;
+  updateAdminRoute({ view: "projects", item: payload.id, tab: activeEditorTab });
   dashboardView();
   message(nextStatus !== payload.status ? "Project saved and returned to Draft because required Ready checks no longer pass. Existing releases are unchanged." : "Project saved. Existing Website, CV and Portfolio releases are unchanged until republished.", "success");
 };
@@ -995,6 +1035,7 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
   await loadProjects();
   selectedTool = tools.find((item) => item.id === payload.id) ?? payload;
   selectedItemType = "tool";
+  updateAdminRoute({ view: "tools", item: payload.id, tab: activeEditorTab });
   dashboardView();
   message(nextStatus !== payload.status ? "Tool saved and returned to Draft because required Ready checks no longer pass. Existing releases are unchanged." : "Tool saved. Existing Website, CV and Portfolio releases are unchanged until republished.", "success");
 };
@@ -1007,6 +1048,7 @@ const moveSelectedToTrash = async (): Promise<void> => {
     resetContentDirtyState();
     if (selected.type === "project") selectedProject = null;
     else selectedTool = null;
+    updateAdminRoute({ view: activeView, item: null, tab: null });
     dashboardView();
     message("Unsaved draft discarded.", "success");
     return;
@@ -1020,6 +1062,7 @@ const moveSelectedToTrash = async (): Promise<void> => {
   selectedProject = null;
   selectedTool = null;
   await loadProjects();
+  updateAdminRoute({ view: activeView, item: null, tab: null });
   dashboardView();
   message(`${selected.type === "project" ? "Project" : "Tool"} moved to Trash. Existing Website, CV and Portfolio releases remain unchanged until you republish them.`, "success");
 };
@@ -1037,6 +1080,8 @@ const restoreTrashItem = async (type: AdminItemType, id: string): Promise<void> 
     selectedTool = tools.find((item) => item.id === id) ?? null;
     selectedProject = null;
   }
+  activeEditorTab = "overview";
+  updateAdminRoute({ view: activeView, item: id, tab: activeEditorTab });
   dashboardView();
   message(`${type === "project" ? "Project" : "Tool"} restored as draft.`, "success");
 };
@@ -1060,6 +1105,7 @@ const permanentlyDeleteTrashItem = async (type: AdminItemType, id: string): Prom
   if (type === "project" && selectedProject?.id === id) selectedProject = null;
   if (type === "tool" && selectedTool?.id === id) selectedTool = null;
   await loadProjects();
+  updateAdminRoute({ view: "trash", item: null, tab: null });
   dashboardView();
   message(`${type === "project" ? "Project" : "Tool"} permanently deleted.${cleanup.retained.length ? ` ${cleanup.retained.length} media asset${cleanup.retained.length === 1 ? " was" : "s were"} retained because a release still references them.` : ""}${cleanupWarning}`, "success");
 };
@@ -1067,7 +1113,7 @@ const permanentlyDeleteTrashItem = async (type: AdminItemType, id: string): Prom
 const changeSelectedStatus = async (type: AdminItemType, next: PublicationStatus): Promise<void> => {
   const id = type === "project" ? selectedProject?.id : selectedTool?.id;
   if (!id) return;
-  if (adminFormDirty) throw new Error("Save or discard the current editor and media changes before changing status.");
+  if (isAdminDirty("content")) throw new Error("Save or discard the current editor and media changes before changing status.");
   if (next === "published") {
     const item = type === "project" ? selectedProject : selectedTool;
     if (!item) return;
@@ -1464,10 +1510,11 @@ const missingYouTubeColumn = (error: { message: string } | null, table: "project
 
 const bindContentItemActions = (root: ParentNode = app): void => {
   root.querySelectorAll<HTMLElement>("[data-select-item]").forEach((button) => button.addEventListener("click", async () => {
-    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you open another item.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
+    if (isAdminDirty("content") && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you open another item.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     const type = button.dataset.itemType as AdminItemType;
     const id = button.dataset.selectItem;
     if (!id) return;
+    const selectingTrash = activeView === "trash";
     const fromCollection = Boolean(button.closest("[data-collection-view]"));
     if (!fromCollection) {
       contentStatusFilter = "all";
@@ -1475,7 +1522,7 @@ const bindContentItemActions = (root: ParentNode = app): void => {
     }
     resetContentDirtyState();
     activeEditorTab = "overview";
-    activeView = type === "project" ? "projects" : "tools";
+    activeView = selectingTrash ? "trash" : type === "project" ? "projects" : "tools";
     clearPendingMedia();
     selectedItemType = type;
     if (type === "project") {
@@ -1486,11 +1533,12 @@ const bindContentItemActions = (root: ParentNode = app): void => {
       selectedProject = null;
     }
     pendingCollectionReveal = {
-      view: type === "project" ? "projects" : "tools",
+      view: selectingTrash ? "trash" : type === "project" ? "projects" : "tools",
       itemId: id,
       align: fromCollection ? "nearest" : "center",
       focus: "select",
     };
+    updateAdminRoute({ view: activeView, item: id, tab: activeEditorTab });
     dashboardView();
   }));
   root.querySelectorAll<HTMLElement>("[data-restore-item]").forEach((button) => button.addEventListener("click", () => {
@@ -1597,10 +1645,12 @@ const bindDashboard = (): void => {
     },
   });
   app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", async () => {
-    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you leave this workspace.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
+    if (activeWorkspaceDirty() && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you leave this workspace.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
+    const previousScope = dirtyScopeForView(activeView);
     if (activeView === "cover-letters") discardCoverLetterChanges();
     if (activeView === "cv" || activeView === "portfolio") discardProfileDocumentChanges();
     if (activeView === "homepage" || activeView === "profile") discardSiteChanges();
+    if (previousScope) clearAdminDirty(previousScope);
     clearPendingMedia();
     const nextView = button.dataset.adminView as AdminView;
     activeView = nextView;
@@ -1609,20 +1659,21 @@ const bindDashboard = (): void => {
     if (activeView === "projects") {
       selectedItemType = "project";
       selectedTool = null;
+      if (!selectedProject || selectedProject.deleted_at) selectedProject = projects.find((item) => !item.deleted_at) ?? blankProject();
     } else if (activeView === "tools") {
       selectedItemType = "tool";
       selectedProject = null;
+      if (!selectedTool || selectedTool.deleted_at) selectedTool = tools.find((item) => !item.deleted_at) ?? blankTool();
     } else if (activeView === "trash") {
       selectedProject = null;
       selectedTool = null;
     }
-    const url = new URL(window.location.href);
-    if (nextView === "cover-letters" || nextView === "cv" || nextView === "portfolio" || nextView === "homepage" || nextView === "profile") url.searchParams.set("view", nextView);
-    else {
-      url.searchParams.delete("view");
-      url.searchParams.delete("id");
-    }
-    window.history.replaceState({}, "", url);
+    const routedItem = activeView === "projects"
+      ? (projects.some((item) => item.id === selectedProject?.id) ? selectedProject?.id : "new")
+      : activeView === "tools"
+        ? (tools.some((item) => item.id === selectedTool?.id) ? selectedTool?.id : "new")
+        : null;
+    updateAdminRoute({ view: nextView, item: routedItem ?? null, tab: activeView === "projects" || activeView === "tools" ? activeEditorTab : null });
 
     const navigationId = ++navigationSequence;
     const workspaceReady = nextView === "cover-letters"
@@ -1638,12 +1689,14 @@ const bindDashboard = (): void => {
     dashboardView();
     if (workspaceReady) {
       await workspaceReady;
-      const loadingViewIsVisible = app.querySelector(".admin-workspace-loading, .admin-document-loading, .admin-cl-loading");
+      const loadingViewIsVisible = app.querySelector('.admin-workspace-state[data-state="loading"], .admin-workspace-loading, .admin-document-loading, .admin-cl-loading');
       if (navigationId === navigationSequence && activeView === nextView && loadingViewIsVisible) dashboardView();
     }
   }));
   app.querySelectorAll<HTMLButtonElement>("[data-editor-tab]").forEach((button) => button.addEventListener("click", () => {
     activeEditorTab = button.dataset.editorTab as EditorTab;
+    const selectedId = selectedItemType === "project" ? selectedProject?.id : selectedTool?.id;
+    updateAdminRoute({ view: activeView, item: selectedId || "new", tab: activeEditorTab });
     app.querySelectorAll<HTMLButtonElement>("[data-editor-tab]").forEach((tab) => {
       const selected = tab === button;
       tab.classList.toggle("is-active", selected);
@@ -1745,17 +1798,17 @@ const bindDashboard = (): void => {
     setStatus("Password updated. You can use Password sign-in next time.", "success");
   });
   app.querySelector("[data-sign-out]")?.addEventListener("click", async () => {
-    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Sign out", title: "Leave with unsaved changes?", message: "Your unsaved changes will be discarded when you sign out.", confirmLabel: "Discard and sign out", cancelLabel: "Keep editing", tone: "danger" }))) return;
+    if (hasAnyAdminDirtyState() && !(await confirmAdmin({ eyebrow: "Sign out", title: "Leave with unsaved changes?", message: "Your unsaved changes will be discarded when you sign out.", confirmLabel: "Discard and sign out", cancelLabel: "Keep editing", tone: "danger" }))) return;
     await supabase.auth.signOut();
     loginView();
   });
   app.querySelector("[data-new-project]")?.addEventListener("click", async () => {
-    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "New project", title: "Discard current changes?", message: "A new project editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new project", cancelLabel: "Keep editing", tone: "danger" }))) return;
-    clearPendingMedia(); resetContentDirtyState(); activeEditorTab = "overview"; activeView = "projects"; selectedItemType = "project"; selectedTool = null; selectedProject = blankProject(); dashboardView();
+    if (isAdminDirty("content") && !(await confirmAdmin({ eyebrow: "New project", title: "Discard current changes?", message: "A new project editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new project", cancelLabel: "Keep editing", tone: "danger" }))) return;
+    clearPendingMedia(); resetContentDirtyState(); activeEditorTab = "overview"; activeView = "projects"; selectedItemType = "project"; selectedTool = null; selectedProject = blankProject(); updateAdminRoute({ view: "projects", item: "new", tab: "overview" }); dashboardView();
   });
   app.querySelector("[data-new-tool]")?.addEventListener("click", async () => {
-    if (adminFormDirty && !(await confirmAdmin({ eyebrow: "New automation tool", title: "Discard current changes?", message: "A new tool editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new tool", cancelLabel: "Keep editing", tone: "danger" }))) return;
-    clearPendingMedia(); resetContentDirtyState(); activeEditorTab = "overview"; activeView = "tools"; selectedItemType = "tool"; selectedProject = null; selectedTool = blankTool(); dashboardView();
+    if (isAdminDirty("content") && !(await confirmAdmin({ eyebrow: "New automation tool", title: "Discard current changes?", message: "A new tool editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new tool", cancelLabel: "Keep editing", tone: "danger" }))) return;
+    clearPendingMedia(); resetContentDirtyState(); activeEditorTab = "overview"; activeView = "tools"; selectedItemType = "tool"; selectedProject = null; selectedTool = blankTool(); updateAdminRoute({ view: "tools", item: "new", tab: "overview" }); dashboardView();
   });
   app.querySelector("[data-delete-selected]")?.addEventListener("click", () => { void moveSelectedToTrash().catch((error: Error) => message(error.message, "error")); });
   app.querySelectorAll<HTMLButtonElement>("[data-content-filter]").forEach((button) => button.addEventListener("click", () => { contentFilter = button.dataset.contentFilter as ContentFilter; resetCurrentCollectionScroll(); dashboardView(); }));
@@ -1780,21 +1833,23 @@ const bindDashboard = (): void => {
   if (activeView === "cover-letters") {
     bindCoverLetterWorkspace(app, {
       rerender: dashboardView,
-      setDirty: (value) => { adminFormDirty = value; },
+      setDirty: (value) => { setAdminDirty("cover-letters", value); },
       notify: message,
     });
   }
   if (activeView === "cv" || activeView === "portfolio") {
-    bindProfileDocumentWorkspace(app, activeView as ProfileDocumentKind, {
+    const documentScope = activeView as ProfileDocumentKind;
+    bindProfileDocumentWorkspace(app, documentScope, {
       rerender: dashboardView,
-      setDirty: (value) => { adminFormDirty = value; },
+      setDirty: (value) => { setAdminDirty(documentScope, value); },
       notify: message,
     });
   }
   if (activeView === "homepage" || activeView === "profile") {
-    bindSiteWorkspace(app, activeView as SiteWorkspaceKind, {
+    const siteScope = activeView as SiteWorkspaceKind;
+    bindSiteWorkspace(app, siteScope, {
       rerender: dashboardView,
-      setDirty: (value) => { adminFormDirty = value; },
+      setDirty: (value) => { setAdminDirty(siteScope, value); },
       notify: message,
     });
   }
@@ -1818,22 +1873,43 @@ const initialize = async (): Promise<void> => {
 
   try {
     await loadProjects();
-    const params = new URLSearchParams(window.location.search);
-    const requestedView = params.get("view");
-    if (requestedView === "cover-letters") {
-      activeView = "cover-letters";
+    const route = readAdminRoute();
+    const availableViews: AdminView[] = ["overview", "homepage", "projects", "tools", "profile", "cv", "portfolio", "cover-letters", "trash"];
+    if (route.view && availableViews.includes(route.view as AdminView)) activeView = route.view as AdminView;
+    if (route.tab === "overview" || route.tab === "content" || route.tab === "media") activeEditorTab = route.tab;
+
+    if (activeView === "projects") {
+      selectedItemType = "project";
+      selectedProject = route.item === "new"
+        ? blankProject()
+        : projects.find((item) => item.id === route.item && !item.deleted_at) ?? projects.find((item) => !item.deleted_at) ?? blankProject();
+      selectedTool = null;
+      updateAdminRoute({ view: activeView, item: projects.some((item) => item.id === selectedProject?.id) ? selectedProject.id : "new", tab: activeEditorTab });
+    } else if (activeView === "tools") {
+      selectedItemType = "tool";
+      selectedTool = route.item === "new"
+        ? blankTool()
+        : tools.find((item) => item.id === route.item && !item.deleted_at) ?? tools.find((item) => !item.deleted_at) ?? blankTool();
+      selectedProject = null;
+      updateAdminRoute({ view: activeView, item: tools.some((item) => item.id === selectedTool?.id) ? selectedTool.id : "new", tab: activeEditorTab });
+    } else if (activeView === "trash") {
+      const project = projects.find((item) => item.id === route.item && item.deleted_at);
+      const tool = tools.find((item) => item.id === route.item && item.deleted_at);
+      selectedProject = project ?? null;
+      selectedTool = tool ?? null;
+      selectedItemType = project ? "project" : "tool";
+      updateAdminRoute({ view: activeView, item: project?.id ?? tool?.id ?? null, tab: null });
+    } else if (activeView === "cover-letters") {
       await ensureCoverLetterWorkspace();
-    } else if (requestedView === "cv" || requestedView === "portfolio") {
-      activeView = requestedView;
-      await ensureProfileDocumentWorkspace(requestedView);
-    } else if (requestedView === "homepage" || requestedView === "profile") {
-      activeView = requestedView;
+    } else if (activeView === "cv" || activeView === "portfolio") {
+      await ensureProfileDocumentWorkspace(activeView);
+    } else if (activeView === "homepage" || activeView === "profile") {
       await ensureSiteWorkspace();
     }
     dashboardView();
     if (activeView === "overview") {
       void ensureCoverLetterWorkspace().then(() => {
-        if (activeView === "overview" && !adminFormDirty) dashboardView();
+        if (activeView === "overview" && !hasAnyAdminDirtyState()) dashboardView();
       });
     }
   } catch (error) {
