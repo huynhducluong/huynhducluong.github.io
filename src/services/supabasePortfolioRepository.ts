@@ -39,6 +39,7 @@ interface MediaRow {
 export interface ProjectRow {
   id: string;
   slug: string;
+  youtube_url?: string | null;
   name: LocalizedText;
   location: LocalizedText;
   role: LocalizedText | null;
@@ -72,6 +73,7 @@ export interface ProjectRow {
 export interface ToolRow {
   id: string;
   slug: string;
+  youtube_url?: string | null;
   name: string;
   problem: LocalizedText;
   solution: LocalizedText;
@@ -124,6 +126,7 @@ const toMedia = (row: MediaRow): PortfolioMedia => {
 export const projectFromRow = (row: ProjectRow): PortfolioProject => ({
   id: row.id,
   slug: row.slug,
+  youtubeUrl: row.youtube_url ?? undefined,
   name: row.name,
   location: row.location,
   role: row.role ?? undefined,
@@ -156,6 +159,7 @@ export const projectFromRow = (row: ProjectRow): PortfolioProject => ({
 export const toolFromRow = (row: ToolRow): PortfolioTool => ({
   id: row.id,
   slug: row.slug,
+  youtubeUrl: row.youtube_url ?? undefined,
   name: row.name,
   problem: row.problem,
   solution: row.solution,

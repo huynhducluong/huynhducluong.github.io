@@ -5,7 +5,7 @@ import "../styles/content.css";
 import { loadPublishedWebsiteRelease } from "../services/websiteRepository";
 import { renderMedia, renderTags } from "../site/renderers";
 import { applyWebsiteTheme, readSlug, siteFooter, siteHeader } from "../site/shell";
-import { localize } from "../shared/format";
+import { escapeHtml, localize } from "../shared/format";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
@@ -24,7 +24,7 @@ const render = async (): Promise<void> => {
   document.title = `${project.name.en} | ${profile.name}`;
   app.querySelector("main")!.innerHTML = `
     <article>
-      <header class="detail-hero"><div class="container detail-hero__grid"><div><p class="section-kicker">${localize(project.location, "en")}</p><h1>${localize(project.name, "en")}</h1>${project.role ? `<p class="detail-hero__role">${localize(project.role, "en")}</p>` : ""}${project.summary ? `<p class="detail-hero__summary">${localize(project.summary, "en")}</p>` : ""}<ul class="tag-list">${renderTags(project.technologies)}</ul></div>${renderMedia(project.images[0], "en", "detail-hero__image")}</div></header>
+      <header class="detail-hero"><div class="container detail-hero__grid"><div><p class="section-kicker">${localize(project.location, "en")}</p><h1>${localize(project.name, "en")}</h1>${project.role ? `<p class="detail-hero__role">${localize(project.role, "en")}</p>` : ""}${project.summary ? `<p class="detail-hero__summary">${localize(project.summary, "en")}</p>` : ""}<ul class="tag-list">${renderTags(project.technologies)}</ul>${project.youtubeUrl ? `<div class="detail-hero__actions"><a class="button" href="${escapeHtml(project.youtubeUrl)}" target="_blank" rel="noopener noreferrer">Watch project video</a></div>` : ""}</div>${renderMedia(project.images[0], "en", "detail-hero__image")}</div></header>
       <div class="container detail-body">
         <section><p class="section-kicker">Contribution</p><h2>Responsibilities and delivery</h2>${project.responsibilities.length ? `<ul class="detail-list">${project.responsibilities.map((point) => `<li>${localize(point.text, "en")}</li>`).join("")}</ul>` : "<p>Detailed contribution information will be added after verification.</p>"}</section>
         ${project.challenge ? `<section><p class="section-kicker">Challenge</p><h2>Project context</h2><p>${localize(project.challenge, "en")}</p></section>` : ""}

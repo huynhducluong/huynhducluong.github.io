@@ -61,6 +61,7 @@ export interface PortfolioMediaCrop {
 export interface PortfolioProject {
   id: string;
   slug: string;
+  youtubeUrl?: string;
   name: LocalizedText;
   location: LocalizedText;
   role?: LocalizedText;
@@ -93,6 +94,7 @@ export interface PortfolioProject {
 export interface PortfolioTool {
   id: string;
   slug: string;
+  youtubeUrl?: string;
   name: string;
   problem: LocalizedText;
   solution: LocalizedText;

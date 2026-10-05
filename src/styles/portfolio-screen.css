@@ -72,10 +72,11 @@ html, body { background: #dfe8ec; }
 
 .portfolio-page--project { display: grid; grid-template-columns: 164mm 1fr; }
 .portfolio-project__visual { position: relative; overflow: hidden; background: var(--document-primary-strong); }
+.portfolio-project__visual.has-image::after { position: absolute; z-index: 1; inset: 0; background: var(--document-primary); content: ""; opacity: .28; pointer-events: none; }
 .portfolio-project-image, .portfolio-image-placeholder { width: 100%; height: 100%; object-fit: cover; }
 .portfolio-image-placeholder { display: grid; place-items: center; color: var(--document-on-primary); background: linear-gradient(145deg, var(--document-primary-strong), var(--document-primary)); }
 .portfolio-image-placeholder span { padding: 3mm 5mm; border: .3mm solid currentColor; font-size: 8pt; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
-.portfolio-project__index { position: absolute; top: 12mm; left: 12mm; display: grid; width: 20mm; height: 20mm; place-items: center; background: var(--document-accent); color: var(--document-on-accent); font-size: 16pt; font-weight: 900; }
+.portfolio-project__index { position: absolute; z-index: 2; top: 12mm; left: 12mm; display: grid; width: 20mm; height: 20mm; place-items: center; background: var(--document-accent); color: var(--document-on-accent); font-size: 16pt; font-weight: 900; }
 .portfolio-project__content { display: flex; flex-direction: column; padding: 17mm 15mm 13mm; }
 .portfolio-project__content h2 { margin-block: 4mm 3mm; font-size: 25pt; line-height: 1.02; }
 .portfolio-project__role { color: var(--document-primary); font-size: 9pt; font-weight: 800; }

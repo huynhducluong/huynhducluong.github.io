@@ -1,6 +1,17 @@
 import { escapeHtml } from "../shared/format";
 
 const tabKeys = new Set(["ArrowLeft", "ArrowRight", "Home", "End"]);
+const adminDateFormatter = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" });
+const adminDateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+
+export const formatAdminDate = (value: string | number | Date): string =>
+  adminDateFormatter.format(new Date(value));
+
+export const formatAdminDateTime = (value: string | number | Date): string =>
+  adminDateTimeFormatter.format(new Date(value));
 
 interface AdminSectionCardOptions {
   title: string;
@@ -310,6 +321,7 @@ export const setButtonBusy = (button: HTMLButtonElement | null, busy: boolean, b
     button.textContent = button.dataset.idleLabel;
     delete button.dataset.idleLabel;
   }
+  button.classList.toggle("is-busy", busy);
   button.disabled = busy;
   button.setAttribute("aria-busy", String(busy));
 };

@@ -109,7 +109,7 @@ export const renderPortfolio = (data: PortfolioRuntimeData, language: Language =
     </div>`, "portfolio-page--index");
 
   const projectPages = selectedProjects.map((project, index) => numbered(`
-    <div class="portfolio-project__visual">${image(project, language)}<span class="portfolio-project__index">${String(index + 1).padStart(2, "0")}</span></div>
+    <div class="portfolio-project__visual${project.images[0] ? " has-image" : ""}">${image(project, language)}<span class="portfolio-project__index">${String(index + 1).padStart(2, "0")}</span></div>
     <div class="portfolio-project__content">
       ${localized(project.location, language) ? `<p class="portfolio-kicker">${localized(project.location, language)}</p>` : ""}
       <h2>${localized(project.name, language)}</h2>

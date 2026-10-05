@@ -35,6 +35,8 @@ import {
 } from "./previewZoom";
 import {
   bindAdminYearPickers,
+  formatAdminDate,
+  formatAdminDateTime,
   renderAdminPreviewLanguageToggle,
   renderAdminPreviewSelect,
   renderAdminPreviewToolbar,
@@ -173,7 +175,7 @@ const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
       <div class="admin-photo-library-card__body">
         <div class="admin-photo-library-card__heading"><h4 data-profile-photo-library-name>${escapeHtml(photo.name)}</h4><div class="admin-photo-library-card__actions"><button class="button button--secondary" type="button" data-profile-photo-rename data-photo-id="${escapeHtml(photo.id)}" data-photo-name="${escapeHtml(photo.name)}">Rename</button><button class="button button--secondary admin-button--danger" type="button" data-profile-photo-delete data-photo-id="${escapeHtml(photo.id)}" data-photo-value="${escapeHtml(photo.publicUrl)}" data-photo-name="${escapeHtml(photo.name)}">Delete</button></div></div>
         <p>${photo.width} × ${photo.height}px · ${formatPhotoFileSize(photo.fileSize)}</p>
-        <small>Saved ${new Date(photo.createdAt).toLocaleDateString()}</small>
+        <small>Saved ${formatAdminDate(photo.createdAt)}</small>
       </div>
     </article>`).join("");
   return renderAdminSectionCard({
@@ -730,7 +732,7 @@ const websiteView = (): string => {
   const tab = state.websiteTab;
   const latest = state.releases[0];
   const releaseHistory = state.releases.length
-    ? `<ol class="admin-release-history__list">${state.releases.map((item, index) => `<li><div><strong>${index === 0 ? "Latest release" : "Published release"}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
+    ? `<ol class="admin-release-history__list">${state.releases.map((item, index) => `<li><div><strong>${index === 0 ? "Latest release" : "Published release"}</strong><span>${formatAdminDateTime(item.publishedAt)}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
     : '<p class="admin-empty">No Website release has been published yet.</p>';
   const viewportControls = renderAdminPreviewSelect({
     label: "Website viewport",
@@ -763,7 +765,7 @@ const websiteView = (): string => {
     controls: `${pageControls}${viewportControls}${languageControls}${zoomControls}`,
   });
   return `<section class="admin-site-workspace">
-    <header class="admin-document-header"><div class="admin-document-header__identity"><p class="section-kicker">Website</p><h1>Homepage</h1><p><span class="status status--draft">Draft</span><span>${latest ? `Last published ${new Date(latest.publishedAt).toLocaleString()}` : "Not published yet"}</span></p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button><button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button><button class="button admin-action-publish" type="button" data-publish-website>Publish</button></div></header>
+    <header class="admin-document-header"><div class="admin-document-header__identity"><p class="section-kicker">Website</p><h1>Homepage</h1><p><span class="status status--draft">Draft</span><span>${latest ? `Last published ${formatAdminDateTime(latest.publishedAt)}` : "Not published yet"}</span></p></div><div class="admin-document-actions"><span data-site-save-state>Saved</span><button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button><button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button><button class="button admin-action-publish" type="button" data-publish-website>Publish</button></div></header>
     <div class="admin-document-layout">
       <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Website editor sections">${([["general","General & SEO"],["sections","Sections"],["featured","Content selection"],["appearance","Appearance"]] as Array<[WebsiteTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-website-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav>
         <form id="website-editor-form" data-website-form>

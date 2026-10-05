@@ -38,6 +38,8 @@ import {
   type PreviewZoomState,
 } from "./previewZoom";
 import {
+  formatAdminDate,
+  formatAdminDateTime,
   renderAdminPreviewToolbar,
   renderAdminPreviewLanguageToggle,
   renderAdminSelectControl,
@@ -302,7 +304,7 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
 const latestReleaseMeta = (kind: ProfileDocumentKind): string => {
   const release = state.releases[kind][0];
   return release
-    ? `<span class="admin-document-meta__detail">Version ${escapeHtml(release.version)}</span><span class="admin-document-meta__detail">Published ${new Date(release.publishedAt).toLocaleString()}</span>`
+    ? `<span class="admin-document-meta__detail">Version ${escapeHtml(release.version)}</span><span class="admin-document-meta__detail">Published ${formatAdminDateTime(release.publishedAt)}</span>`
     : '<span class="admin-document-meta__detail">Not published yet</span>';
 };
 
@@ -652,12 +654,6 @@ const tabs = (kind: ProfileDocumentKind): Array<[DocumentTab, string]> => kind =
 
 const documentLabel = (kind: ProfileDocumentKind): string => kind === "cv" ? "CV" : "Portfolio";
 const documentPlural = (kind: ProfileDocumentKind): string => kind === "cv" ? "CVs" : "Portfolios";
-const formattedDate = (value: string): string => new Date(value).toLocaleDateString(undefined, {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-});
-
 const visibleDocuments = (kind: ProfileDocumentKind): ProfileDocumentRecord[] => {
   const query = state.search[kind].trim().toLowerCase();
   return state.documents[kind].filter((item) => {
@@ -676,7 +672,7 @@ const documentListView = (kind: ProfileDocumentKind): string => {
         <button class="admin-content-item__select" type="button" data-profile-document-select="${escapeHtml(item.id)}" aria-pressed="${selected?.id === item.id}">
           <strong title="${escapeHtml(item.internalTitle)}">${escapeHtml(item.internalTitle)}</strong>
           <small>Version ${escapeHtml(item.draftPayload?.content.version || "not set")}</small>
-          <small>Updated ${formattedDate(item.updatedAt)}</small>
+          <small>Updated ${formatAdminDate(item.updatedAt)}</small>
         </button>
         <div class="admin-content-item__meta"><span class="status status--${item.status}">${item.status}</span>${item.isActive ? '<span class="admin-document-active">Active</span>' : ""}</div>
       </li>`).join("");
@@ -726,7 +722,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
     ? `<ul data-document-validation-list>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
     : '<p data-document-validation-ready>Required content and document selection are ready.</p>';
   const releaseHistory = state.releases[kind].length
-    ? `<ol class="admin-release-history__list">${state.releases[kind].map((item) => `<li><div><strong>${item.isActive ? "Active release" : "Published release"}</strong><span>${new Date(item.publishedAt).toLocaleString()}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
+    ? `<ol class="admin-release-history__list">${state.releases[kind].map((item) => `<li><div><strong>${item.isActive ? "Active release" : "Published release"}</strong><span>${formatAdminDateTime(item.publishedAt)}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
     : `<p class="admin-empty">No ${documentLabel(kind)} release has been published yet.</p>`;
   const publicPath = kind === "cv" ? "cv/" : "portfolio/";
   const previewPath = `${publicPath}?preview=1&embedded=1`;

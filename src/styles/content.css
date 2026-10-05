@@ -68,6 +68,7 @@ body.website-embedded .page-nav .page-nav__admin {
 .detail-hero__grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(18rem, .75fr); gap: var(--space-12); align-items: center; }
 .detail-hero__role { margin-top: var(--space-4); color: var(--color-accent); font-weight: 800; }
 .detail-hero__summary { max-width: 62ch; margin-block: var(--space-6); color: #c1d7df; font-size: var(--font-size-lg); }
+.detail-hero__actions { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-6); }
 .detail-hero__image { width: 100%; min-height: 22rem; border: 1px solid rgb(255 255 255 / 18%); border-radius: var(--radius-lg); object-fit: cover; }
 .detail-hero .media-placeholder { color: #dff5fb; background: rgb(255 255 255 / 7%); }
 .detail-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-12); padding-block: var(--space-20); }

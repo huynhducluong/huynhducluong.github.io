@@ -11,10 +11,12 @@ import "../styles/admin-ui.css";
 import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
-import { bindAdminTablists, bindAdminYearPickers, renderAdminSectionCard } from "./ui";
+import { bindAdminTablists, bindAdminYearPickers, formatAdminDateTime, renderAdminSectionCard } from "./ui";
+import { clearAdminToasts, showAdminToast } from "./toast";
 import { confirmAdmin } from "./confirmDialog";
 import { bindProjectCoverCropper, renderProjectCoverCropDialog } from "./projectCoverCropper";
 import { escapeHtml } from "../shared/format";
+import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
 import { downloadStoredMedia, type ProjectImageCropRow } from "../services/projectCoverCropRepository";
 import type { CvProjectDisplay } from "../types/cvContent";
@@ -58,6 +60,7 @@ interface AdminMediaRow {
 interface AdminProjectRow {
   id: string;
   slug: string;
+  youtube_url: string | null;
   name: { en: string; vi: string };
   location: { en: string; vi: string };
   role: { en: string; vi: string } | null;
@@ -89,6 +92,7 @@ interface AdminProjectRow {
 interface AdminToolRow {
   id: string;
   slug: string;
+  youtube_url: string | null;
   name: string;
   problem: { en: string; vi: string };
   solution: { en: string; vi: string };
@@ -245,9 +249,11 @@ const startMagicLinkCooldown = (button: HTMLButtonElement): void => {
 
 const message = (text: string, kind: "info" | "error" | "success" = "info"): void => {
   const target = document.querySelector<HTMLElement>("[data-admin-message]");
-  if (!target) return;
-  target.textContent = text;
-  target.dataset.kind = kind;
+  if (target) {
+    target.textContent = text;
+    target.dataset.kind = kind;
+  }
+  if (text && document.querySelector(".admin-shell")) showAdminToast(text, kind);
 };
 
 const slugify = (value: string): string =>
@@ -261,6 +267,7 @@ const slugify = (value: string): string =>
 const blankProject = (): AdminProjectRow => ({
   id: crypto.randomUUID(),
   slug: "",
+  youtube_url: null,
   name: { en: "", vi: "" },
   location: { en: "", vi: "" },
   role: null,
@@ -292,6 +299,7 @@ const blankProject = (): AdminProjectRow => ({
 const blankTool = (): AdminToolRow => ({
   id: crypto.randomUUID(),
   slug: "",
+  youtube_url: null,
   name: "",
   problem: { en: "", vi: "" },
   solution: { en: "", vi: "" },
@@ -312,6 +320,7 @@ const blankTool = (): AdminToolRow => ({
 });
 
 const loginView = (): void => {
+  clearAdminToasts();
   if (magicLinkCooldown !== undefined) {
     window.clearInterval(magicLinkCooldown);
     magicLinkCooldown = undefined;
@@ -540,8 +549,8 @@ const contentList = (): string => {
   }).join("");
 };
 
-const field = (label: string, name: string, value = "", type = "text"): string =>
-  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}"></label>`;
+const field = (label: string, name: string, value = "", type = "text", placeholder = ""): string =>
+  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ""}></label>`;
 
 const contentStatusLabel = (status: PublicationStatus): string =>
   status === "published" ? "Ready" : status.charAt(0).toUpperCase() + status.slice(1);
@@ -569,7 +578,7 @@ const mediaLibrary = (type: AdminItemType, mediaRows: AdminMediaRow[]): string =
       <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
       <div class="admin-media-row__fields"><label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt.en)}" data-media-alt></label></div>
       <div class="admin-media-row__actions">
-        ${type === "project" ? `<button type="button" class="admin-media-action--icon" data-media-download aria-label="Download original image" title="Download original">${downloadIcon}</button>` : ""}
+        <button type="button" class="admin-media-action--icon" data-media-download aria-label="Download original image" title="Download original">${downloadIcon}</button>
         ${type === "project" && item.kind === "cover" ? `<button type="button" data-media-crops>Adjust crops <small>${item.project_image_crops?.length ?? 0}/3</small></button>` : ""}
         ${item.kind === "cover" ? "" : `<button type="button" data-media-cover>Set cover</button>
         <button type="button" class="admin-media-action--icon" data-media-move="up" ${index === firstGalleryIndex ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button>
@@ -617,7 +626,7 @@ const editor = (project: AdminProjectRow): string => `
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
         ${renderAdminSectionCard({
           title: "Project overview",
-          note: "Edit identity, dates and slug. Output selection is managed in Website, CV and Portfolio.",
+          note: "Edit identity, dates, slug and optional video. Output selection is managed in Website, CV and Portfolio.",
           content: `<div class="admin-form-grid">
           ${field("Project name (EN) *", "name_en", project.name.en)}${field("Project name (VI)", "name_vi", project.name.vi)}
           ${field("Role (EN)", "role_en", project.role?.en ?? "")}${field("Role (VI)", "role_vi", project.role?.vi ?? "")}
@@ -625,6 +634,7 @@ const editor = (project: AdminProjectRow): string => `
           ${field("Start", "start_date", project.start_date ?? "", "month")}
           ${field("End (blank = Present)", "end_date", project.is_current ? "" : project.end_date ?? "", "month")}
           ${field("Slug *", "slug", project.slug)}
+          ${field("YouTube URL (optional)", "youtube_url", project.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}
         </div>`,
         })}
       </section>
@@ -651,7 +661,7 @@ const toolEditor = (tool: AdminToolRow): string => `
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
-        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug and technologies. Output selection is managed in Website, CV and Portfolio.", content: `<div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}</div><label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>` })}
+        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug, technologies and optional video. Output selection is managed in Website, CV and Portfolio.", content: `<div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}</div><label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>${field("YouTube URL (optional)", "youtube_url", tool.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}` })}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
         ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>Problem (EN)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (VI)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (EN)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (VI)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (EN)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (VI)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
@@ -668,7 +678,7 @@ const selectedTrashItem = (): AdminContentListItem | null => {
 const trashInspector = (item: AdminContentListItem): string => `
   <section class="admin-editor admin-trash-detail">
     <div class="admin-editor__heading"><div><p class="section-kicker">${item.type} in Trash</p><h2 title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</h2><p>This item is hidden from active Website, Portfolio and CV draft data.</p></div><span class="status status--archived">Trash</span></div>
-    <dl><div><dt>Deleted</dt><dd>${item.deletedAt ? new Date(item.deletedAt).toLocaleString() : "Unknown"}</dd></div><div><dt>Permanent deletion</dt><dd>${item.purgeAfter ? new Date(item.purgeAfter).toLocaleString() : "Pending cleanup"} (${trashDaysRemaining(item.purgeAfter)})</dd></div></dl>
+    <dl><div><dt>Deleted</dt><dd>${item.deletedAt ? formatAdminDateTime(item.deletedAt) : "Unknown"}</dd></div><div><dt>Permanent deletion</dt><dd>${item.purgeAfter ? formatAdminDateTime(item.purgeAfter) : "Pending cleanup"} (${trashDaysRemaining(item.purgeAfter)})</dd></div></dl>
     <div class="admin-actions"><button class="button" type="button" data-restore-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Restore as draft</button><button class="button admin-button--danger" type="button" data-purge-item="${escapeHtml(item.id)}" data-item-type="${item.type}">Delete permanently</button></div>
   </section>`;
 
@@ -748,7 +758,7 @@ const dashboardView = (): void => {
         <div class="admin-rail__footer"><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div>
       </aside>
       <section class="admin-main">
-        <header class="admin-header"><div><small>HDL Admin /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message" data-admin-message role="status" aria-live="polite">Ready</p><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></header>
+        <header class="admin-header"><div><small>HDL Admin /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message sr-only" data-admin-message></p><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></header>
         <div class="admin-layout ${showCollection ? "has-collection" : ""}">
           ${showCollection ? `<aside class="admin-collection">
             <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
@@ -794,8 +804,8 @@ const loadProjects = async (): Promise<void> => {
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
-  projects = (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, project_images: item.project_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
-  tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
+  projects = (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, project_images: item.project_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
+  tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
   if (selectedProjectWasPersisted) selectedProject = projects.find((item) => item.id === selectedProjectId) ?? null;
   if (selectedToolWasPersisted) selectedTool = tools.find((item) => item.id === selectedToolId) ?? null;
   markSiteWorkspaceStale();
@@ -825,6 +835,7 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     ...current,
     id: String(form.get("id")),
     slug,
+    youtube_url: normalizeYouTubeUrl(String(form.get("youtube_url") ?? "")),
     name: { en: nameEn, vi: String(form.get("name_vi") ?? "").trim() },
     location: { en: String(form.get("location_en") ?? "").trim(), vi: String(form.get("location_vi") ?? "").trim() },
     role: roleEn || roleVi ? { en: roleEn, vi: roleVi } : null,
@@ -849,7 +860,11 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     responsibilities: payload.responsibilities,
     technologies: payload.technologies,
   };
-  const { error } = await supabase.from("projects").upsert(projectPayload);
+  let { error } = await supabase.from("projects").upsert({ ...projectPayload, youtube_url: payload.youtube_url });
+  if (missingYouTubeColumn(error, "projects")) {
+    if (payload.youtube_url) throw new Error("Apply the latest database migration before saving a YouTube URL.");
+    ({ error } = await supabase.from("projects").upsert(projectPayload));
+  }
   if (error) throw error;
   adminFormDirty = false;
   await loadProjects();
@@ -870,6 +885,7 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     ...current,
     id: formText(form, "id"),
     slug,
+    youtube_url: normalizeYouTubeUrl(formText(form, "youtube_url")),
     name,
     problem: { en: formText(form, "problem_en"), vi: formText(form, "problem_vi") },
     solution: { en: formText(form, "solution_en"), vi: formText(form, "solution_vi") },
@@ -885,7 +901,11 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     benefit: payload.benefit,
     technologies: payload.technologies,
   };
-  const { error } = await supabase.from("automation_tools").upsert(toolPayload);
+  let { error } = await supabase.from("automation_tools").upsert({ ...toolPayload, youtube_url: payload.youtube_url });
+  if (missingYouTubeColumn(error, "automation_tools")) {
+    if (payload.youtube_url) throw new Error("Apply the latest database migration before saving a YouTube URL.");
+    ({ error } = await supabase.from("automation_tools").upsert(toolPayload));
+  }
   if (error) throw error;
   adminFormDirty = false;
   await loadProjects();
@@ -1288,6 +1308,8 @@ const deleteSavedMedia = async (type: AdminItemType, mediaId: string): Promise<v
 
 const formText = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const commaList = (value: string): string[] => value.split(",").map((item) => item.trim()).filter(Boolean);
+const missingYouTubeColumn = (error: { message: string } | null, table: "projects" | "automation_tools"): boolean =>
+  Boolean(error?.message.includes("'youtube_url'") && error.message.includes(`'${table}'`) && error.message.includes("schema cache"));
 
 const bindContentItemActions = (root: ParentNode = app): void => {
   root.querySelectorAll<HTMLElement>("[data-select-item]").forEach((button) => button.addEventListener("click", async () => {

@@ -18,6 +18,7 @@ import type { CoverLetterEvidenceOption, CoverLetterInput, CoverLetterRecord, Co
 import type { ProfessionalProfileContent } from "../types/website";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import {
+  formatAdminDate,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
   setButtonBusy,
@@ -81,9 +82,6 @@ const input = (label: string, name: keyof CoverLetterInput, type = "text", requi
 
 const textarea = (label: string, name: keyof CoverLetterInput, rows: number, required = false): string =>
   `<label>${label}<textarea name="${name}" rows="${rows}"${required ? " required" : ""}${disabled()}>${fieldValue(name)}</textarea></label>`;
-
-const date = (value: string): string =>
-  new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" }).format(new Date(value));
 
 const syncUrl = (id?: string): void => {
   const url = new URL(window.location.href);
@@ -204,7 +202,7 @@ const recordList = (): string => {
         <button class="admin-content-item__select" type="button" data-cl-select="${escapeHtml(item.id)}" aria-pressed="${record?.id === item.id}">
           <strong title="${escapeHtml(item.internalTitle)}">${escapeHtml(item.internalTitle)}</strong>
         <small>${escapeHtml(item.positionTitle || "Position not set")} · ${escapeHtml(item.companyName || "Company not set")}</small>
-        <small>Updated ${date(item.updatedAt)}</small>
+        <small>Updated ${formatAdminDate(item.updatedAt)}</small>
       </button>
       <div class="admin-content-item__meta"><span class="status status--${item.status}">${item.status}</span></div>
     </li>`).join("");
@@ -240,7 +238,7 @@ const emptyWorkspace = (): string => {
       <section class="admin-cl-empty admin-cl-empty--selection">
         <div><p class="section-kicker">Applications</p><h1>Select a cover letter</h1><p>Choose a letter from the list or continue with the most recently updated application.</p></div>
         <article class="admin-cl-recent">
-          <div><span>Recently updated</span><strong>${escapeHtml(recent.internalTitle)}</strong><small>${escapeHtml(recent.positionTitle || "Position not set")} · ${escapeHtml(recent.companyName || "Company not set")} · ${date(recent.updatedAt)}</small></div>
+          <div><span>Recently updated</span><strong>${escapeHtml(recent.internalTitle)}</strong><small>${escapeHtml(recent.positionTitle || "Position not set")} · ${escapeHtml(recent.companyName || "Company not set")} · ${formatAdminDate(recent.updatedAt)}</small></div>
           <button class="button" type="button" data-cl-select="${escapeHtml(recent.id)}">Open letter</button>
         </article>
         <p class="admin-cl-empty__hint">Use <strong>+ New</strong> in the sidebar to start another application.</p>
@@ -277,7 +275,7 @@ const editorView = (): string => {
         <div class="admin-document-header__identity">
           <p class="section-kicker">Applications</p>
           <h1 class="admin-document-title"><button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button></h1>
-          <p class="admin-document-meta"><span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${date(record.updatedAt)}` : "New application"}</span></p>
+          <p class="admin-document-meta"><span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${formatAdminDate(record.updatedAt)}` : "New application"}</span></p>
         </div>
         <div class="admin-document-actions">
           <span data-cl-dirty-state>${dirty ? "Unsaved changes" : isLocked ? "Locked" : "Saved"}</span>

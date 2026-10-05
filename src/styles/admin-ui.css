@@ -395,6 +395,148 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-shell .admin-message[data-kind="success"] { color: var(--admin-color-success); }
 .admin-shell .admin-message[data-kind="error"] { color: var(--admin-color-danger); }
 
+html.admin-app button.is-busy::before {
+  width: .9rem;
+  height: .9rem;
+  flex: 0 0 .9rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: admin-spin 700ms linear infinite;
+  content: "";
+}
+
+.admin-toast-region {
+  position: fixed;
+  z-index: 70;
+  top: 5.25rem;
+  right: 1rem;
+  display: grid;
+  width: min(25rem, calc(100vw - 2rem));
+  gap: .65rem;
+  pointer-events: none;
+}
+
+.admin-toast {
+  --admin-toast-accent: var(--color-primary);
+  --admin-toast-icon-surface: var(--admin-color-selected);
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr) 1.75rem;
+  gap: .75rem;
+  align-items: start;
+  padding: .85rem .8rem .85rem .9rem;
+  overflow: hidden;
+  border: 1px solid var(--admin-color-border);
+  border-left: 4px solid var(--admin-toast-accent);
+  border-radius: var(--admin-radius-lg);
+  background: var(--admin-color-surface);
+  box-shadow: 0 14px 36px rgb(16 45 59 / 18%);
+  color: var(--admin-color-text);
+  pointer-events: auto;
+  animation: admin-toast-in 180ms ease-out both;
+}
+
+.admin-toast[data-kind="success"] {
+  --admin-toast-accent: var(--admin-color-success);
+  --admin-toast-icon-surface: var(--admin-color-success-surface);
+}
+
+.admin-toast[data-kind="error"] {
+  --admin-toast-accent: var(--admin-color-danger);
+  --admin-toast-icon-surface: var(--admin-color-danger-surface);
+}
+
+.admin-toast.is-leaving { animation: admin-toast-out 160ms ease-in both; }
+
+.admin-toast__icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--admin-toast-icon-surface);
+  color: var(--admin-toast-accent);
+}
+
+.admin-toast__icon svg {
+  width: 1.2rem;
+  height: 1.2rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+}
+
+.admin-toast[data-progress="true"] .admin-toast__icon svg { animation: admin-spin 800ms linear infinite; }
+
+.admin-toast__body {
+  display: grid;
+  min-width: 0;
+  gap: .2rem;
+  padding-top: .08rem;
+}
+
+.admin-toast__body strong {
+  overflow-wrap: anywhere;
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+  line-height: 1.35;
+}
+
+.admin-toast__body p {
+  overflow-wrap: anywhere;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+  line-height: 1.45;
+}
+
+.admin-toast__body details { margin-top: .25rem; }
+
+.admin-toast__body summary {
+  width: max-content;
+  color: var(--admin-toast-accent);
+  cursor: pointer;
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-toast__body code {
+  display: block;
+  max-height: 7rem;
+  margin-top: .4rem;
+  padding: .55rem;
+  overflow: auto;
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-color-surface-muted);
+  color: var(--admin-color-text-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: .6875rem;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.admin-toast__close {
+  display: grid;
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: var(--admin-radius-sm);
+  background: transparent;
+  color: var(--admin-color-text-muted);
+  cursor: pointer;
+}
+
+.admin-toast__close:hover { background: var(--admin-color-hover); color: var(--admin-color-text); }
+.admin-toast__close svg { width: 1rem; height: 1rem; fill: none; stroke: currentColor; stroke-linecap: round; stroke-width: 1.8; }
+
+@keyframes admin-spin { to { transform: rotate(360deg); } }
+@keyframes admin-toast-in { from { opacity: 0; transform: translateY(-.5rem) scale(.98); } }
+@keyframes admin-toast-out { to { opacity: 0; transform: translateX(1rem) scale(.98); } }
+
 /* Let form pairs respond to the space inside each editor, including when a
    sidebar, preview pane, or browser zoom reduces the available width. */
 .admin-editor-panel,
@@ -1244,6 +1386,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 
   .admin-main { grid-template-rows: 4rem minmax(0, 1fr); }
   .admin-header { height: 4rem; min-height: 4rem; }
+  .admin-toast-region { top: 8.75rem; }
 }
 
 @media (max-width: 720px) {
@@ -1251,6 +1394,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   .admin-rail { grid-template-columns: minmax(0, 1fr) auto; }
   .admin-header { grid-template-columns: minmax(0, 1fr) auto; padding-inline: .8rem; }
   .admin-header .admin-message { display: none; }
+  .admin-toast-region { right: .75rem; width: calc(100vw - 1.5rem); }
 
   .admin-editor-shell > .admin-editor-tabs { position: static; }
 
@@ -1295,6 +1439,9 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   .admin-workspace-loading__list span { animation: none; }
   .admin-document-title-switcher,
   .admin-document-title-switcher__icon svg { transition: none; }
+  html.admin-app button.is-busy::before,
+  .admin-toast,
+  .admin-toast[data-progress="true"] .admin-toast__icon svg { animation: none; }
 }
 
 /* Fixed workspace chrome: keep identity/actions/tabs visible while the active pane scrolls. */

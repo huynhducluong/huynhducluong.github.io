@@ -291,7 +291,7 @@ body:has(.admin-shell) {
   display: grid;
   height: 4.5rem;
   min-height: 4.5rem;
-  grid-template-columns: minmax(0, 1fr) minmax(12rem, auto) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 1rem;
   padding: .7rem 1.4rem;
