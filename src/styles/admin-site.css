@@ -1319,3 +1319,12 @@ button.admin-profile-photo-control {
   font-size: var(--admin-text-xs);
   line-height: 1.5;
 }
+.admin-site-validation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.admin-site-validation section { padding: .85rem; border: 1px solid var(--admin-color-border); border-radius: .5rem; background: var(--admin-color-surface-subtle); }
+.admin-site-validation h3 { margin: 0 0 .5rem; font-size: var(--admin-text-sm); }
+.admin-site-validation :where(ul, p) { margin: 0; color: var(--admin-color-text-muted); font-size: var(--admin-text-xs); line-height: 1.5; }
+.admin-site-validation ul { display: grid; gap: .35rem; padding-left: 1.15rem; }
+
+@media (max-width: 42rem) {
+  .admin-site-validation { grid-template-columns: 1fr; }
+}

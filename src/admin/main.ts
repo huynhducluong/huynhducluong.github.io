@@ -19,8 +19,11 @@ import { escapeHtml } from "../shared/format";
 import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
 import { downloadStoredMedia, type ProjectImageCropRow } from "../services/projectCoverCropRepository";
+import { loadAdminSchemaHealth, removeUnreferencedStoragePaths, type AdminSchemaHealth } from "../services/adminSystemRepository";
+import { projectFromRow, toolFromRow, type ProjectRow, type ToolRow } from "../services/supabasePortfolioRepository";
 import type { CvProjectDisplay } from "../types/cvContent";
 import type { PublicationStatus } from "../types/portfolio";
+import { validateProjectReadiness, validateToolReadiness, type ContentValidationResult } from "./contentValidation";
 import {
   bindCoverLetterWorkspace,
   coverLetterSummary,
@@ -50,6 +53,7 @@ interface AdminMediaRow {
   id: string;
   storage_path: string;
   alt: { en: string; vi: string };
+  caption: { en: string; vi: string } | null;
   kind: "cover" | "gallery";
   display_order: number;
   mime_type: string | null;
@@ -65,6 +69,9 @@ interface AdminProjectRow {
   location: { en: string; vi: string };
   role: { en: string; vi: string } | null;
   summary: { en: string; vi: string } | null;
+  challenge: { en: string; vi: string } | null;
+  approach: { en: string; vi: string } | null;
+  outcome: { en: string; vi: string } | null;
   start_date: string | null;
   end_date: string | null;
   is_current: boolean;
@@ -116,7 +123,10 @@ interface PendingMedia {
   id: string;
   file: File;
   previewUrl: string;
-  alt: string;
+  altEn: string;
+  altVi: string;
+  captionEn: string;
+  captionVi: string;
   kind: "cover" | "gallery";
 }
 
@@ -151,7 +161,10 @@ let contentStatusFilter: ContentStatusFilter = "all";
 let contentSearch = "";
 let activeEditorTab: EditorTab = "overview";
 let adminFormDirty = false;
+let contentEditorDirty = false;
+let dirtyMediaIds = new Set<string>();
 let pendingMedia: PendingMedia[] = [];
+let adminSchemaHealth: AdminSchemaHealth = { healthy: false, version: "unknown", message: "Schema health has not been checked." };
 let magicLinkCooldown: number | undefined;
 let reorderBusy = false;
 let navigationSequence = 0;
@@ -219,6 +232,22 @@ window.addEventListener("beforeunload", (event) => {
   if (adminFormDirty) event.preventDefault();
 });
 
+const syncContentDirtyState = (): void => {
+  if (activeView !== "projects" && activeView !== "tools") return;
+  adminFormDirty = contentEditorDirty || dirtyMediaIds.size > 0 || pendingMedia.length > 0;
+  const state = app.querySelector<HTMLElement>("[data-unsaved-state]");
+  if (state) {
+    state.textContent = adminFormDirty ? "Unsaved changes" : "Saved";
+    state.dataset.dirty = adminFormDirty ? "true" : "false";
+  }
+};
+
+const resetContentDirtyState = (): void => {
+  contentEditorDirty = false;
+  dirtyMediaIds = new Set<string>();
+  adminFormDirty = false;
+};
+
 const resetMagicLinkButton = (button: HTMLButtonElement): void => {
   button.disabled = false;
   button.textContent = "Send magic link";
@@ -272,6 +301,9 @@ const blankProject = (): AdminProjectRow => ({
   location: { en: "", vi: "" },
   role: null,
   summary: null,
+  challenge: null,
+  approach: null,
+  outcome: null,
   start_date: null,
   end_date: null,
   is_current: false,
@@ -576,7 +608,12 @@ const mediaLibrary = (type: AdminItemType, mediaRows: AdminMediaRow[]): string =
     <article class="admin-media-row" data-media-id="${escapeHtml(item.id)}">
       <div class="admin-media-row__preview"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
       <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
-      <div class="admin-media-row__fields"><label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt.en)}" data-media-alt></label></div>
+      <div class="admin-media-row__fields">
+        <label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt.en)}" data-media-alt-en></label>
+        <label><span>Alt text (VI)</span><input value="${escapeHtml(item.alt.vi)}" data-media-alt-vi></label>
+        <label><span>Caption (EN)</span><input value="${escapeHtml(item.caption?.en ?? "")}" data-media-caption-en></label>
+        <label><span>Caption (VI)</span><input value="${escapeHtml(item.caption?.vi ?? "")}" data-media-caption-vi></label>
+      </div>
       <div class="admin-media-row__actions">
         <button type="button" class="admin-media-action--icon" data-media-download aria-label="Download original image" title="Download original">${downloadIcon}</button>
         ${type === "project" && item.kind === "cover" ? `<button type="button" data-media-crops>Adjust crops <small>${item.project_image_crops?.length ?? 0}/3</small></button>` : ""}
@@ -614,11 +651,30 @@ const editorMoreMenu = (type: AdminItemType, status: PublicationStatus): string 
   <button class="admin-danger" type="button" data-delete-selected>Move to Trash</button>
 </div></details>`;
 
+const readinessFor = (type: AdminItemType, item: AdminProjectRow | AdminToolRow): ContentValidationResult =>
+  type === "project"
+    ? validateProjectReadiness(projectFromRow(item as unknown as ProjectRow))
+    : validateToolReadiness(toolFromRow(item as unknown as ToolRow));
+
+const readinessCard = (type: AdminItemType, item: AdminProjectRow | AdminToolRow): string => {
+  const result = readinessFor(type, item);
+  const content = result.errors.length || result.warnings.length
+    ? `<div class="admin-readiness-grid">
+        <div><strong>${result.errors.length ? `${result.errors.length} required fix${result.errors.length === 1 ? "" : "es"}` : "Required content complete"}</strong>${result.errors.length ? `<ul>${result.errors.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : ""}</div>
+        <div><strong>${result.warnings.length ? `${result.warnings.length} recommendation${result.warnings.length === 1 ? "" : "s"}` : "No recommendations"}</strong>${result.warnings.length ? `<ul>${result.warnings.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : ""}</div>
+      </div>`
+    : '<p class="admin-readiness-ready">Required content and recommended translations are complete.</p>';
+  return renderAdminSectionCard({ title: "Ready check", note: "Required fixes block Ready status. Recommendations do not block publishing.", content, className: result.errors.length ? "admin-readiness admin-readiness--blocked" : "admin-readiness" });
+};
+
+const savedDetailPreviewUrl = (type: AdminItemType, slug: string): string =>
+  `${import.meta.env.BASE_URL}${type === "project" ? "project" : "tool"}/?preview=1&id=${encodeURIComponent(slug)}`;
+
 const editor = (project: AdminProjectRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
       <div class="admin-editor__identity"><p class="section-kicker">${project.name.en ? "Edit project" : "New project"}</p><h2 title="${escapeHtml(project.name.en || "Untitled project")}">${escapeHtml(project.name.en || "Untitled project")}</h2><div class="admin-editor__meta"><span class="status status--${project.status}">${contentStatusLabel(project.status)}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) ? editorMoreMenu("project", project.status) : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
+      <div class="admin-editor__status">${projects.some((item) => item.id === project.id) && project.slug ? `<a class="button button--secondary" href="${savedDetailPreviewUrl("project", project.slug)}" target="_blank" rel="noreferrer">Preview detail</a>` : ""}${projects.some((item) => item.id === project.id) ? editorMoreMenu("project", project.status) : ""}<button class="button admin-action-save" type="submit" form="project-editor">Save changes</button></div>
     </div>
     <nav class="admin-editor-tabs" role="tablist" aria-label="Project editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${project.project_images.length})`)}</nav>
     <form id="project-editor" class="admin-editor" data-project-form>
@@ -637,12 +693,16 @@ const editor = (project: AdminProjectRow): string => `
           ${field("YouTube URL (optional)", "youtube_url", project.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}
         </div>`,
         })}
+        ${readinessCard("project", project)}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
         ${renderAdminSectionCard({
           title: "Project content",
           note: "Edit paired EN and VI project descriptions.",
           content: `<div class="admin-form-grid"><label>Summary (EN)<textarea name="summary_en" rows="7">${escapeHtml(project.summary?.en ?? "")}</textarea></label><label>Summary (VI)<textarea name="summary_vi" rows="7">${escapeHtml(project.summary?.vi ?? "")}</textarea></label></div>
+            <div class="admin-form-grid"><label>Challenge (EN)<textarea name="challenge_en" rows="6">${escapeHtml(project.challenge?.en ?? "")}</textarea></label><label>Challenge (VI)<textarea name="challenge_vi" rows="6">${escapeHtml(project.challenge?.vi ?? "")}</textarea></label></div>
+            <div class="admin-form-grid"><label>Approach (EN)<textarea name="approach_en" rows="6">${escapeHtml(project.approach?.en ?? "")}</textarea></label><label>Approach (VI)<textarea name="approach_vi" rows="6">${escapeHtml(project.approach?.vi ?? "")}</textarea></label></div>
+            <div class="admin-form-grid"><label>Outcome (EN)<textarea name="outcome_en" rows="6">${escapeHtml(project.outcome?.en ?? "")}</textarea></label><label>Outcome (VI)<textarea name="outcome_vi" rows="6">${escapeHtml(project.outcome?.vi ?? "")}</textarea></label></div>
             <div class="admin-form-grid"><label>Responsibilities (EN, one item per line)<textarea name="responsibilities_en" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label><label>Responsibilities (VI, one item per line)<textarea name="responsibilities_vi" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.vi).join("\n"))}</textarea></label></div>
             <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}"></label>`,
         })}
@@ -655,13 +715,14 @@ const toolEditor = (tool: AdminToolRow): string => `
   <section class="admin-editor-shell">
     <div class="admin-editor__heading">
       <div class="admin-editor__identity"><p class="section-kicker">${tool.name ? "Edit tool" : "New tool"}</p><h2 title="${escapeHtml(tool.name || "Untitled tool")}">${escapeHtml(tool.name || "Untitled tool")}</h2><div class="admin-editor__meta"><span class="status status--${tool.status}">${contentStatusLabel(tool.status)}</span><small data-unsaved-state>Saved</small></div></div>
-      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) ? editorMoreMenu("tool", tool.status) : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
+      <div class="admin-editor__status">${tools.some((item) => item.id === tool.id) && tool.slug ? `<a class="button button--secondary" href="${savedDetailPreviewUrl("tool", tool.slug)}" target="_blank" rel="noreferrer">Preview detail</a>` : ""}${tools.some((item) => item.id === tool.id) ? editorMoreMenu("tool", tool.status) : ""}<button class="button admin-action-save" type="submit" form="tool-editor">Save changes</button></div>
     </div>
     <nav class="admin-editor-tabs" role="tablist" aria-label="Tool editor sections">${editorTab("overview", "Overview")}${editorTab("content", "Content EN / VI")}${editorTab("media", `Media (${tool.tool_images.length})`)}</nav>
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
         ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug, technologies and optional video. Output selection is managed in Website, CV and Portfolio.", content: `<div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}</div><label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>${field("YouTube URL (optional)", "youtube_url", tool.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}` })}
+        ${readinessCard("tool", tool)}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
         ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>Problem (EN)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (VI)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (EN)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (VI)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (EN)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (VI)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
@@ -700,6 +761,7 @@ const overviewView = (): string => {
         <article><span>Ready items</span><strong>${ready}</strong><small>${drafts} drafts still being prepared</small></article>
         <article><span>Cover letters</span><strong>${letters.loaded ? letters.total : "—"}</strong><button type="button" data-admin-view="cover-letters">${letters.loaded ? `${letters.drafts} drafts · ${letters.final} final` : "Open workspace"}</button></article>
         <article class="${trash ? "has-warning" : ""}"><span>Trash</span><strong>${trash}</strong><button type="button" data-admin-view="trash">Review trash</button></article>
+        <article class="${adminSchemaHealth.healthy ? "" : "has-warning"}"><span>Database schema</span><strong>${adminSchemaHealth.healthy ? "Current" : "Update"}</strong><small>${escapeHtml(adminSchemaHealth.version)}</small></article>
       </div>
       <div class="admin-overview-grid">
         <section class="admin-overview-card admin-overview-card--attention${needsAttention.length ? "" : " is-empty"}"><div class="admin-card-heading"><div><h2>Needs attention</h2><p>Draft and archived content that is not public.</p></div><span>${needsAttention.length}</span></div>
@@ -814,6 +876,7 @@ const loadProjects = async (): Promise<void> => {
 };
 
 const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
+  if (dirtyMediaIds.size) throw new Error("Save the edited media metadata before saving project details.");
   const form = new FormData(formElement);
   const current = projects.find((item) => item.id === String(form.get("id"))) ?? selectedProject ?? blankProject();
   const nameEn = String(form.get("name_en") ?? "").trim();
@@ -831,6 +894,12 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
   const roleVi = String(form.get("role_vi") ?? "").trim();
   const summaryEn = String(form.get("summary_en") ?? "").trim();
   const summaryVi = String(form.get("summary_vi") ?? "").trim();
+  const challengeEn = String(form.get("challenge_en") ?? "").trim();
+  const challengeVi = String(form.get("challenge_vi") ?? "").trim();
+  const approachEn = String(form.get("approach_en") ?? "").trim();
+  const approachVi = String(form.get("approach_vi") ?? "").trim();
+  const outcomeEn = String(form.get("outcome_en") ?? "").trim();
+  const outcomeVi = String(form.get("outcome_vi") ?? "").trim();
   const payload: AdminProjectRow = {
     ...current,
     id: String(form.get("id")),
@@ -840,12 +909,17 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     location: { en: String(form.get("location_en") ?? "").trim(), vi: String(form.get("location_vi") ?? "").trim() },
     role: roleEn || roleVi ? { en: roleEn, vi: roleVi } : null,
     summary: summaryEn || summaryVi ? { en: summaryEn, vi: summaryVi } : null,
+    challenge: challengeEn || challengeVi ? { en: challengeEn, vi: challengeVi } : null,
+    approach: approachEn || approachVi ? { en: approachEn, vi: approachVi } : null,
+    outcome: outcomeEn || outcomeVi ? { en: outcomeEn, vi: outcomeVi } : null,
     start_date: String(form.get("start_date") ?? "").trim() || null,
     end_date: isCurrent ? null : endDate,
     is_current: isCurrent,
     responsibilities,
     technologies: String(form.get("technologies") ?? "").split(",").map((item) => item.trim()).filter(Boolean),
   };
+  const readiness = readinessFor("project", payload);
+  const nextStatus: PublicationStatus = payload.status === "published" && readiness.errors.length ? "draft" : payload.status;
   const projectPayload = {
     id: payload.id,
     slug: payload.slug,
@@ -853,12 +927,16 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     location: payload.location,
     role: payload.role,
     summary: payload.summary,
+    challenge: payload.challenge,
+    approach: payload.approach,
+    outcome: payload.outcome,
     start_date: payload.start_date,
     end_date: payload.end_date,
     is_current: payload.is_current,
     year: payload.year,
     responsibilities: payload.responsibilities,
     technologies: payload.technologies,
+    status: nextStatus,
   };
   let { error } = await supabase.from("projects").upsert({ ...projectPayload, youtube_url: payload.youtube_url });
   if (missingYouTubeColumn(error, "projects")) {
@@ -866,14 +944,16 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     ({ error } = await supabase.from("projects").upsert(projectPayload));
   }
   if (error) throw error;
-  adminFormDirty = false;
+  contentEditorDirty = false;
+  syncContentDirtyState();
   await loadProjects();
   selectedProject = projects.find((item) => item.id === payload.id) ?? payload;
   dashboardView();
-  message("Project saved. Status was not changed.", "success");
+  message(nextStatus !== payload.status ? "Project saved and returned to Draft because required Ready checks no longer pass. Existing releases are unchanged." : "Project saved. Existing Website, CV and Portfolio releases are unchanged until republished.", "success");
 };
 
 const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
+  if (dirtyMediaIds.size) throw new Error("Save the edited media metadata before saving tool details.");
   const form = new FormData(formElement);
   const current = tools.find((item) => item.id === String(form.get("id"))) ?? selectedTool ?? blankTool();
   const name = formText(form, "name");
@@ -892,6 +972,8 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     benefit: benefitEn || benefitVi ? { en: benefitEn, vi: benefitVi } : null,
     technologies: commaList(formText(form, "technologies")),
   };
+  const readiness = readinessFor("tool", payload);
+  const nextStatus: PublicationStatus = payload.status === "published" && readiness.errors.length ? "draft" : payload.status;
   const toolPayload = {
     id: payload.id,
     slug: payload.slug,
@@ -900,6 +982,7 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     solution: payload.solution,
     benefit: payload.benefit,
     technologies: payload.technologies,
+    status: nextStatus,
   };
   let { error } = await supabase.from("automation_tools").upsert({ ...toolPayload, youtube_url: payload.youtube_url });
   if (missingYouTubeColumn(error, "automation_tools")) {
@@ -907,12 +990,13 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     ({ error } = await supabase.from("automation_tools").upsert(toolPayload));
   }
   if (error) throw error;
-  adminFormDirty = false;
+  contentEditorDirty = false;
+  syncContentDirtyState();
   await loadProjects();
   selectedTool = tools.find((item) => item.id === payload.id) ?? payload;
   selectedItemType = "tool";
   dashboardView();
-  message("Tool saved. Status was not changed.", "success");
+  message(nextStatus !== payload.status ? "Tool saved and returned to Draft because required Ready checks no longer pass. Existing releases are unchanged." : "Tool saved. Existing Website, CV and Portfolio releases are unchanged until republished.", "success");
 };
 
 const moveSelectedToTrash = async (): Promise<void> => {
@@ -920,6 +1004,7 @@ const moveSelectedToTrash = async (): Promise<void> => {
   if (!selected) return;
   if (!selected.persisted) {
     clearPendingMedia();
+    resetContentDirtyState();
     if (selected.type === "project") selectedProject = null;
     else selectedTool = null;
     dashboardView();
@@ -931,11 +1016,12 @@ const moveSelectedToTrash = async (): Promise<void> => {
   const { error } = await supabase.rpc("move_admin_item_to_trash", { target_type: selected.type, target_id: id });
   if (error) throw error;
   clearPendingMedia();
+  resetContentDirtyState();
   selectedProject = null;
   selectedTool = null;
   await loadProjects();
   dashboardView();
-  message(`${selected.type === "project" ? "Project" : "Tool"} moved to Trash. Republish the CV if this item exists in the current public release.`, "success");
+  message(`${selected.type === "project" ? "Project" : "Tool"} moved to Trash. Existing Website, CV and Portfolio releases remain unchanged until you republish them.`, "success");
 };
 
 const restoreTrashItem = async (type: AdminItemType, id: string): Promise<void> => {
@@ -961,24 +1047,38 @@ const permanentlyDeleteTrashItem = async (type: AdminItemType, id: string): Prom
   const media = type === "project"
     ? projects.find((project) => project.id === id)?.project_images ?? []
     : tools.find((tool) => tool.id === id)?.tool_images ?? [];
-  const paths = media.map((entry) => entry.storage_path);
-  if (paths.length) {
-    const { error: storageError } = await supabase.storage.from(supabaseConfig.storageBucket).remove(paths);
-    if (storageError) throw new Error(`Storage cleanup failed, so the record was kept in Trash: ${storageError.message}`);
-  }
+  const paths = media.flatMap((entry) => [entry.storage_path, ...(entry.project_image_crops ?? []).map((crop) => crop.storage_path)]);
   const { error } = await supabase.rpc("purge_admin_item", { target_type: type, target_id: id });
   if (error) throw error;
+  let cleanup = { removed: [] as string[], retained: [] as string[] };
+  let cleanupWarning = "";
+  try {
+    if (paths.length) cleanup = await removeUnreferencedStoragePaths(paths);
+  } catch (cleanupError) {
+    cleanupWarning = ` Storage cleanup was deferred: ${cleanupError instanceof Error ? cleanupError.message : "unknown error"}`;
+  }
   if (type === "project" && selectedProject?.id === id) selectedProject = null;
   if (type === "tool" && selectedTool?.id === id) selectedTool = null;
   await loadProjects();
   dashboardView();
-  message(`${type === "project" ? "Project" : "Tool"} permanently deleted.`, "success");
+  message(`${type === "project" ? "Project" : "Tool"} permanently deleted.${cleanup.retained.length ? ` ${cleanup.retained.length} media asset${cleanup.retained.length === 1 ? " was" : "s were"} retained because a release still references them.` : ""}${cleanupWarning}`, "success");
 };
 
 const changeSelectedStatus = async (type: AdminItemType, next: PublicationStatus): Promise<void> => {
   const id = type === "project" ? selectedProject?.id : selectedTool?.id;
   if (!id) return;
-  if (next === "published" && !(await confirmAdmin({ eyebrow: "Content status", title: `Mark this ${type} as Ready?`, message: "It will become available for Website, CV and Portfolio selection.", confirmLabel: "Mark ready" }))) return;
+  if (adminFormDirty) throw new Error("Save or discard the current editor and media changes before changing status.");
+  if (next === "published") {
+    const item = type === "project" ? selectedProject : selectedTool;
+    if (!item) return;
+    const validation = readinessFor(type, item);
+    if (validation.errors.length) {
+      activeEditorTab = "overview";
+      dashboardView();
+      throw new Error(`Cannot mark Ready: ${validation.errors.slice(0, 3).join(" ")}${validation.errors.length > 3 ? ` (+${validation.errors.length - 3} more)` : ""}`);
+    }
+    if (!(await confirmAdmin({ eyebrow: "Content status", title: `Mark this ${type} as Ready?`, message: validation.warnings.length ? `Required checks passed. ${validation.warnings.length} recommendation${validation.warnings.length === 1 ? " remains" : "s remain"}; you can still mark it Ready.` : "It will become available for Website, CV and Portfolio selection.", confirmLabel: "Mark ready" }))) return;
+  }
   const table = type === "project" ? "projects" : "automation_tools";
   const { error } = await supabase.from(table).update({ status: next }).eq("id", id).is("deleted_at", null);
   if (error) throw error;
@@ -990,6 +1090,7 @@ const changeSelectedStatus = async (type: AdminItemType, next: PublicationStatus
 const clearPendingMedia = (): void => {
   pendingMedia.forEach((item) => URL.revokeObjectURL(item.previewUrl));
   pendingMedia = [];
+  syncContentDirtyState();
 };
 
 const renderUploadQueue = (): void => {
@@ -1006,7 +1107,10 @@ const renderUploadQueue = (): void => {
       <div class="admin-media-row__details"><strong title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</strong><small>${formatMediaType(item.file.type)} · ${formatMediaSize(item.file.size)}</small></div>
       <div class="admin-media-row__fields admin-media-row__fields--pending">
         <label><span>Use as</span><select data-pending-kind><option value="cover" ${item.kind === "cover" ? "selected" : ""}>Cover</option><option value="gallery" ${item.kind === "gallery" ? "selected" : ""}>Gallery</option></select></label>
-        <label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt)}" data-pending-alt></label>
+        <label><span>Alt text (EN)</span><input value="${escapeHtml(item.altEn)}" data-pending-alt-en></label>
+        <label><span>Alt text (VI)</span><input value="${escapeHtml(item.altVi)}" data-pending-alt-vi></label>
+        <label><span>Caption (EN)</span><input value="${escapeHtml(item.captionEn)}" data-pending-caption-en></label>
+        <label><span>Caption (VI)</span><input value="${escapeHtml(item.captionVi)}" data-pending-caption-vi></label>
       </div>
       <div class="admin-media-row__actions"><button type="button" class="admin-media-action--icon" data-pending-move="up" ${index === 0 ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button><button type="button" class="admin-media-action--icon" data-pending-move="down" ${index === pendingMedia.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button><button type="button" class="admin-danger" data-pending-remove>Remove</button></div>
     </article>`).join("")}</div>` : '<p class="admin-empty">Selected images will appear here before upload.</p>';
@@ -1059,11 +1163,14 @@ const selectedMediaOwner = (type: AdminItemType): SelectedMediaOwner | null => {
   return null;
 };
 
+const ensureEditorSavedBeforeImmediateMutation = (): void => {
+  if (contentEditorDirty) throw new Error("Save the content form before changing media or shared order.");
+  if (dirtyMediaIds.size) throw new Error("Save the edited media metadata before changing media or shared order.");
+};
+
 const persistMediaOrder = async (type: AdminItemType, ordered: Array<{ id: string }>): Promise<void> => {
-  const table = type === "project" ? "project_images" : "tool_images";
-  const results = await Promise.all(ordered.map((item, index) => supabase.from(table).update({ display_order: index + 1 }).eq("id", item.id)));
-  const failure = results.find((result) => result.error)?.error;
-  if (failure) throw failure;
+  const { error } = await supabase.rpc("reorder_admin_media", { target_type: type, ordered_ids: ordered.map((item) => item.id) });
+  if (error) throw error;
 };
 
 const masterOrder = (type: AdminItemType): Array<AdminProjectRow | AdminToolRow> =>
@@ -1072,15 +1179,13 @@ const masterOrder = (type: AdminItemType): Array<AdminProjectRow | AdminToolRow>
     .sort((left, right) => left.display_order - right.display_order);
 
 const persistMasterOrder = async (type: AdminItemType, ordered: Array<AdminProjectRow | AdminToolRow>): Promise<void> => {
-  const table = type === "project" ? "projects" : "automation_tools";
-  const results = await Promise.all(ordered.map((item, index) => supabase.from(table).update({ display_order: index + 1 }).eq("id", item.id)));
-  const failure = results.find((result) => result.error)?.error;
-  if (failure) throw failure;
+  const { error } = await supabase.rpc("reorder_admin_content", { target_type: type, ordered_ids: ordered.map((item) => item.id) });
+  if (error) throw error;
 };
 
 const reorderMasterItem = async (type: AdminItemType, id: string, movement: ReorderMovement): Promise<void> => {
   if (reorderBusy) return;
-  if (adminFormDirty && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Reorder content?", message: "Your current editor changes will remain open while the shared order is updated.", confirmLabel: "Reorder", cancelLabel: "Keep editing" }))) return;
+  ensureEditorSavedBeforeImmediateMutation();
   const ordered = masterOrder(type);
   const index = ordered.findIndex((item) => item.id === id);
   if (index < 0) return;
@@ -1101,7 +1206,7 @@ const reorderMasterItem = async (type: AdminItemType, id: string, movement: Reor
   reorderBusy = true;
   try {
     await persistMasterOrder(type, next);
-    await loadProjects();
+    [, adminSchemaHealth] = await Promise.all([loadProjects(), loadAdminSchemaHealth()]);
     pendingCollectionReveal = {
       view: type === "project" ? "projects" : "tools",
       itemId: id,
@@ -1109,6 +1214,7 @@ const reorderMasterItem = async (type: AdminItemType, id: string, movement: Reor
       focus: movement === "up" || movement === "down" ? movement : movement === "first" || movement === "last" ? "more" : "select",
     };
     dashboardView();
+    if (!adminSchemaHealth.healthy) message(adminSchemaHealth.message, "error");
     const position = movement === "first" ? " moved to first position" : movement === "last" ? " moved to last position" : " order updated";
     message(`${type === "project" ? "Project" : "Tool"}${position}.`, "success");
   } finally {
@@ -1125,14 +1231,27 @@ const bindPendingMedia = (): void => {
       pendingMedia = pendingMedia.map((item) => ({ ...item, kind: item.id === id ? kind : kind === "cover" ? "gallery" : item.kind }));
       renderUploadQueue();
     });
-    card.querySelector<HTMLInputElement>("[data-pending-alt]")?.addEventListener("input", (event) => {
+    card.querySelector<HTMLInputElement>("[data-pending-alt-en]")?.addEventListener("input", (event) => {
       const item = pendingMedia.find((entry) => entry.id === id);
-      if (item) item.alt = (event.currentTarget as HTMLInputElement).value;
+      if (item) item.altEn = (event.currentTarget as HTMLInputElement).value;
+    });
+    card.querySelector<HTMLInputElement>("[data-pending-alt-vi]")?.addEventListener("input", (event) => {
+      const item = pendingMedia.find((entry) => entry.id === id);
+      if (item) item.altVi = (event.currentTarget as HTMLInputElement).value;
+    });
+    card.querySelector<HTMLInputElement>("[data-pending-caption-en]")?.addEventListener("input", (event) => {
+      const item = pendingMedia.find((entry) => entry.id === id);
+      if (item) item.captionEn = (event.currentTarget as HTMLInputElement).value;
+    });
+    card.querySelector<HTMLInputElement>("[data-pending-caption-vi]")?.addEventListener("input", (event) => {
+      const item = pendingMedia.find((entry) => entry.id === id);
+      if (item) item.captionVi = (event.currentTarget as HTMLInputElement).value;
     });
     card.querySelector("[data-pending-remove]")?.addEventListener("click", () => {
       const item = pendingMedia.find((entry) => entry.id === id);
       if (item) URL.revokeObjectURL(item.previewUrl);
       pendingMedia = pendingMedia.filter((entry) => entry.id !== id);
+      syncContentDirtyState();
       renderUploadQueue();
     });
     card.querySelectorAll<HTMLElement>("[data-pending-move]").forEach((button) => button.addEventListener("click", () => {
@@ -1152,9 +1271,10 @@ const choosePendingMedia = (files: FileList, type: AdminItemType): void => {
   const owner = selectedMediaOwner(type);
   const hasCover = owner?.media.some((item) => item.kind === "cover") ?? false;
   pendingMedia = selected.map((file, index) => ({
-    id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file), alt: owner?.name ?? "",
+    id: crypto.randomUUID(), file, previewUrl: URL.createObjectURL(file), altEn: owner?.name ?? "", altVi: "", captionEn: "", captionVi: "",
     kind: !hasCover && index === 0 ? "cover" : "gallery",
   }));
+  syncContentDirtyState();
   renderUploadQueue();
 };
 
@@ -1163,6 +1283,7 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
   const owner = selectedMediaOwner(type);
   const persisted = type === "project" ? projects.some((item) => item.id === owner?.id) : tools.some((item) => item.id === owner?.id);
   if (!owner || !persisted) throw new Error(`Save or select a ${type} before uploading.`);
+  ensureEditorSavedBeforeImmediateMutation();
   if (!pendingMedia.length) throw new Error("Choose one or more images.");
   const submitButton = formElement.querySelector<HTMLButtonElement>("[data-upload-submit]");
   const failures: Array<{ name: string; reason: string }> = [];
@@ -1180,7 +1301,8 @@ const uploadImages = async (formElement: HTMLFormElement): Promise<void> => {
         const { error: uploadError } = await supabase.storage.from(supabaseConfig.storageBucket).upload(path, item.file, { contentType: item.file.type, upsert: false });
         if (uploadError) throw uploadError;
         const currentMaxOrder = Math.max(0, ...owner.media.map((media) => media.display_order));
-        const { data, error: metadataError } = await supabase.from(owner.table).insert({ [owner.foreignKey]: owner.id, storage_path: path, alt: { en: item.alt.trim(), vi: "" }, kind: "gallery", display_order: currentMaxOrder + index + 1, mime_type: item.file.type, file_size: item.file.size }).select("id").single();
+        const caption = item.captionEn.trim() || item.captionVi.trim() ? { en: item.captionEn.trim(), vi: item.captionVi.trim() } : null;
+        const { data, error: metadataError } = await supabase.from(owner.table).insert({ [owner.foreignKey]: owner.id, storage_path: path, alt: { en: item.altEn.trim(), vi: item.altVi.trim() }, caption, kind: "gallery", display_order: currentMaxOrder + index + 1, mime_type: item.file.type, file_size: item.file.size }).select("id").single();
         if (metadataError) { await supabase.storage.from(supabaseConfig.storageBucket).remove([path]); throw metadataError; }
         const uploadedId = String(data.id);
         uploadedMediaIds.push(uploadedId);
@@ -1220,11 +1342,14 @@ const refreshSelectedMediaOwner = async (type: AdminItemType, ownerId: string): 
 };
 
 const setMediaCover = async (type: AdminItemType, mediaId: string): Promise<void> => {
+  ensureEditorSavedBeforeImmediateMutation();
   const owner = selectedMediaOwner(type);
   if (!owner) return;
   const ordered = orderedProjectMedia(owner.media);
   const cover = ordered.find((item) => item.id === mediaId);
   if (!cover) return;
+  const ownerIsReady = type === "project" ? selectedProject?.status === "published" : selectedTool?.status === "published";
+  if (ownerIsReady && !cover.alt.en.trim()) throw new Error("Add English alt text before using this image as the cover of a Ready item.");
   const { error } = await supabase.rpc(owner.coverRpc, { target_image_id: mediaId });
   if (error) throw error;
   await persistMediaOrder(type, [cover, ...ordered.filter((item) => item.id !== mediaId)]);
@@ -1270,15 +1395,33 @@ const downloadSavedMedia = async (type: AdminItemType, mediaId: string, button: 
 const saveMediaAlt = async (type: AdminItemType, card: HTMLElement): Promise<void> => {
   const owner = selectedMediaOwner(type);
   if (!owner || !card.dataset.mediaId) return;
-  const alt = card.querySelector<HTMLInputElement>("[data-media-alt]")?.value.trim() ?? "";
+  const alt = {
+    en: card.querySelector<HTMLInputElement>("[data-media-alt-en]")?.value.trim() ?? "",
+    vi: card.querySelector<HTMLInputElement>("[data-media-alt-vi]")?.value.trim() ?? "",
+  };
+  const captionValue = {
+    en: card.querySelector<HTMLInputElement>("[data-media-caption-en]")?.value.trim() ?? "",
+    vi: card.querySelector<HTMLInputElement>("[data-media-caption-vi]")?.value.trim() ?? "",
+  };
+  const caption = captionValue.en || captionValue.vi ? captionValue : null;
   const current = owner.media.find((item) => item.id === card.dataset.mediaId);
-  const { error } = await supabase.from(owner.table).update({ alt: { en: alt, vi: current?.alt.vi ?? "" } }).eq("id", card.dataset.mediaId);
+  const ownerIsReady = type === "project" ? selectedProject?.status === "published" : selectedTool?.status === "published";
+  if (ownerIsReady && current?.kind === "cover" && !alt.en) {
+    throw new Error("A Ready item must keep English alt text on its cover image. Return it to Draft first or add alt text.");
+  }
+  const { error } = await supabase.from(owner.table).update({ alt, caption }).eq("id", card.dataset.mediaId);
   if (error) throw error;
-  await refreshSelectedMediaOwner(type, owner.id);
-  message("Image alt text saved.", "success");
+  if (current) {
+    current.alt = alt;
+    current.caption = caption;
+  }
+  dirtyMediaIds.delete(card.dataset.mediaId);
+  syncContentDirtyState();
+  message("Image alt text and caption saved.", "success");
 };
 
 const moveSavedMedia = async (type: AdminItemType, mediaId: string, direction: "up" | "down"): Promise<void> => {
+  ensureEditorSavedBeforeImmediateMutation();
   const owner = selectedMediaOwner(type);
   if (!owner) return;
   const ordered = orderedProjectMedia(owner.media);
@@ -1293,17 +1436,25 @@ const moveSavedMedia = async (type: AdminItemType, mediaId: string, direction: "
 };
 
 const deleteSavedMedia = async (type: AdminItemType, mediaId: string): Promise<void> => {
+  ensureEditorSavedBeforeImmediateMutation();
   const owner = selectedMediaOwner(type);
   if (!owner) return;
   const media = owner.media.find((item) => item.id === mediaId);
-  if (!media || !(await confirmAdmin({ eyebrow: `${owner.label} media`, title: "Delete this image?", message: "The image record and its stored file will be removed.", confirmLabel: "Delete image", tone: "danger" }))) return;
+  const ownerIsReady = type === "project" ? selectedProject?.status === "published" : selectedTool?.status === "published";
+  if (ownerIsReady && media?.kind === "cover") throw new Error(`Return this ${type} to Draft before deleting its required cover image.`);
+  if (!media || !(await confirmAdmin({ eyebrow: `${owner.label} media`, title: "Delete this image?", message: "It will be removed from the draft. Stored files are retained automatically when a published release still references them.", confirmLabel: "Delete image", tone: "danger" }))) return;
   const { error: metadataError } = await supabase.from(owner.table).delete().eq("id", mediaId);
   if (metadataError) throw metadataError;
   const cropPaths = type === "project" ? (media.project_image_crops ?? []).map((crop) => crop.storage_path) : [];
-  const { error: storageError } = await supabase.storage.from(supabaseConfig.storageBucket).remove([media.storage_path, ...cropPaths]);
+  let cleanup = { removed: [] as string[], retained: [] as string[] };
+  let cleanupWarning = "";
+  try {
+    cleanup = await removeUnreferencedStoragePaths([media.storage_path, ...cropPaths]);
+  } catch (cleanupError) {
+    cleanupWarning = ` Storage cleanup was deferred: ${cleanupError instanceof Error ? cleanupError.message : "unknown error"}`;
+  }
   await refreshSelectedMediaOwner(type, owner.id);
-  if (storageError) throw new Error(`Image record deleted, but Storage cleanup failed: ${storageError.message}`);
-  message("Image deleted.", "success");
+  message(`Image deleted from the draft.${cleanup.retained.length ? " Its stored asset was retained because a release still references it." : ""}${cleanupWarning}`, "success");
 };
 
 const formText = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
@@ -1322,7 +1473,7 @@ const bindContentItemActions = (root: ParentNode = app): void => {
       contentStatusFilter = "all";
       contentSearch = "";
     }
-    adminFormDirty = false;
+    resetContentDirtyState();
     activeEditorTab = "overview";
     activeView = type === "project" ? "projects" : "tools";
     clearPendingMedia();
@@ -1453,7 +1604,7 @@ const bindDashboard = (): void => {
     clearPendingMedia();
     const nextView = button.dataset.adminView as AdminView;
     activeView = nextView;
-    adminFormDirty = false;
+    resetContentDirtyState();
     activeEditorTab = "overview";
     if (activeView === "projects") {
       selectedItemType = "project";
@@ -1503,12 +1654,8 @@ const bindDashboard = (): void => {
     });
   }));
   const markDirty = (): void => {
-    adminFormDirty = true;
-    const state = app.querySelector<HTMLElement>("[data-unsaved-state]");
-    if (state) {
-      state.textContent = "Unsaved changes";
-      state.dataset.dirty = "true";
-    }
+    contentEditorDirty = true;
+    syncContentDirtyState();
   };
   app.querySelectorAll<HTMLFormElement>("[data-project-form], [data-tool-form]").forEach((form) => {
     form.addEventListener("input", markDirty);
@@ -1525,10 +1672,20 @@ const bindDashboard = (): void => {
     const mediaId = card.dataset.mediaId;
     const type = card.closest<HTMLElement>("[data-media-owner]")?.dataset.mediaOwner as AdminItemType | undefined;
     if (!mediaId || !type) return;
+    card.querySelectorAll<HTMLInputElement>("[data-media-alt-en], [data-media-alt-vi], [data-media-caption-en], [data-media-caption-vi]").forEach((input) => input.addEventListener("input", () => {
+      dirtyMediaIds.add(mediaId);
+      syncContentDirtyState();
+    }));
     card.querySelector<HTMLButtonElement>("[data-media-download]")?.addEventListener("click", (event) => {
       void downloadSavedMedia(type, mediaId, event.currentTarget as HTMLButtonElement).catch((error: Error) => message(error.message, "error"));
     });
     card.querySelector<HTMLButtonElement>("[data-media-crops]")?.addEventListener("click", (event) => {
+      try {
+        ensureEditorSavedBeforeImmediateMutation();
+      } catch (error) {
+        message(error instanceof Error ? error.message : "Save pending changes first.", "error");
+        return;
+      }
       const project = selectedProject;
       const media = project?.project_images.find((item) => item.id === mediaId);
       if (!project || !media || media.kind !== "cover") return;
@@ -1594,11 +1751,11 @@ const bindDashboard = (): void => {
   });
   app.querySelector("[data-new-project]")?.addEventListener("click", async () => {
     if (adminFormDirty && !(await confirmAdmin({ eyebrow: "New project", title: "Discard current changes?", message: "A new project editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new project", cancelLabel: "Keep editing", tone: "danger" }))) return;
-    clearPendingMedia(); adminFormDirty = false; activeEditorTab = "overview"; activeView = "projects"; selectedItemType = "project"; selectedTool = null; selectedProject = blankProject(); dashboardView();
+    clearPendingMedia(); resetContentDirtyState(); activeEditorTab = "overview"; activeView = "projects"; selectedItemType = "project"; selectedTool = null; selectedProject = blankProject(); dashboardView();
   });
   app.querySelector("[data-new-tool]")?.addEventListener("click", async () => {
     if (adminFormDirty && !(await confirmAdmin({ eyebrow: "New automation tool", title: "Discard current changes?", message: "A new tool editor will open and the current unsaved changes will be lost.", confirmLabel: "Create new tool", cancelLabel: "Keep editing", tone: "danger" }))) return;
-    clearPendingMedia(); adminFormDirty = false; activeEditorTab = "overview"; activeView = "tools"; selectedItemType = "tool"; selectedProject = null; selectedTool = blankTool(); dashboardView();
+    clearPendingMedia(); resetContentDirtyState(); activeEditorTab = "overview"; activeView = "tools"; selectedItemType = "tool"; selectedProject = null; selectedTool = blankTool(); dashboardView();
   });
   app.querySelector("[data-delete-selected]")?.addEventListener("click", () => { void moveSelectedToTrash().catch((error: Error) => message(error.message, "error")); });
   app.querySelectorAll<HTMLButtonElement>("[data-content-filter]").forEach((button) => button.addEventListener("click", () => { contentFilter = button.dataset.contentFilter as ContentFilter; resetCurrentCollectionScroll(); dashboardView(); }));
@@ -1619,6 +1776,7 @@ const bindDashboard = (): void => {
   app.querySelector<HTMLFormElement>("[data-project-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-tool-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void saveToolForm(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   app.querySelector<HTMLFormElement>("[data-upload-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void uploadImages(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
+  if (pendingMedia.length) renderUploadQueue();
   if (activeView === "cover-letters") {
     bindCoverLetterWorkspace(app, {
       rerender: dashboardView,

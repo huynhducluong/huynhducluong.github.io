@@ -44,20 +44,26 @@ export const renderMedia = (
   return `<img class="${className}" src="${escapeHtml(source)}" alt="${localized(media.alt, language)}" loading="lazy">`;
 };
 
+export const renderMediaFigure = (
+  media: PortfolioMedia,
+  language: Language,
+  className = "detail-gallery__image",
+): string => `<figure>${renderMedia(media, language, className)}${media.caption && localized(media.caption, language) ? `<figcaption>${localized(media.caption, language)}</figcaption>` : ""}</figure>`;
+
 export const renderProjectCard = (
   project: PortfolioProject,
   language: Language,
 ): string => `
   <article class="listing-card">
-    <a class="listing-card__media" href="${projectUrl(project.slug)}">
+    <a class="listing-card__media" href="${projectUrl(project.slug, language)}">
       ${renderMedia(project.images[0], language, "listing-card__image")}
     </a>
     <div class="listing-card__body">
       ${localized(project.location, language) ? `<p class="listing-card__eyebrow">${localized(project.location, language)}</p>` : ""}
-      <h2><a href="${projectUrl(project.slug)}">${localized(project.name, language)}</a></h2>
+      <h2><a href="${projectUrl(project.slug, language)}">${localized(project.name, language)}</a></h2>
       ${project.summary ? `<p>${localized(project.summary, language)}</p>` : ""}
       <ul class="tag-list">${renderTags(project.technologies)}</ul>
-      <a class="text-link" href="${projectUrl(project.slug)}">${copy[language].viewProject} →</a>
+      <a class="text-link" href="${projectUrl(project.slug, language)}">${copy[language].viewProject} →</a>
     </div>
   </article>`;
 
@@ -65,9 +71,9 @@ export const renderToolCard = (tool: PortfolioTool, language: Language): string 
   <article class="listing-card listing-card--tool">
     <div class="listing-card__body">
       <p class="listing-card__eyebrow">${copy[language].automation}</p>
-      <h2><a href="${toolUrl(tool.slug)}">${escapeHtml(tool.name)}</a></h2>
+      <h2><a href="${toolUrl(tool.slug, language)}">${escapeHtml(tool.name)}</a></h2>
       <p>${localized(tool.solution, language)}</p>
       <ul class="tag-list">${renderTags(tool.technologies)}</ul>
-      <a class="text-link" href="${toolUrl(tool.slug)}">${copy[language].viewTool} →</a>
+      <a class="text-link" href="${toolUrl(tool.slug, language)}">${copy[language].viewTool} →</a>
     </div>
   </article>`;

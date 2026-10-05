@@ -15,6 +15,7 @@ import {
   localize,
   type Language,
 } from "./shared/format";
+import { readWebsiteLanguage, withWebsiteLanguage } from "./site/shell";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 
@@ -315,7 +316,7 @@ const renderPage = (language: Language): void => {
               )
               .join("")}
           </div>
-          <a class="section-more" href="${import.meta.env.BASE_URL}projects/">${text.allProjects} →</a>
+          <a class="section-more" href="${withWebsiteLanguage(`${import.meta.env.BASE_URL}projects/`, language)}">${text.allProjects} →</a>
         </div>
       </section>
 
@@ -348,7 +349,7 @@ const renderPage = (language: Language): void => {
               )
               .join("")}
           </div>
-          <a class="section-more" href="${import.meta.env.BASE_URL}tools/">${text.allTools} →</a>
+          <a class="section-more" href="${withWebsiteLanguage(`${import.meta.env.BASE_URL}tools/`, language)}">${text.allTools} →</a>
         </div>
       </section>
 
@@ -378,6 +379,10 @@ const renderPage = (language: Language): void => {
     "click",
     () => {
       currentLanguage = language === "en" ? "vi" : "en";
+      const url = new URL(window.location.href);
+      if (currentLanguage === "vi") url.searchParams.set("lang", "vi");
+      else url.searchParams.delete("lang");
+      window.history.replaceState({}, "", url);
       renderPage(currentLanguage);
     },
   );
@@ -389,6 +394,7 @@ const initialize = async (): Promise<void> => {
   const previewReceiver = wantsPreview ? createPreviewReceiver<WebsitePreviewData>("website") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
+  currentLanguage = readWebsiteLanguage(currentLanguage);
   websiteData = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
   renderPage(currentLanguage);
   if (adminPreview) {

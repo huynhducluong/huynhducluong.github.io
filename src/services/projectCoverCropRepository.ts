@@ -1,6 +1,7 @@
 import { supabaseConfig } from "../config/supabase";
 import type { PortfolioLayout } from "../types/portfolio";
 import { supabase } from "./supabaseClient";
+import { removeUnreferencedStoragePaths } from "./adminSystemRepository";
 
 export interface ProjectImageCropRow {
   id: string;
@@ -41,7 +42,14 @@ export const saveProjectCoverCrops = async (
 ): Promise<ProjectImageCropRow[]> => {
   const uploadedPaths: string[] = [];
   try {
-    const rows = [];
+    const layouts = outputs.map((output) => output.layout);
+    const { data: existing, error: existingError } = await supabase
+      .from("project_image_crops")
+      .select("layout,storage_path")
+      .eq("project_image_id", imageId)
+      .in("layout", layouts);
+    if (existingError) throw existingError;
+    const rows: Array<Omit<ProjectImageCropRow, "id">> = [];
     for (const output of outputs) {
       const storagePath = `project-cover-crops/${projectId}/${imageId}/${output.layout}/${crypto.randomUUID()}.webp`;
       const { error } = await supabase.storage
@@ -69,6 +77,16 @@ export const saveProjectCoverCrops = async (
       .upsert(rows, { onConflict: "project_image_id,layout" })
       .select("id,project_image_id,layout,storage_path,crop_x,crop_y,crop_width,crop_height,width,height,mime_type,file_size");
     if (error) throw error;
+    const replacedPaths = (existing ?? [])
+      .map((item) => String(item.storage_path))
+      .filter((path) => !rows.some((row) => row.storage_path === path));
+    if (replacedPaths.length) {
+      try {
+        await removeUnreferencedStoragePaths(replacedPaths);
+      } catch {
+        // The new crop rows are already valid. Leave older files for the next safe cleanup pass.
+      }
+    }
     return data as ProjectImageCropRow[];
   } catch (error) {
     if (uploadedPaths.length) await supabase.storage.from(supabaseConfig.storageBucket).remove(uploadedPaths);

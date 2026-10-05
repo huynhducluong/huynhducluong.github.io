@@ -105,7 +105,7 @@ export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {
   const [contentResult, professional, projectResult, toolResult] = await Promise.all([
     supabase.from("website_content").select("*").eq("id", "primary").maybeSingle(),
     loadProfessionalProfile(),
-    supabase.from("projects").select("*, project_images(*)").is("deleted_at", null).order("display_order"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("display_order"),
     supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("display_order"),
   ]);
   if (contentResult.error) throw contentResult.error;
@@ -171,8 +171,7 @@ export const saveWebsiteContent = async (content: WebsiteContent): Promise<void>
   if (error) throw error;
 };
 
-export const publishWebsiteRelease = async (): Promise<void> => {
-  const draft = await loadWebsiteDraftData();
+export const websiteReleasePayload = (draft: WebsiteRuntimeData): WebsiteRuntimeData => {
   const payload: WebsiteRuntimeData = {
     content: draft.content,
     professional: draft.professional,
@@ -183,13 +182,14 @@ export const publishWebsiteRelease = async (): Promise<void> => {
       .filter((item) => item.websiteVisible !== false && item.status === "published")
       .sort((left, right) => left.displayOrder - right.displayOrder),
   };
-  const { data: authData, error: authError } = await supabase.auth.getUser();
-  if (authError) throw authError;
-  if (!authData.user) throw new Error("Sign in before publishing the website.");
-  const { error } = await supabase.from("website_releases").insert({
-    version: payload.content.version,
-    payload,
-    published_by: authData.user.id,
+  return payload;
+};
+
+export const publishWebsiteRelease = async (draft: WebsiteRuntimeData): Promise<void> => {
+  const payload = websiteReleasePayload(draft);
+  const { error } = await supabase.rpc("publish_website", {
+    p_version: payload.content.version,
+    p_payload: payload,
   });
   if (error) throw error;
 };

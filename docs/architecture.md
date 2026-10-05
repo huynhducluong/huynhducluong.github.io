@@ -28,15 +28,21 @@ Legacy Project/Tool distribution columns remain readable for migration and old-r
 
 1. Create/import shared Project or Tool content: status is `draft`.
 2. Edit text and upload sanitized public-ready images.
-3. Mark the shared item **Ready**.
+3. Resolve the Admin Ready check, then mark the shared item **Ready**. Required English detail content, technologies, a cover image and cover alt text block Ready; Vietnamese completeness and project crops are recommendations.
 4. Select Ready items per channel; change their shared order once in Projects or Automation Tools.
 5. Review that output's preview and publish its release.
 
 Returning a shared item to Draft prevents it from being selected in new output drafts. Already published releases remain unchanged until that output is published again.
 
+Project/Tool content saves automatically return a Ready item to Draft when a required Ready check no longer passes. Website publishing runs its own preflight against Website/Profile fields and every selected Project/Tool. Website publish, master/media reorder and Cover Letter draft/evidence writes use database transactions so partial multi-row state cannot be committed.
+
+## Media lifecycle
+
+Release JSON stores immutable content plus versioned Storage paths. Removing media from a draft deletes its editable metadata, but the stored object is retained whenever any Website, CV or Portfolio release still references that path. Crop replacement and Trash purging use the same release-reference check. Unreferenced objects may be removed immediately; referenced objects remain available so historical and active releases never lose their images.
+
 ## Admin preview contract
 
-- Website, CV and Portfolio previews exchange the latest unsaved form payload through a same-origin ready/rendered handshake. The iframe announces readiness after Admin authorization, so its first payload cannot be lost during asynchronous startup.
+- Website, Project detail, Tool detail, CV and Portfolio previews exchange the latest unsaved form payload through a same-origin ready/rendered handshake. The iframe announces readiness after Admin authorization, so its first payload cannot be lost during asynchronous startup.
 - Professional Profile remains the shared data editor. CV and Portfolio drafts always inherit name, email, phone, photo and location from the saved Professional Profile, while each document owns its role-specific title and summary and can explicitly refresh those two fields from the shared profile. Portfolio cover and narrative copy uses the same EN/VI localized-text shape as Website content. CV Background is a read-only composition view that stores Experience, Education, Skill Group and Language order by ID; explicit sync refreshes its snapshot without discarding that order. Website, CV, Portfolio and Cover Letter previews stay in their own workspaces, and published releases remain frozen.
 - Project and automation-tool changes mark dependent workspaces stale. They reload on the next visit without discarding edits in another open workspace.
 - CV and Portfolio drafts compose current shared Project/Tool records with their saved document settings. Published releases remain immutable snapshots.

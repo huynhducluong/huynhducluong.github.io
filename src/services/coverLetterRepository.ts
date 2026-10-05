@@ -86,21 +86,6 @@ const toRow = (input: CoverLetterInput) => ({
   theme_accent: input.theme.accent,
 });
 
-const syncEvidence = async (letterId: string, input: CoverLetterInput): Promise<void> => {
-  const projectDelete = await supabase.from("cover_letter_projects").delete().eq("cover_letter_id", letterId);
-  if (projectDelete.error) throw projectDelete.error;
-  const toolDelete = await supabase.from("cover_letter_tools").delete().eq("cover_letter_id", letterId);
-  if (toolDelete.error) throw toolDelete.error;
-  if (input.projectIds.length) {
-    const result = await supabase.from("cover_letter_projects").insert(input.projectIds.map((projectId, displayOrder) => ({ cover_letter_id: letterId, project_id: projectId, display_order: displayOrder })));
-    if (result.error) throw result.error;
-  }
-  if (input.toolIds.length) {
-    const result = await supabase.from("cover_letter_tools").insert(input.toolIds.map((toolId, displayOrder) => ({ cover_letter_id: letterId, tool_id: toolId, display_order: displayOrder })));
-    if (result.error) throw result.error;
-  }
-};
-
 export const listCoverLetters = async (): Promise<CoverLetterRecord[]> => {
   const { data, error } = await supabase.from("cover_letters").select(selection).order("updated_at", { ascending: false });
   if (error) throw error;
@@ -114,32 +99,39 @@ export const getCoverLetter = async (id: string): Promise<CoverLetterRecord | nu
 };
 
 export const createCoverLetter = async (input: CoverLetterInput): Promise<CoverLetterRecord> => {
-  const { data, error } = await supabase.from("cover_letters").insert(toRow(input)).select("id").single();
+  const { data, error } = await supabase.rpc("create_cover_letter_draft", {
+    p_letter: toRow(input),
+    p_project_ids: input.projectIds,
+    p_tool_ids: input.toolIds,
+  });
   if (error) throw error;
-  const id = String(data.id);
-  try {
-    await syncEvidence(id, input);
-  } catch (syncError) {
-    await supabase.from("cover_letters").delete().eq("id", id);
-    throw syncError;
-  }
+  const id = String(data);
   const record = await getCoverLetter(id);
   if (!record) throw new Error("The cover letter was created but could not be reloaded.");
   return record;
 };
 
 export const updateCoverLetterDraft = async (id: string, input: CoverLetterInput): Promise<CoverLetterRecord> => {
-  const { error } = await supabase.from("cover_letters").update(toRow(input)).eq("id", id).eq("status", "draft");
+  const { error } = await supabase.rpc("save_cover_letter_draft", {
+    p_letter_id: id,
+    p_letter: toRow(input),
+    p_project_ids: input.projectIds,
+    p_tool_ids: input.toolIds,
+  });
   if (error) throw error;
-  await syncEvidence(id, input);
   const record = await getCoverLetter(id);
   if (!record) throw new Error("The cover letter could not be reloaded.");
   return record;
 };
 
 export const finalizeCoverLetter = async (id: string, input: CoverLetterInput, sender: CoverLetterSenderSnapshot): Promise<CoverLetterRecord> => {
-  const saved = await updateCoverLetterDraft(id, input);
-  const { error } = await supabase.from("cover_letters").update({ status: "final", sender_snapshot: sender, finalized_at: new Date().toISOString() }).eq("id", saved.id).eq("status", "draft");
+  const { error } = await supabase.rpc("finalize_cover_letter_draft", {
+    p_letter_id: id,
+    p_letter: toRow(input),
+    p_project_ids: input.projectIds,
+    p_tool_ids: input.toolIds,
+    p_sender: sender,
+  });
   if (error) throw error;
   const record = await getCoverLetter(id);
   if (!record) throw new Error("The finalized cover letter could not be reloaded.");

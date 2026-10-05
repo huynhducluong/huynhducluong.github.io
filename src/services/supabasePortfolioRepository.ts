@@ -175,7 +175,7 @@ export const toolFromRow = (row: ToolRow): PortfolioTool => ({
   cvOrder: row.cv_order ?? 100,
 });
 
-const projectSelect = "*, project_images(*)";
+const projectSelect = "*, project_images(*, project_image_crops(*))";
 const toolSelect = "*, tool_images(*)";
 
 export const supabasePortfolioRepository: PortfolioRepository = {

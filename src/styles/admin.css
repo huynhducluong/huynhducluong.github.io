@@ -54,8 +54,8 @@ textarea { resize: vertical; }
 .admin-media-row__details small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-media-row__details strong { color: var(--admin-color-text); font-size: var(--admin-text-sm); }
 .admin-media-row__details small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); }
-.admin-media-row__fields { display: grid; min-width: 0; gap: .6rem; }
-.admin-media-row__fields--pending { grid-template-columns: 7.5rem minmax(10rem, 1fr); }
+.admin-media-row__fields { display: grid; min-width: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.admin-media-row__fields--pending { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .admin-media-row__fields label { min-width: 0; gap: .3rem; }
 .admin-media-row__fields label > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-media-row__fields :where(input, select) { min-height: 2.25rem; padding-block: .45rem; }
@@ -72,6 +72,13 @@ textarea { resize: vertical; }
 .admin-message[data-kind="error"] { color: var(--admin-color-danger); }
 .admin-message[data-kind="success"] { color: var(--admin-color-success); }
 .admin-empty { color: var(--color-text-muted); }
+.admin-readiness { border-left: 3px solid var(--admin-color-success); }
+.admin-readiness--blocked { border-left-color: var(--admin-color-danger); }
+.admin-readiness-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.admin-readiness-grid > div { min-width: 0; padding: .8rem; border-radius: .45rem; background: var(--admin-color-surface-subtle); }
+.admin-readiness-grid strong { display: block; margin-bottom: .45rem; font-size: var(--admin-text-sm); }
+.admin-readiness-grid ul { display: grid; gap: .3rem; margin: 0; padding-left: 1.1rem; color: var(--admin-color-text-muted); font-size: var(--admin-text-xs); line-height: 1.45; }
+.admin-readiness-ready { margin: 0; color: var(--admin-color-success); font-weight: 700; }
 .admin-trash-detail dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-4); }
 .admin-trash-detail dl > div { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-background); }
 .admin-trash-detail dt { color: var(--color-text-muted); font-size: var(--font-size-xs); font-weight: 800; text-transform: uppercase; }

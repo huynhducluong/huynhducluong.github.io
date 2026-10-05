@@ -14,6 +14,7 @@ import {
 import { archiveProfilePhoto, listProfilePhotos, renameProfilePhoto } from "../services/profilePhotoRepository";
 import { assetUrl, degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
+import { validateWebsitePublish } from "./contentValidation";
 import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfilePhotoAsset } from "../types/profilePhoto";
@@ -49,7 +50,7 @@ export type SiteWorkspaceKind = "homepage" | "profile";
 type WebsiteTab = "general" | "sections" | "featured" | "appearance";
 type ProfileTab = "identity" | "photos" | "experience" | "education" | "skills" | "languages";
 type WebsiteViewport = "desktop" | "laptop" | "tablet" | "mobile";
-type WebsitePreviewPage = "homepage" | "projects" | "tools";
+type WebsitePreviewPage = "homepage" | "projects" | "tools" | `project:${string}` | `tool:${string}`;
 type WebsitePreviewData = WebsiteRuntimeData & { previewLanguage?: Language };
 
 interface WorkspaceCallbacks {
@@ -97,9 +98,23 @@ const websiteViewportWidths: Record<WebsiteViewport, number> = {
   tablet: 768,
   mobile: 390,
 };
-const websitePreviewPath = (page: WebsitePreviewPage): string => {
+const websitePreviewPath = (page: WebsitePreviewPage, runtime = state.runtime): string => {
+  if (page.startsWith("project:")) {
+    const project = runtime?.projects.find((item) => item.id === page.slice("project:".length));
+    return `${import.meta.env.BASE_URL}project/?preview=1&embedded=1&id=${encodeURIComponent(project?.slug ?? "")}`;
+  }
+  if (page.startsWith("tool:")) {
+    const tool = runtime?.tools.find((item) => item.id === page.slice("tool:".length));
+    return `${import.meta.env.BASE_URL}tool/?preview=1&embedded=1&id=${encodeURIComponent(tool?.slug ?? "")}`;
+  }
   const route = page === "homepage" ? "" : page === "projects" ? "projects/" : "tools/";
   return `${import.meta.env.BASE_URL}${route}?preview=1&embedded=1`;
+};
+
+const websitePreviewTitle = (page: WebsitePreviewPage): string => {
+  if (page.startsWith("project:")) return "Project detail";
+  if (page.startsWith("tool:")) return "Tool detail";
+  return page === "homepage" ? "Homepage" : page === "projects" ? "Projects" : "Automation";
 };
 const value = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const lines = (text: string): string[] => text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
@@ -728,8 +743,14 @@ const validateProfileLanguages = (languages: LanguageSkill[]): string | null => 
 
 const websiteView = (): string => {
   const runtime = state.runtime!;
+  if (state.previewPage.startsWith("project:") && !runtime.projects.some((item) => item.id === state.previewPage.slice("project:".length) && item.status === "published")) state.previewPage = "projects";
+  if (state.previewPage.startsWith("tool:") && !runtime.tools.some((item) => item.id === state.previewPage.slice("tool:".length) && item.status === "published")) state.previewPage = "tools";
   const content = runtime.content;
   const tab = state.websiteTab;
+  const publishValidation = validateWebsitePublish(runtime);
+  const validationContent = publishValidation.errors.length || publishValidation.warnings.length
+    ? `<div class="admin-site-validation"><section><h3>Required fixes</h3>${publishValidation.errors.length ? `<ul>${publishValidation.errors.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : "<p>All required checks pass.</p>"}</section><section><h3>Recommendations</h3>${publishValidation.warnings.length ? `<ul>${publishValidation.warnings.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : "<p>No recommendations.</p>"}</section></div>`
+    : "<p data-document-validation-ready>Website content and selected items are ready to publish.</p>";
   const latest = state.releases[0];
   const releaseHistory = state.releases.length
     ? `<ol class="admin-release-history__list">${state.releases.map((item, index) => `<li><div><strong>${index === 0 ? "Latest release" : "Published release"}</strong><span>${formatAdminDateTime(item.publishedAt)}</span></div><code>${escapeHtml(item.version)}</code></li>`).join("")}</ol>`
@@ -755,13 +776,15 @@ const websiteView = (): string => {
       { label: "Homepage", value: "homepage" },
       { label: "Projects", value: "projects" },
       { label: "Automation", value: "tools" },
+      ...runtime.projects.filter((item) => item.status === "published").map((item) => ({ label: `Project · ${item.name.en || item.slug}`, value: `project:${item.id}` })),
+      ...runtime.tools.filter((item) => item.status === "published").map((item) => ({ label: `Tool · ${item.name || item.slug}`, value: `tool:${item.id}` })),
     ],
   });
   const languageControls = renderAdminPreviewLanguageToggle(state.previewLanguage, "data-website-language-toggle");
   const zoomControls = renderPreviewZoomControls(state.previewZoom);
   const previewToolbar = renderAdminPreviewToolbar({
     title: "Website preview",
-    meta: 'Live draft · <span data-preview-status data-kind="warning">Connecting…</span>',
+    meta: `Live draft · <span data-preview-status data-kind="warning">Connecting…</span> · <button type="button" class="admin-preview-status" data-website-validation-open data-kind="${publishValidation.errors.length ? "warning" : "success"}" aria-haspopup="dialog" aria-controls="website-validation-dialog">${publishValidation.errors.length ? `${publishValidation.errors.length} issue${publishValidation.errors.length === 1 ? "" : "s"}` : "Ready"}</button>`,
     controls: `${pageControls}${viewportControls}${languageControls}${zoomControls}`,
   });
   return `<section class="admin-site-workspace">
@@ -775,9 +798,10 @@ const websiteView = (): string => {
           <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: "Homepage appearance", note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) })}</section>
         </form>
       </section>
-      <aside class="admin-site-preview">${previewToolbar}<div class="admin-site-frame" data-viewport="${state.viewport}" data-zoom="${state.previewZoom.mode}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${state.previewPage === "homepage" ? "Homepage" : state.previewPage === "projects" ? "Projects" : "Automation"} draft preview" src="${websitePreviewPath(state.previewPage)}" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div></aside>
+      <aside class="admin-site-preview">${previewToolbar}<div class="admin-site-frame" data-viewport="${state.viewport}" data-zoom="${state.previewZoom.mode}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${websitePreviewTitle(state.previewPage)} draft preview" src="${websitePreviewPath(state.previewPage, runtime)}" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div></aside>
     </div>
     <dialog class="admin-dialog admin-release-history" data-website-history-dialog aria-labelledby="website-release-history-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-release-history-title">Release history</h2><p>Versions are generated automatically when a release is published.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-website-history-close>Close</button></div></form></dialog>
+    <dialog id="website-validation-dialog" class="admin-dialog admin-document-check-dialog" data-website-validation-dialog aria-labelledby="website-validation-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-validation-title">Pre-publish check</h2><p>Required fixes block publishing. Recommendations are optional.</p></div><div class="admin-document-check-dialog__content" data-website-validation-content>${validationContent}</div><div class="admin-actions"><button class="button button--secondary" type="button" data-website-validation-close>Close</button></div></form></dialog>
   </section>`;
 };
 
@@ -856,6 +880,22 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     status.textContent = label;
     status.dataset.kind = kind;
   };
+  const updateWebsiteValidation = (): ReturnType<typeof validateWebsitePublish> | null => {
+    if (!websiteForm) return null;
+    const result = validateWebsitePublish(readWebsiteForm(websiteForm));
+    const status = root.querySelector<HTMLButtonElement>("[data-website-validation-open]");
+    const content = root.querySelector<HTMLElement>("[data-website-validation-content]");
+    if (status) {
+      status.dataset.kind = result.errors.length ? "warning" : "success";
+      status.textContent = result.errors.length ? `${result.errors.length} issue${result.errors.length === 1 ? "" : "s"}` : "Ready";
+    }
+    if (content) {
+      content.innerHTML = result.errors.length || result.warnings.length
+        ? `<div class="admin-site-validation"><section><h3>Required fixes</h3>${result.errors.length ? `<ul>${result.errors.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : "<p>All required checks pass.</p>"}</section><section><h3>Recommendations</h3>${result.warnings.length ? `<ul>${result.warnings.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : "<p>No recommendations.</p>"}</section></div>`
+        : "<p data-document-validation-ready>Website content and selected items are ready to publish.</p>";
+    }
+    return result;
+  };
   previewSender = previewIframe && websiteForm
     ? bindPreviewSender<WebsitePreviewData>(previewIframe, "website", () => ({
         ...readWebsiteForm(websiteForm),
@@ -870,6 +910,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     callbacks.setDirty(true);
     const status = root.querySelector<HTMLElement>("[data-site-save-state]");
     if (status) status.textContent = "Unsaved changes";
+    updateWebsiteValidation();
     if (websiteForm && previewSender) {
       setPreviewStatus("Updating…", "warning");
       if (previewTimer !== undefined) window.clearTimeout(previewTimer);
@@ -1435,8 +1476,8 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     previewFrame?.scrollTo({ top: 0, left: 0 });
     previewZoomController?.resetFit();
     previewStage?.setAttribute("aria-busy", "true");
-    previewIframe.title = `${nextPage === "homepage" ? "Homepage" : nextPage === "projects" ? "Projects" : "Automation"} draft preview`;
-    previewIframe.src = websitePreviewPath(nextPage);
+    previewIframe.title = `${websitePreviewTitle(nextPage)} draft preview`;
+    previewIframe.src = websitePreviewPath(nextPage, state.runtime);
   });
   root.querySelector<HTMLButtonElement>("[data-website-language-toggle]")?.addEventListener("click", (event) => {
     state.previewLanguage = state.previewLanguage === "en" ? "vi" : "en";
@@ -1449,8 +1490,11 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     previewSender?.send();
   });
   const releaseHistoryDialog = root.querySelector<HTMLDialogElement>("[data-website-history-dialog]");
+  const validationDialog = root.querySelector<HTMLDialogElement>("[data-website-validation-dialog]");
   root.querySelector<HTMLButtonElement>("[data-website-history-open]")?.addEventListener("click", () => releaseHistoryDialog?.showModal());
   root.querySelector<HTMLButtonElement>("[data-website-history-close]")?.addEventListener("click", () => releaseHistoryDialog?.close());
+  root.querySelector<HTMLButtonElement>("[data-website-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
+  root.querySelector<HTMLButtonElement>("[data-website-validation-close]")?.addEventListener("click", () => validationDialog?.close());
   websiteForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     const saveButton = root.querySelector<HTMLButtonElement>('[form="website-editor-form"].admin-action-save');
@@ -1491,18 +1535,25 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });
   });
   root.querySelector<HTMLButtonElement>("[data-publish-website]")?.addEventListener("click", async (event) => {
-    if (!websiteForm || !(await confirmAdmin({ eyebrow: "Website release", title: "Publish this Website draft?", message: "A new public release will be created with an automatically generated version.", confirmLabel: "Publish Website" }))) return;
+    if (!websiteForm) return;
+    const draft = readWebsiteForm(websiteForm);
+    const runtime: WebsiteRuntimeData = {
+      ...draft,
+      content: { ...draft.content, version: automaticWebsiteVersion() },
+    };
+    const validation = validateWebsitePublish(runtime);
+    updateWebsiteValidation();
+    if (validation.errors.length) {
+      validationDialog?.showModal();
+      callbacks.notify(`Resolve ${validation.errors.length} pre-publish issue${validation.errors.length === 1 ? "" : "s"} before publishing.`, "info");
+      return;
+    }
+    if (!(await confirmAdmin({ eyebrow: "Website release", title: "Publish this Website draft?", message: validation.warnings.length ? `Required checks pass. ${validation.warnings.length} recommendation${validation.warnings.length === 1 ? " remains" : "s remain"}. A new public release will be created.` : "A new public release will be created with an automatically generated version.", confirmLabel: "Publish Website" }))) return;
     const publishButton = event.currentTarget as HTMLButtonElement;
     setButtonBusy(publishButton, true, "Publishing…");
     void (async () => {
-      const draft = readWebsiteForm(websiteForm);
-      const runtime: WebsiteRuntimeData = {
-        ...draft,
-        content: { ...draft.content, version: automaticWebsiteVersion() },
-      };
-      await saveWebsiteContent(runtime.content);
+      await publishWebsiteRelease(runtime);
       state.runtime = runtime;
-      await publishWebsiteRelease();
       state.releases = await listWebsiteReleases();
       callbacks.setDirty(false);
       callbacks.rerender();

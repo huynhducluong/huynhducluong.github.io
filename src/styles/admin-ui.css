@@ -656,7 +656,9 @@ html.admin-app button.is-busy::before {
 @container admin-form (max-width: 32rem) {
   .admin-media-section-heading { grid-template-columns: minmax(0, 1fr); }
   .admin-media-section-heading__count { grid-column: 1; grid-row: auto; justify-self: start; }
-  .admin-media-row__fields--pending { grid-template-columns: 1fr; }
+  .admin-media-row__fields,
+  .admin-media-row__fields--pending,
+  .admin-readiness-grid { grid-template-columns: 1fr; }
   .admin-media-row__actions { justify-content: flex-start; }
   .admin-media-upload-action { width: 100%; justify-self: stretch; }
 }

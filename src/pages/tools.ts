@@ -7,7 +7,7 @@ import { loadPublishedWebsiteRelease, loadWebsiteDraftData } from "../services/w
 import { createPreviewReceiver } from "../shared/previewProtocol";
 import { localize, type Language } from "../shared/format";
 import { renderToolCard } from "../site/renderers";
-import { applyWebsiteTheme, siteFooter, siteHeader } from "../site/shell";
+import { applyWebsiteTheme, readWebsiteLanguage, siteFooter, siteHeader } from "../site/shell";
 import type { WebsiteRuntimeData } from "../types/website";
 
 const app = document.querySelector<HTMLDivElement>("#app");
@@ -45,7 +45,7 @@ const initialize = async (): Promise<void> => {
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
   if (params.get("embedded") === "1") document.body.classList.add("website-embedded");
   const data = adminPreview ? await loadWebsiteDraftData() : await loadPublishedWebsiteRelease();
-  render(data);
+  render(data, readWebsiteLanguage());
   if (adminPreview) {
     previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));
   } else {
