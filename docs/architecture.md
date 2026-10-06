@@ -53,9 +53,9 @@ Professional credentials are a normalized shared library. A credential may stand
 
 ## Admin performance model
 
-The Admin shell is the only eager workspace UI. Website/Profile, CV/Portfolio, Cover Letter and Project crop features are route-loaded with their own CSS and JavaScript. Route initialization requests only the data required by the selected workspace; shared Profile, Credential, Profile Photo and health reads use short-lived in-memory request deduplication. Successful mutations replace or invalidate their cache entry, and private document files and signed URLs are never persisted in the cache.
+The Admin shell and workspace styles load eagerly in a deterministic cascade, with `admin-ui.css` remaining the final normalization layer. Website/Profile, CV/Portfolio, Cover Letter and Project crop JavaScript remains route-loaded. Route initialization requests only the data required by the selected workspace; shared Profile, Credential, Profile Photo and health reads use short-lived in-memory request deduplication. Successful mutations replace or invalidate their cache entry, and private document files and signed URLs are never persisted in the cache.
 
-Admin media outside the viewport uses native lazy image decoding. Long media and credential card lists use `content-visibility` where supported. CI measures the compressed JavaScript and CSS referenced by the built `/admin/` HTML so an accidental eager import cannot silently degrade startup performance.
+Admin media outside the viewport uses native lazy image decoding. Interactive rows and cards do not use guessed intrinsic heights, avoiding scroll and layout shifts as content enters the viewport. CI measures the compressed JavaScript and CSS referenced by the built `/admin/` HTML so an accidental bundle increase cannot silently degrade startup performance.
 
 ## Security boundary
 

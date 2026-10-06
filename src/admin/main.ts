@@ -3,8 +3,12 @@ import "../styles/reset.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 import "../styles/admin.css";
+import "../styles/admin-cover-letter.css";
+import "../styles/admin-documents.css";
+import "../styles/admin-site.css";
 import "../styles/admin-typography.css";
 import "../styles/admin-ui.css";
+import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import {
@@ -40,6 +44,7 @@ import { validateProjectReadiness, validateToolReadiness, type ContentValidation
 import type { ProfileDocumentKind } from "./profileDocumentWorkspace";
 import type { SiteWorkspaceKind } from "./siteWorkspace";
 import { adminBrand, adminDocumentTitle } from "./brand";
+import { renderAdminNavIcon } from "./adminIcons";
 
 interface AdminMediaRow {
   id: string;
@@ -944,18 +949,18 @@ const dashboardView = (): void => {
   const viewTitle: Record<AdminView, string> = { overview: "Overview", homepage: "Homepage", projects: "Projects", tools: "Automation tools", profile: "Professional Profile", cv: "Curriculum Vitae", portfolio: "Portfolio", "cover-letters": "Cover letters", trash: "Trash" };
   const collectionTitle = activeView === "projects" ? "Projects" : activeView === "tools" ? "Tools" : "Deleted items";
   const collectionCount = visibleContentItems().length;
-  const navButton = (view: AdminView, label: string, marker: string): string => `<button type="button" data-admin-view="${view}" class="${activeView === view ? "is-active" : ""}"${activeView === view ? ' aria-current="page"' : ""}><span aria-hidden="true">${marker}</span>${label}${view === "trash" && trashCount ? `<b>${trashCount}</b>` : ""}</button>`;
+  const navButton = (view: AdminView, label: string): string => `<button type="button" data-admin-view="${view}" class="${activeView === view ? "is-active" : ""}"${activeView === view ? ' aria-current="page"' : ""}><span class="admin-nav__icon-shell" aria-hidden="true">${renderAdminNavIcon(view)}</span>${label}${view === "trash" && trashCount ? `<b>${trashCount}</b>` : ""}</button>`;
   app.innerHTML = `
     <a class="admin-skip-link" href="#admin-workspace">Skip to workspace</a>
     <main class="admin-shell">
       <aside class="admin-rail">
         <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span class="admin-brand__avatar" data-admin-brand-avatar>${adminAvatarContent(adminIdentity)}</span><div><strong>${adminBrand.name}</strong><small>${adminBrand.workspace}</small></div></a>
         <nav class="admin-nav" aria-label="Admin sections">
-          <p>Overview</p>${navButton("overview", "Dashboard", "01")}
-          <p>Website</p>${navButton("homepage", "Homepage", "02")}${navButton("projects", "Projects", "03")}${navButton("tools", "Automation tools", "04")}
-          <p>Profile & documents</p>${navButton("profile", "Professional Profile", "05")}${navButton("cv", "Curriculum Vitae", "06")}${navButton("portfolio", "Portfolio", "07")}
-          <p>Applications</p>${navButton("cover-letters", "Cover letters", "08")}
-          <p>System</p>${navButton("trash", "Trash", "09")}
+          <p>Overview</p>${navButton("overview", "Dashboard")}
+          <p>Website</p>${navButton("homepage", "Homepage")}${navButton("projects", "Projects")}${navButton("tools", "Automation tools")}
+          <p>Profile & documents</p>${navButton("profile", "Professional Profile")}${navButton("cv", "Curriculum Vitae")}${navButton("portfolio", "Portfolio")}
+          <p>Applications</p>${navButton("cover-letters", "Cover letters")}
+          <p>System</p>${navButton("trash", "Trash")}
         </nav>
         <div class="admin-rail__footer"><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div>
       </aside>

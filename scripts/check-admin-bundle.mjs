@@ -16,7 +16,7 @@ const totals = uniqueAssets.reduce((result, assetPath) => {
   return result;
 }, { js: 0, css: 0 });
 
-const budgets = { js: 115 * 1024, css: 18 * 1024 };
+const budgets = { js: 115 * 1024, css: 26 * 1024 };
 const format = (bytes) => `${(bytes / 1024).toFixed(1)} kB gzip`;
 
 console.log(`Admin initial JavaScript: ${format(totals.js)} / ${format(budgets.js)}`);

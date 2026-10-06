@@ -3,12 +3,11 @@ import type { ProfessionalCredentialInput } from "../types/credential";
 export const credentialFileLimit = 10 * 1024 * 1024;
 export const credentialMimeTypes = ["application/pdf", "image/jpeg", "image/png", "image/webp"] as const;
 
-export const validateCredentialInput = (input: ProfessionalCredentialInput, evidenceCount: number): string | null => {
+export const validateCredentialInput = (input: ProfessionalCredentialInput): string | null => {
   if (!input.title.en || !input.issuer.en || !input.issuedOn) return "Title (EN), Issuer (EN) and Issue date are required.";
   if (!input.doesNotExpire && !input.expiresOn) return "Enter an expiry date or select that the credential does not expire.";
   if (input.expiresOn && input.issuedOn && input.expiresOn < input.issuedOn) return "Expiry date cannot be earlier than Issue date.";
   if (input.verificationUrl && !input.verificationUrl.startsWith("https://")) return "Verification URL must start with https://.";
-  if (input.status === "published" && evidenceCount === 0 && !input.verificationUrl) return "A Ready credential needs a private evidence file or verification URL.";
   return null;
 };
 

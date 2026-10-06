@@ -1,5 +1,3 @@
-import "../styles/admin-cover-letter.css";
-import "../styles/cover-letter-screen.css";
 import { coverLetterSenderDefaults, createCoverLetterDraft } from "../cover-letter/defaults";
 import { renderCoverLetterMarkup } from "../cover-letter/renderCoverLetter";
 import { coverLetterOverflows, validateCoverLetter } from "../cover-letter/validation";
@@ -347,7 +345,7 @@ const editorView = (): string => {
           <div class="admin-cl-preview-scroll" data-zoom="${previewZoom.mode}"><div class="admin-cl-preview-stage"><div data-cl-preview></div></div></div>
         </aside>
       </div>
-      <dialog id="cover-letter-validation-dialog" class="admin-dialog admin-document-check-dialog" data-cl-validation-dialog aria-labelledby="cover-letter-validation-title"><form method="dialog"><div><p class="section-kicker">Cover Letter</p><h2 id="cover-letter-validation-title">Final review</h2><p>Resolve errors before finalizing; warnings should be reviewed.</p></div><div class="admin-document-check-dialog__content" data-cl-validation>${validationContent}</div><div class="admin-actions"><button class="button button--secondary" type="button" data-cl-validation-close>Close</button></div></form></dialog>
+      <dialog id="cover-letter-validation-dialog" class="admin-dialog admin-document-check-dialog" data-cl-validation-dialog aria-labelledby="cover-letter-validation-title"><form method="dialog"><div><p class="section-kicker">Cover Letter</p><h2 id="cover-letter-validation-title">Final review</h2><p>Resolve errors before finalizing; warnings should be reviewed.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Cover Letter validation status" hidden></section></div><div class="admin-document-check-dialog__content" data-cl-validation>${validationContent}</div><div class="admin-actions"><button class="button button--secondary" type="button" data-cl-validation-close>Close</button></div></form></dialog>
     </section>`;
 };
 

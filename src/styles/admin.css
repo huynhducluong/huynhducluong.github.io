@@ -250,17 +250,24 @@ body:has(.admin-shell) {
   text-decoration: none;
 }
 
-.admin-nav button > span,
-.admin-nav a > span {
+.admin-nav__icon-shell {
   display: grid;
   width: 1.6rem;
   height: 1.6rem;
+  flex: 0 0 auto;
   place-items: center;
   border-radius: .45rem;
   background: rgb(255 255 255 / 7%);
   color: #90afbb;
-  font-size: var(--admin-text-2xs);
-  font-weight: 900;
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 3%);
+}
+
+.admin-nav__icon {
+  display: block;
+  width: 1.05rem;
+  height: 1.05rem;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
 }
 
 .admin-nav button:hover,
@@ -275,7 +282,17 @@ body:has(.admin-shell) {
   box-shadow: inset 3px 0 0 var(--color-primary);
 }
 
-.admin-nav button.is-active > span { background: var(--color-primary); color: #fff; }
+.admin-nav button:hover .admin-nav__icon-shell,
+.admin-nav a:hover .admin-nav__icon-shell {
+  background: rgb(255 255 255 / 12%);
+  color: #dff5fc;
+}
+
+.admin-nav button.is-active .admin-nav__icon-shell {
+  background: var(--color-primary);
+  color: #fff;
+  box-shadow: 0 .2rem .65rem rgb(0 151 199 / 24%);
+}
 .admin-nav b { display: grid; min-width: 1.35rem; height: 1.35rem; place-items: center; border-radius: 999px; background: var(--admin-color-danger); color: #fff; font-size: var(--admin-text-2xs); }
 
 .admin-rail__footer {
@@ -676,10 +693,4 @@ textarea { line-height: 1.5; }
   text-align: right;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-@supports (content-visibility: auto) {
-  .admin-media-row {
-    content-visibility: auto;
-    contain-intrinsic-size: auto 180px;
-  }
 }

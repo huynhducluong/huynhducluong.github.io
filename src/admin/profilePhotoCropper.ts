@@ -22,7 +22,7 @@ const cropperTemplate = `
 export const renderProfilePhotoCropDialog = (): string => `
   <dialog class="admin-dialog admin-photo-crop-dialog" data-profile-photo-crop-dialog aria-labelledby="profile-photo-crop-title">
     <div class="admin-photo-crop-dialog__heading">
-      <div><p class="section-kicker">Profile photo</p><h2 id="profile-photo-crop-title">Crop photo</h2><p>Drag the image and adjust zoom inside the fixed square.</p></div>
+      <div><p class="section-kicker">Profile photo</p><h2 id="profile-photo-crop-title">Crop photo</h2><p>Drag the image and adjust zoom inside the fixed square.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Photo crop status" hidden></section></div>
       <button class="admin-dialog-close" type="button" aria-label="Close crop photo dialog" data-profile-photo-crop-cancel>&times;</button>
     </div>
     <div class="admin-photo-crop-dialog__layout">

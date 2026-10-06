@@ -58,7 +58,7 @@ const cropperTemplate = (layout: CropLayoutConfig): string => `
 export const renderProjectCoverCropDialog = (): string => `
   <dialog class="admin-dialog admin-photo-crop-dialog admin-project-cover-crop-dialog" data-project-cover-crop-dialog aria-labelledby="project-cover-crop-title">
     <div class="admin-photo-crop-dialog__heading">
-      <div><p class="section-kicker">Portfolio cover</p><h2 id="project-cover-crop-title">Adjust cover crops</h2><p>Position the original image for each Portfolio layout.</p></div>
+      <div><p class="section-kicker">Portfolio cover</p><h2 id="project-cover-crop-title">Adjust cover crops</h2><p>Position the original image for each Portfolio layout.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Cover crop status" hidden></section></div>
       <button class="admin-dialog-close" type="button" aria-label="Close cover crop dialog" data-project-cover-crop-cancel>&times;</button>
     </div>
     <div class="admin-project-cover-crop-tabs" role="tablist" aria-label="Portfolio cover layout">

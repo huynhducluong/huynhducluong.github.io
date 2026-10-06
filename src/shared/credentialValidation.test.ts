@@ -20,17 +20,17 @@ const input = (): ProfessionalCredentialInput => ({
 
 describe("credential validation", () => {
   it("allows a complete draft without evidence", () => {
-    expect(validateCredentialInput(input(), 0)).toBeNull();
+    expect(validateCredentialInput(input())).toBeNull();
   });
 
-  it("requires evidence or a verification URL before Ready", () => {
-    expect(validateCredentialInput({ ...input(), status: "published" }, 0)).toContain("evidence file");
-    expect(validateCredentialInput({ ...input(), status: "published", verificationUrl: "https://verify.example.test/1" }, 0)).toBeNull();
+  it("allows Ready credentials to be saved before verification details are added", () => {
+    expect(validateCredentialInput({ ...input(), status: "published" })).toBeNull();
+    expect(validateCredentialInput({ ...input(), status: "published", verificationUrl: "https://verify.example.test/1" })).toBeNull();
   });
 
   it("rejects invalid date and URL combinations", () => {
-    expect(validateCredentialInput({ ...input(), doesNotExpire: false, expiresOn: "2025-01-01" }, 1)).toContain("earlier");
-    expect(validateCredentialInput({ ...input(), verificationUrl: "http://example.test" }, 1)).toContain("https://");
+    expect(validateCredentialInput({ ...input(), doesNotExpire: false, expiresOn: "2025-01-01" })).toContain("earlier");
+    expect(validateCredentialInput({ ...input(), verificationUrl: "http://example.test" })).toContain("https://");
   });
 
   it("accepts supported private documents within 10 MB", () => {

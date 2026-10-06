@@ -1,4 +1,3 @@
-import "../styles/admin-site.css";
 import { websiteContentSeed } from "../data/websiteSeed";
 import {
   experienceLocationLabel,
@@ -199,7 +198,8 @@ const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
   const cards = photos.map((photo) => `<article class="admin-photo-library-card" data-photo-library-card="${escapeHtml(photo.id)}">
       <div class="admin-photo-library-card__image"><img src="${escapeHtml(photo.publicUrl)}" alt="${escapeHtml(photo.name)}" loading="lazy" decoding="async" width="${photo.width}" height="${photo.height}"></div>
       <div class="admin-photo-library-card__body">
-        <div class="admin-photo-library-card__heading"><h4 data-profile-photo-library-name>${escapeHtml(photo.name)}</h4><div class="admin-photo-library-card__actions"><button class="button button--secondary" type="button" data-profile-photo-rename data-photo-id="${escapeHtml(photo.id)}" data-photo-name="${escapeHtml(photo.name)}">Rename</button><button class="button button--secondary admin-button--danger" type="button" data-profile-photo-delete data-photo-id="${escapeHtml(photo.id)}" data-photo-value="${escapeHtml(photo.publicUrl)}" data-photo-name="${escapeHtml(photo.name)}">Delete</button></div></div>
+        <h4 data-profile-photo-library-name>${escapeHtml(photo.name)}</h4>
+        <div class="admin-photo-library-card__actions"><button class="button button--secondary" type="button" data-profile-photo-rename data-photo-id="${escapeHtml(photo.id)}" data-photo-name="${escapeHtml(photo.name)}">Rename</button><button class="button button--secondary admin-button--danger" type="button" data-profile-photo-delete data-photo-id="${escapeHtml(photo.id)}" data-photo-value="${escapeHtml(photo.publicUrl)}" data-photo-name="${escapeHtml(photo.name)}">Delete</button></div>
         <p>${photo.width} × ${photo.height}px · ${formatPhotoFileSize(photo.fileSize)}</p>
         <small>Saved ${formatAdminDate(photo.createdAt)}</small>
       </div>
@@ -216,7 +216,7 @@ const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
 
 const renderProfilePhotoRenameDialog = (): string => `<dialog class="admin-dialog admin-photo-rename-dialog" data-profile-photo-rename-dialog aria-labelledby="profile-photo-rename-title">
   <form data-profile-photo-rename-form>
-    <div><p class="section-kicker">Profile photo library</p><h2 id="profile-photo-rename-title">Rename photo</h2><p>Use a short name that makes this photo easy to identify.</p></div>
+    <div><p class="section-kicker">Profile photo library</p><h2 id="profile-photo-rename-title">Rename photo</h2><p>Use a short name that makes this photo easy to identify.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Photo rename status" hidden></section></div>
     <label>Photo name<input type="text" maxlength="120" required data-profile-photo-rename-input></label>
     <div class="admin-actions"><button class="button button--secondary" type="button" data-profile-photo-rename-cancel>Cancel</button><button class="button" type="submit" data-profile-photo-rename-save>Save name</button></div>
   </form>
@@ -826,8 +826,8 @@ const websiteView = (): string => {
       </section>
       <aside class="admin-site-preview">${previewToolbar}<div class="admin-site-frame" data-viewport="${state.viewport}" data-zoom="${state.previewZoom.mode}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${websitePreviewTitle(state.previewPage)} draft preview" src="${websitePreviewPath(state.previewPage, runtime)}" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div></aside>
     </div>
-    <dialog class="admin-dialog admin-release-history" data-website-history-dialog aria-labelledby="website-release-history-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-release-history-title">Release history</h2><p>Versions are generated automatically when a release is published.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-website-history-close>Close</button></div></form></dialog>
-    <dialog id="website-validation-dialog" class="admin-dialog admin-document-check-dialog" data-website-validation-dialog aria-labelledby="website-validation-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-validation-title">Pre-publish check</h2><p>Required fixes block publishing. Recommendations are optional.</p></div><div class="admin-document-check-dialog__content" data-website-validation-content>${validationContent}</div><div class="admin-actions"><button class="button button--secondary" type="button" data-website-validation-close>Close</button></div></form></dialog>
+    <dialog class="admin-dialog admin-release-history" data-website-history-dialog aria-labelledby="website-release-history-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-release-history-title">Release history</h2><p>Versions are generated automatically when a release is published.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Website history status" hidden></section></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-website-history-close>Close</button></div></form></dialog>
+    <dialog id="website-validation-dialog" class="admin-dialog admin-document-check-dialog" data-website-validation-dialog aria-labelledby="website-validation-title"><form method="dialog"><div><p class="section-kicker">Website</p><h2 id="website-validation-title">Pre-publish check</h2><p>Required fixes block publishing. Recommendations are optional.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Website validation status" hidden></section></div><div class="admin-document-check-dialog__content" data-website-validation-content>${validationContent}</div><div class="admin-actions"><button class="button button--secondary" type="button" data-website-validation-close>Close</button></div></form></dialog>
   </section>`;
 };
 

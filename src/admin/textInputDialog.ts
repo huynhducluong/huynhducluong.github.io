@@ -33,6 +33,7 @@ const ensureDialog = (): HTMLDialogElement => {
       <p class="section-kicker" data-admin-text-input-eyebrow></p>
       <h2 id="admin-text-input-title" data-admin-text-input-title></h2>
       <p id="admin-text-input-description" data-admin-text-input-description></p>
+      <section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Input status" hidden></section>
     </div>
     <label><span data-admin-text-input-label></span><input type="text" required data-admin-text-input></label>
     <div class="admin-actions">

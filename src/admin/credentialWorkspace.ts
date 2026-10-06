@@ -17,6 +17,7 @@ import type {
   ProfessionalCredentialInput,
 } from "../types/credential";
 import { confirmAdmin } from "./confirmDialog";
+import { clearAdminDialogStatus } from "./toast";
 import { formatAdminDate, renderAdminSectionCard, setButtonBusy } from "./ui";
 
 const credentialKindLabels: Record<CredentialKind, string> = {
@@ -92,21 +93,21 @@ const relationOptions = (professional: ProfessionalProfileContent): string => [
 ].join("");
 
 const credentialDialog = (professional: ProfessionalProfileContent): string => `<dialog class="admin-dialog admin-credential-dialog" data-credential-dialog aria-labelledby="credential-dialog-title">
-  <form data-credential-form>
-    <header><div><p class="section-kicker">Professional Profile</p><h2 id="credential-dialog-title" data-credential-dialog-title>Add credential</h2><p>Store verification details once and link the credential to Education or Languages when relevant.</p></div><button class="admin-icon-button" type="button" data-credential-cancel aria-label="Close credential editor">×</button></header>
-    <input type="hidden" name="credential_id">
-    <div class="admin-form-grid">
-      <label>Credential type<select name="credential_kind">${Object.entries(credentialKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label>
-      <label>Linked profile entry<select name="credential_relation">${relationOptions(professional)}</select></label>
+  <form data-credential-form novalidate>
+    <header class="admin-credential-dialog__header"><div><p class="section-kicker">Professional Profile</p><h2 id="credential-dialog-title" data-credential-dialog-title>Add credential</h2><p>Store verification details once and link the credential to Education or Languages when relevant.</p><section id="credential-dialog-status" class="admin-dialog-status-region" data-admin-dialog-status aria-label="Credential status" hidden></section></div><button class="admin-icon-button" type="button" data-credential-cancel aria-label="Close credential editor">×</button></header>
+    <div class="admin-credential-dialog__body">
+      <input type="hidden" name="credential_id">
+      <div class="admin-form-grid">
+        <label>Credential type<select name="credential_kind">${Object.entries(credentialKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label>
+        <label>Linked profile entry<select name="credential_relation">${relationOptions(professional)}</select></label>
+      </div>
+      <div class="admin-site-bilingual"><label>Title (EN)<input name="credential_title_en" maxlength="180" required></label><label>Title (VI)<input name="credential_title_vi" maxlength="180"></label></div>
+      <div class="admin-site-bilingual"><label>Issuer (EN)<input name="credential_issuer_en" maxlength="180" required></label><label>Issuer (VI)<input name="credential_issuer_vi" maxlength="180"></label></div>
+      <div class="admin-credential-date-grid"><label>Issue date<input name="credential_issued_on" type="date" required></label><label>Expiry date<input name="credential_expires_on" type="date" data-credential-expiry></label><label class="admin-switch admin-credential-no-expiry"><input name="credential_no_expiry" type="checkbox" checked data-credential-no-expiry><span>This credential does not expire</span></label></div>
+      <div class="admin-form-grid"><label>Credential number<input name="credential_number" maxlength="180"></label><label>Verification URL<input name="credential_url" type="url" placeholder="https://"></label></div>
+      <div class="admin-site-bilingual"><label>Description (EN)<textarea name="credential_description_en" rows="2"></textarea></label><label>Description (VI)<textarea name="credential_description_vi" rows="2"></textarea></label></div>
     </div>
-    <div class="admin-site-bilingual"><label>Title (EN)<input name="credential_title_en" maxlength="180" required></label><label>Title (VI)<input name="credential_title_vi" maxlength="180"></label></div>
-    <div class="admin-site-bilingual"><label>Issuer (EN)<input name="credential_issuer_en" maxlength="180" required></label><label>Issuer (VI)<input name="credential_issuer_vi" maxlength="180"></label></div>
-    <div class="admin-form-grid"><label>Issue date<input name="credential_issued_on" type="date" required></label><label>Expiry date<input name="credential_expires_on" type="date" data-credential-expiry></label></div>
-    <label class="admin-switch"><input name="credential_no_expiry" type="checkbox" checked data-credential-no-expiry> This credential does not expire</label>
-    <div class="admin-form-grid"><label>Credential number<input name="credential_number" maxlength="180"></label><label>Verification URL<input name="credential_url" type="url" placeholder="https://"></label></div>
-    <div class="admin-site-bilingual"><label>Description (EN)<textarea name="credential_description_en" rows="3"></textarea></label><label>Description (VI)<textarea name="credential_description_vi" rows="3"></textarea></label></div>
-    <label>Status<select name="credential_status"><option value="draft">Draft</option><option value="published">Ready</option></select></label>
-    <div class="admin-actions"><button class="button button--secondary" type="button" data-credential-cancel>Cancel</button><button class="button" type="submit" data-credential-save>Save credential</button></div>
+    <footer class="admin-credential-dialog__footer"><label>Status<select name="credential_status"><option value="draft">Draft</option><option value="published">Ready</option></select></label><div class="admin-actions"><button class="button button--secondary" type="button" data-credential-cancel>Cancel</button><button class="button" type="submit" data-credential-save>Save credential</button></div></footer>
   </form>
 </dialog>`;
 
@@ -155,6 +156,14 @@ const inputFromCredential = (credential: ProfessionalCredential, status = creden
   displayOrder: credential.displayOrder,
 });
 
+const credentialValidationFields = (message: string): string[] => {
+  if (message.startsWith("Title (EN)")) return ["credential_title_en", "credential_issuer_en", "credential_issued_on"];
+  if (message.startsWith("Enter an expiry date")) return ["credential_expires_on"];
+  if (message.startsWith("Expiry date")) return ["credential_expires_on", "credential_issued_on"];
+  if (message.startsWith("Verification URL")) return ["credential_url"];
+  return [];
+};
+
 export const bindProfessionalCredentials = (root: ParentNode, callbacks: CredentialWorkspaceCallbacks): void => {
   const dialog = root.querySelector<HTMLDialogElement>("[data-credential-dialog]");
   const form = dialog?.querySelector<HTMLFormElement>("[data-credential-form]");
@@ -171,6 +180,11 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
   const openEditor = (credential?: ProfessionalCredential, preset?: { type: CredentialRelationType; id: string }): void => {
     if (!dialog || !form) return;
     form.reset();
+    clearAdminDialogStatus(dialog);
+    form.querySelectorAll<HTMLElement>('[aria-invalid="true"]').forEach((control) => {
+      control.removeAttribute("aria-invalid");
+      control.removeAttribute("aria-describedby");
+    });
     const set = (name: string, value: string): void => {
       const control = form.elements.namedItem(name);
       if (control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement) control.value = value;
@@ -218,6 +232,13 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
     openEditor(credential);
   }));
 
+  form?.addEventListener("input", (event) => {
+    if (event.target instanceof HTMLElement) {
+      event.target.removeAttribute("aria-invalid");
+      event.target.removeAttribute("aria-describedby");
+    }
+  });
+
   form?.addEventListener("submit", (event) => {
     event.preventDefault();
     const values = new FormData(form);
@@ -241,9 +262,21 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
       status: String(values.get("credential_status")) as ProfessionalCredential["status"],
       displayOrder: existing?.displayOrder ?? callbacks.getCredentials().length + 1,
     };
-    const validationError = validateCredentialInput(input, existing?.assets.length ?? 0);
+    const validationError = validateCredentialInput(input);
     if (validationError) {
+      const validationControls = credentialValidationFields(validationError)
+        .map((name) => form.elements.namedItem(name))
+        .filter((control): control is HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement =>
+          control instanceof HTMLInputElement || control instanceof HTMLSelectElement || control instanceof HTMLTextAreaElement);
+      const invalidControls = validationError.startsWith("Title (EN)")
+        ? validationControls.filter((control) => !control.value.trim())
+        : validationControls;
+      invalidControls.forEach((control) => {
+        control.setAttribute("aria-invalid", "true");
+        control.setAttribute("aria-describedby", "credential-dialog-status");
+      });
       callbacks.notify(validationError, "error");
+      invalidControls[0]?.focus({ preventScroll: true });
       return;
     }
     const saveButton = form.querySelector<HTMLButtonElement>("[data-credential-save]");
@@ -257,7 +290,7 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
         callbacks.setCredentials(credentials);
         closeEditor();
         callbacks.rerender();
-        callbacks.notify(existing ? "Credential updated." : "Credential created. You can now add private evidence files.", "success");
+        callbacks.notify(existing ? "Credential updated." : "Credential created. Verification details can be added later.", "success");
       })
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (saveButton?.isConnected) setButtonBusy(saveButton, false); });

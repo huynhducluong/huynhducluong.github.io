@@ -1,5 +1,10 @@
 export type AdminToastKind = "info" | "error" | "success";
 
+export interface AdminToastOptions {
+  source?: Element | null;
+  scope?: "auto" | "dialog" | "page";
+}
+
 interface ToastTimer {
   timeoutId: number;
   remaining: number;
@@ -16,6 +21,7 @@ interface ToastContent {
 const toastRegionId = "admin-toast-region";
 const toastTimers = new Map<string, ToastTimer>();
 let toastSequence = 0;
+let dialogToastSequence = 0;
 let activeOperationId: string | null = null;
 
 const icons: Record<AdminToastKind | "progress", string> = {
@@ -33,6 +39,52 @@ const ensureToastRegion = (): HTMLElement => {
   region.className = "admin-toast-region";
   region.setAttribute("aria-label", "Notifications");
   document.body.append(region);
+  return region;
+};
+
+const activeAdminDialog = (source?: Element | null): HTMLDialogElement | null => {
+  const sourceDialog = source?.closest<HTMLDialogElement>("dialog[open]");
+  if (sourceDialog) return sourceDialog;
+  const focusedDialog = document.activeElement instanceof Element
+    ? document.activeElement.closest<HTMLDialogElement>("dialog[open]")
+    : null;
+  if (focusedDialog) return focusedDialog;
+  return Array.from(document.querySelectorAll<HTMLDialogElement>("dialog.admin-dialog[open]")).at(-1) ?? null;
+};
+
+const clearRegion = (region: HTMLElement): void => {
+  region.querySelectorAll<HTMLElement>("[data-admin-toast-id]").forEach((toast) => {
+    const id = toast.dataset.adminToastId ?? "";
+    const timer = toastTimers.get(id);
+    if (timer) window.clearTimeout(timer.timeoutId);
+    toastTimers.delete(id);
+    toast.remove();
+  });
+  if (region.matches("[data-admin-dialog-status]")) region.hidden = true;
+};
+
+export const clearAdminDialogStatus = (dialog: HTMLDialogElement): void => {
+  const region = dialog.querySelector<HTMLElement>("[data-admin-dialog-status]");
+  if (region) clearRegion(region);
+};
+
+const ensureDialogStatusRegion = (dialog: HTMLDialogElement): HTMLElement => {
+  let region = dialog.querySelector<HTMLElement>("[data-admin-dialog-status]");
+  if (!region) {
+    region = document.createElement("section");
+    region.className = "admin-dialog-status-region";
+    region.dataset.adminDialogStatus = "";
+    region.setAttribute("aria-label", "Dialog status");
+    region.hidden = true;
+    const heading = dialog.querySelector<HTMLElement>(
+      ".admin-credential-dialog__header > div, .admin-photo-crop-dialog__heading > div, .admin-confirm-dialog__heading, .admin-text-input-dialog__form > div:first-child, form > div:first-child",
+    );
+    (heading ?? dialog).append(region);
+  }
+  if (dialog.dataset.adminStatusBound !== "true") {
+    dialog.dataset.adminStatusBound = "true";
+    dialog.addEventListener("close", () => clearAdminDialogStatus(dialog));
+  }
   return region;
 };
 
@@ -77,6 +129,14 @@ const toastById = (region: HTMLElement, id: string): HTMLElement | undefined =>
   Array.from(region.querySelectorAll<HTMLElement>("[data-admin-toast-id]"))
     .find((toast) => toast.dataset.adminToastId === id);
 
+const toastByKey = (region: HTMLElement, key: string): HTMLElement | undefined =>
+  Array.from(region.querySelectorAll<HTMLElement>("[data-admin-toast-key]"))
+    .find((toast) => toast.dataset.adminToastKey === key);
+
+const toastAnywhereById = (id: string): HTMLElement | undefined =>
+  Array.from(document.querySelectorAll<HTMLElement>("[data-admin-toast-id]"))
+    .find((toast) => toast.dataset.adminToastId === id);
+
 const clearToastTimer = (id: string): ToastTimer | undefined => {
   const timer = toastTimers.get(id);
   if (timer) window.clearTimeout(timer.timeoutId);
@@ -86,14 +146,19 @@ const clearToastTimer = (id: string): ToastTimer | undefined => {
 
 const removeToast = (id: string, immediate = false): void => {
   clearToastTimer(id);
-  const toast = toastById(ensureToastRegion(), id);
+  const toast = toastAnywhereById(id);
   if (!toast) return;
-  if (immediate) {
+  const region = toast.parentElement;
+  const finish = (): void => {
     toast.remove();
+    if (region?.matches("[data-admin-dialog-status]") && !region.querySelector("[data-admin-toast-id]")) region.hidden = true;
+  };
+  if (immediate) {
+    finish();
     return;
   }
   toast.classList.add("is-leaving");
-  window.setTimeout(() => toast.remove(), 180);
+  window.setTimeout(finish, 180);
 };
 
 const scheduleToastRemoval = (id: string, duration: number): void => {
@@ -137,11 +202,12 @@ const bindToastPauseEvents = (toast: HTMLElement): void => {
   }));
 };
 
-const renderToast = (toast: HTMLElement, id: string, text: string, kind: AdminToastKind): void => {
+const renderToast = (toast: HTMLElement, id: string, key: string, text: string, kind: AdminToastKind): void => {
   const content = toastContent(text, kind);
   const progress = isProgressMessage(text, kind);
   toast.className = "admin-toast";
   toast.dataset.adminToastId = id;
+  toast.dataset.adminToastKey = key;
   toast.dataset.kind = kind;
   toast.dataset.progress = String(progress);
   toast.setAttribute("role", kind === "error" ? "alert" : "status");
@@ -182,28 +248,38 @@ const renderToast = (toast: HTMLElement, id: string, text: string, kind: AdminTo
   toast.replaceChildren(icon, body, close);
 };
 
-export const showAdminToast = (text: string, kind: AdminToastKind = "info"): void => {
+export const showAdminToast = (text: string, kind: AdminToastKind = "info", options: AdminToastOptions = {}): void => {
   const normalized = text.replace(/\s+/g, " ").trim();
   if (!normalized) return;
-  const region = ensureToastRegion();
+  const dialog = options.scope === "page" ? null : activeAdminDialog(options.source);
+  const useDialog = Boolean(dialog) && options.scope !== "page";
+  const region = useDialog && dialog ? ensureDialogStatusRegion(dialog) : ensureToastRegion();
   const progress = isProgressMessage(normalized, kind);
-  const id = kind === "info"
+  const key = `${kind}:${normalized}`;
+  const proposedId = kind === "info"
     ? (activeOperationId ??= "admin-operation")
     : activeOperationId ?? `admin-toast-${++toastSequence}`;
   if (kind !== "info") activeOperationId = null;
 
-  let toast = toastById(region, id);
+  let toast = useDialog
+    ? region.querySelector<HTMLElement>("[data-admin-toast-id]") ?? undefined
+    : toastById(region, proposedId) ?? toastByKey(region, key);
+  const id = toast?.dataset.adminToastId
+    ?? (useDialog ? `admin-dialog-toast-${++dialogToastSequence}` : proposedId);
   if (!toast) {
     toast = document.createElement("article");
     bindToastPauseEvents(toast);
     region.prepend(toast);
   }
-  renderToast(toast, id, normalized, kind);
+  if (useDialog) region.hidden = false;
+  renderToast(toast, id, key, normalized, kind);
   scheduleToastRemoval(id, kind === "error" ? 0 : progress ? 30_000 : kind === "success" ? 4_500 : 6_000);
 
-  Array.from(region.querySelectorAll<HTMLElement>("[data-admin-toast-id]"))
-    .slice(3)
-    .forEach((item) => removeToast(item.dataset.adminToastId ?? "", true));
+  if (!useDialog) {
+    Array.from(region.querySelectorAll<HTMLElement>("[data-admin-toast-id]"))
+      .slice(3)
+      .forEach((item) => removeToast(item.dataset.adminToastId ?? "", true));
+  }
 };
 
 export const clearAdminToasts = (): void => {
@@ -211,4 +287,5 @@ export const clearAdminToasts = (): void => {
   toastTimers.clear();
   activeOperationId = null;
   document.getElementById(toastRegionId)?.remove();
+  document.querySelectorAll<HTMLElement>("[data-admin-dialog-status]").forEach((region) => clearRegion(region));
 };

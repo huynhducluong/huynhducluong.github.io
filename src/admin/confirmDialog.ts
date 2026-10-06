@@ -34,6 +34,7 @@ const ensureDialog = (): HTMLDialogElement => {
       <p class="section-kicker" data-admin-confirm-eyebrow>Admin confirmation</p>
       <h2 id="admin-confirm-title" data-admin-confirm-title></h2>
       <p id="admin-confirm-message" data-admin-confirm-message></p>
+      <section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Confirmation status" hidden></section>
     </div>
     <div class="admin-confirm-dialog__actions">
       <button class="button button--secondary" type="button" data-admin-confirm-cancel></button>
