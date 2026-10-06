@@ -41,7 +41,15 @@ Run the same command locally that GitHub Actions runs before deployment:
 npm run verify:admin
 ```
 
-It performs TypeScript checking, the Vitest regression suite and the production Vite build. A failure in any step returns a non-zero exit code and prevents GitHub Pages deployment.
+It performs TypeScript checking, the Vitest regression suite, the production Vite build and the Admin initial-bundle budget check. A failure in any step returns a non-zero exit code and prevents GitHub Pages deployment.
+
+The current initial budgets are 115 kB gzip for JavaScript and 18 kB gzip for CSS. Run only the bundle check after an existing production build with:
+
+```powershell
+npm run check:admin-bundle
+```
+
+Website/Profile, CV/Portfolio, Cover Letter and Project crop modules load on demand. A workspace-specific chunk growing does not affect the initial budget unless it becomes an eager dependency of `/admin/`.
 
 Use `npm run test:watch` while developing Admin behavior. Use `npm run test` for one deterministic CI-style run.
 

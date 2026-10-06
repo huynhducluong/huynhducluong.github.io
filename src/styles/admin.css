@@ -677,3 +677,9 @@ textarea { line-height: 1.5; }
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+@supports (content-visibility: auto) {
+  .admin-media-row {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 180px;
+  }
+}

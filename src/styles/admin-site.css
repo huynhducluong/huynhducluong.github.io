@@ -1426,3 +1426,10 @@ button.admin-profile-photo-control {
   .admin-credential-files li .button { grid-column: span 1; }
   .admin-credential-upload { grid-template-columns: 1fr; }
 }
+@supports (content-visibility: auto) {
+  .admin-photo-library-card,
+  .admin-credential-card {
+    content-visibility: auto;
+    contain-intrinsic-size: auto 240px;
+  }
+}

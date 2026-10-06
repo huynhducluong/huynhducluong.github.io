@@ -1,3 +1,4 @@
+import "../styles/admin-site.css";
 import { websiteContentSeed } from "../data/websiteSeed";
 import {
   experienceLocationLabel,
@@ -24,8 +25,6 @@ import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } f
 import type { Education, Experience, LanguageSkill, Profile } from "../types/career";
 import type { StoredDocumentTheme } from "../types/theme";
 import { renderDocumentThemeFields } from "./documentThemeFields";
-import { invalidateProfileDocumentWorkspace } from "./profileDocumentWorkspace";
-import { updateCoverLetterSharedProfile } from "./coverLetterWorkspace";
 import { confirmAdmin } from "./confirmDialog";
 import { readAdminRoute, updateAdminRoute } from "./adminRoute";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
@@ -64,6 +63,7 @@ interface WorkspaceCallbacks {
   setDirty: (value: boolean) => void;
   notify: (message: string, kind?: "info" | "error" | "success") => void;
   updateAdminIdentity: (profile: Profile, persist?: boolean) => void;
+  onProfessionalProfileSaved: (professional: ProfessionalProfileContent) => void;
 }
 
 const state: {
@@ -161,11 +161,11 @@ const profilePhotoControl = (professional: ProfessionalProfileContent, photos: P
   const selectedName = selectedPhoto?.name ?? (path ? profilePhotoName(path) : "No photo");
   const legacyOption = path && !selectedPhoto
     ? `<button class="admin-profile-photo-option" type="button" role="option" aria-selected="true" data-profile-photo-option data-photo-value="${escapeHtml(path)}" data-photo-name="${escapeHtml(selectedName)}">
-        <span class="admin-profile-photo-option__thumb"><img src="${escapeHtml(assetUrl(path))}" alt=""></span><strong>${escapeHtml(selectedName)}</strong>
+        <span class="admin-profile-photo-option__thumb"><img src="${escapeHtml(assetUrl(path))}" alt="" loading="lazy" decoding="async"></span><strong>${escapeHtml(selectedName)}</strong>
       </button>`
     : "";
   const photoOptions = photos.map((photo) => `<button class="admin-profile-photo-option" type="button" role="option" aria-selected="${photo.publicUrl === path ? "true" : "false"}" data-profile-photo-option data-photo-value="${escapeHtml(photo.publicUrl)}" data-photo-name="${escapeHtml(photo.name)}">
-      <span class="admin-profile-photo-option__thumb"><img src="${escapeHtml(photo.publicUrl)}" alt=""></span><strong>${escapeHtml(photo.name)}</strong>
+      <span class="admin-profile-photo-option__thumb"><img src="${escapeHtml(photo.publicUrl)}" alt="" loading="lazy" decoding="async"></span><strong>${escapeHtml(photo.name)}</strong>
     </button>`).join("");
   return `<div class="admin-profile-photo-field">
     <span class="admin-profile-photo-field__label" id="profile-photo-label">Profile photo</span>
@@ -197,7 +197,7 @@ const formatPhotoFileSize = (bytes: number): string => bytes < 1024 * 1024
 
 const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
   const cards = photos.map((photo) => `<article class="admin-photo-library-card" data-photo-library-card="${escapeHtml(photo.id)}">
-      <div class="admin-photo-library-card__image"><img src="${escapeHtml(photo.publicUrl)}" alt="${escapeHtml(photo.name)}"></div>
+      <div class="admin-photo-library-card__image"><img src="${escapeHtml(photo.publicUrl)}" alt="${escapeHtml(photo.name)}" loading="lazy" decoding="async" width="${photo.width}" height="${photo.height}"></div>
       <div class="admin-photo-library-card__body">
         <div class="admin-photo-library-card__heading"><h4 data-profile-photo-library-name>${escapeHtml(photo.name)}</h4><div class="admin-photo-library-card__actions"><button class="button button--secondary" type="button" data-profile-photo-rename data-photo-id="${escapeHtml(photo.id)}" data-photo-name="${escapeHtml(photo.name)}">Rename</button><button class="button button--secondary admin-button--danger" type="button" data-profile-photo-delete data-photo-id="${escapeHtml(photo.id)}" data-photo-value="${escapeHtml(photo.publicUrl)}" data-photo-name="${escapeHtml(photo.name)}">Delete</button></div></div>
         <p>${photo.width} × ${photo.height}px · ${formatPhotoFileSize(photo.fileSize)}</p>
@@ -1615,8 +1615,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       if (!state.credentialError) state.credentials = await listProfessionalCredentials();
       callbacks.updateAdminIdentity(professional.profile, true);
       profileStructuralSnapshot = null;
-      invalidateProfileDocumentWorkspace();
-      updateCoverLetterSharedProfile(professional);
+      callbacks.onProfessionalProfileSaved(professional);
       callbacks.setDirty(false);
       callbacks.rerender();
       callbacks.notify("Professional Profile saved. Publish the Website and sync each CV background when ready.", "success");

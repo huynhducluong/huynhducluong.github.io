@@ -51,6 +51,12 @@ Professional credentials are a normalized shared library. A credential may stand
 - Cover Letter drafts render directly from the current form. Final and archived letters retain their saved sender snapshot.
 - Website release versions are generated automatically at publish time. Release history remains available from the Homepage header without occupying the preview canvas.
 
+## Admin performance model
+
+The Admin shell is the only eager workspace UI. Website/Profile, CV/Portfolio, Cover Letter and Project crop features are route-loaded with their own CSS and JavaScript. Route initialization requests only the data required by the selected workspace; shared Profile, Credential, Profile Photo and health reads use short-lived in-memory request deduplication. Successful mutations replace or invalidate their cache entry, and private document files and signed URLs are never persisted in the cache.
+
+Admin media outside the viewport uses native lazy image decoding. Long media and credential card lists use `content-visibility` where supported. CI measures the compressed JavaScript and CSS referenced by the built `/admin/` HTML so an accidental eager import cannot silently degrade startup performance.
+
 ## Security boundary
 
 The browser contains only a Supabase publishable key. Row Level Security and an immutable `auth.uid()` allowlist protect writes and draft reads. The service-role key must never be added to frontend code or the repository.

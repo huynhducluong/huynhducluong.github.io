@@ -1,6 +1,7 @@
 import { supabaseConfig } from "../config/supabase";
 import type { ProfilePhotoAsset } from "../types/profilePhoto";
 import { supabase } from "./supabaseClient";
+import { MemoryRequestCache } from "./memoryRequestCache";
 
 interface ProfilePhotoRow {
   id: string;
@@ -25,7 +26,9 @@ const profilePhotoFromRow = (row: ProfilePhotoRow): ProfilePhotoAsset => ({
   createdAt: row.created_at,
 });
 
-export const listProfilePhotos = async (): Promise<ProfilePhotoAsset[]> => {
+const profilePhotoCache = new MemoryRequestCache<ProfilePhotoAsset[]>(30_000);
+
+const fetchProfilePhotos = async (): Promise<ProfilePhotoAsset[]> => {
   const { data, error } = await supabase
     .from("profile_photos")
     .select("id,name,storage_path,mime_type,width,height,file_size,created_at")
@@ -34,6 +37,9 @@ export const listProfilePhotos = async (): Promise<ProfilePhotoAsset[]> => {
   if (error) throw error;
   return (data as ProfilePhotoRow[]).map(profilePhotoFromRow);
 };
+
+export const listProfilePhotos = async (force = false): Promise<ProfilePhotoAsset[]> =>
+  structuredClone(await profilePhotoCache.get(fetchProfilePhotos, force));
 
 export const createProfilePhoto = async (name: string, file: Blob): Promise<ProfilePhotoAsset> => {
   const id = crypto.randomUUID();
@@ -62,6 +68,7 @@ export const createProfilePhoto = async (name: string, file: Blob): Promise<Prof
     await supabase.storage.from(supabaseConfig.storageBucket).remove([storagePath]);
     throw metadataError;
   }
+  profilePhotoCache.invalidate();
   return profilePhotoFromRow(data as ProfilePhotoRow);
 };
 
@@ -72,6 +79,7 @@ export const archiveProfilePhoto = async (id: string): Promise<void> => {
     .eq("id", id)
     .is("archived_at", null);
   if (error) throw error;
+  profilePhotoCache.invalidate();
 };
 
 export const renameProfilePhoto = async (id: string, name: string): Promise<ProfilePhotoAsset> => {
@@ -83,5 +91,6 @@ export const renameProfilePhoto = async (id: string, name: string): Promise<Prof
     .select("id,name,storage_path,mime_type,width,height,file_size,created_at")
     .single();
   if (error) throw error;
+  profilePhotoCache.invalidate();
   return profilePhotoFromRow(data as ProfilePhotoRow);
 };

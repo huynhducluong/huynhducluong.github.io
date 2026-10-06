@@ -1,3 +1,5 @@
+import "../styles/admin-cover-letter.css";
+import "../styles/cover-letter-screen.css";
 import { coverLetterSenderDefaults, createCoverLetterDraft } from "../cover-letter/defaults";
 import { renderCoverLetterMarkup } from "../cover-letter/renderCoverLetter";
 import { coverLetterOverflows, validateCoverLetter } from "../cover-letter/validation";

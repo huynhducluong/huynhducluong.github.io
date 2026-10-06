@@ -3,12 +3,8 @@ import "../styles/reset.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
 import "../styles/admin.css";
-import "../styles/admin-cover-letter.css";
-import "../styles/admin-documents.css";
-import "../styles/admin-site.css";
 import "../styles/admin-typography.css";
 import "../styles/admin-ui.css";
-import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import {
@@ -30,7 +26,6 @@ import {
   setAdminDirty,
   type AdminDirtyScope,
 } from "./dirtyState";
-import { bindProjectCoverCropper, renderProjectCoverCropDialog } from "./projectCoverCropper";
 import { assetUrl, escapeHtml, profileName } from "../shared/format";
 import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
@@ -42,30 +37,8 @@ import type { CvProjectDisplay } from "../types/cvContent";
 import type { PublicationStatus } from "../types/portfolio";
 import type { Profile } from "../types/career";
 import { validateProjectReadiness, validateToolReadiness, type ContentValidationResult } from "./contentValidation";
-import {
-  bindCoverLetterWorkspace,
-  coverLetterSummary,
-  coverLetterWorkspaceView,
-  discardCoverLetterChanges,
-  ensureCoverLetterWorkspace,
-  markCoverLetterWorkspaceStale,
-} from "./coverLetterWorkspace";
-import {
-  bindProfileDocumentWorkspace,
-  discardProfileDocumentChanges,
-  ensureProfileDocumentWorkspace,
-  markProfileDocumentWorkspaceStale,
-  profileDocumentWorkspaceView,
-  type ProfileDocumentKind,
-} from "./profileDocumentWorkspace";
-import {
-  bindSiteWorkspace,
-  discardSiteChanges,
-  ensureSiteWorkspace,
-  markSiteWorkspaceStale,
-  siteWorkspaceView,
-  type SiteWorkspaceKind,
-} from "./siteWorkspace";
+import type { ProfileDocumentKind } from "./profileDocumentWorkspace";
+import type { SiteWorkspaceKind } from "./siteWorkspace";
 import { adminBrand, adminDocumentTitle } from "./brand";
 
 interface AdminMediaRow {
@@ -189,6 +162,67 @@ let reorderBusy = false;
 let navigationSequence = 0;
 let dashboardRenderSequence = 0;
 let adminIdentity: Profile | null = null;
+let adminContentLoaded = false;
+let adminContentLoading: Promise<void> | null = null;
+let contentSearchTimer: number | undefined;
+
+type CoverLetterWorkspaceModule = typeof import("./coverLetterWorkspace");
+type ProfileDocumentWorkspaceModule = typeof import("./profileDocumentWorkspace");
+type SiteWorkspaceModule = typeof import("./siteWorkspace");
+type ProjectCoverCropperModule = typeof import("./projectCoverCropper");
+
+let coverLetterWorkspaceModule: CoverLetterWorkspaceModule | null = null;
+let profileDocumentWorkspaceModule: ProfileDocumentWorkspaceModule | null = null;
+let siteWorkspaceModule: SiteWorkspaceModule | null = null;
+let projectCoverCropperModule: ProjectCoverCropperModule | null = null;
+let coverLetterWorkspaceLoading: Promise<CoverLetterWorkspaceModule> | null = null;
+let profileDocumentWorkspaceLoading: Promise<ProfileDocumentWorkspaceModule> | null = null;
+let siteWorkspaceLoading: Promise<SiteWorkspaceModule> | null = null;
+let projectCoverCropperLoading: Promise<ProjectCoverCropperModule> | null = null;
+
+const loadCoverLetterWorkspaceModule = (): Promise<CoverLetterWorkspaceModule> => {
+  if (coverLetterWorkspaceModule) return Promise.resolve(coverLetterWorkspaceModule);
+  if (!coverLetterWorkspaceLoading) {
+    coverLetterWorkspaceLoading = import("./coverLetterWorkspace").then((module) => {
+      coverLetterWorkspaceModule = module;
+      return module;
+    }).finally(() => { coverLetterWorkspaceLoading = null; });
+  }
+  return coverLetterWorkspaceLoading;
+};
+
+const loadProfileDocumentWorkspaceModule = (): Promise<ProfileDocumentWorkspaceModule> => {
+  if (profileDocumentWorkspaceModule) return Promise.resolve(profileDocumentWorkspaceModule);
+  if (!profileDocumentWorkspaceLoading) {
+    profileDocumentWorkspaceLoading = import("./profileDocumentWorkspace").then((module) => {
+      profileDocumentWorkspaceModule = module;
+      return module;
+    }).finally(() => { profileDocumentWorkspaceLoading = null; });
+  }
+  return profileDocumentWorkspaceLoading;
+};
+
+const loadSiteWorkspaceModule = (): Promise<SiteWorkspaceModule> => {
+  if (siteWorkspaceModule) return Promise.resolve(siteWorkspaceModule);
+  if (!siteWorkspaceLoading) {
+    siteWorkspaceLoading = import("./siteWorkspace").then((module) => {
+      siteWorkspaceModule = module;
+      return module;
+    }).finally(() => { siteWorkspaceLoading = null; });
+  }
+  return siteWorkspaceLoading;
+};
+
+const loadProjectCoverCropperModule = (): Promise<ProjectCoverCropperModule> => {
+  if (projectCoverCropperModule) return Promise.resolve(projectCoverCropperModule);
+  if (!projectCoverCropperLoading) {
+    projectCoverCropperLoading = import("./projectCoverCropper").then((module) => {
+      projectCoverCropperModule = module;
+      return module;
+    }).finally(() => { projectCoverCropperLoading = null; });
+  }
+  return projectCoverCropperLoading;
+};
 
 const identityInitials = (profile: Profile | null): string => (profile ? profileName(profile.name, "vi") : "HDL")
   .split(/\s+/)
@@ -669,7 +703,7 @@ const mediaLibrary = (type: AdminItemType, mediaRows: AdminMediaRow[]): string =
   const firstGalleryIndex = media[0]?.kind === "cover" ? 1 : 0;
   return `<div class="admin-media-list">${media.map((item, index) => `
     <article class="admin-media-row" data-media-id="${escapeHtml(item.id)}">
-      <div class="admin-media-row__preview"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
+      <div class="admin-media-row__preview"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}" loading="lazy" decoding="async"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
       <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
       <div class="admin-media-row__fields">
         <label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt.en)}" data-media-alt-en></label>
@@ -815,13 +849,19 @@ const trashInspector = (item: AdminContentListItem): string => `
   </section>`;
 
 const overviewView = (): string => {
+  if (!adminContentLoaded) return renderAdminWorkspaceState({
+    kind: "loading",
+    eyebrow: "Workspace overview",
+    title: "Loading dashboard",
+    message: "Preparing content summaries and operational checks.",
+  });
   const activeProjects = projects.filter((item) => !item.deleted_at);
   const activeTools = tools.filter((item) => !item.deleted_at);
   const activeItems = [...activeProjects, ...activeTools];
   const ready = activeItems.filter((item) => item.status === "published").length;
   const drafts = activeItems.filter((item) => item.status === "draft").length;
   const trash = [...projects, ...tools].filter((item) => item.deleted_at).length;
-  const letters = coverLetterSummary();
+  const letters = coverLetterWorkspaceModule?.coverLetterSummary() ?? { loaded: false, total: 0, drafts: 0, final: 0 };
   const needsAttention = activeItems.filter((item) => item.status !== "published").slice(0, 6);
   const coreSchemaHealthy = adminSchemaHealth.checks.transactionalPublishing
     && adminSchemaHealth.checks.releaseAwareMedia
@@ -862,11 +902,17 @@ const overviewView = (): string => {
 
 const workspaceView = (): string => {
   if (activeView === "overview") return overviewView();
-  if (activeView === "homepage") return siteWorkspaceView("homepage");
-  if (activeView === "profile") return siteWorkspaceView("profile");
-  if (activeView === "cv") return profileDocumentWorkspaceView("cv");
-  if (activeView === "portfolio") return profileDocumentWorkspaceView("portfolio");
-  if (activeView === "cover-letters") return coverLetterWorkspaceView();
+  if (activeView === "homepage" || activeView === "profile") return siteWorkspaceModule
+    ? siteWorkspaceModule.siteWorkspaceView(activeView)
+    : renderAdminWorkspaceState({ kind: "loading", eyebrow: "Website CMS", title: "Loading workspace", message: "Loading only the editor required for this view." });
+  if (activeView === "cv" || activeView === "portfolio") return profileDocumentWorkspaceModule
+    ? profileDocumentWorkspaceModule.profileDocumentWorkspaceView(activeView)
+    : renderAdminWorkspaceState({ kind: "loading", eyebrow: "Document workspace", title: "Loading editor", message: "Preparing the selected document workspace." });
+  if (activeView === "cover-letters") return coverLetterWorkspaceModule
+    ? coverLetterWorkspaceModule.coverLetterWorkspaceView()
+    : renderAdminWorkspaceState({ kind: "loading", eyebrow: "Applications", title: "Loading Cover Letters", message: "Preparing application drafts and evidence." });
+  if (!adminContentLoaded) return renderAdminWorkspaceState({ kind: "loading", eyebrow: "Content", title: "Loading content", message: "Preparing projects, tools and media metadata." });
+  if (activeView === "projects" && !projectCoverCropperModule) return renderAdminWorkspaceState({ kind: "loading", eyebrow: "Projects", title: "Loading project editor", message: "Preparing project media and crop tools." });
   if (activeView === "trash") {
     const item = selectedTrashItem();
     return item ? trashInspector(item) : renderAdminWorkspaceState({
@@ -938,7 +984,7 @@ const dashboardView = (): void => {
         <div class="admin-actions"><button class="button" type="submit" data-password-update-submit>Save password</button><button class="button button--secondary" type="button" data-password-close>Cancel</button></div>
       </form>
     </dialog>
-    ${renderProjectCoverCropDialog()}
+    ${activeView === "projects" && projectCoverCropperModule ? projectCoverCropperModule.renderProjectCoverCropDialog() : ""}
     <div class="admin-reorder-menu" data-reorder-menu popover="auto" role="menu" aria-label="Reorder item">
       <button type="button" role="menuitem" data-reorder-edge="first"><span aria-hidden="true">⇈</span>Move to first</button>
       <button type="button" role="menuitem" data-reorder-edge="last"><span aria-hidden="true">⇊</span>Move to last</button>
@@ -963,11 +1009,20 @@ const loadProjects = async (): Promise<void> => {
   if (toolResult.error) throw toolResult.error;
   projects = (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, project_images: item.project_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
   tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
+  adminContentLoaded = true;
   if (selectedProjectWasPersisted) selectedProject = projects.find((item) => item.id === selectedProjectId) ?? null;
   if (selectedToolWasPersisted) selectedTool = tools.find((item) => item.id === selectedToolId) ?? null;
-  markSiteWorkspaceStale();
-  markProfileDocumentWorkspaceStale();
-  markCoverLetterWorkspaceStale();
+  siteWorkspaceModule?.markSiteWorkspaceStale();
+  profileDocumentWorkspaceModule?.markProfileDocumentWorkspaceStale();
+  coverLetterWorkspaceModule?.markCoverLetterWorkspaceStale();
+};
+
+const ensureAdminContent = (): Promise<void> => {
+  if (adminContentLoaded) return Promise.resolve();
+  if (!adminContentLoading) {
+    adminContentLoading = loadProjects().finally(() => { adminContentLoading = null; });
+  }
+  return adminContentLoading;
 };
 
 const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
@@ -1205,7 +1260,7 @@ const renderUploadQueue = (): void => {
   if (count) count.textContent = `${pendingMedia.length} selected`;
   root.innerHTML = pendingMedia.length ? `<div class="admin-media-list">${pendingMedia.map((item, index) => `
     <article class="admin-media-row admin-media-row--pending" data-pending-id="${item.id}">
-      <div class="admin-media-row__preview"><img src="${item.previewUrl}" alt=""><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
+      <div class="admin-media-row__preview"><img src="${item.previewUrl}" alt="" loading="lazy" decoding="async"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
       <div class="admin-media-row__details"><strong title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</strong><small>${formatMediaType(item.file.type)} · ${formatMediaSize(item.file.size)}</small></div>
       <div class="admin-media-row__fields admin-media-row__fields--pending">
         <label><span>Use as</span><select data-pending-kind><option value="cover" ${item.kind === "cover" ? "selected" : ""}>Cover</option><option value="gallery" ${item.kind === "gallery" ? "selected" : ""}>Gallery</option></select></label>
@@ -1693,7 +1748,7 @@ const bindDashboard = (): void => {
     reorderMenu.hidePopover();
     void reorderMasterItem(type, id, edge).catch((error: Error) => message(error.message, "error"));
   }));
-  const coverCropper = bindProjectCoverCropper(app, {
+  const coverCropper = projectCoverCropperModule?.bindProjectCoverCropper(app, {
     notify: message,
     onSaved: async () => {
       const projectId = selectedProject?.id;
@@ -1703,41 +1758,55 @@ const bindDashboard = (): void => {
   app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", async () => {
     if (activeWorkspaceDirty() && !(await confirmAdmin({ eyebrow: "Unsaved changes", title: "Leave this editor?", message: "Your unsaved changes will be discarded if you leave this workspace.", confirmLabel: "Discard changes", cancelLabel: "Keep editing", tone: "danger" }))) return;
     const previousScope = dirtyScopeForView(activeView);
-    if (activeView === "cover-letters") discardCoverLetterChanges();
-    if (activeView === "cv" || activeView === "portfolio") discardProfileDocumentChanges();
-    if (activeView === "homepage" || activeView === "profile") discardSiteChanges();
+    if (activeView === "cover-letters") coverLetterWorkspaceModule?.discardCoverLetterChanges();
+    if (activeView === "cv" || activeView === "portfolio") profileDocumentWorkspaceModule?.discardProfileDocumentChanges();
+    if (activeView === "homepage" || activeView === "profile") siteWorkspaceModule?.discardSiteChanges();
     if (previousScope) clearAdminDirty(previousScope);
     clearPendingMedia();
     const nextView = button.dataset.adminView as AdminView;
     activeView = nextView;
     resetContentDirtyState();
     activeEditorTab = "overview";
-    if (activeView === "projects") {
-      selectedItemType = "project";
-      selectedTool = null;
-      if (!selectedProject || selectedProject.deleted_at) selectedProject = projects.find((item) => !item.deleted_at) ?? blankProject();
-    } else if (activeView === "tools") {
-      selectedItemType = "tool";
-      selectedProject = null;
-      if (!selectedTool || selectedTool.deleted_at) selectedTool = tools.find((item) => !item.deleted_at) ?? blankTool();
-    } else if (activeView === "trash") {
+    if (activeView === "trash") {
       selectedProject = null;
       selectedTool = null;
     }
-    const routedItem = activeView === "projects"
-      ? (projects.some((item) => item.id === selectedProject?.id) ? selectedProject?.id : "new")
-      : activeView === "tools"
-        ? (tools.some((item) => item.id === selectedTool?.id) ? selectedTool?.id : "new")
-        : null;
-    updateAdminRoute({ view: nextView, item: routedItem ?? null, tab: activeView === "projects" || activeView === "tools" ? activeEditorTab : null });
+    updateAdminRoute({ view: nextView, item: null, tab: activeView === "projects" || activeView === "tools" ? activeEditorTab : null });
 
     const navigationId = ++navigationSequence;
-    const workspaceReady = nextView === "cover-letters"
-      ? ensureCoverLetterWorkspace()
+    const workspaceReady: Promise<void> | null = nextView === "overview"
+      ? Promise.all([
+          ensureAdminContent(),
+          loadAdminSchemaHealth().then((health) => { adminSchemaHealth = health; }),
+          loadCoverLetterWorkspaceModule().then((module) => module.ensureCoverLetterWorkspace()),
+        ]).then(() => undefined)
+      : nextView === "projects" || nextView === "tools" || nextView === "trash"
+        ? Promise.all([
+            ensureAdminContent(),
+            nextView === "projects" ? loadProjectCoverCropperModule() : Promise.resolve(),
+          ]).then(() => {
+            if (nextView === "projects") {
+              selectedItemType = "project";
+              selectedTool = null;
+              if (!selectedProject || selectedProject.deleted_at) selectedProject = projects.find((item) => !item.deleted_at) ?? blankProject();
+            } else if (nextView === "tools") {
+              selectedItemType = "tool";
+              selectedProject = null;
+              if (!selectedTool || selectedTool.deleted_at) selectedTool = tools.find((item) => !item.deleted_at) ?? blankTool();
+            }
+            const routedItem = nextView === "projects"
+              ? (projects.some((item) => item.id === selectedProject?.id) ? selectedProject?.id : "new")
+              : nextView === "tools"
+                ? (tools.some((item) => item.id === selectedTool?.id) ? selectedTool?.id : "new")
+                : null;
+            updateAdminRoute({ view: nextView, item: routedItem ?? null, tab: nextView === "projects" || nextView === "tools" ? activeEditorTab : null });
+          })
+      : nextView === "cover-letters"
+      ? loadCoverLetterWorkspaceModule().then((module) => module.ensureCoverLetterWorkspace())
       : nextView === "cv" || nextView === "portfolio"
-        ? ensureProfileDocumentWorkspace(nextView)
+        ? loadProfileDocumentWorkspaceModule().then((module) => module.ensureProfileDocumentWorkspace(nextView))
         : nextView === "homepage" || nextView === "profile"
-          ? ensureSiteWorkspace()
+          ? loadSiteWorkspaceModule().then((module) => module.ensureSiteWorkspace())
           : null;
 
     // Start loading before the first render so an unopened workspace can
@@ -1745,8 +1814,7 @@ const bindDashboard = (): void => {
     dashboardView();
     if (workspaceReady) {
       await workspaceReady;
-      const loadingViewIsVisible = app.querySelector('.admin-workspace-state[data-state="loading"], .admin-workspace-loading, .admin-document-loading, .admin-cl-loading');
-      if (navigationId === navigationSequence && activeView === nextView && loadingViewIsVisible) dashboardView();
+      if (navigationId === navigationSequence && activeView === nextView) dashboardView();
     }
   }));
   app.querySelectorAll<HTMLButtonElement>("[data-editor-tab]").forEach((button) => button.addEventListener("click", () => {
@@ -1789,6 +1857,10 @@ const bindDashboard = (): void => {
       void downloadSavedMedia(type, mediaId, event.currentTarget as HTMLButtonElement).catch((error: Error) => message(error.message, "error"));
     });
     card.querySelector<HTMLButtonElement>("[data-media-crops]")?.addEventListener("click", (event) => {
+      if (!coverCropper) {
+        message("The crop editor is still loading. Try again in a moment.", "info");
+        return;
+      }
       try {
         ensureEditorSavedBeforeImmediateMutation();
       } catch (error) {
@@ -1871,12 +1943,14 @@ const bindDashboard = (): void => {
   app.querySelectorAll<HTMLButtonElement>("[data-status-filter]").forEach((button) => button.addEventListener("click", () => { contentStatusFilter = button.dataset.statusFilter as ContentStatusFilter; resetCurrentCollectionScroll(); dashboardView(); }));
   app.querySelector<HTMLInputElement>("[data-content-search]")?.addEventListener("input", (event) => {
     contentSearch = (event.currentTarget as HTMLInputElement).value;
-    const list = app.querySelector<HTMLElement>("[data-content-list]");
-    if (list) {
+    window.clearTimeout(contentSearchTimer);
+    contentSearchTimer = window.setTimeout(() => {
+      const list = app.querySelector<HTMLElement>("[data-content-list]");
+      if (!list) return;
       list.innerHTML = contentList();
       resetCurrentCollectionScroll();
       bindContentItemActions(list);
-    }
+    }, 120);
   });
   app.querySelectorAll<HTMLButtonElement>("[data-selected-status]").forEach((button) => button.addEventListener("click", () => {
     void changeSelectedStatus(button.dataset.itemType as AdminItemType, button.dataset.next as PublicationStatus).catch((error: Error) => message(error.message, "error"));
@@ -1887,7 +1961,7 @@ const bindDashboard = (): void => {
   app.querySelector<HTMLFormElement>("[data-upload-form]")?.addEventListener("submit", (event) => { event.preventDefault(); void uploadImages(event.currentTarget as HTMLFormElement).catch((error: Error) => message(error.message, "error")); });
   if (pendingMedia.length) renderUploadQueue();
   if (activeView === "cover-letters") {
-    bindCoverLetterWorkspace(app, {
+    coverLetterWorkspaceModule?.bindCoverLetterWorkspace(app, {
       rerender: dashboardView,
       setDirty: (value) => { setAdminDirty("cover-letters", value); },
       notify: message,
@@ -1895,7 +1969,7 @@ const bindDashboard = (): void => {
   }
   if (activeView === "cv" || activeView === "portfolio") {
     const documentScope = activeView as ProfileDocumentKind;
-    bindProfileDocumentWorkspace(app, documentScope, {
+    profileDocumentWorkspaceModule?.bindProfileDocumentWorkspace(app, documentScope, {
       rerender: dashboardView,
       setDirty: (value) => { setAdminDirty(documentScope, value); },
       notify: message,
@@ -1903,11 +1977,15 @@ const bindDashboard = (): void => {
   }
   if (activeView === "homepage" || activeView === "profile") {
     const siteScope = activeView as SiteWorkspaceKind;
-    bindSiteWorkspace(app, siteScope, {
+    siteWorkspaceModule?.bindSiteWorkspace(app, siteScope, {
       rerender: dashboardView,
       setDirty: (value) => { setAdminDirty(siteScope, value); },
       notify: message,
       updateAdminIdentity,
+      onProfessionalProfileSaved: (professional) => {
+        profileDocumentWorkspaceModule?.invalidateProfileDocumentWorkspace();
+        coverLetterWorkspaceModule?.updateCoverLetterSharedProfile(professional);
+      },
     });
   }
 };
@@ -1929,17 +2007,38 @@ const initialize = async (): Promise<void> => {
   }
 
   try {
-    const [, professional, schemaHealth] = await Promise.all([
-      loadProjects(),
-      loadProfessionalProfile().catch(() => null),
-      loadAdminSchemaHealth(),
-    ]);
-    adminIdentity = professional?.profile ?? null;
-    adminSchemaHealth = schemaHealth;
     const route = readAdminRoute();
     const availableViews: AdminView[] = ["overview", "homepage", "projects", "tools", "profile", "cv", "portfolio", "cover-letters", "trash"];
     if (route.view && availableViews.includes(route.view as AdminView)) activeView = route.view as AdminView;
     if (route.tab === "overview" || route.tab === "content" || route.tab === "media") activeEditorTab = route.tab;
+
+    dashboardView();
+    void loadProfessionalProfile().then((professional) => {
+      adminIdentity = professional.profile;
+      updateAdminIdentity(professional.profile);
+    }).catch(() => undefined);
+
+    if (activeView === "overview") {
+      await Promise.all([
+        ensureAdminContent(),
+        loadAdminSchemaHealth().then((health) => { adminSchemaHealth = health; }),
+        loadCoverLetterWorkspaceModule().then((module) => module.ensureCoverLetterWorkspace()),
+      ]);
+    } else if (activeView === "projects" || activeView === "tools" || activeView === "trash") {
+      await Promise.all([
+        ensureAdminContent(),
+        activeView === "projects" ? loadProjectCoverCropperModule() : Promise.resolve(),
+      ]);
+    } else if (activeView === "cover-letters") {
+      const module = await loadCoverLetterWorkspaceModule();
+      await module.ensureCoverLetterWorkspace();
+    } else if (activeView === "cv" || activeView === "portfolio") {
+      const module = await loadProfileDocumentWorkspaceModule();
+      await module.ensureProfileDocumentWorkspace(activeView);
+    } else if (activeView === "homepage" || activeView === "profile") {
+      const module = await loadSiteWorkspaceModule();
+      await module.ensureSiteWorkspace();
+    }
 
     if (activeView === "projects") {
       selectedItemType = "project";
@@ -1962,19 +2061,8 @@ const initialize = async (): Promise<void> => {
       selectedTool = tool ?? null;
       selectedItemType = project ? "project" : "tool";
       updateAdminRoute({ view: activeView, item: project?.id ?? tool?.id ?? null, tab: null });
-    } else if (activeView === "cover-letters") {
-      await ensureCoverLetterWorkspace();
-    } else if (activeView === "cv" || activeView === "portfolio") {
-      await ensureProfileDocumentWorkspace(activeView);
-    } else if (activeView === "homepage" || activeView === "profile") {
-      await ensureSiteWorkspace();
     }
     dashboardView();
-    if (activeView === "overview") {
-      void ensureCoverLetterWorkspace().then(() => {
-        if (activeView === "overview" && !hasAnyAdminDirtyState()) dashboardView();
-      });
-    }
   } catch (error) {
     loginView();
     message(error instanceof Error ? error.message : "Admin data could not be loaded.", "error");

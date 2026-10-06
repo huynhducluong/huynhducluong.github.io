@@ -8,6 +8,7 @@ import type {
 } from "../types/credential";
 import { supabase } from "./supabaseClient";
 import { validateCredentialFile } from "../shared/credentialValidation";
+import { MemoryRequestCache } from "./memoryRequestCache";
 
 interface CredentialAssetRow {
   id: string;
@@ -110,7 +111,9 @@ const toRow = (input: ProfessionalCredentialInput) => ({
 
 const selection = "*, credential_assets(*)";
 
-export const listProfessionalCredentials = async (): Promise<ProfessionalCredential[]> => {
+const credentialCache = new MemoryRequestCache<ProfessionalCredential[]>(30_000);
+
+const fetchProfessionalCredentials = async (): Promise<ProfessionalCredential[]> => {
   const { data, error } = await supabase
     .from("professional_credentials")
     .select(selection)
@@ -120,6 +123,9 @@ export const listProfessionalCredentials = async (): Promise<ProfessionalCredent
   return (data as CredentialRow[]).map(credentialFromRow);
 };
 
+export const listProfessionalCredentials = async (force = false): Promise<ProfessionalCredential[]> =>
+  structuredClone(await credentialCache.get(fetchProfessionalCredentials, force));
+
 export const createProfessionalCredential = async (input: ProfessionalCredentialInput): Promise<ProfessionalCredential> => {
   const { data, error } = await supabase
     .from("professional_credentials")
@@ -127,6 +133,7 @@ export const createProfessionalCredential = async (input: ProfessionalCredential
     .select(selection)
     .single();
   if (error) throw error;
+  credentialCache.invalidate();
   return credentialFromRow(data as CredentialRow);
 };
 
@@ -138,12 +145,14 @@ export const updateProfessionalCredential = async (id: string, input: Profession
     .select(selection)
     .single();
   if (error) throw error;
+  credentialCache.invalidate();
   return credentialFromRow(data as CredentialRow);
 };
 
 export const archiveProfessionalCredential = async (id: string): Promise<void> => {
   const { error } = await supabase.from("professional_credentials").update({ status: "archived" }).eq("id", id);
   if (error) throw error;
+  credentialCache.invalidate();
 };
 
 const extensions: Record<CredentialAsset["mimeType"], string> = {
@@ -183,6 +192,7 @@ export const uploadCredentialAsset = async (
     await supabase.storage.from(supabaseConfig.privateDocumentBucket).remove([storagePath]);
     throw error;
   }
+  credentialCache.invalidate();
   return assetFromRow(data as CredentialAssetRow);
 };
 
@@ -201,4 +211,5 @@ export const deleteCredentialAsset = async (asset: CredentialAsset): Promise<voi
   if (storageError) throw storageError;
   const { error } = await supabase.from("credential_assets").delete().eq("id", asset.id);
   if (error) throw error;
+  credentialCache.invalidate();
 };

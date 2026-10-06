@@ -10,7 +10,8 @@
     "check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "verify:admin": "npm run check && npm run test && npm run build",
+    "verify:admin": "npm run check && npm run test && npm run build && npm run check:admin-bundle",
+    "check:admin-bundle": "node scripts/check-admin-bundle.mjs",
     "build": "tsc && vite build",
     "preview": "vite preview"
   },

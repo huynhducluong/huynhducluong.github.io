@@ -5,6 +5,7 @@ import type { ProfessionalProfileContent, WebsiteContent, WebsiteContentSelectio
 import { supabase } from "./supabaseClient";
 import { withoutTrashed } from "./activeContent";
 import { normalizeProfile } from "../shared/format";
+import { MemoryRequestCache } from "./memoryRequestCache";
 import {
   projectFromRow,
   toolFromRow,
@@ -73,7 +74,9 @@ const websiteContentWithDefaults = (content: WebsiteContent): WebsiteContent => 
   };
 };
 
-export const loadProfessionalProfile = async (): Promise<ProfessionalProfileContent> => {
+const professionalProfileCache = new MemoryRequestCache<ProfessionalProfileContent>(30_000);
+
+const fetchProfessionalProfile = async (): Promise<ProfessionalProfileContent> => {
   const { data, error } = await supabase
     .from("professional_profile")
     .select("profile,experiences,education,skill_groups,languages")
@@ -90,6 +93,9 @@ export const loadProfessionalProfile = async (): Promise<ProfessionalProfileCont
   };
 };
 
+export const loadProfessionalProfile = async (force = false): Promise<ProfessionalProfileContent> =>
+  structuredClone(await professionalProfileCache.get(fetchProfessionalProfile, force));
+
 export const saveProfessionalProfile = async (content: ProfessionalProfileContent): Promise<void> => {
   const { error } = await supabase.rpc("save_professional_profile", {
     p_profile: content.profile,
@@ -98,7 +104,10 @@ export const saveProfessionalProfile = async (content: ProfessionalProfileConten
     p_skill_groups: content.skillGroups,
     p_languages: content.languages,
   });
-  if (!error) return;
+  if (!error) {
+    professionalProfileCache.set(structuredClone(content));
+    return;
+  }
   const missingRpc = error.code === "PGRST202" || error.message.includes("save_professional_profile");
   if (!missingRpc) throw error;
   const { error: fallbackError } = await supabase.from("professional_profile").upsert({
@@ -110,6 +119,7 @@ export const saveProfessionalProfile = async (content: ProfessionalProfileConten
     languages: content.languages,
   });
   if (fallbackError) throw fallbackError;
+  professionalProfileCache.set(structuredClone(content));
 };
 
 export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {

@@ -1,5 +1,6 @@
 import { supabaseConfig } from "../config/supabase";
 import { supabase } from "./supabaseClient";
+import { MemoryRequestCache } from "./memoryRequestCache";
 
 export interface AdminSchemaHealth {
   healthy: boolean;
@@ -74,13 +75,18 @@ export const parseAdminSchemaHealth = (payload: unknown): AdminSchemaHealth => {
   };
 };
 
-export const loadAdminSchemaHealth = async (): Promise<AdminSchemaHealth> => {
+const adminSchemaHealthCache = new MemoryRequestCache<AdminSchemaHealth>(15_000);
+
+const fetchAdminSchemaHealth = async (): Promise<AdminSchemaHealth> => {
   const { data, error } = await supabase.rpc("admin_schema_health");
   if (error) {
     return parseAdminSchemaHealth(null);
   }
   return parseAdminSchemaHealth(data);
 };
+
+export const loadAdminSchemaHealth = async (force = false): Promise<AdminSchemaHealth> =>
+  adminSchemaHealthCache.get(fetchAdminSchemaHealth, force);
 
 export const storagePathIsReferenced = async (storagePath: string): Promise<boolean> => {
   const { data, error } = await supabase.rpc("release_references_storage_path", { target_path: storagePath });
