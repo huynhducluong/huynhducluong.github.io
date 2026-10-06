@@ -10,8 +10,8 @@ export interface AdminRoutePatch {
   tab?: string | null;
 }
 
-export const readAdminRoute = (): AdminRouteState => {
-  const params = new URL(window.location.href).searchParams;
+export const parseAdminRoute = (source: string | URL): AdminRouteState => {
+  const params = new URL(source).searchParams;
   return {
     view: params.get("view"),
     item: params.get("item") ?? params.get("document") ?? params.get("id"),
@@ -19,11 +19,12 @@ export const readAdminRoute = (): AdminRouteState => {
   };
 };
 
-export const updateAdminRoute = (
-  patch: AdminRoutePatch,
-  mode: "replace" | "push" = "replace",
-): void => {
-  const url = new URL(window.location.href);
+export const readAdminRoute = (): AdminRouteState => {
+  return parseAdminRoute(window.location.href);
+};
+
+export const buildAdminRoute = (source: string | URL, patch: AdminRoutePatch): string => {
+  const url = new URL(source);
   const update = (key: "view" | "item" | "tab", value: string | null | undefined): void => {
     if (value === undefined) return;
     if (value) url.searchParams.set(key, value);
@@ -34,7 +35,14 @@ export const updateAdminRoute = (
   update("tab", patch.tab);
   url.searchParams.delete("id");
   url.searchParams.delete("document");
-  const target = `${url.pathname}${url.search}${url.hash}`;
+  return `${url.pathname}${url.search}${url.hash}`;
+};
+
+export const updateAdminRoute = (
+  patch: AdminRoutePatch,
+  mode: "replace" | "push" = "replace",
+): void => {
+  const target = buildAdminRoute(window.location.href, patch);
   if (mode === "push") window.history.pushState({}, "", target);
   else window.history.replaceState({}, "", target);
 };

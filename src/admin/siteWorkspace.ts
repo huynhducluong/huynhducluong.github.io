@@ -12,12 +12,14 @@ import {
   saveWebsiteContent,
 } from "../services/websiteRepository";
 import { archiveProfilePhoto, listProfilePhotos, renameProfilePhoto } from "../services/profilePhotoRepository";
+import { listProfessionalCredentials } from "../services/credentialRepository";
 import { assetUrl, degreeClassificationValue, escapeHtml, normalizeProfileName, profileName, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { validateWebsitePublish } from "./contentValidation";
 import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfilePhotoAsset } from "../types/profilePhoto";
+import type { ProfessionalCredential } from "../types/credential";
 import type { ProfessionalProfileContent, WebsiteContent, WebsiteRuntimeData } from "../types/website";
 import type { Education, Experience, LanguageSkill, Profile } from "../types/career";
 import type { StoredDocumentTheme } from "../types/theme";
@@ -28,6 +30,7 @@ import { confirmAdmin } from "./confirmDialog";
 import { readAdminRoute, updateAdminRoute } from "./adminRoute";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { bindProfilePhotoCropper, renderProfilePhotoCropDialog } from "./profilePhotoCropper";
+import { bindProfessionalCredentials, renderLinkedCredentials, renderProfessionalCredentials } from "./credentialWorkspace";
 import {
   bindPreviewZoom,
   createPreviewZoomState,
@@ -51,7 +54,7 @@ import {
 
 export type SiteWorkspaceKind = "homepage" | "profile";
 type WebsiteTab = "general" | "sections" | "featured" | "appearance";
-type ProfileTab = "identity" | "photos" | "experience" | "education" | "skills" | "languages";
+type ProfileTab = "identity" | "photos" | "experience" | "education" | "credentials" | "skills" | "languages";
 type WebsiteViewport = "desktop" | "laptop" | "tablet" | "mobile";
 type WebsitePreviewPage = "homepage" | "projects" | "tools" | `project:${string}` | `tool:${string}`;
 type WebsitePreviewData = WebsiteRuntimeData & { previewLanguage?: Language };
@@ -67,6 +70,8 @@ const state: {
   runtime: WebsiteRuntimeData | null;
   releases: DocumentReleaseSummary[];
   photos: ProfilePhotoAsset[];
+  credentials: ProfessionalCredential[];
+  credentialError: string;
   loading: boolean;
   error: string;
   websiteTab: WebsiteTab;
@@ -80,6 +85,8 @@ const state: {
   runtime: null,
   releases: [],
   photos: [],
+  credentials: [],
+  credentialError: "",
   loading: false,
   error: "",
   websiteTab: "general",
@@ -240,11 +247,16 @@ export const ensureSiteWorkspace = async (): Promise<void> => {
   if (state.loading || (state.runtime && !state.stale)) return;
   state.loading = true;
   state.error = "";
+  state.credentialError = "";
   try {
-    [state.runtime, state.releases, state.photos] = await Promise.all([
+    [state.runtime, state.releases, state.photos, state.credentials] = await Promise.all([
       loadWebsiteDraftData(),
       listWebsiteReleases(),
       listProfilePhotos(),
+      listProfessionalCredentials().catch((error: Error) => {
+        state.credentialError = error.message;
+        return [];
+      }),
     ]);
     profileStructuralSnapshot = null;
     state.stale = false;
@@ -526,7 +538,7 @@ const blankEducation = (): Education => ({
   endDate: "",
 });
 
-const educationCard = (item: Education, index: number, total: number): string => `
+const educationCard = (item: Education, index: number, total: number, credentials: ProfessionalCredential[]): string => `
   <article class="admin-education-card admin-profile-entry-card" data-profile-education="${escapeHtml(item.id)}">
     <input type="hidden" name="profile_education_order" value="${escapeHtml(item.id)}">
     <header class="admin-profile-entry-card__heading">
@@ -554,15 +566,16 @@ const educationCard = (item: Education, index: number, total: number): string =>
         ${renderAdminYearSelect({ label: "Start year", name: educationFieldName(item.id, "start"), value: item.startDate })}
         ${renderAdminYearSelect({ label: "End year", name: educationFieldName(item.id, "end"), value: item.endDate })}
       </div>
+      ${renderLinkedCredentials(credentials, "education", item.id)}
     </div>
   </article>`;
 
-const profileEducation = (professional: ProfessionalProfileContent): string => renderAdminSectionCard({
+const profileEducation = (professional: ProfessionalProfileContent, credentials: ProfessionalCredential[]): string => renderAdminSectionCard({
   title: "Profile education",
   note: "Shared education history used by the Website and CV.",
   headerActions: '<button class="button admin-action-new" type="button" data-profile-education-new>+ Add education</button>',
   content: professional.education.length
-    ? `<div class="admin-document-cards admin-education-list">${professional.education.map((item, index) => educationCard(item, index, professional.education.length)).join("")}</div>`
+    ? `<div class="admin-document-cards admin-education-list">${professional.education.map((item, index) => educationCard(item, index, professional.education.length, credentials)).join("")}</div>`
     : '<div class="admin-empty-state"><div><strong>No education entries</strong><small>Add an education entry to reuse it across the Website and CVs.</small></div></div>',
 });
 
@@ -581,7 +594,7 @@ const blankLanguage = (): LanguageSkill => ({
   name: { en: "", vi: "" },
 });
 
-const languageCard = (item: LanguageSkill, index: number, total: number): string => `
+const languageCard = (item: LanguageSkill, index: number, total: number, credentials: ProfessionalCredential[]): string => `
   <article class="admin-language-card admin-profile-entry-card" data-profile-language="${escapeHtml(item.id)}">
     <input type="hidden" name="profile_language_order" value="${escapeHtml(item.id)}">
     <header class="admin-profile-entry-card__heading">
@@ -601,15 +614,16 @@ const languageCard = (item: LanguageSkill, index: number, total: number): string
         ${field("Proficiency (EN)", languageFieldName(item.id, "proficiency_en"), item.proficiency?.en ?? "")}
         ${field("Proficiency (VI)", languageFieldName(item.id, "proficiency_vi"), item.proficiency?.vi ?? "")}
       </div>
+      ${renderLinkedCredentials(credentials, "language", item.id)}
     </div>
   </article>`;
 
-const profileLanguages = (professional: ProfessionalProfileContent): string => renderAdminSectionCard({
+const profileLanguages = (professional: ProfessionalProfileContent, credentials: ProfessionalCredential[]): string => renderAdminSectionCard({
   title: "Profile languages",
   note: "Shared language proficiency used by the Website and CV.",
   headerActions: '<button class="button admin-action-new" type="button" data-profile-language-new>+ Add language</button>',
   content: professional.languages.length
-    ? `<div class="admin-document-cards admin-language-list">${professional.languages.map((item, index) => languageCard(item, index, professional.languages.length)).join("")}</div>`
+    ? `<div class="admin-document-cards admin-language-list">${professional.languages.map((item, index) => languageCard(item, index, professional.languages.length, credentials)).join("")}</div>`
     : '<div class="admin-empty-state"><div><strong>No language entries</strong><small>Add a language to reuse it across the Website and CVs.</small></div></div>',
 });
 
@@ -829,7 +843,7 @@ const profileView = (): string => {
       saveActions: '<button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button>',
     })}
     <div class="admin-profile-layout">
-      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["photos","Photos"],["experience","Experience"],["education","Education"],["skills","Skills"],["languages","Languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional, state.photos)}</section><section data-profile-panel="photos"${tab === "photos" ? "" : " hidden"}>${profilePhotos(state.photos)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section><section data-profile-panel="languages"${tab === "languages" ? "" : " hidden"}>${profileLanguages(professional)}</section></form></section>
+      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["photos","Photos"],["experience","Experience"],["education","Education"],["credentials","Credentials"],["skills","Skills"],["languages","Languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional, state.photos)}</section><section data-profile-panel="photos"${tab === "photos" ? "" : " hidden"}>${profilePhotos(state.photos)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional, state.credentials)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section><section data-profile-panel="languages"${tab === "languages" ? "" : " hidden"}>${profileLanguages(professional, state.credentials)}</section></form><section data-profile-panel="credentials"${tab === "credentials" ? "" : " hidden"}>${state.credentialError ? renderAdminSectionCard({ title: "Credentials unavailable", note: "Apply migration 202610060002, then reload Admin.", content: `<p class="admin-empty">${escapeHtml(state.credentialError)}</p>` }) : renderProfessionalCredentials(professional, state.credentials)}</section></section>
       <aside class="admin-profile-usage"><p class="section-kicker">Used by</p><h2>One profile, four outputs</h2><div><article><strong>Website</strong><span>Applied when the next Website release is published.</span></article><article><strong>Curriculum Vitae</strong><span>Use “Sync from Professional Profile” in the CV draft before publishing.</span></article><article><strong>Portfolio</strong><span>Sync from the Professional Profile or from the active CV draft.</span></article><article><strong>Cover Letters</strong><span>Drafts use the saved profile; finalized letters retain their sender snapshot.</span></article></div><p>Published releases and finalized letters remain unchanged.</p></aside>
     </div>
     ${renderProfilePhotoCropDialog()}
@@ -843,7 +857,7 @@ export const siteWorkspaceView = (kind: SiteWorkspaceKind): string => {
   if (!state.runtime) return renderAdminWorkspaceState({ kind: "loading", eyebrow: "Website CMS", title: "Preparing workspace", message: "Loading the latest saved draft." });
   const route = readAdminRoute();
   const websiteTabs: WebsiteTab[] = ["general", "sections", "featured", "appearance"];
-  const profileTabs: ProfileTab[] = ["identity", "photos", "experience", "education", "skills", "languages"];
+  const profileTabs: ProfileTab[] = ["identity", "photos", "experience", "education", "credentials", "skills", "languages"];
   if (route.view === kind && route.tab) {
     if (kind === "homepage" && websiteTabs.includes(route.tab as WebsiteTab)) state.websiteTab = route.tab as WebsiteTab;
     if (kind === "profile" && profileTabs.includes(route.tab as ProfileTab)) state.profileTab = route.tab as ProfileTab;
@@ -1154,7 +1168,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const renderEducationPanel = (focusEducationId?: string): void => {
     const panel = root.querySelector<HTMLElement>('[data-profile-panel="education"]');
     if (!panel || !state.runtime) return;
-    panel.innerHTML = profileEducation(state.runtime.professional);
+    panel.innerHTML = profileEducation(state.runtime.professional, state.credentials);
     bindEducationActions();
     if (focusEducationId) {
       requestAnimationFrame(() => panel.querySelector<HTMLInputElement>(`[data-education-institution="${CSS.escape(focusEducationId)}"]`)?.focus());
@@ -1215,7 +1229,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const renderLanguagesPanel = (focusLanguageId?: string): void => {
     const panel = root.querySelector<HTMLElement>('[data-profile-panel="languages"]');
     if (!panel || !state.runtime) return;
-    panel.innerHTML = profileLanguages(state.runtime.professional);
+    panel.innerHTML = profileLanguages(state.runtime.professional, state.credentials);
     bindLanguageActions();
     if (focusLanguageId) {
       requestAnimationFrame(() => panel.querySelector<HTMLInputElement>(`[data-language-name="${CSS.escape(focusLanguageId)}"]`)?.focus());
@@ -1275,6 +1289,24 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   bindExperienceActions();
   bindEducationActions();
   bindLanguageActions();
+  bindProfessionalCredentials(root, {
+    getCredentials: () => state.credentials,
+    getProfessional: () => state.runtime!.professional,
+    setCredentials: (credentials) => { state.credentials = credentials; },
+    beforeMutation: () => { commitProfileDraft(); },
+    activateCredentialsTab: () => {
+      state.profileTab = "credentials";
+      updateAdminRoute({ view: "profile", item: null, tab: "credentials" });
+      root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]").forEach((item) => {
+        const selected = item.dataset.profileTab === "credentials";
+        item.classList.toggle("is-active", selected);
+        item.setAttribute("aria-selected", String(selected));
+      });
+      root.querySelectorAll<HTMLElement>("[data-profile-panel]").forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== "credentials"; });
+    },
+    rerender: callbacks.rerender,
+    notify: callbacks.notify,
+  });
   const photoPath = profileForm?.querySelector<HTMLInputElement>("[data-profile-photo-path]");
   const photoFrame = profileForm?.querySelector<HTMLElement>("[data-profile-photo-frame]");
   const photoName = profileForm?.querySelector<HTMLElement>("[data-profile-photo-name]");
@@ -1580,6 +1612,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       if (languageError) throw new Error(languageError);
       await saveProfessionalProfile(professional);
       state.runtime = { ...state.runtime!, professional };
+      if (!state.credentialError) state.credentials = await listProfessionalCredentials();
       callbacks.updateAdminIdentity(professional.profile, true);
       profileStructuralSnapshot = null;
       invalidateProfileDocumentWorkspace();

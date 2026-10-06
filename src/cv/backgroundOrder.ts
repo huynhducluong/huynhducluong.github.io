@@ -20,6 +20,7 @@ const reconcileIds = <T extends { id: string }>(
 export const resolveCvBackgroundOrder = (content: CvContent): CvBackgroundOrder => ({
   experienceIds: reconcileIds(content.backgroundOrder?.experienceIds, content.experiences, "start"),
   educationIds: reconcileIds(content.backgroundOrder?.educationIds, content.education, "start"),
+  credentialIds: reconcileIds(content.backgroundOrder?.credentialIds, content.credentials ?? [], "start"),
   skillGroupIds: reconcileIds(content.backgroundOrder?.skillGroupIds, content.skillGroups),
   languageIds: reconcileIds(content.backgroundOrder?.languageIds, content.languages, "start"),
 });
@@ -34,6 +35,7 @@ export const orderedCvBackground = (content: CvContent) => {
   return {
     experiences: orderItems(content.experiences, order.experienceIds),
     education: orderItems(content.education, order.educationIds),
+    credentials: orderItems(content.credentials ?? [], order.credentialIds),
     skillGroups: orderItems(content.skillGroups, order.skillGroupIds),
     languages: orderItems(content.languages, order.languageIds),
   };
@@ -42,6 +44,7 @@ export const orderedCvBackground = (content: CvContent) => {
 const backgroundOrderKeys: Record<CvBackgroundGroup, keyof CvBackgroundOrder> = {
   experiences: "experienceIds",
   education: "educationIds",
+  credentials: "credentialIds",
   skillGroups: "skillGroupIds",
   languages: "languageIds",
 };

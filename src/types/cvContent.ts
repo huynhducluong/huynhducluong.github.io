@@ -9,14 +9,16 @@ import type {
 } from "./career";
 import type { StoredDocumentTheme } from "./theme";
 import type { PublicationStatus } from "./portfolio";
+import type { CredentialSnapshot } from "./credential";
 
 export type CvProjectDisplay = "detailed" | "compact";
 
-export type CvBackgroundGroup = "experiences" | "education" | "skillGroups" | "languages";
+export type CvBackgroundGroup = "experiences" | "education" | "credentials" | "skillGroups" | "languages";
 
 export interface CvBackgroundOrder {
   experienceIds: string[];
   educationIds: string[];
+  credentialIds: string[];
   skillGroupIds: string[];
   languageIds: string[];
 }
@@ -29,6 +31,7 @@ export interface CvContent {
   profile: Profile;
   experiences: Experience[];
   education: Education[];
+  credentials: CredentialSnapshot[];
   skillGroups: SkillGroup[];
   languages: LanguageSkill[];
   backgroundOrder?: CvBackgroundOrder;

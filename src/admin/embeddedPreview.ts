@@ -55,7 +55,10 @@ export const bindEmbeddedPreview = (
     stage.dataset.previewState = "loading";
     if (frame) frame.dataset.previewMessage = message;
     loadingTimeout = window.setTimeout(() => {
+      loadingTimeout = undefined;
       stage.dataset.previewState = "error";
+      stage.removeAttribute("aria-busy");
+      stage.setAttribute("role", "alert");
       stage.setAttribute("aria-label", "Preview is taking longer than expected.");
       if (frame) frame.dataset.previewMessage = "Preview is taking longer than expected.";
     }, 12000);
@@ -167,8 +170,8 @@ export const bindEmbeddedPreview = (
     setError: (message = "Preview is unavailable.") => {
       clearLoadingTimeout();
       revealAfterMeasure = false;
-      stage.setAttribute("aria-busy", "true");
-      stage.setAttribute("role", "status");
+      stage.removeAttribute("aria-busy");
+      stage.setAttribute("role", "alert");
       stage.setAttribute("aria-label", message);
       stage.dataset.previewState = "error";
       if (frame) frame.dataset.previewMessage = message;

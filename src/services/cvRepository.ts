@@ -70,6 +70,7 @@ const contentFromRow = (row: CvContentRow): CvContent => ({
   profile: normalizeProfile(row.profile),
   experiences: row.experiences ?? [],
   education: row.education ?? [],
+  credentials: [],
   skillGroups: row.skill_groups ?? [],
   languages: row.languages ?? [],
 });

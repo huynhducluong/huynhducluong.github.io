@@ -11,6 +11,7 @@ const copy = {
     email: "Email",
     address: "Address",
     education: "Education",
+    credentials: "Credentials",
     language: "Language",
     experience: "Experience",
     professionalSummary: "Professional Summary",
@@ -27,6 +28,7 @@ const copy = {
     email: "Email",
     address: "Địa chỉ",
     education: "Học vấn",
+    credentials: "Chứng chỉ",
     language: "Ngôn ngữ",
     experience: "Kinh nghiệm",
     professionalSummary: "Tóm tắt chuyên môn",
@@ -108,6 +110,10 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
           </article>`;
         }).join("")}
       </section>
+      ${background.credentials.length ? `<section class="cv-sidebar-section">
+        ${heading(text.credentials)}
+        <ul class="cv-sidebar-list cv-sidebar-list--compact">${background.credentials.map((item) => `<li>${localized(item.title, language)}${item.issuer.en ? ` - ${localized(item.issuer, language)}` : ""}${item.issuedOn ? ` (${escapeHtml(item.issuedOn.slice(0, 4))})` : ""}</li>`).join("")}</ul>
+      </section>` : ""}
       ${background.skillGroups.map((group) => `
         <section class="cv-sidebar-section">
           ${heading(localized(group.title, language))}

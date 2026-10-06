@@ -1368,3 +1368,61 @@ button.admin-profile-photo-control {
 @media (max-width: 42rem) {
   .admin-site-validation { grid-template-columns: 1fr; }
 }
+.admin-credential-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.admin-credential-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--admin-color-border);
+  border-radius: .65rem;
+  background: var(--admin-color-surface-subtle);
+}
+
+.admin-credential-card.is-archived { opacity: .72; }
+.admin-credential-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.admin-credential-card > header p { color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: 800; text-transform: uppercase; }
+.admin-credential-card > header h4 { margin-top: .15rem; font-size: var(--admin-text-base); }
+.admin-credential-card > header small { display: block; margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); }
+.admin-credential-card > dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .65rem; margin: 0; }
+.admin-credential-card > dl div { padding: .65rem; border: 1px solid var(--admin-color-border); border-radius: .45rem; background: #fff; }
+.admin-credential-card dt { color: var(--color-text-muted); font-size: var(--admin-text-2xs); font-weight: 800; text-transform: uppercase; }
+.admin-credential-card dd { margin: .2rem 0 0; font-size: var(--admin-text-xs); font-weight: 700; }
+.admin-credential-card__description { color: var(--color-text-muted); font-size: var(--admin-text-sm); }
+.admin-credential-card__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+
+.admin-credential-files { display: grid; gap: .75rem; padding-top: .9rem; border-top: 1px solid var(--admin-color-border); }
+.admin-credential-files h5 { font-size: var(--admin-text-sm); }
+.admin-credential-files > div > p { margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); }
+.admin-credential-files ul { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
+.admin-credential-files li { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .6rem; padding: .6rem; border: 1px solid var(--admin-color-border); border-radius: .45rem; background: #fff; }
+.admin-credential-files li strong,
+.admin-credential-files li small { display: block; }
+.admin-credential-files li strong { overflow: hidden; font-size: var(--admin-text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.admin-credential-files li small { margin-top: .1rem; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
+.admin-credential-file__icon { display: grid; height: 2rem; place-items: center; border-radius: .35rem; background: var(--color-primary-light); color: var(--color-primary-dark); font-size: .58rem; font-weight: 900; }
+.admin-credential-upload { display: grid; grid-template-columns: minmax(12rem, 18rem) auto; align-items: end; gap: .65rem; }
+
+.admin-linked-credentials { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .8rem; padding: .8rem; border: 1px dashed var(--admin-color-border); border-radius: .5rem; background: var(--admin-color-surface-subtle); }
+.admin-linked-credentials strong,
+.admin-linked-credentials small { display: block; }
+.admin-linked-credentials strong { font-size: var(--admin-text-sm); }
+.admin-linked-credentials small { margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
+.admin-linked-credentials > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+
+.admin-credential-dialog { width: min(52rem, calc(100vw - 2rem)); }
+.admin-credential-dialog form { display: grid; gap: 1rem; }
+.admin-credential-dialog form > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.admin-credential-dialog form > header h2 { margin-top: .15rem; }
+.admin-credential-dialog form > header p:not(.section-kicker) { margin-top: .25rem; color: var(--color-text-muted); font-size: var(--admin-text-sm); }
+
+@media (max-width: 48rem) {
+  .admin-linked-credentials { grid-template-columns: 1fr; }
+  .admin-linked-credentials > div:last-child { justify-content: flex-start; }
+  .admin-credential-files li { grid-template-columns: 2.4rem minmax(0, 1fr); }
+  .admin-credential-files li .button { grid-column: span 1; }
+  .admin-credential-upload { grid-template-columns: 1fr; }
+}

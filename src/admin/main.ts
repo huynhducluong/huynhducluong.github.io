@@ -36,7 +36,7 @@ import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
 import { loadProfessionalProfile } from "../services/websiteRepository";
 import { downloadStoredMedia, type ProjectImageCropRow } from "../services/projectCoverCropRepository";
-import { loadAdminSchemaHealth, removeUnreferencedStoragePaths, type AdminSchemaHealth } from "../services/adminSystemRepository";
+import { loadAdminSchemaHealth, parseAdminSchemaHealth, removeUnreferencedStoragePaths, type AdminSchemaHealth } from "../services/adminSystemRepository";
 import { projectFromRow, toolFromRow, type ProjectRow, type ToolRow } from "../services/supabasePortfolioRepository";
 import type { CvProjectDisplay } from "../types/cvContent";
 import type { PublicationStatus } from "../types/portfolio";
@@ -183,7 +183,7 @@ let activeEditorTab: EditorTab = "overview";
 let contentEditorDirty = false;
 let dirtyMediaIds = new Set<string>();
 let pendingMedia: PendingMedia[] = [];
-let adminSchemaHealth: AdminSchemaHealth = { healthy: false, version: "unknown", message: "Schema health has not been checked." };
+let adminSchemaHealth: AdminSchemaHealth = parseAdminSchemaHealth(null);
 let magicLinkCooldown: number | undefined;
 let reorderBusy = false;
 let navigationSequence = 0;
@@ -823,6 +823,13 @@ const overviewView = (): string => {
   const trash = [...projects, ...tools].filter((item) => item.deleted_at).length;
   const letters = coverLetterSummary();
   const needsAttention = activeItems.filter((item) => item.status !== "published").slice(0, 6);
+  const coreSchemaHealthy = adminSchemaHealth.checks.transactionalPublishing
+    && adminSchemaHealth.checks.releaseAwareMedia
+    && adminSchemaHealth.checks.contentReadiness;
+  const lastPurgeRunSucceeded = adminSchemaHealth.trashPurge.lastRunStatus === "succeeded";
+  const lastPurgeRunLabel = adminSchemaHealth.trashPurge.lastRunAt
+    ? `${formatAdminDateTime(adminSchemaHealth.trashPurge.lastRunAt)} · ${adminSchemaHealth.trashPurge.lastRunStatus ?? "unknown"}`
+    : "Awaiting the first scheduled run";
   return `
     <section class="admin-overview">
       <div class="admin-page-heading"><div><p class="section-kicker">Workspace overview</p><h1>Content dashboard</h1><p>Manage website content, CV data and publish-ready documents from one place.</p></div></div>
@@ -832,8 +839,18 @@ const overviewView = (): string => {
         <article><span>Ready items</span><strong>${ready}</strong><small>${drafts} drafts still being prepared</small></article>
         <article><span>Cover letters</span><strong>${letters.loaded ? letters.total : "—"}</strong><button type="button" data-admin-view="cover-letters">${letters.loaded ? `${letters.drafts} drafts · ${letters.final} final` : "Open workspace"}</button></article>
         <article class="${trash ? "has-warning" : ""}"><span>Trash</span><strong>${trash}</strong><button type="button" data-admin-view="trash">Review trash</button></article>
-        <article class="${adminSchemaHealth.healthy ? "" : "has-warning"}"><span>Database schema</span><strong>${adminSchemaHealth.healthy ? "Current" : "Update"}</strong><small>${escapeHtml(adminSchemaHealth.version)}</small></article>
+        <article class="${adminSchemaHealth.healthy ? "" : "has-warning"}"><span>System health</span><strong>${adminSchemaHealth.healthy ? "Healthy" : "Attention"}</strong><small>Schema ${escapeHtml(adminSchemaHealth.version)}</small></article>
       </div>
+      <section class="admin-overview-card admin-health-card${adminSchemaHealth.healthy ? "" : " has-warning"}" aria-labelledby="admin-health-title">
+        <div class="admin-card-heading"><div><h2 id="admin-health-title">Operational health</h2><p>Live checks for publishing safety and automatic Trash cleanup.</p></div><span aria-label="${adminSchemaHealth.healthy ? "All required checks passed" : "One or more checks need attention"}">${adminSchemaHealth.healthy ? "OK" : "!"}</span></div>
+        <ul class="admin-health-list">
+          <li class="${coreSchemaHealthy ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Publishing database</strong><small>Transactional publishing, readiness and release-aware media</small></div><b>${coreSchemaHealthy ? "Ready" : "Update migration"}</b></li>
+          <li class="${adminSchemaHealth.checks.purgeServiceRole ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Purge database access</strong><small>Least-privilege access for the Edge Function service role</small></div><b>${adminSchemaHealth.checks.purgeServiceRole ? "Ready" : "Check grants"}</b></li>
+          <li class="${adminSchemaHealth.checks.trashPurgeSchedule ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Daily Trash cleanup</strong><small>${escapeHtml(adminSchemaHealth.trashPurge.localTime)} · ${escapeHtml(adminSchemaHealth.trashPurge.schedule ?? "Not scheduled")}</small></div><b>${adminSchemaHealth.checks.trashPurgeSchedule ? "Active" : "Check Cron"}</b></li>
+          <li class="${adminSchemaHealth.checks.credentialStorage ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Private credential storage</strong><small>Protected images, certificates and PDF evidence</small></div><b>${adminSchemaHealth.checks.credentialStorage ? "Ready" : "Update migration"}</b></li>
+          <li class="${adminSchemaHealth.trashPurge.lastRunAt ? (lastPurgeRunSucceeded ? "is-healthy" : "has-warning") : "is-pending"}"><span aria-hidden="true"></span><div><strong>Latest scheduled run</strong><small>${escapeHtml(lastPurgeRunLabel)}</small></div><b>${adminSchemaHealth.trashPurge.lastRunAt ? (lastPurgeRunSucceeded ? "Passed" : "Review") : "Pending"}</b></li>
+        </ul>
+      </section>
       <div class="admin-overview-grid">
         <section class="admin-overview-card admin-overview-card--attention${needsAttention.length ? "" : " is-empty"}"><div class="admin-card-heading"><div><h2>Needs attention</h2><p>Draft and archived content that is not public.</p></div><span>${needsAttention.length}</span></div>
           <div class="admin-attention-list">${needsAttention.length ? needsAttention.map((item) => { const isTool = typeof item.name === "string"; const itemName = isTool ? String(item.name) : (item.name as { en: string }).en; return `<button type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${isTool ? "tool" : "project"}"><span><strong title="${escapeHtml(itemName)}">${escapeHtml(itemName)}</strong><small title="${escapeHtml(item.slug)}">${escapeHtml(item.slug)}</small></span><span class="status status--${item.status}">${contentStatusLabel(item.status)}</span></button>`; }).join("") : '<div class="admin-empty-state"><span aria-hidden="true">&#10003;</span><div><strong>Everything is ready</strong><small>No draft or archived content needs attention.</small></div></div>'}</div>
@@ -1912,11 +1929,13 @@ const initialize = async (): Promise<void> => {
   }
 
   try {
-    const [, professional] = await Promise.all([
+    const [, professional, schemaHealth] = await Promise.all([
       loadProjects(),
       loadProfessionalProfile().catch(() => null),
+      loadAdminSchemaHealth(),
     ]);
     adminIdentity = professional?.profile ?? null;
+    adminSchemaHealth = schemaHealth;
     const route = readAdminRoute();
     const availableViews: AdminView[] = ["overview", "homepage", "projects", "tools", "profile", "cv", "portfolio", "cover-letters", "trash"];
     if (route.view && availableViews.includes(route.view as AdminView)) activeView = route.view as AdminView;

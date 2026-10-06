@@ -91,7 +91,17 @@ export const loadProfessionalProfile = async (): Promise<ProfessionalProfileCont
 };
 
 export const saveProfessionalProfile = async (content: ProfessionalProfileContent): Promise<void> => {
-  const { error } = await supabase.from("professional_profile").upsert({
+  const { error } = await supabase.rpc("save_professional_profile", {
+    p_profile: content.profile,
+    p_experiences: content.experiences,
+    p_education: content.education,
+    p_skill_groups: content.skillGroups,
+    p_languages: content.languages,
+  });
+  if (!error) return;
+  const missingRpc = error.code === "PGRST202" || error.message.includes("save_professional_profile");
+  if (!missingRpc) throw error;
+  const { error: fallbackError } = await supabase.from("professional_profile").upsert({
     id: "primary",
     profile: content.profile,
     experiences: content.experiences,
@@ -99,7 +109,7 @@ export const saveProfessionalProfile = async (content: ProfessionalProfileConten
     skill_groups: content.skillGroups,
     languages: content.languages,
   });
-  if (error) throw error;
+  if (fallbackError) throw fallbackError;
 };
 
 export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {

@@ -1061,8 +1061,8 @@ html.admin-app button.is-busy::before {
   isolation: isolate;
 }
 
-.admin-site-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::before,
-.admin-document-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::before {
+.admin-site-frame:has(> .admin-embedded-preview-stage:is([aria-busy="true"], [data-preview-state="error"]))::before,
+.admin-document-frame:has(> .admin-embedded-preview-stage:is([aria-busy="true"], [data-preview-state="error"]))::before {
   position: absolute;
   z-index: 5;
   inset: 1rem;
@@ -1074,8 +1074,8 @@ html.admin-app button.is-busy::before {
   content: "";
 }
 
-.admin-site-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::after,
-.admin-document-frame:has(> .admin-embedded-preview-stage[aria-busy="true"])::after {
+.admin-site-frame:has(> .admin-embedded-preview-stage:is([aria-busy="true"], [data-preview-state="error"]))::after,
+.admin-document-frame:has(> .admin-embedded-preview-stage:is([aria-busy="true"], [data-preview-state="error"]))::after {
   position: absolute;
   z-index: 6;
   top: 50%;
@@ -1096,7 +1096,7 @@ html.admin-app button.is-busy::before {
   animation: admin-preview-pulse 1.2s ease-in-out infinite;
 }
 
-.admin-embedded-preview-stage[aria-busy="true"] iframe { opacity: 0; }
+.admin-embedded-preview-stage:is([aria-busy="true"], [data-preview-state="error"]) iframe { opacity: 0; }
 
 @keyframes admin-preview-pulse {
   0%, 100% { opacity: .62; }

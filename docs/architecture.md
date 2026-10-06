@@ -40,6 +40,8 @@ Project/Tool content saves automatically return a Ready item to Draft when a req
 
 Release JSON stores immutable content plus versioned Storage paths. Removing media from a draft deletes its editable metadata, but the stored object is retained whenever any Website, CV or Portfolio release still references that path. Crop replacement and Trash purging use the same release-reference check. Unreferenced objects may be removed immediately; referenced objects remain available so historical and active releases never lose their images.
 
+Professional credentials are a normalized shared library. A credential may stand alone or link to an Education/Language entry; its evidence files live in the private `portfolio-private-documents` bucket. Original certificates, diplomas, transcripts and score reports are available only to authenticated Admin users through short-lived signed URLs. CV sync copies only Ready credential metadata into its draft and release—never private file paths or signed URLs.
+
 ## Admin preview contract
 
 - Website, Project detail, Tool detail, CV and Portfolio previews exchange the latest unsaved form payload through a same-origin ready/rendered handshake. The iframe announces readiness after Admin authorization, so its first payload cannot be lost during asynchronous startup.
@@ -54,3 +56,11 @@ Release JSON stores immutable content plus versioned Storage paths. Removing med
 The browser contains only a Supabase publishable key. Row Level Security and an immutable `auth.uid()` allowlist protect writes and draft reads. The service-role key must never be added to frontend code or the repository.
 
 The Storage bucket is public because approved images must render on GitHub Pages. Therefore a leaked direct object URL can still be opened even while its database record is Draft. Only sanitized public-ready media belongs in this bucket.
+
+## Admin operational health and release gate
+
+The Admin Overview reads `admin_schema_health()` when the authenticated workspace starts. The response contains no credentials; it reports the current schema version, transactional publishing safeguards, release-aware media cleanup, least-privilege `service_role` grants, the daily Trash Cron schedule and the most recent scheduled-run status. A Cron job that has not reached its first scheduled run is shown as pending and does not by itself make the system unhealthy.
+
+Every GitHub Pages deployment runs `npm run verify:admin`. The gate stops deployment when TypeScript checking, Admin regression tests or the production build fails. The regression suite protects deep-link normalization, shared dirty-state behavior, content readiness, Website draft persistence/publish payloads and operational-health parsing.
+
+See `docs/admin-operations.md` for deployment and incident checks.

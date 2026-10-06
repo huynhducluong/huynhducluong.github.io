@@ -564,7 +564,7 @@ textarea { line-height: 1.5; }
 .admin-page-heading { display: block; padding: .2rem .15rem .25rem; }
 .admin-page-heading h1 { margin-top: .2rem; font-family: inherit; font-size: var(--admin-title-lg); }
 .admin-page-heading p:not(.section-kicker) { margin-top: .3rem; color: var(--color-text-muted); font-size: var(--admin-text-base); }
-.admin-metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .9rem; }
+.admin-metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .9rem; }
 .admin-metric-grid article {
   display: grid;
   min-height: 8rem;
@@ -585,6 +585,19 @@ textarea { line-height: 1.5; }
 .admin-overview-grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(18rem, .65fr); gap: .9rem; }
 .admin-overview-card { padding: 1.1rem; border: 1px solid var(--color-border); border-radius: .65rem; background: #fff; box-shadow: 0 5px 15px rgb(16 45 59 / 4%); }
 .admin-overview-card--attention { display: grid; grid-template-rows: auto minmax(0, 1fr); }
+.admin-health-card.has-warning { border-color: color-mix(in srgb, var(--admin-color-warning) 55%, var(--color-border)); }
+.admin-health-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr)); gap: .65rem; margin: 0; padding: 0; list-style: none; }
+.admin-health-list li { display: grid; min-width: 0; grid-template-columns: .65rem minmax(0, 1fr) auto; align-items: center; gap: .65rem; padding: .75rem; border: 1px solid var(--admin-color-border); border-radius: .5rem; background: var(--admin-color-surface-subtle); }
+.admin-health-list li > span { width: .55rem; height: .55rem; border-radius: 999px; background: var(--admin-color-text-muted); }
+.admin-health-list li.is-healthy > span { background: var(--color-primary); }
+.admin-health-list li.has-warning > span { background: var(--admin-color-warning); }
+.admin-health-list strong,
+.admin-health-list small { display: block; }
+.admin-health-list strong { font-size: var(--admin-text-sm); }
+.admin-health-list small { margin-top: .15rem; overflow: hidden; color: var(--color-text-muted); font-size: var(--admin-text-2xs); text-overflow: ellipsis; white-space: nowrap; }
+.admin-health-list b { color: var(--color-text-muted); font-size: var(--admin-text-2xs); white-space: nowrap; }
+.admin-health-list li.is-healthy b { color: var(--color-primary-dark); }
+.admin-health-list li.has-warning b { color: var(--admin-color-warning); }
 .admin-card-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: .9rem; }
 .admin-card-heading h2 { font-family: inherit; font-size: var(--admin-text-lg); }
 .admin-card-heading p { margin-top: .2rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); }

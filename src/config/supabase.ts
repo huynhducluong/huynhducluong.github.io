@@ -2,6 +2,7 @@ export const supabaseConfig = {
   url: "https://xktfazwwenqhsncoovjw.supabase.co",
   publishableKey: "sb_publishable_SgGfshKSEGYjUJV0sTi1FA_VvG3f-o4",
   storageBucket: "portfolio-public",
+  privateDocumentBucket: "portfolio-private-documents",
   adminEmail: "huynhluong321998@gmail.com",
 } as const;
 

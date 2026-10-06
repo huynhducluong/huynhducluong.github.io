@@ -3,6 +3,7 @@ import { portfolioContentSeed } from "../data/portfolioSeed";
 import { loadPortfolioDraftData, normalizePortfolioRuntimeData } from "../services/documentRepository";
 import { loadCvData } from "../services/cvRepository";
 import { loadProfessionalProfile } from "../services/websiteRepository";
+import { credentialSnapshot, listProfessionalCredentials } from "../services/credentialRepository";
 import {
   archiveProfileDocument,
   createProfileDocument,
@@ -225,6 +226,7 @@ const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData, sharedProfi
     content: {
       ...saved.content,
       profile: inheritSharedProfile(sharedProfile, saved.content.profile),
+      credentials: saved.content.credentials ?? [],
     },
     detailedProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "detailed").sort((a, b) => a.cvOrder - b.cvOrder),
     compactProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "compact").sort((a, b) => a.cvOrder - b.cvOrder),
@@ -413,6 +415,14 @@ const cvBackgroundPanel = (content: CvContent): string => {
       ].filter(Boolean).join(" · "),
     });
   }).join("");
+  const credentialRows = background.credentials.map((item, index) => backgroundRow({
+    group: "credentials",
+    id: item.id,
+    index,
+    total: background.credentials.length,
+    title: item.title.en,
+    meta: [item.issuer.en, item.issuedOn?.slice(0, 4), item.credentialNumber].filter(Boolean).join(" · "),
+  })).join("");
   const skillRows = background.skillGroups.map((item, index) => backgroundRow({
     group: "skillGroups",
     id: item.id,
@@ -436,6 +446,7 @@ const cvBackgroundPanel = (content: CvContent): string => {
     content: `<div class="admin-cv-background__groups">
         <section><header><div><h4>Experience</h4><p>Employment history shown in the CV sidebar.</p></div><span>${background.experiences.length}</span></header><div class="admin-cv-background__list" data-background-list="experiences">${experienceRows || '<p class="admin-empty">No experience entries in Professional Profile.</p>'}</div></section>
         <section><header><div><h4>Education</h4><p>Qualifications shown before skills.</p></div><span>${background.education.length}</span></header><div class="admin-cv-background__list" data-background-list="education">${educationRows || '<p class="admin-empty">No education entries in Professional Profile.</p>'}</div></section>
+        <section><header><div><h4>Credentials</h4><p>Ready qualifications synced without private evidence files.</p></div><span>${background.credentials.length}</span></header><div class="admin-cv-background__list" data-background-list="credentials">${credentialRows || '<p class="admin-empty">No Ready credentials have been synced.</p>'}</div></section>
         <section><header><div><h4>Skills</h4><p>Skill groups and languages shown in the CV sidebar.</p></div><span>${background.skillGroups.length + background.languages.length}</span></header>
           <div class="admin-cv-background__subsection"><h5>Skill groups</h5><div class="admin-cv-background__list" data-background-list="skillGroups">${skillRows || '<p class="admin-empty">No skill groups in Professional Profile.</p>'}</div></div>
           <div class="admin-cv-background__subsection"><h5>Languages</h5><div class="admin-cv-background__list" data-background-list="languages">${languageRows || '<p class="admin-empty">No languages in Professional Profile.</p>'}</div></div>
@@ -525,6 +536,7 @@ const readCvForm = (formElement: HTMLFormElement): CvContent => {
     },
     experiences: current.experiences,
     education: current.education,
+    credentials: current.credentials ?? [],
     skillGroups: current.skillGroups,
     languages: current.languages,
     backgroundOrder: resolveCvBackgroundOrder(current),
@@ -815,7 +827,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
         </section>
         <aside class="admin-document-preview">
           ${previewToolbar}
-          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind].mode}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="${kind === "portfolio" ? "yes" : "no"}" tabindex="-1"></iframe></div></div>
+          <div class="admin-document-frame admin-document-frame--${kind}" data-zoom="${state.zoom[kind].mode}" tabindex="0" aria-label="Scrollable ${kind === "cv" ? "CV" : "Portfolio"} preview frame"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${kind === "cv" ? "CV" : "Portfolio"} draft preview${kind === "portfolio" ? "; scroll to review pages" : ""}" src="${import.meta.env.BASE_URL + previewPath}" data-document-iframe scrolling="${kind === "portfolio" ? "yes" : "no"}" tabindex="${kind === "portfolio" ? "0" : "-1"}"></iframe></div></div>
         </aside>
       </div>
       <dialog id="${kind}-release-history-dialog" class="admin-dialog admin-release-history" data-document-history-dialog aria-labelledby="${kind}-release-history-title"><form method="dialog"><div><p class="section-kicker">${documentLabel(kind)}</p><h2 id="${kind}-release-history-title">Release history</h2><p>Published releases remain read-only snapshots.</p></div>${releaseHistory}<div class="admin-actions"><button class="button button--secondary" type="button" data-document-history-close>Close</button></div></form></dialog>
@@ -1288,8 +1300,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       .catch((error: Error) => callbacks.notify(error.message, "error"));
   });
   root.querySelectorAll("[data-sync-professional-profile]").forEach((button) => button.addEventListener("click", () => {
-    void loadProfessionalProfile()
-      .then((professional) => {
+    void Promise.all([loadProfessionalProfile(), listProfessionalCredentials().catch(() => [])])
+      .then(([professional, credentials]) => {
         if (kind === "cv" && state.cv) {
           state.cv = readCvRuntimeForm(form);
           const nextContent: CvContent = {
@@ -1297,6 +1309,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
             profile: inheritSharedProfile(professional.profile, state.cv.content.profile),
             experiences: structuredClone(professional.experiences),
             education: structuredClone(professional.education),
+            credentials: credentials.filter((item) => item.status === "published").map(credentialSnapshot),
             skillGroups: structuredClone(professional.skillGroups),
             languages: structuredClone(professional.languages),
           };
