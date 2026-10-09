@@ -78,8 +78,9 @@ const renderProject = (project: CvRuntimeProject, language: Language, compact = 
 export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, language: Language = "en"): string => {
   const { content } = data;
   const text = copy[language];
-  const pageOneProjects = data.detailedProjects.slice(0, content.pageOneProjectCount);
-  const pageTwoProjects = data.detailedProjects.slice(content.pageOneProjectCount);
+  const pageOneProjectCount = Math.min(3, Math.max(1, content.pageOneProjectCount));
+  const pageOneProjects = data.detailedProjects.slice(0, pageOneProjectCount);
+  const pageTwoProjects = data.detailedProjects.slice(pageOneProjectCount);
   const profile = content.profile;
   const displayName = profileName(profile.name, language);
   const background = orderedCvBackground(content);

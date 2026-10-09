@@ -262,6 +262,16 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-preview {
+  --cv-sidebar-width: 71mm;
+  --cv-font-body: 8.5pt;
+  --cv-font-summary: 9.25pt;
+  --cv-font-role: 10pt;
+  --cv-font-project: 8.75pt;
+  --cv-font-project-summary: 8.25pt;
+  --cv-font-meta: 7.75pt;
+  --cv-font-sidebar-primary: 8.5pt;
+  --cv-font-sidebar-secondary: 7.5pt;
+  --cv-font-sidebar-list: 7.75pt;
   --document-primary: #087fb6;
   --document-primary-strong: #075d80;
   --document-accent: #14a8d6;
@@ -287,8 +297,8 @@ body.document-embedded .cv-preview-shell {
   background: var(--document-surface);
   color: var(--document-text);
   box-shadow: 0 22px 70px rgb(16 45 59 / 20%);
-  font-size: 7.6pt;
-  line-height: 1.35;
+  font-size: var(--cv-font-body);
+  line-height: 1.36;
 }
 
 .cv-page *,
@@ -321,7 +331,7 @@ body.document-embedded .cv-preview-shell {
 
 .cv-page--one {
   display: grid;
-  grid-template-columns: 71mm 139mm;
+  grid-template-columns: var(--cv-sidebar-width) minmax(0, 1fr);
 }
 
 .cv-sidebar {
@@ -411,7 +421,7 @@ body.document-embedded .cv-preview-shell {
 
 .cv-contact {
   display: grid;
-  gap: 2.1mm;
+  gap: 1.8mm;
   font-style: normal;
 }
 
@@ -422,7 +432,7 @@ body.document-embedded .cv-preview-shell {
 .cv-contact strong,
 .cv-sidebar-entry h3,
 .cv-employment strong {
-  font-size: 8pt;
+  font-size: var(--cv-font-sidebar-primary);
   font-weight: 800;
 }
 
@@ -430,24 +440,26 @@ body.document-embedded .cv-preview-shell {
 .cv-contact span,
 .cv-sidebar-entry p,
 .cv-employment span {
-  font-size: 6.9pt;
+  font-size: var(--cv-font-sidebar-secondary);
+  line-height: 1.3;
 }
 
 .cv-sidebar-entry {
   display: grid;
-  gap: 1.5mm;
+  gap: 1.1mm;
 }
 
 .cv-sidebar-entry__meta {
-  font-size: 6.6pt !important;
+  font-size: 7.25pt !important;
   font-weight: 650;
 }
 
 .cv-sidebar-list {
   display: grid;
-  gap: 1.35mm;
+  gap: 1.15mm;
   padding-left: 11mm !important;
-  font-size: 7.2pt;
+  font-size: var(--cv-font-sidebar-list);
+  line-height: 1.3;
 }
 
 .cv-sidebar-list--compact {
@@ -457,8 +469,12 @@ body.document-embedded .cv-preview-shell {
 
 .cv-employment-list {
   display: grid;
-  gap: 1.55mm;
+  gap: 1.25mm;
   list-style: none;
+}
+
+.cv-sidebar .cv-employment-list {
+  padding-inline: 7.5mm 4mm;
 }
 
 .cv-employment {
@@ -471,11 +487,11 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-page-one-main {
-  padding: 17mm 10mm 9mm 14.5mm;
+  padding: 15mm 10mm 9mm 14.5mm;
 }
 
 .cv-identity {
-  min-height: 43mm;
+  min-height: 39mm;
 }
 
 .cv-identity__name {
@@ -498,18 +514,18 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-summary {
-  min-height: 43mm;
+  min-height: 39mm;
 }
 
 .cv-summary p {
-  color: var(--document-text-muted);
-  font-size: 8.2pt;
-  line-height: 1.52;
+  color: color-mix(in srgb, var(--document-text) 84%, var(--document-text-muted));
+  font-size: var(--cv-font-summary);
+  line-height: 1.42;
 }
 
 .cv-experience-list {
   display: grid;
-  gap: 4.4mm;
+  gap: 3.8mm;
 }
 
 .cv-experience-item {
@@ -522,39 +538,41 @@ body.document-embedded .cv-preview-shell {
 .cv-experience-item__date {
   padding-top: 0.5mm;
   border-right: 0.45mm solid var(--document-text-muted);
-  font-size: 6.8pt;
+  font-size: var(--cv-font-meta);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-align: center;
 }
 
 .cv-experience-item__content h3 {
-  font-size: 9.1pt;
-  line-height: 1.15;
+  font-size: var(--cv-font-role);
+  line-height: 1.18;
 }
 
 .cv-experience-item__project {
-  margin-top: 1.4mm !important;
-  font-size: 7.6pt;
+  margin-top: 1.2mm !important;
+  font-size: var(--cv-font-project);
   font-weight: 800;
+  line-height: 1.25;
 }
 
 .cv-experience-item__summary {
-  margin-top: 1.2mm !important;
-  color: var(--document-text-muted);
-  font-size: 6.6pt;
+  margin-top: 1mm !important;
+  color: color-mix(in srgb, var(--document-text) 82%, var(--document-text-muted));
+  font-size: var(--cv-font-project-summary);
   font-style: italic;
-  line-height: 1.35;
+  font-weight: 500;
+  line-height: 1.34;
 }
 
 .cv-bullet-list {
   display: grid;
-  gap: 0.55mm;
-  margin-top: 1.4mm !important;
+  gap: 0.45mm;
+  margin-top: 1.2mm !important;
   padding-left: 4mm !important;
-  font-size: 6.45pt;
-  font-weight: 620;
-  line-height: 1.3;
+  font-size: 8.25pt;
+  font-weight: 600;
+  line-height: 1.32;
 }
 
 .cv-page-accent {
@@ -580,7 +598,7 @@ body.document-embedded .cv-preview-shell {
 .cv-page-two-header {
   display: grid;
   height: 37mm;
-  grid-template-columns: 73mm 1fr;
+  grid-template-columns: var(--cv-sidebar-width) minmax(0, 1fr);
 }
 
 .cv-page-two-header__identity {
@@ -637,22 +655,6 @@ body.document-embedded .cv-preview-shell {
   gap: 3.2mm;
 }
 
-.cv-experience-item--compact .cv-experience-item__content h3 {
-  font-size: 8.6pt;
-}
-
-.cv-experience-item--compact .cv-experience-item__project {
-  font-size: 7.25pt;
-}
-
-.cv-experience-item--compact .cv-experience-item__summary {
-  font-size: 6.35pt;
-}
-
-.cv-experience-item--compact .cv-bullet-list {
-  font-size: 6.25pt;
-}
-
 .cv-page-two-bottom {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
@@ -676,15 +678,16 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-selected-projects span {
-  font-size: 6.7pt;
+  font-size: 7.75pt;
   font-weight: 750;
-  line-height: 1.2;
+  line-height: 1.25;
 }
 
 .cv-selected-projects small {
   margin-top: 0.5mm;
   color: var(--document-text-muted);
-  font-size: 5.9pt;
+  font-size: 7.25pt;
+  line-height: 1.25;
 }
 
 .cv-tool {
@@ -694,13 +697,13 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-tool h3 {
-  font-size: 8.5pt;
+  font-size: 8.75pt;
 }
 
 .cv-tool p {
   margin-top: 1.5mm !important;
   color: var(--document-text-muted);
-  font-size: 6.3pt;
+  font-size: 7.75pt;
   line-height: 1.35;
 }
 
@@ -717,7 +720,7 @@ body.document-embedded .cv-preview-shell {
   border: 0.25mm solid var(--document-border);
   border-radius: 2mm;
   background: var(--document-surface);
-  font-size: 5.7pt;
+  font-size: 7.25pt;
   font-weight: 700;
 }
 

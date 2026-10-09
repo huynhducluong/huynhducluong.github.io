@@ -190,7 +190,7 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
    keep the same geometry while their content and available actions vary. */
 .admin-document-header {
   display: grid;
-  height: var(--admin-workspace-header-min-height);
+  height: auto;
   min-height: var(--admin-workspace-header-min-height);
   grid-template-columns: minmax(12rem, 1fr) auto;
   align-items: center;
@@ -219,7 +219,15 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   white-space: nowrap;
 }
 
-.admin-document-header__identity > p:last-child > span:last-child {
+.admin-document-meta > .status,
+.admin-document-meta__active {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+.admin-document-meta__detail {
+  flex: 0 1 auto;
+  max-width: 100%;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -336,6 +344,38 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-document-actions {
   flex-wrap: nowrap;
   white-space: nowrap;
+}
+
+@container (max-width: 64rem) {
+  .admin-document-header {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .admin-document-header__identity,
+  .admin-document-title {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .admin-document-header__identity > .admin-document-meta {
+    overflow: visible;
+    flex-wrap: wrap;
+    row-gap: .3rem;
+    white-space: normal;
+  }
+
+  .admin-document-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+
+  .admin-document-actions > span {
+    min-width: 0;
+    margin-right: .25rem;
+    text-align: left;
+  }
 }
 
 .admin-document-more summary {

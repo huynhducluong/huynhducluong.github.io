@@ -352,7 +352,7 @@ const cvContentPanel = (content: CvContent): string => [
     note: "Control the draft version and first-page project density.",
     content: `<div class="admin-form-grid">
       ${field("CV version", "cv_version", content.version)}
-      ${field("Detailed projects on page 1", "page_one_project_count", String(content.pageOneProjectCount), "number")}
+      <label>Detailed projects on page 1 (recommended 2-3)<input name="page_one_project_count" type="number" min="1" max="3" step="1" value="${Math.min(3, Math.max(1, content.pageOneProjectCount))}"></label>
     </div>`,
   }),
   renderAdminSectionCard({
@@ -453,7 +453,7 @@ const cvBackgroundPanel = (content: CvContent): string => {
     content: `<div class="admin-cv-background__groups">
         ${backgroundGroup({ group: "experiences", title: "Experience", note: "Choose employment history for the CV sidebar.", rows: experienceRows, selected: selection.experienceIds.length, total: content.experiences.length, empty: "No experience entries in Professional Profile." })}
         ${backgroundGroup({ group: "education", title: "Education", note: "Choose qualifications for the CV sidebar.", rows: educationRows, selected: selection.educationIds.length, total: content.education.length, empty: "No education entries in Professional Profile." })}
-        ${backgroundGroup({ group: "credentials", title: "Credentials", note: "Choose Ready credentials; private evidence files stay excluded.", rows: credentialRows, selected: selection.credentialIds.length, total: (content.credentials ?? []).length, empty: "No Ready credentials have been synced." })}
+        ${backgroundGroup({ group: "credentials", title: "Credentials", note: "Choose Ready credentials for this CV.", rows: credentialRows, selected: selection.credentialIds.length, total: (content.credentials ?? []).length, empty: "No Ready credentials have been synced." })}
         ${backgroundGroup({ group: "skillGroups", title: "Skill groups", note: "Each selected group becomes its own CV section.", rows: skillRows, selected: selection.skillGroupIds.length, total: content.skillGroups.length, empty: "No skill groups in Professional Profile." })}
         ${backgroundGroup({ group: "languages", title: "Languages", note: "Choose languages for the CV sidebar.", rows: languageRows, selected: selection.languageIds.length, total: content.languages.length, empty: "No languages in Professional Profile." })}
       </div>`,
@@ -517,7 +517,7 @@ const readCvForm = (formElement: HTMLFormElement): CvContent => {
     version: text(form, "cv_version") || current.version,
     themeId: readTheme(form).presetId,
     theme: readTheme(form),
-    pageOneProjectCount: Math.max(1, Number(form.get("page_one_project_count")) || 3),
+    pageOneProjectCount: Math.min(3, Math.max(1, Number(form.get("page_one_project_count")) || 3)),
     profile: {
       ...current.profile,
       professionalTitle: { en: text(form, "profile_title_en"), vi: text(form, "profile_title_vi") },

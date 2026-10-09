@@ -77,3 +77,14 @@ describe("CV background selection", () => {
     expect(orderedCvBackground(content).experiences.map((item) => item.id)).toEqual(reversedIds);
   });
 });
+
+describe("CV page density", () => {
+  it("caps the first page at three detailed projects", () => {
+    const runtime = structuredClone(cvRuntimeSeed);
+    runtime.content.pageOneProjectCount = 8;
+    const html = renderDynamicCv(runtime);
+    const firstPage = html.split('<section class="cv-page cv-page--two"')[0];
+
+    expect(firstPage.match(/class="cv-experience-item"/g)).toHaveLength(3);
+  });
+});
