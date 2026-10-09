@@ -108,6 +108,11 @@
 .admin-cover-letter-form form { display: block; margin: 0; padding: 1.2rem; }
 .admin-cover-letter-form .admin-editor-panel { gap: 1rem; }
 .admin-cover-letter-form textarea { line-height: 1.5; }
+.admin-cl-application-grid { align-items: start; }
+
+@container admin-cover-letter-form (max-width: 34rem) {
+  .admin-cl-application-grid { grid-template-columns: minmax(0, 1fr); }
+}
 
 .admin-cl-evidence-card { gap: .75rem; }
 .admin-cl-evidence-card .admin-form-section__body { width: 100%; gap: 0; }

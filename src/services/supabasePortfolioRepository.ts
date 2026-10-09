@@ -11,6 +11,7 @@ import type {
 } from "../types/portfolio";
 import { supabase } from "./supabaseClient";
 import { withoutTrashed } from "./activeContent";
+import { sortByMasterContentOrder } from "../shared/contentOrder";
 
 interface MediaCropRow {
   id: string;
@@ -185,9 +186,13 @@ export const supabasePortfolioRepository: PortfolioRepository = {
       .select(projectSelect)
       .eq("status", "published")
       .is("deleted_at", null)
-      .order("display_order");
+      .order("display_order")
+      .order("id");
     if (error) throw error;
-    return withoutTrashed(data as ProjectRow[]).map(projectFromRow);
+    return sortByMasterContentOrder(
+      withoutTrashed(data as ProjectRow[]).map(projectFromRow),
+      (item) => item.displayOrder,
+    );
   },
 
   async getPublishedProject(slug: string): Promise<PortfolioProject | null> {
@@ -209,9 +214,13 @@ export const supabasePortfolioRepository: PortfolioRepository = {
       .select(toolSelect)
       .eq("status", "published")
       .is("deleted_at", null)
-      .order("display_order");
+      .order("display_order")
+      .order("id");
     if (error) throw error;
-    return withoutTrashed(data as ToolRow[]).map(toolFromRow);
+    return sortByMasterContentOrder(
+      withoutTrashed(data as ToolRow[]).map(toolFromRow),
+      (item) => item.displayOrder,
+    );
   },
 
   async getPublishedTool(slug: string): Promise<PortfolioTool | null> {

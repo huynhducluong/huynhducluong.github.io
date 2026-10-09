@@ -9,6 +9,7 @@ import {
   finalizeCoverLetter,
   listCoverLetterEvidence,
   listCoverLetters,
+  renameCoverLetter,
   updateCoverLetterDraft,
 } from "../services/coverLetterRepository";
 import { escapeHtml, profileName } from "../shared/format";
@@ -27,6 +28,7 @@ import {
 } from "./ui";
 import { confirmAdmin } from "./confirmDialog";
 import { readAdminRoute, updateAdminRoute } from "./adminRoute";
+import { requestAdminText } from "./textInputDialog";
 import {
   bindPreviewZoom,
   createPreviewZoomState,
@@ -222,8 +224,7 @@ const panelState = (tab: CoverLetterEditorTab): string => editorTab === tab ? ""
 
 const evidenceChecks = (items: CoverLetterEvidenceOption[], name: "projectIds" | "toolIds"): string => {
   if (!items.length) return '<p class="admin-empty">No records available.</p>';
-  return [...items]
-    .sort((a, b) => Number(b.status === "published") - Number(a.status === "published"))
+  return items
     .map((item) => `<label class="evidence-option"><input type="checkbox" name="${name}" value="${escapeHtml(item.id)}" ${letter[name].includes(item.id) ? "checked" : ""}${disabled()}><span><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(item.status)}</small></span></label>`)
     .join("");
 };
@@ -284,7 +285,7 @@ const editorView = (): string => {
         titleContent: `<button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button>`,
         meta: `<span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${formatAdminDate(record.updatedAt)}` : "New application"}</span>`,
         saveState: `<span data-cl-dirty-state data-dirty="${dirty}" aria-live="polite">${dirty ? "Unsaved changes" : isLocked ? "Locked" : "Saved"}</span>`,
-        moreActions: record ? `<details class="admin-document-more"><summary>More</summary><div><a href="${base}cover-letter/?id=${encodeURIComponent(record.id)}" target="_blank" rel="noreferrer">Print / PDF</a>${record.status === "draft" ? '<button class="admin-danger" type="button" data-cl-delete>Delete draft</button>' : record.status === "final" ? '<button type="button" data-cl-archive>Archive</button>' : ""}</div></details>` : "",
+        moreActions: record ? `<details class="admin-document-more"><summary>More</summary><div><button type="button" data-cl-print>Print / PDF</button><button type="button" data-cl-rename>Rename</button>${record.status === "draft" ? '<button class="admin-danger" type="button" data-cl-delete>Delete draft</button>' : record.status === "final" ? '<button type="button" data-cl-archive>Archive</button>' : ""}</div></details>` : "",
         saveActions: isLocked ? "" : '<button class="button button--secondary admin-action-save" type="submit" form="admin-cover-letter-form">Save draft</button>',
         primaryActions: isLocked ? '<button class="button admin-action-publish" type="button" data-cl-duplicate>Duplicate as draft</button>' : '<button class="button admin-action-publish" type="button" data-cl-finalize>Finalize</button>',
       })}
@@ -297,9 +298,8 @@ const editorView = (): string => {
               ${renderAdminSectionCard({
                 title: "Application details",
                 note: "Identify the role, company and recipient.",
-                content: `<div class="admin-form-grid">${input("Internal title *", "internalTitle", "text", true)}${input("Application date *", "applicationDate", "date", true)}${input("Company name *", "companyName", "text", true)}${input("Position title *", "positionTitle", "text", true)}${input("Recipient name", "recipientName")}${input("Recipient title", "recipientTitle")}</div>
-                  ${textarea("Company address", "companyAddress", 3)}
-                  ${input("Salutation *", "salutation", "text", true)}`,
+                content: `<div class="admin-form-grid admin-cl-application-grid">${input("Company name *", "companyName", "text", true)}${input("Position title *", "positionTitle", "text", true)}${input("Application date *", "applicationDate", "date", true)}${input("Recipient name", "recipientName")}${input("Recipient title", "recipientTitle")}${input("Salutation *", "salutation", "text", true)}</div>
+                  ${textarea("Company address", "companyAddress", 3)}`,
               })}
               ${renderAdminSectionCard({
                 title: "Letter body",
@@ -314,7 +314,7 @@ const editorView = (): string => {
             <section class="admin-editor-panel" data-cl-panel="evidence" ${panelState("evidence")}>
               ${renderAdminSectionCard({
                 title: "Supporting evidence",
-                note: "Private references only; published content appears first.",
+                note: "Private references only; order follows Projects and Automation Tools.",
                 className: "admin-cl-evidence-card",
                 content: `<div class="admin-cl-evidence">
                   <div class="admin-cl-evidence-heading"><h4>Projects</h4><small>${letter.projectIds.length} selected</small></div>
@@ -372,7 +372,7 @@ const readForm = (root: ParentNode): CoverLetterInput => {
   const data = new FormData(form);
   const text = (name: string): string => String(data.get(name) ?? "");
   return {
-    internalTitle: text("internalTitle"),
+    internalTitle: letter.internalTitle.trim(),
     companyName: text("companyName"),
     positionTitle: text("positionTitle"),
     recipientName: text("recipientName"),
@@ -470,14 +470,30 @@ const openRecord = async (id: string, callbacks: WorkspaceCallbacks): Promise<vo
 
 const openNew = async (callbacks: WorkspaceCallbacks): Promise<void> => {
   if (dirty && !(await confirmAdmin({ eyebrow: "New cover letter", title: "Discard current changes?", message: "A new cover letter draft will open and the current unsaved changes will be lost.", confirmLabel: "Create new letter", cancelLabel: "Keep editing", tone: "danger" }))) return;
-  record = null;
-  letter = createCoverLetterDraft();
+  const title = await requestAdminText({
+    eyebrow: "New Cover Letter",
+    title: "Name this Cover Letter",
+    description: "Use an internal name that makes this application easy to find later.",
+    label: "Document name",
+    initialValue: "New Cover Letter",
+    submitLabel: "Create Cover Letter",
+  });
+  if (!title) return;
+  callbacks.notify("Creating cover letter draft…");
+  const draft = createCoverLetterDraft();
+  draft.internalTitle = title;
+  const created = await createCoverLetter(draft);
+  record = created;
+  letter = structuredClone(created);
   editorOpen = true;
   dirty = false;
   editorTab = "content";
+  upsertLocalRecord(created);
+  rememberRecord(created.id);
   callbacks.setDirty(false);
-  syncUrl();
+  syncUrl(created.id);
   callbacks.rerender();
+  callbacks.notify("Cover letter draft created.", "success");
 };
 
 const saveDraft = async (root: ParentNode, callbacks: WorkspaceCallbacks): Promise<void> => {
@@ -554,7 +570,9 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
     callbacks.rerender();
     void ensureCoverLetterWorkspace().then(callbacks.rerender);
   });
-  root.querySelectorAll<HTMLElement>("[data-cl-new]").forEach((button) => button.addEventListener("click", () => { void openNew(callbacks); }));
+  root.querySelectorAll<HTMLElement>("[data-cl-new]").forEach((button) => button.addEventListener("click", () => {
+    void openNew(callbacks).catch((error: Error) => callbacks.notify(error.message, "error"));
+  }));
   bindRecordButtons(root, callbacks);
   root.querySelector<HTMLInputElement>("[data-cl-search]")?.addEventListener("input", (event) => {
     search = (event.currentTarget as HTMLInputElement).value;
@@ -610,6 +628,35 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   root.querySelector<HTMLButtonElement>("[data-cl-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
   root.querySelector<HTMLButtonElement>("[data-cl-validation-close]")?.addEventListener("click", () => validationDialog?.close());
 
+  root.querySelector<HTMLButtonElement>("[data-cl-rename]")?.addEventListener("click", async () => {
+    if (!record) return;
+    const activeRecord = record;
+    const preservedLetter = activeRecord.status === "draft" ? readForm(root) : structuredClone(letter);
+    const wasDirty = dirty;
+    const title = await requestAdminText({
+      eyebrow: "Rename Cover Letter",
+      title: "Choose a clear internal name",
+      description: "This changes the Admin library name only; the letter content and finalized snapshot remain unchanged.",
+      label: "Document name",
+      initialValue: activeRecord.internalTitle,
+      submitLabel: "Rename",
+    });
+    if (!title || title === activeRecord.internalTitle) return;
+    callbacks.notify("Renaming cover letter…");
+    void renameCoverLetter(activeRecord.id, title)
+      .then((renamed) => {
+        record = renamed;
+        letter = { ...preservedLetter, internalTitle: renamed.internalTitle };
+        upsertLocalRecord(renamed);
+        dirty = wasDirty;
+        callbacks.setDirty(wasDirty);
+        syncUrl(renamed.id);
+        callbacks.rerender();
+        callbacks.notify("Cover letter renamed.", "success");
+      })
+      .catch((error: Error) => callbacks.notify(error.message, "error"));
+  });
+
   const form = root.querySelector<HTMLFormElement>("[data-cl-form]");
   form?.addEventListener("input", () => { markDirty(root, callbacks); updatePreview(root); });
   form?.addEventListener("change", (event) => {
@@ -643,6 +690,25 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
     void finalize(root, callbacks)
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (finalizeButton.isConnected) setButtonBusy(finalizeButton, false); });
+  });
+  root.querySelector<HTMLButtonElement>("[data-cl-print]")?.addEventListener("click", () => {
+    if (!record) return;
+    const previewWindow = window.open("", "_blank");
+    if (!previewWindow) {
+      callbacks.notify("Allow pop-ups to open the print preview.", "error");
+      return;
+    }
+    previewWindow.document.title = "Preparing Cover Letter preview";
+    previewWindow.document.body.textContent = "Preparing print preview…";
+    void (async () => {
+      if (dirty && record?.status === "draft") await saveDraft(root, callbacks);
+      if (!record) throw new Error("Save the Cover Letter before opening print preview.");
+      previewWindow.location.replace(`${base}cover-letter/?id=${encodeURIComponent(record.id)}&mode=print`);
+      callbacks.notify("Cover Letter print preview opened.", "success");
+    })().catch((error: Error) => {
+      previewWindow.close();
+      callbacks.notify(error.message, "error");
+    });
   });
   root.querySelector("[data-cl-duplicate]")?.addEventListener("click", () => {
     if (!record) return;

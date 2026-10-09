@@ -13,7 +13,7 @@ export const validateCoverLetter = (letter: CoverLetterInput): CoverLetterValida
   const errors: string[] = [];
   const warnings: string[] = [];
   const required: Array<[string, string]> = [
-    ["Internal title", letter.internalTitle], ["Company name", letter.companyName],
+    ["Cover Letter name", letter.internalTitle], ["Company name", letter.companyName],
     ["Position title", letter.positionTitle], ["Application date", letter.applicationDate],
     ["Salutation", letter.salutation], ["Opening paragraph", letter.openingParagraph],
     ["Experience and fit paragraph", letter.fitParagraph], ["Company-specific paragraph", letter.companyParagraph],

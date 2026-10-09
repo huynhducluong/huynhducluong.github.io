@@ -15,9 +15,10 @@ import {
   saveProfileDocument,
 } from "../services/profileDocumentRepository";
 import { degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
+import { validateProfileDocument } from "../shared/profileDocumentValidation";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes, resolveDocumentTheme } from "../themes/documentThemes";
-import { backgroundOrderKey, orderedCvBackground, resolveCvBackgroundOrder } from "../cv/backgroundOrder";
+import { resolveCvBackgroundSelection } from "../cv/backgroundOrder";
 import type { LocalizedText, Profile } from "../types/career";
 import type { CvBackgroundGroup, CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
 import type { PortfolioContent, PortfolioRuntimeData } from "../types/portfolio";
@@ -365,116 +366,99 @@ const cvContentPanel = (content: CvContent): string => [
 
 const backgroundRange = (start: string, end: string | null): string => `${start || "Start not set"} – ${end || "Present"}`;
 
-const backgroundRow = ({
-  group,
-  id,
-  index,
-  total,
-  title,
-  meta,
-}: {
+const backgroundRow = ({ group, id, title, meta, selected }: {
   group: CvBackgroundGroup;
   id: string;
-  index: number;
-  total: number;
   title: string;
   meta: string;
-}): string => `<article class="admin-cv-background__item" data-cv-background-item data-background-group="${group}" data-background-id="${escapeHtml(id)}">
-  <button class="admin-cv-background__drag" type="button" draggable="true" data-background-drag aria-label="Drag ${escapeHtml(title)} to reorder" title="Drag to reorder"><span aria-hidden="true">⋮⋮</span></button>
-  <span class="admin-cv-background__index" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
+  selected: boolean;
+}): string => `<label class="admin-switch admin-cv-background__item${selected ? " is-selected" : ""}">
+  <input type="checkbox" name="cv_background_${group}" value="${escapeHtml(id)}" data-cv-background-toggle${selected ? " checked" : ""}>
   <span class="admin-cv-background__identity"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>
-  <span class="admin-cv-background__source">Profile</span>
-  <span class="admin-cv-background__actions">
-    <button type="button" data-background-move="up" aria-label="Move ${escapeHtml(title)} earlier" title="Move earlier"${index === 0 ? " disabled" : ""}>↑</button>
-    <button type="button" data-background-move="down" aria-label="Move ${escapeHtml(title)} later" title="Move later"${index === total - 1 ? " disabled" : ""}>↓</button>
-  </span>
-</article>`;
+</label>`;
+
+const backgroundCount = (selected: number, total: number): string => {
+  if (!total) return "0";
+  return selected ? `${selected} of ${total} shown` : "Hidden";
+};
+
+const backgroundGroup = ({ group, title, note, rows, selected, total, empty }: {
+  group: CvBackgroundGroup;
+  title: string;
+  note: string;
+  rows: string;
+  selected: number;
+  total: number;
+  empty: string;
+}): string => `<section data-cv-background-group="${group}">
+  <header><div><h4>${title}</h4><p>${note}</p></div><span class="admin-cv-background__count" data-cv-background-count data-empty="${selected === 0}">${backgroundCount(selected, total)}</span></header>
+  <div class="admin-cv-background__list">${rows || `<p class="admin-empty">${empty}</p>`}</div>
+</section>`;
 
 const cvBackgroundPanel = (content: CvContent): string => {
-  const background = orderedCvBackground(content);
-  const experienceRows = background.experiences.map((item, index) => backgroundRow({
+  const selection = resolveCvBackgroundSelection(content);
+  const selected = {
+    experiences: new Set(selection.experienceIds),
+    education: new Set(selection.educationIds),
+    credentials: new Set(selection.credentialIds),
+    skillGroups: new Set(selection.skillGroupIds),
+    languages: new Set(selection.languageIds),
+  };
+  const experienceRows = content.experiences.map((item) => backgroundRow({
     group: "experiences",
     id: item.id,
-    index,
-    total: background.experiences.length,
     title: item.company,
     meta: [item.position.en, item.location.en, backgroundRange(item.startDate, item.endDate)].filter(Boolean).join(" · "),
+    selected: selected.experiences.has(item.id),
   })).join("");
-  const educationRows = background.education.map((item, index) => {
+  const educationRows = content.education.map((item) => {
     const classification = degreeClassificationValue(item.classification?.en ?? "", "en");
     return backgroundRow({
       group: "education",
       id: item.id,
-      index,
-      total: background.education.length,
       title: item.field.en,
       meta: [
         item.institution.en,
         classification ? `Degree classification: ${classification}` : "",
         `${item.startDate} – ${item.endDate}`,
       ].filter(Boolean).join(" · "),
+      selected: selected.education.has(item.id),
     });
   }).join("");
-  const credentialRows = background.credentials.map((item, index) => backgroundRow({
+  const credentialRows = (content.credentials ?? []).map((item) => backgroundRow({
     group: "credentials",
     id: item.id,
-    index,
-    total: background.credentials.length,
     title: item.title.en,
     meta: [item.issuer.en, item.issuedOn?.slice(0, 4), item.credentialNumber].filter(Boolean).join(" · "),
+    selected: selected.credentials.has(item.id),
   })).join("");
-  const skillRows = background.skillGroups.map((item, index) => backgroundRow({
+  const skillRows = content.skillGroups.map((item) => backgroundRow({
     group: "skillGroups",
     id: item.id,
-    index,
-    total: background.skillGroups.length,
     title: item.title.en,
     meta: item.items.map((skill) => skill.label.en).join(" · "),
+    selected: selected.skillGroups.has(item.id),
   })).join("");
-  const languageRows = background.languages.map((item, index) => backgroundRow({
+  const languageRows = content.languages.map((item) => backgroundRow({
     group: "languages",
     id: item.id,
-    index,
-    total: background.languages.length,
     title: item.name.en,
     meta: item.proficiency?.en || "Proficiency not set",
+    selected: selected.languages.has(item.id),
   })).join("");
   return renderAdminSectionCard({
     title: "CV background",
-    note: "Content comes from Professional Profile.",
+    note: "Choose what appears on this CV. Order follows Professional Profile.",
     className: "admin-cv-background",
     content: `<div class="admin-cv-background__groups">
-        <section><header><div><h4>Experience</h4><p>Employment history shown in the CV sidebar.</p></div><span>${background.experiences.length}</span></header><div class="admin-cv-background__list" data-background-list="experiences">${experienceRows || '<p class="admin-empty">No experience entries in Professional Profile.</p>'}</div></section>
-        <section><header><div><h4>Education</h4><p>Qualifications shown before skills.</p></div><span>${background.education.length}</span></header><div class="admin-cv-background__list" data-background-list="education">${educationRows || '<p class="admin-empty">No education entries in Professional Profile.</p>'}</div></section>
-        <section><header><div><h4>Credentials</h4><p>Ready qualifications synced without private evidence files.</p></div><span>${background.credentials.length}</span></header><div class="admin-cv-background__list" data-background-list="credentials">${credentialRows || '<p class="admin-empty">No Ready credentials have been synced.</p>'}</div></section>
-        <section><header><div><h4>Skills</h4><p>Skill groups and languages shown in the CV sidebar.</p></div><span>${background.skillGroups.length + background.languages.length}</span></header>
-          <div class="admin-cv-background__subsection"><h5>Skill groups</h5><div class="admin-cv-background__list" data-background-list="skillGroups">${skillRows || '<p class="admin-empty">No skill groups in Professional Profile.</p>'}</div></div>
-          <div class="admin-cv-background__subsection"><h5>Languages</h5><div class="admin-cv-background__list" data-background-list="languages">${languageRows || '<p class="admin-empty">No languages in Professional Profile.</p>'}</div></div>
-        </section>
+        ${backgroundGroup({ group: "experiences", title: "Experience", note: "Choose employment history for the CV sidebar.", rows: experienceRows, selected: selection.experienceIds.length, total: content.experiences.length, empty: "No experience entries in Professional Profile." })}
+        ${backgroundGroup({ group: "education", title: "Education", note: "Choose qualifications for the CV sidebar.", rows: educationRows, selected: selection.educationIds.length, total: content.education.length, empty: "No education entries in Professional Profile." })}
+        ${backgroundGroup({ group: "credentials", title: "Credentials", note: "Choose Ready credentials; private evidence files stay excluded.", rows: credentialRows, selected: selection.credentialIds.length, total: (content.credentials ?? []).length, empty: "No Ready credentials have been synced." })}
+        ${backgroundGroup({ group: "skillGroups", title: "Skill groups", note: "Each selected group becomes its own CV section.", rows: skillRows, selected: selection.skillGroupIds.length, total: content.skillGroups.length, empty: "No skill groups in Professional Profile." })}
+        ${backgroundGroup({ group: "languages", title: "Languages", note: "Choose languages for the CV sidebar.", rows: languageRows, selected: selection.languageIds.length, total: content.languages.length, empty: "No languages in Professional Profile." })}
       </div>`,
     actions: '<button class="button button--secondary" type="button" data-sync-professional-profile>Sync latest</button><button class="button button--secondary" type="button" data-admin-view="profile">Edit Professional Profile</button>',
   });
-};
-
-const moveCvBackgroundItem = (
-  content: CvContent,
-  group: CvBackgroundGroup,
-  itemId: string,
-  movement: "up" | "down" | { targetId: string },
-): boolean => {
-  const order = resolveCvBackgroundOrder(content);
-  const key = backgroundOrderKey(group);
-  const current = [...order[key]];
-  const fromIndex = current.indexOf(itemId);
-  if (fromIndex < 0) return false;
-  const toIndex = typeof movement === "string"
-    ? fromIndex + (movement === "up" ? -1 : 1)
-    : current.indexOf(movement.targetId);
-  if (toIndex < 0 || toIndex >= current.length || toIndex === fromIndex) return false;
-  current.splice(fromIndex, 1);
-  current.splice(toIndex, 0, itemId);
-  content.backgroundOrder = { ...order, [key]: current };
-  return true;
 };
 
 const cvSelectionPanel = (runtime: CvRuntimeData): string => {
@@ -524,6 +508,11 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
 const readCvForm = (formElement: HTMLFormElement): CvContent => {
   const current = state.cv?.content ?? structuredClone(cvContentSeed);
   const form = new FormData(formElement);
+  const savedSelection = resolveCvBackgroundSelection(current);
+  const archived = selectedDocument("cv")?.status === "archived";
+  const selectionIds = (group: CvBackgroundGroup, fallback: string[]): string[] => archived
+    ? fallback
+    : form.getAll(`cv_background_${group}`).map(String);
   return {
     version: text(form, "cv_version") || current.version,
     themeId: readTheme(form).presetId,
@@ -539,7 +528,13 @@ const readCvForm = (formElement: HTMLFormElement): CvContent => {
     credentials: current.credentials ?? [],
     skillGroups: current.skillGroups,
     languages: current.languages,
-    backgroundOrder: resolveCvBackgroundOrder(current),
+    backgroundSelection: {
+      experienceIds: selectionIds("experiences", savedSelection.experienceIds),
+      educationIds: selectionIds("education", savedSelection.educationIds),
+      credentialIds: selectionIds("credentials", savedSelection.credentialIds),
+      skillGroupIds: selectionIds("skillGroups", savedSelection.skillGroupIds),
+      languageIds: selectionIds("languages", savedSelection.languageIds),
+    },
   };
 };
 
@@ -682,26 +677,6 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
   };
 };
 
-const validation = (kind: ProfileDocumentKind, runtime?: CvRuntimeData | PortfolioRuntimeData | null): string[] => {
-  if (kind === "cv") {
-    const data = (runtime ?? state.cv) as CvRuntimeData | null;
-    if (!data) return ["CV draft is not loaded."];
-    return [
-      !data.content.profile.name.en && "Add a full name in Professional Profile.",
-      !data.content.profile.email && "Add an email address in Professional Profile.",
-      !data.detailedProjects.length && "Select at least one detailed CV project.",
-    ].filter((item): item is string => Boolean(item));
-  }
-  const data = (runtime ?? state.portfolio) as PortfolioRuntimeData | null;
-  if (!data) return ["Portfolio draft is not loaded."];
-  return [
-    !data.content.profile.name.en && "Add a full name in Professional Profile.",
-    !data.content.profile.email && "Add an email address in Professional Profile.",
-    !data.content.title && "Document title is required.",
-    !data.projects.some((item) => item.includeInPortfolio) && "Select at least one Portfolio project.",
-  ].filter((item): item is string => Boolean(item));
-};
-
 const tabs = (kind: ProfileDocumentKind): Array<[DocumentTab, string]> => kind === "cv"
   ? [["content", "Profile"], ["background", "Background"], ["selection", "Projects & tools"], ["appearance", "Appearance"]]
   : [["content", "Content"], ["selection", "Projects & tools"], ["appearance", "Appearance"]];
@@ -772,7 +747,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   if (route.view === kind && route.tab && availableTabs.some(([id]) => id === route.tab)) state.tab[kind] = route.tab as DocumentTab;
   const activeTab = availableTabs.some(([id]) => id === state.tab[kind]) ? state.tab[kind] : availableTabs[0][0];
   state.tab[kind] = activeTab;
-  const issues = validation(kind, runtime);
+  const issues = validateProfileDocument(kind, runtime);
   const validationContent = issues.length
     ? `<ul data-document-validation-list>${issues.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>`
     : '<p data-document-validation-ready>Required content and document selection are ready.</p>';
@@ -1172,7 +1147,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       status.textContent = "Unsaved changes";
       status.dataset.dirty = "true";
     }
-    updateValidation(validation(kind, previewPayload(kind, form)));
+    updateValidation(validateProfileDocument(kind, previewPayload(kind, form)));
     if (previewMode === "appearance") {
       schedulePortfolioAppearancePreview();
       return;
@@ -1181,6 +1156,17 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     previewTimer = window.setTimeout(() => sendPreview(kind, form), 180);
   };
   form.addEventListener("input", (event) => {
+    if (event.target instanceof HTMLInputElement && event.target.matches("[data-cv-background-toggle]")) {
+      const group = event.target.closest<HTMLElement>("[data-cv-background-group]");
+      const checked = group?.querySelectorAll<HTMLInputElement>("[data-cv-background-toggle]:checked").length ?? 0;
+      const total = group?.querySelectorAll<HTMLInputElement>("[data-cv-background-toggle]").length ?? 0;
+      const count = group?.querySelector<HTMLElement>("[data-cv-background-count]");
+      event.target.closest<HTMLElement>(".admin-cv-background__item")?.classList.toggle("is-selected", event.target.checked);
+      if (count) {
+        count.textContent = backgroundCount(checked, total);
+        count.dataset.empty = String(checked === 0);
+      }
+    }
     syncImageOverlayControl();
     markDirty(isPortfolioAppearanceControl(event.target) ? "appearance" : "full");
   });
@@ -1218,61 +1204,39 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     });
     root.querySelectorAll<HTMLElement>("[data-document-panel]").forEach((panel) => { panel.hidden = panel.dataset.documentPanel !== state.tab[kind]; });
   }));
-  const commitBackgroundMove = (
-    group: CvBackgroundGroup,
-    itemId: string,
-    movement: "up" | "down" | { targetId: string },
-  ): void => {
-    if (kind !== "cv" || !state.cv || activeDocument?.status === "archived") return;
-    state.cv = readCvRuntimeForm(form);
-    if (!moveCvBackgroundItem(state.cv.content, group, itemId, movement)) return;
-    state.dirty.cv = true;
-    callbacks.setDirty(true);
-    callbacks.rerender();
-  };
-  root.querySelectorAll<HTMLButtonElement>("[data-background-move]").forEach((button) => button.addEventListener("click", () => {
-    const item = button.closest<HTMLElement>("[data-cv-background-item]");
-    const group = item?.dataset.backgroundGroup as CvBackgroundGroup | undefined;
-    const itemId = item?.dataset.backgroundId;
-    const direction = button.dataset.backgroundMove as "up" | "down" | undefined;
-    if (group && itemId && direction) commitBackgroundMove(group, itemId, direction);
-  }));
-  let draggedBackground: { group: CvBackgroundGroup; itemId: string } | null = null;
-  root.querySelectorAll<HTMLButtonElement>("[data-background-drag]").forEach((handle) => {
-    handle.addEventListener("dragstart", (event) => {
-      const item = handle.closest<HTMLElement>("[data-cv-background-item]");
-      const group = item?.dataset.backgroundGroup as CvBackgroundGroup | undefined;
-      const itemId = item?.dataset.backgroundId;
-      if (!item || !group || !itemId || handle.disabled || activeDocument?.status === "archived") return event.preventDefault();
-      draggedBackground = { group, itemId };
-      item.classList.add("is-dragging");
-      event.dataTransfer?.setData("text/plain", `${group}:${itemId}`);
-      if (event.dataTransfer) event.dataTransfer.effectAllowed = "move";
-    });
-    handle.addEventListener("dragend", () => {
-      handle.closest<HTMLElement>("[data-cv-background-item]")?.classList.remove("is-dragging");
-      root.querySelectorAll(".admin-cv-background__item.is-drop-target").forEach((item) => item.classList.remove("is-drop-target"));
-      draggedBackground = null;
-    });
-  });
-  root.querySelectorAll<HTMLElement>("[data-cv-background-item]").forEach((item) => {
-    item.addEventListener("dragover", (event) => {
-      if (!draggedBackground || item.dataset.backgroundGroup !== draggedBackground.group || item.dataset.backgroundId === draggedBackground.itemId) return;
-      event.preventDefault();
-      item.classList.add("is-drop-target");
-      if (event.dataTransfer) event.dataTransfer.dropEffect = "move";
-    });
-    item.addEventListener("dragleave", () => item.classList.remove("is-drop-target"));
-    item.addEventListener("drop", (event) => {
-      event.preventDefault();
-      item.classList.remove("is-drop-target");
-      const targetId = item.dataset.backgroundId;
-      if (draggedBackground && targetId && item.dataset.backgroundGroup === draggedBackground.group) {
-        commitBackgroundMove(draggedBackground.group, draggedBackground.itemId, { targetId });
+  root.querySelector<HTMLButtonElement>("[data-document-print]")?.addEventListener("click", () => {
+    if (!activeDocument) return;
+    const previewWindow = window.open("", "_blank");
+    if (!previewWindow) {
+      callbacks.notify("Allow pop-ups to open the print preview.", "error");
+      return;
+    }
+    previewWindow.document.title = `Preparing ${documentLabel(kind)} preview`;
+    previewWindow.document.body.textContent = "Preparing print preview…";
+    const payload = previewPayload(kind, form);
+    void (async () => {
+      if (state.dirty[kind]) {
+        callbacks.notify(`Saving the latest ${documentLabel(kind)} draft…`);
+        await saveProfileDocument(activeDocument.id, payload);
+        activeDocument.draftPayload = structuredClone(payload);
+        if (kind === "cv") state.cv = payload as CvRuntimeData;
+        else state.portfolio = payload as PortfolioRuntimeData;
+        state.dirty[kind] = false;
+        callbacks.setDirty(false);
       }
+      const params = new URLSearchParams({
+        mode: "print",
+        document: activeDocument.id,
+        lang: state.previewLanguage[kind],
+      });
+      previewWindow.location.replace(`${import.meta.env.BASE_URL}${kind}/?${params.toString()}`);
+      if (state.dirty[kind] === false) callbacks.notify(`${documentLabel(kind)} print preview opened.`, "success");
+      callbacks.rerender();
+    })().catch((error: Error) => {
+      previewWindow.close();
+      callbacks.notify(error.message, "error");
     });
   });
-  root.querySelector("[data-document-print]")?.addEventListener("click", () => iframe?.contentWindow?.print());
   root.querySelector("[data-sync-target-profile]")?.addEventListener("click", () => {
     void loadProfessionalProfile()
       .then((professional) => {
@@ -1304,6 +1268,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       .then(([professional, credentials]) => {
         if (kind === "cv" && state.cv) {
           state.cv = readCvRuntimeForm(form);
+          const previousSelection = resolveCvBackgroundSelection(state.cv.content);
           const nextContent: CvContent = {
             ...state.cv.content,
             profile: inheritSharedProfile(professional.profile, state.cv.content.profile),
@@ -1313,7 +1278,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
             skillGroups: structuredClone(professional.skillGroups),
             languages: structuredClone(professional.languages),
           };
-          nextContent.backgroundOrder = resolveCvBackgroundOrder(nextContent);
+          nextContent.backgroundSelection = resolveCvBackgroundSelection({ ...nextContent, backgroundSelection: previousSelection });
+          delete nextContent.backgroundOrder;
           state.cv.content = nextContent;
           state.dirty.cv = true;
         }
@@ -1361,7 +1327,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   root.querySelector<HTMLButtonElement>("[data-document-publish]")?.addEventListener("click", async (event) => {
     if (!activeDocument) return;
     const payload = previewPayload(kind, form);
-    const issues = validation(kind, payload);
+    const issues = validateProfileDocument(kind, payload);
     if (issues.length) {
       updateValidation(issues);
       validationDialog?.showModal();

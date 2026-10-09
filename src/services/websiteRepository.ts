@@ -5,6 +5,7 @@ import type { ProfessionalProfileContent, WebsiteContent, WebsiteContentSelectio
 import { supabase } from "./supabaseClient";
 import { withoutTrashed } from "./activeContent";
 import { normalizeProfile } from "../shared/format";
+import { sortByMasterContentOrder } from "../shared/contentOrder";
 import { MemoryRequestCache } from "./memoryRequestCache";
 import {
   projectFromRow,
@@ -126,16 +127,22 @@ export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {
   const [contentResult, professional, projectResult, toolResult] = await Promise.all([
     supabase.from("website_content").select("*").eq("id", "primary").maybeSingle(),
     loadProfessionalProfile(),
-    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("display_order"),
-    supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("display_order"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("display_order").order("id"),
+    supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("display_order").order("id"),
   ]);
   if (contentResult.error) throw contentResult.error;
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
   const contentRow = contentResult.data as WebsiteContentRow | null;
   const content = contentRow ? websiteContentFromRow(contentRow) : structuredClone(websiteContentSeed);
-  const sourceProjects = withoutTrashed(projectResult.data as ProjectRow[]).map(projectFromRow);
-  const sourceTools = withoutTrashed(toolResult.data as ToolRow[]).map(toolFromRow);
+  const sourceProjects = sortByMasterContentOrder(
+    withoutTrashed(projectResult.data as ProjectRow[]).map(projectFromRow),
+    (item) => item.displayOrder,
+  );
+  const sourceTools = sortByMasterContentOrder(
+    withoutTrashed(toolResult.data as ToolRow[]).map(toolFromRow),
+    (item) => item.displayOrder,
+  );
   if (!contentRow?.content_selection) {
     content.contentSelection = {
       projectIds: sourceProjects.filter((item) => item.status === "published").map((item) => item.id),

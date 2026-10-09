@@ -49,4 +49,5 @@ export interface CoverLetterEvidenceOption {
   id: string;
   name: string;
   status: string;
+  displayOrder: number;
 }

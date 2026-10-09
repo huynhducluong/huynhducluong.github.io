@@ -98,7 +98,7 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
           <div><strong>${text.address}</strong><span>${localized(profile.location, language)}</span></div>
         </address>
       </section>
-      <section class="cv-sidebar-section">
+      ${background.education.length ? `<section class="cv-sidebar-section">
         ${heading(text.education)}
         ${background.education.map((item) => {
           const classification = formatDegreeClassification(item.classification, language);
@@ -109,7 +109,7 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
             <p class="cv-sidebar-entry__meta">${escapeHtml(item.startDate)} - ${escapeHtml(item.endDate)}</p>
           </article>`;
         }).join("")}
-      </section>
+      </section>` : ""}
       ${background.credentials.length ? `<section class="cv-sidebar-section">
         ${heading(text.credentials)}
         <ul class="cv-sidebar-list cv-sidebar-list--compact">${background.credentials.map((item) => `<li>${localized(item.title, language)}${item.issuer.en ? ` - ${localized(item.issuer, language)}` : ""}${item.issuedOn ? ` (${escapeHtml(item.issuedOn.slice(0, 4))})` : ""}</li>`).join("")}</ul>
@@ -119,15 +119,15 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
           ${heading(localized(group.title, language))}
           <ul class="cv-sidebar-list">${group.items.map((item) => `<li>${localized(item.label, language)}</li>`).join("")}</ul>
         </section>`).join("")}
-      <section class="cv-sidebar-section">
+      ${background.languages.length ? `<section class="cv-sidebar-section">
         ${heading(text.language)}
         <ul class="cv-sidebar-list cv-sidebar-list--compact">${background.languages.map((item) => `<li>${localized(item.name, language)}${item.proficiency ? ` - ${localized(item.proficiency, language)}` : ""}</li>`).join("")}</ul>
-      </section>
-      <section class="cv-sidebar-section cv-sidebar-section--employment">
+      </section>` : ""}
+      ${background.experiences.length ? `<section class="cv-sidebar-section cv-sidebar-section--employment">
         ${heading(text.experience)}
         <ul class="cv-employment-list">${background.experiences.map((item) => `
           <li class="cv-employment"><strong>${escapeHtml(item.company)}</strong><span>${formatRange(item.startDate, item.endDate, language)}</span></li>`).join("")}</ul>
-      </section>
+      </section>` : ""}
     </aside>`;
 
   const selectedProjects = data.compactProjects.map((project) => {

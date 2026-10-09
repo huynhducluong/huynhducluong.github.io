@@ -15,6 +15,7 @@ import {
 import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
 import { withoutTrashed } from "./activeContent";
 import { normalizeProfile } from "../shared/format";
+import { sortByMasterContentOrder } from "../shared/contentOrder";
 
 interface PortfolioContentRow {
   version: string;
@@ -86,8 +87,8 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalize
 export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> => {
   const [contentResult, projectResult, toolResult] = await Promise.all([
     supabase.from("portfolio_content").select("*").eq("id", "primary").maybeSingle(),
-    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("portfolio_order"),
-    supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("portfolio_order"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("display_order").order("id"),
+    supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("display_order").order("id"),
   ]);
   if (contentResult.error) throw contentResult.error;
   if (projectResult.error) throw projectResult.error;
@@ -97,8 +98,14 @@ export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> =>
     content: contentResult.data
       ? contentFromRow(contentResult.data as PortfolioContentRow)
       : structuredClone(portfolioContentSeed),
-    projects: withoutTrashed(projectResult.data as ProjectRow[]).map(projectFromRow),
-    tools: withoutTrashed(toolResult.data as ToolRow[]).map(toolFromRow),
+    projects: sortByMasterContentOrder(
+      withoutTrashed(projectResult.data as ProjectRow[]).map(projectFromRow),
+      (item) => item.displayOrder,
+    ),
+    tools: sortByMasterContentOrder(
+      withoutTrashed(toolResult.data as ToolRow[]).map(toolFromRow),
+      (item) => item.displayOrder,
+    ),
   };
 };
 export const loadPublishedPortfolioRelease = async (): Promise<PortfolioRuntimeData> => {

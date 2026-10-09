@@ -57,6 +57,20 @@ export const listProfileDocuments = async <TPayload extends ProfileDocumentPaylo
   return (data as ProfileDocumentRow[]).map((row) => fromRow<TPayload>(row));
 };
 
+export const getProfileDocument = async <TPayload extends ProfileDocumentPayload>(
+  kind: ProfileDocumentKind,
+  id: string,
+): Promise<ProfileDocumentRecord<TPayload> | null> => {
+  const { data, error } = await supabase
+    .from("profile_documents")
+    .select("*")
+    .eq("kind", kind)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? fromRow<TPayload>(data as ProfileDocumentRow) : null;
+};
+
 export const ensureProfileDocumentLibrary = async <TPayload extends ProfileDocumentPayload>(
   kind: ProfileDocumentKind,
   legacyPayload: TPayload,

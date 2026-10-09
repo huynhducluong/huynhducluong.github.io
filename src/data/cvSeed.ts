@@ -31,7 +31,7 @@ export const cvContentSeed: CvContent = {
   credentials: [],
   skillGroups,
   languages: languageSkills,
-  backgroundOrder: {
+  backgroundSelection: {
     experienceIds: experiences.map((item) => item.id),
     educationIds: education.map((item) => item.id),
     credentialIds: [],

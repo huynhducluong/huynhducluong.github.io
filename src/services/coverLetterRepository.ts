@@ -7,6 +7,7 @@ import type {
   CoverLetterSenderSnapshot,
   CoverLetterStatus,
 } from "../types/coverLetter";
+import { sortByMasterContentOrder } from "../shared/contentOrder";
 
 interface CoverLetterRow {
   id: string;
@@ -124,6 +125,19 @@ export const updateCoverLetterDraft = async (id: string, input: CoverLetterInput
   return record;
 };
 
+export const renameCoverLetter = async (id: string, internalTitle: string): Promise<CoverLetterRecord> => {
+  const title = internalTitle.trim();
+  if (!title) throw new Error("Enter a cover letter name.");
+  const { error } = await supabase
+    .from("cover_letters")
+    .update({ internal_title: title })
+    .eq("id", id);
+  if (error) throw error;
+  const record = await getCoverLetter(id);
+  if (!record) throw new Error("The renamed cover letter could not be reloaded.");
+  return record;
+};
+
 export const finalizeCoverLetter = async (id: string, input: CoverLetterInput, sender: CoverLetterSenderSnapshot): Promise<CoverLetterRecord> => {
   const { error } = await supabase.rpc("finalize_cover_letter_draft", {
     p_letter_id: id,
@@ -153,13 +167,19 @@ export const duplicateCoverLetter = async (record: CoverLetterRecord): Promise<C
 
 export const listCoverLetterEvidence = async (): Promise<{ projects: CoverLetterEvidenceOption[]; tools: CoverLetterEvidenceOption[] }> => {
   const [projectResult, toolResult] = await Promise.all([
-    supabase.from("projects").select("id, name, status, deleted_at").is("deleted_at", null).order("display_order"),
-    supabase.from("automation_tools").select("id, name, status, deleted_at").is("deleted_at", null).order("display_order"),
+    supabase.from("projects").select("id, name, status, display_order, deleted_at").is("deleted_at", null).order("display_order").order("id"),
+    supabase.from("automation_tools").select("id, name, status, display_order, deleted_at").is("deleted_at", null).order("display_order").order("id"),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
   return {
-    projects: withoutTrashed(projectResult.data).map((item) => ({ id: String(item.id), name: String((item.name as { en?: string }).en ?? "Untitled project"), status: String(item.status) })),
-    tools: withoutTrashed(toolResult.data).map((item) => ({ id: String(item.id), name: String(item.name), status: String(item.status) })),
+    projects: sortByMasterContentOrder(
+      withoutTrashed(projectResult.data).map((item) => ({ id: String(item.id), name: String((item.name as { en?: string }).en ?? "Untitled project"), status: String(item.status), displayOrder: Number(item.display_order) })),
+      (item) => item.displayOrder,
+    ),
+    tools: sortByMasterContentOrder(
+      withoutTrashed(toolResult.data).map((item) => ({ id: String(item.id), name: String(item.name), status: String(item.status), displayOrder: Number(item.display_order) })),
+      (item) => item.displayOrder,
+    ),
   };
 };

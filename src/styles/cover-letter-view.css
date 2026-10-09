@@ -1,20 +1,8 @@
 body { min-width: 0; background: #dce5e8; }
-.cover-letter-toolbar { position: sticky; z-index: 10; top: 0; display: flex; min-height: 4.5rem; align-items: center; justify-content: space-between; gap: var(--space-4); padding: var(--space-3) var(--space-6); background: var(--color-dark); color: #fff; box-shadow: 0 8px 24px rgb(16 45 59 / 20%); }
-.cover-letter-toolbar > div { display: flex; align-items: center; gap: var(--space-4); }
-.cover-letter-toolbar a:not(.button) { color: #fff; }
-.cover-letter-toolbar .status { color: #0b5b2a; }
-.cover-letter-toolbar .status--draft { color: #6b4b00; }
-.cover-letter-toolbar .status--archived { color: #4a555b; }
-.cover-letter-toolbar .button--secondary { background: transparent; color: #fff; border-color: rgb(255 255 255 / 45%); }
-.cover-letter-toolbar button:disabled { cursor: not-allowed; opacity: .5; }
 .cover-letter-screen { padding-block: var(--space-8); }
 .cover-letter-screen__canvas { overflow-x: auto; padding: 0 max(var(--space-5), calc((100vw - 210mm) / 2)); }
 .cover-letter-screen__canvas > div { width: 210mm; }
 .cover-letter-screen .cover-letter-page { box-shadow: 0 18px 60px rgb(16 45 59 / 24%); }
-.cover-letter-print-status { width: min(calc(100% - 2rem), 50rem); margin: var(--space-5) auto 0; padding: var(--space-4); border-radius: var(--radius-sm); background: #fff; color: var(--color-text-muted); font-size: var(--font-size-sm); }
-.cover-letter-print-status[data-kind="error"] { border-left: .3rem solid #a02626; color: #7e2020; }
-.cover-letter-print-status[data-kind="success"] { border-left: .3rem solid #14723a; }
-.cover-letter-print-status p { margin-top: .3rem; }
 .cover-letter-error { width: min(calc(100% - 2rem), 42rem); margin: 12vh auto; padding: var(--space-8); border-radius: var(--radius-lg); background: #fff; box-shadow: var(--shadow-card); }
 .cover-letter-error p { margin-block: var(--space-4); color: var(--color-text-muted); }
-@media (max-width: 720px) { .cover-letter-toolbar { position: static; align-items: flex-start; flex-direction: column; } .cover-letter-toolbar > div { flex-wrap: wrap; } .cover-letter-screen { padding-block: var(--space-4); } }
+@media (max-width: 720px) { .cover-letter-screen { padding-block: var(--space-4); } }

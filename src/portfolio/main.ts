@@ -3,12 +3,21 @@ import "../styles/tokens.css";
 import "../styles/cv-screen.css";
 import "../styles/portfolio-screen.css";
 import "../styles/portfolio-print.css";
+import "../styles/document-print-preview.css";
 import { loadPublishedPortfolioRelease } from "../services/documentRepository";
 import { loadPortfolioDraftData } from "../services/documentRepository";
-import { getAdminAccess } from "../admin/auth";
+import { getAdminAccess, requireAdminAccess } from "../admin/auth";
+import { getProfileDocument } from "../services/profileDocumentRepository";
 import { applyDocumentTheme, resolveDocumentTheme } from "../themes/documentThemes";
 import { createPreviewReceiver } from "../shared/previewProtocol";
 import { profileName, type Language } from "../shared/format";
+import { validateProfileDocument } from "../shared/profileDocumentValidation";
+import {
+  bindDocumentPrintButton,
+  renderDocumentPrintStatus,
+  renderDocumentPrintToolbar,
+  updateDocumentPrintStatus,
+} from "../shared/documentPrintPreview";
 import type { PortfolioRuntimeData } from "../types/portfolio";
 import type { StoredDocumentTheme } from "../types/theme";
 import { renderPortfolio } from "./renderPortfolio";
@@ -53,8 +62,55 @@ const render = (data: PortfolioRuntimeData, language: Language = "en"): void => 
   updatePhoto();
 };
 
+const portfolioOverflowCount = (): number => [...app.querySelectorAll<HTMLElement>(".portfolio-page")]
+  .filter((page) => page.scrollHeight > page.clientHeight + 1 || page.scrollWidth > page.clientWidth + 1)
+  .length;
+
+const renderPrintPreviewChrome = (documentId: string, internalTitle: string, status: string, data: PortfolioRuntimeData): void => {
+  document.body.classList.add("document-print-preview", "document-print-preview--landscape");
+  const pageCount = app.querySelectorAll(".portfolio-page").length;
+  app.insertAdjacentHTML("afterbegin", [
+    renderDocumentPrintToolbar({
+      backHref: `${import.meta.env.BASE_URL}admin/?view=portfolio&item=${encodeURIComponent(documentId)}`,
+      backLabel: "Portfolios",
+      state: status,
+      title: internalTitle,
+      meta: `A4 landscape · ${pageCount} pages · Version ${data.content.version}`,
+    }),
+    renderDocumentPrintStatus({ kind: "checking", title: "Checking PDF readiness…", detail: "Verifying required content and fixed A4 landscape page boundaries." }),
+  ].join(""));
+
+  const readiness = (): string[] => [
+    ...validateProfileDocument("portfolio", data),
+    ...(portfolioOverflowCount() ? ["Content exceeds one or more fixed A4 landscape page boundaries."] : []),
+  ];
+  const updateReadiness = (): boolean => {
+    const issues = readiness();
+    updateDocumentPrintStatus(app, issues.length
+      ? { kind: "error", title: "PDF export needs attention", detail: issues.join(" ") }
+      : { kind: "success", title: `Ready for ${pageCount}-page A4 landscape PDF`, detail: `Version ${data.content.version} · selectable text · saved theme` });
+    return !issues.length;
+  };
+  bindDocumentPrintButton(app, updateReadiness);
+  requestAnimationFrame(updateReadiness);
+  document.fonts.ready.then(updateReadiness).catch(updateReadiness);
+  window.addEventListener("beforeprint", updateReadiness);
+};
+
 const initialize = async (): Promise<void> => {
   const params = new URLSearchParams(window.location.search);
+  const printMode = params.get("mode") === "print";
+  if (printMode) {
+    if (!await requireAdminAccess()) return;
+    const documentId = params.get("document");
+    if (!documentId) throw new Error("A Portfolio document ID is required for print preview.");
+    const document = await getProfileDocument<PortfolioRuntimeData>("portfolio", documentId);
+    if (!document?.draftPayload) throw new Error("The selected Portfolio draft could not be loaded.");
+    const language: Language = params.get("lang") === "vi" ? "vi" : "en";
+    render(document.draftPayload, language);
+    renderPrintPreviewChrome(document.id, document.internalTitle, document.status, document.draftPayload);
+    return;
+  }
   const wantsPreview = params.get("preview") === "1";
   const previewReceiver = wantsPreview ? createPreviewReceiver<PortfolioPreviewData>("portfolio") : null;
   const adminPreview = wantsPreview && await getAdminAccess() === "allowed";
@@ -87,9 +143,12 @@ const initialize = async (): Promise<void> => {
 };
 
 void initialize().catch((error: unknown) => {
+  const printMode = new URLSearchParams(window.location.search).get("mode") === "print";
   app.innerHTML = '<main class="cv-load-error"><h1>Portfolio is not available</h1><p data-portfolio-load-error>The owner has not published a Portfolio release yet.</p></main>';
   const target = app.querySelector<HTMLElement>("[data-portfolio-load-error]");
-  if (target && error instanceof Error && !error.message.includes("No published")) {
+  if (target && printMode) {
+    target.textContent = error instanceof Error ? error.message : "The Portfolio print preview could not be loaded.";
+  } else if (target && error instanceof Error && !error.message.includes("No published")) {
     target.textContent = "The published Portfolio could not be loaded. Please try again later.";
   }
 });

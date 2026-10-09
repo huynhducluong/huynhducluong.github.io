@@ -1,4 +1,4 @@
-import type { CvBackgroundGroup, CvBackgroundOrder, CvContent } from "../types/cvContent";
+import type { CvBackgroundGroup, CvBackgroundOrder, CvBackgroundSelection, CvContent } from "../types/cvContent";
 
 const reconcileIds = <T extends { id: string }>(
   savedIds: readonly string[] | undefined,
@@ -25,12 +25,36 @@ export const resolveCvBackgroundOrder = (content: CvContent): CvBackgroundOrder 
   languageIds: reconcileIds(content.backgroundOrder?.languageIds, content.languages, "start"),
 });
 
+const selectedIds = <T extends { id: string }>(savedIds: readonly string[] | undefined, items: readonly T[]): string[] => {
+  if (savedIds === undefined) return items.map((item) => item.id);
+  const selected = new Set(savedIds);
+  return items.filter((item) => selected.has(item.id)).map((item) => item.id);
+};
+
+export const resolveCvBackgroundSelection = (content: CvContent): CvBackgroundSelection => ({
+  experienceIds: selectedIds(content.backgroundSelection?.experienceIds, content.experiences),
+  educationIds: selectedIds(content.backgroundSelection?.educationIds, content.education),
+  credentialIds: selectedIds(content.backgroundSelection?.credentialIds, content.credentials ?? []),
+  skillGroupIds: selectedIds(content.backgroundSelection?.skillGroupIds, content.skillGroups),
+  languageIds: selectedIds(content.backgroundSelection?.languageIds, content.languages),
+});
+
 const orderItems = <T extends { id: string }>(items: readonly T[], ids: readonly string[]): T[] => {
   const byId = new Map(items.map((item) => [item.id, item]));
   return ids.map((id) => byId.get(id)).filter((item): item is T => Boolean(item));
 };
 
 export const orderedCvBackground = (content: CvContent) => {
+  if (content.backgroundSelection) {
+    const selection = resolveCvBackgroundSelection(content);
+    return {
+      experiences: orderItems(content.experiences, selection.experienceIds),
+      education: orderItems(content.education, selection.educationIds),
+      credentials: orderItems(content.credentials ?? [], selection.credentialIds),
+      skillGroups: orderItems(content.skillGroups, selection.skillGroupIds),
+      languages: orderItems(content.languages, selection.languageIds),
+    };
+  }
   const order = resolveCvBackgroundOrder(content);
   return {
     experiences: orderItems(content.experiences, order.experienceIds),

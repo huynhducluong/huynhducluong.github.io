@@ -2,7 +2,7 @@
 @media print {
   html, body { width: 210mm; min-width: 210mm; margin: 0 !important; padding: 0 !important; background: #fff !important; }
   body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  [data-print-toolbar], .cover-letter-print-status { display: none !important; }
+  [data-print-toolbar], [data-print-status] { display: none !important; }
   .cover-letter-screen, .cover-letter-screen__canvas, .cover-letter-screen__canvas > div { display: block; width: 210mm; height: 297mm; margin: 0; padding: 0; overflow: visible; }
   .cover-letter-page { width: 210mm; height: 297mm; margin: 0; box-shadow: none !important; break-after: avoid; break-inside: avoid; page-break-after: avoid; page-break-inside: avoid; }
 }

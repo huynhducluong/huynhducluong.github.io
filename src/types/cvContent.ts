@@ -23,6 +23,14 @@ export interface CvBackgroundOrder {
   languageIds: string[];
 }
 
+export interface CvBackgroundSelection {
+  experienceIds: string[];
+  educationIds: string[];
+  credentialIds: string[];
+  skillGroupIds: string[];
+  languageIds: string[];
+}
+
 export interface CvContent {
   version: string;
   themeId: string;
@@ -34,6 +42,8 @@ export interface CvContent {
   credentials: CredentialSnapshot[];
   skillGroups: SkillGroup[];
   languages: LanguageSkill[];
+  backgroundSelection?: CvBackgroundSelection;
+  /** Retained for legacy published releases. New drafts use source order. */
   backgroundOrder?: CvBackgroundOrder;
 }
 

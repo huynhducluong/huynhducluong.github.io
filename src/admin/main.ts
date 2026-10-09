@@ -31,6 +31,7 @@ import {
   type AdminDirtyScope,
 } from "./dirtyState";
 import { assetUrl, escapeHtml, profileName } from "../shared/format";
+import { sortByMasterContentOrder } from "../shared/contentOrder";
 import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
 import { loadProfessionalProfile } from "../services/websiteRepository";
@@ -651,9 +652,10 @@ const isSelectedItem = (item: AdminContentListItem): boolean =>
   && (item.type === "project" ? selectedProject?.id === item.id : selectedTool?.id === item.id);
 
 const itemOrderPosition = (item: AdminContentListItem): { first: boolean; last: boolean; only: boolean } => {
-  const orderedIds = (item.type === "project" ? projects : tools)
-    .filter((entry) => !entry.deleted_at)
-    .sort((left, right) => left.display_order - right.display_order)
+  const orderedIds = sortByMasterContentOrder(
+    (item.type === "project" ? projects : tools).filter((entry) => !entry.deleted_at),
+    (entry) => entry.display_order,
+  )
     .map((entry) => entry.id);
   const index = orderedIds.indexOf(item.id);
   return { first: index === 0, last: index === orderedIds.length - 1, only: orderedIds.length <= 1 };
@@ -1007,13 +1009,19 @@ const loadProjects = async (): Promise<void> => {
   const selectedProjectWasPersisted = Boolean(selectedProjectId && projects.some((item) => item.id === selectedProjectId));
   const selectedToolWasPersisted = Boolean(selectedToolId && tools.some((item) => item.id === selectedToolId));
   const [projectResult, toolResult] = await Promise.all([
-    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").order("display_order"),
-    supabase.from("automation_tools").select("*, tool_images(*)").order("display_order"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").order("display_order").order("id"),
+    supabase.from("automation_tools").select("*, tool_images(*)").order("display_order").order("id"),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
-  projects = (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, project_images: item.project_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
-  tools = (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null }));
+  projects = sortByMasterContentOrder(
+    (projectResult.data as AdminProjectRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, project_images: item.project_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null })),
+    (item) => item.display_order,
+  );
+  tools = sortByMasterContentOrder(
+    (toolResult.data as AdminToolRow[]).map((item) => ({ ...item, youtube_url: item.youtube_url ?? null, tool_images: item.tool_images ?? [], deleted_at: item.deleted_at ?? null, deleted_by: item.deleted_by ?? null, purge_after: item.purge_after ?? null, deleted_from_status: item.deleted_from_status ?? null })),
+    (item) => item.display_order,
+  );
   adminContentLoaded = true;
   if (selectedProjectWasPersisted) selectedProject = projects.find((item) => item.id === selectedProjectId) ?? null;
   if (selectedToolWasPersisted) selectedTool = tools.find((item) => item.id === selectedToolId) ?? null;
@@ -1336,9 +1344,10 @@ const persistMediaOrder = async (type: AdminItemType, ordered: Array<{ id: strin
 };
 
 const masterOrder = (type: AdminItemType): Array<AdminProjectRow | AdminToolRow> =>
-  (type === "project" ? projects : tools)
-    .filter((item) => !item.deleted_at)
-    .sort((left, right) => left.display_order - right.display_order);
+  sortByMasterContentOrder(
+    (type === "project" ? projects : tools).filter((item) => !item.deleted_at),
+    (item) => item.display_order,
+  );
 
 const persistMasterOrder = async (type: AdminItemType, ordered: Array<AdminProjectRow | AdminToolRow>): Promise<void> => {
   const { error } = await supabase.rpc("reorder_admin_content", { target_type: type, ordered_ids: ordered.map((item) => item.id) });

@@ -12,6 +12,7 @@ import type {
 import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
 import { withoutTrashed } from "./activeContent";
 import { normalizeProfile } from "../shared/format";
+import { sortByMasterContentOrder } from "../shared/contentOrder";
 
 interface CvContentRow {
   version: string;
@@ -39,7 +40,6 @@ interface CvProjectRow {
   technologies: string[];
   featured: boolean;
   display_order: number;
-  cv_order: number;
   cv_display: CvProjectDisplay;
   cv_show_summary: boolean;
   cv_responsibility_ids: string[];
@@ -56,7 +56,6 @@ interface CvToolRow {
   technologies: string[];
   featured: boolean;
   display_order: number;
-  cv_order: number;
   include_in_cv: boolean;
   status: PublicationStatus;
   deleted_at: string | null;
@@ -116,8 +115,8 @@ const toolFromRow = (row: CvToolRow): CvRuntimeTool => ({
 });
 
 const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => {
-  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_order,cv_display,cv_show_summary,cv_responsibility_ids,include_in_cv,status,deleted_at").is("deleted_at", null);
-  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,display_order,cv_order,include_in_cv,status,deleted_at").is("deleted_at", null);
+  let projectQuery = supabase.from("projects").select("id,name,location,role,summary,start_date,end_date,is_current,year,responsibilities,technologies,featured,display_order,cv_display,cv_show_summary,cv_responsibility_ids,include_in_cv,status,deleted_at").is("deleted_at", null);
+  let toolQuery = supabase.from("automation_tools").select("id,name,problem,solution,technologies,featured,display_order,include_in_cv,status,deleted_at").is("deleted_at", null);
   if (!adminPreview) {
     projectQuery = projectQuery.eq("include_in_cv", true).eq("status", "published");
     toolQuery = toolQuery.eq("include_in_cv", true).eq("status", "published");
@@ -126,8 +125,8 @@ const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => 
   const [contentResult, professionalResult, projectResult, toolResult] = await Promise.all([
     supabase.from("cv_content").select("*").eq("id", "primary").maybeSingle(),
     supabase.from("professional_profile").select("profile,experiences,education,skill_groups,languages").eq("id", "primary").maybeSingle(),
-    projectQuery.order("display_order"),
-    toolQuery.order("display_order"),
+    projectQuery.order("display_order").order("id"),
+    toolQuery.order("display_order").order("id"),
   ]);
 
   if (contentResult.error) throw contentResult.error;
@@ -145,9 +144,15 @@ const loadLiveCvData = async (adminPreview: boolean): Promise<CvRuntimeData> => 
     content.skillGroups = (professionalResult.data.skill_groups ?? []) as CvContent["skillGroups"];
     content.languages = (professionalResult.data.languages ?? []) as CvContent["languages"];
   }
-  const projects = withoutTrashed(projectResult.data as CvProjectRow[]).map(projectFromRow);
+  const projects = sortByMasterContentOrder(
+    withoutTrashed(projectResult.data as CvProjectRow[]).map(projectFromRow),
+    (item) => item.cvOrder,
+  );
   const selectedProjects = projects.filter((project) => project.includeInCv);
-  const tools = withoutTrashed(toolResult.data as CvToolRow[]).map(toolFromRow);
+  const tools = sortByMasterContentOrder(
+    withoutTrashed(toolResult.data as CvToolRow[]).map(toolFromRow),
+    (item) => item.cvOrder,
+  );
   const selectedTools = tools.filter((tool) => tool.includeInCv);
 
   return {
