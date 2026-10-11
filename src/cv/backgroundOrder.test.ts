@@ -87,4 +87,13 @@ describe("CV page density", () => {
 
     expect(firstPage.match(/class="cv-experience-item"/g)).toHaveLength(3);
   });
+
+  it("escapes localized Admin content before rendering it into the CV", () => {
+    const runtime = structuredClone(cvRuntimeSeed);
+    runtime.content.profile.summary.en = '<script>alert("cv")</script>';
+    const html = renderDynamicCv(runtime);
+
+    expect(html).toContain("&lt;script&gt;alert(&quot;cv&quot;)&lt;/script&gt;");
+    expect(html).not.toContain('<script>alert("cv")</script>');
+  });
 });

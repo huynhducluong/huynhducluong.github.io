@@ -338,6 +338,8 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-sidebar {
+  --cv-sidebar-item-gap: 1.6mm;
+
   position: relative;
   z-index: 1;
   height: 297mm;
@@ -431,12 +433,13 @@ body.document-embedded .cv-preview-shell {
 
 .cv-contact {
   display: grid;
-  gap: 1.6mm;
+  gap: var(--cv-sidebar-item-gap);
   font-style: normal;
 }
 
 .cv-contact div {
   display: grid;
+  gap: 0;
 }
 
 .cv-contact strong,
@@ -444,6 +447,7 @@ body.document-embedded .cv-preview-shell {
 .cv-employment strong {
   font-size: var(--cv-font-sidebar-primary);
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .cv-contact a,
@@ -456,7 +460,15 @@ body.document-embedded .cv-preview-shell {
 
 .cv-sidebar-entry {
   display: grid;
-  gap: 1.1mm;
+  gap: 0;
+}
+
+.cv-sidebar-section--education .cv-sidebar-entry {
+  gap: 0.6mm;
+}
+
+.cv-sidebar-section--education .cv-sidebar-entry + .cv-sidebar-entry {
+  margin-top: 2.2mm;
 }
 
 .cv-sidebar-entry__meta {
@@ -479,7 +491,7 @@ body.document-embedded .cv-preview-shell {
 
 .cv-employment-list {
   display: grid;
-  gap: 1.25mm;
+  gap: var(--cv-sidebar-item-gap);
   list-style: none;
 }
 
@@ -489,7 +501,7 @@ body.document-embedded .cv-preview-shell {
 
 .cv-employment {
   display: grid;
-  gap: 0.2mm;
+  gap: 0;
 }
 
 .cv-sidebar-section--employment {
@@ -756,6 +768,16 @@ body.document-embedded .cv-preview-shell {
   color: var(--document-text-muted);
   font-size: 7.75pt;
   line-height: 1.3;
+}
+
+.cv-contact a,
+.cv-contact span,
+.cv-sidebar-entry p,
+.cv-selected-projects span,
+.cv-selected-projects small,
+.cv-tool h3,
+.cv-tool p {
+  overflow-wrap: anywhere;
 }
 
 .cv-selected-tools {

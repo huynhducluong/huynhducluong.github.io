@@ -276,7 +276,11 @@ const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
     ]);
     state.documents.cv = documents.map((document) => ({
       ...document,
-      draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared, professional.profile) : null,
+      draftPayload: document.draftPayload
+        ? document.status === "archived"
+          ? structuredClone(document.draftPayload)
+          : composeCvDraft(document.draftPayload, shared, professional.profile)
+        : null,
     }));
     return;
   }
@@ -287,7 +291,11 @@ const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
   ]);
   state.documents.portfolio = documents.map((document) => ({
     ...document,
-    draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared, professional.profile) : null,
+    draftPayload: document.draftPayload
+      ? document.status === "archived"
+        ? structuredClone(document.draftPayload)
+        : composePortfolioDraft(document.draftPayload, shared, professional.profile)
+      : null,
   }));
 };
 
@@ -310,7 +318,11 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
         const documents = await ensureProfileDocumentLibrary<CvRuntimeData>(kind, shared);
         state.documents.cv = documents.map((document) => ({
           ...document,
-          draftPayload: document.draftPayload ? composeCvDraft(document.draftPayload, shared, professional.profile) : null,
+          draftPayload: document.draftPayload
+            ? document.status === "archived"
+              ? structuredClone(document.draftPayload)
+              : composeCvDraft(document.draftPayload, shared, professional.profile)
+            : null,
         }));
       } else {
         const [shared, professional] = await Promise.all([
@@ -320,7 +332,11 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
         const documents = await ensureProfileDocumentLibrary<PortfolioRuntimeData>(kind, shared);
         state.documents.portfolio = documents.map((document) => ({
           ...document,
-          draftPayload: document.draftPayload ? composePortfolioDraft(document.draftPayload, shared, professional.profile) : null,
+          draftPayload: document.draftPayload
+            ? document.status === "archived"
+              ? structuredClone(document.draftPayload)
+              : composePortfolioDraft(document.draftPayload, shared, professional.profile)
+            : null,
         }));
       }
       const preferred = preferredDocument(kind, state.documents[kind]);
@@ -1215,8 +1231,11 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     previewWindow.document.body.textContent = "Preparing print preview…";
     const payload = previewPayload(kind, form);
     void (async () => {
-      if (state.dirty[kind]) {
-        callbacks.notify(`Saving the latest ${documentLabel(kind)} draft…`);
+      const wasDirty = state.dirty[kind];
+      if (activeDocument.status !== "archived") {
+        if (wasDirty) {
+          callbacks.notify(`Saving the latest ${documentLabel(kind)} draft…`);
+        }
         await saveProfileDocument(activeDocument.id, payload);
         activeDocument.draftPayload = structuredClone(payload);
         if (kind === "cv") state.cv = payload as CvRuntimeData;
@@ -1230,7 +1249,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
         lang: state.previewLanguage[kind],
       });
       previewWindow.location.replace(`${import.meta.env.BASE_URL}${kind}/?${params.toString()}`);
-      if (state.dirty[kind] === false) callbacks.notify(`${documentLabel(kind)} print preview opened.`, "success");
+      callbacks.notify(`${documentLabel(kind)} print preview opened.`, "success");
       callbacks.rerender();
     })().catch((error: Error) => {
       previewWindow.close();

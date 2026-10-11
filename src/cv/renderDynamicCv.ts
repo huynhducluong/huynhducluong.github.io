@@ -100,7 +100,7 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
           <div><strong>${text.address}</strong><span>${localized(profile.location, language)}</span></div>
         </address>
       </section>
-      ${background.education.length ? `<section class="cv-sidebar-section">
+      ${background.education.length ? `<section class="cv-sidebar-section cv-sidebar-section--education">
         ${heading(text.education)}
         ${background.education.map((item) => {
           const classification = formatDegreeClassification(item.classification, language);

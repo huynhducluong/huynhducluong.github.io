@@ -214,7 +214,7 @@ const renderSidebar = (): string => `
       </address>
     </section>
 
-    <section class="cv-sidebar-section">
+    <section class="cv-sidebar-section cv-sidebar-section--education">
       ${renderSectionHeading("Education")}
       ${renderEducation()}
     </section>
