@@ -305,6 +305,7 @@ const renderPageTwo = (): string => {
         </div>
       </main>
       <span class="cv-page-accent cv-page-accent--top" aria-hidden="true"></span>
+      <span class="cv-page-accent cv-page-accent--middle" aria-hidden="true"></span>
       <span class="cv-page-accent cv-page-accent--bottom" aria-hidden="true"></span>
     </section>
   `;

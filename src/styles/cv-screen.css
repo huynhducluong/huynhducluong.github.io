@@ -636,22 +636,26 @@ body.document-embedded .cv-preview-shell {
 
 .cv-page-accent {
   position: absolute;
+  z-index: 3;
   right: 0;
-  width: 4mm;
-  height: 12mm;
+  width: 5.5mm;
   background: var(--document-accent);
+  pointer-events: none;
 }
 
 .cv-page-accent--top {
   top: 16mm;
+  height: 30mm;
 }
 
 .cv-page-accent--middle {
-  display: none;
+  top: 64mm;
+  height: 10mm;
 }
 
 .cv-page-accent--bottom {
-  display: none;
+  bottom: 40mm;
+  height: 10mm;
 }
 
 .cv-page-two-header {
@@ -684,16 +688,23 @@ body.document-embedded .cv-preview-shell {
 .cv-page-two-header__title {
   display: grid;
   align-content: center;
+  gap: 1.8mm;
   padding: 5mm 14mm;
 }
 
 .cv-page-two-header__title span {
-  display: none;
+  color: var(--document-primary);
+  font-size: 7.25pt;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .cv-page-two-header__title strong {
-  font-size: 14pt;
+  font-size: 16pt;
   font-weight: 700;
+  line-height: 1.1;
 }
 
 .cv-page-two-main {
@@ -712,8 +723,8 @@ body.document-embedded .cv-preview-shell {
 
 .cv-page-two-bottom {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
-  gap: 8mm;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 4mm;
   margin-top: 6mm;
   padding-top: 5mm;
   border-top: 0.4mm solid var(--document-border);
@@ -722,12 +733,14 @@ body.document-embedded .cv-preview-shell {
 .cv-selected-projects ul {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 2.2mm 4mm;
+  grid-auto-rows: 1fr;
+  gap: 2.8mm 7mm;
   list-style: none;
 }
 
 .cv-selected-projects li {
   display: grid;
+  align-content: start;
   padding-left: 2.7mm;
   border-left: 0.9mm solid var(--document-accent);
 }
@@ -745,7 +758,20 @@ body.document-embedded .cv-preview-shell {
   line-height: 1.3;
 }
 
+.cv-selected-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 7mm;
+  padding-top: 2.8mm;
+  border-top: 0.4mm solid var(--document-border);
+}
+
+.cv-selected-tools .cv-section-heading {
+  grid-column: 1 / -1;
+}
+
 .cv-tool {
+  min-width: 0;
   padding: 4mm;
   border-top: 1.2mm solid var(--document-primary);
   background: var(--document-surface-muted);

@@ -191,7 +191,7 @@ export const renderDynamicCv = (data: CvRuntimeData, adminPreview = false, langu
               <section class="cv-main-section cv-selected-tools">${heading(text.selectedTools)}${selectedTools}</section>
             </div>
           </main>
-          <span class="cv-page-accent cv-page-accent--top" aria-hidden="true"></span><span class="cv-page-accent cv-page-accent--bottom" aria-hidden="true"></span>
+          <span class="cv-page-accent cv-page-accent--top" aria-hidden="true"></span><span class="cv-page-accent cv-page-accent--middle" aria-hidden="true"></span><span class="cv-page-accent cv-page-accent--bottom" aria-hidden="true"></span>
         </section>
       </div>
     </div>`;
