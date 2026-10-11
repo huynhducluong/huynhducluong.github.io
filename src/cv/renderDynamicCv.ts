@@ -3,6 +3,7 @@ import { assetUrl, escapeHtml, formatDegreeClassification, formatNumericDate, lo
 import type { ContentPoint } from "../types/career";
 import type { CvRuntimeData, CvRuntimeProject } from "../types/cvContent";
 import { orderedCvBackground } from "./backgroundOrder";
+import { renderExperienceDate } from "./renderExperienceDate";
 
 const copy = {
   en: {
@@ -65,7 +66,7 @@ const renderProject = (project: CvRuntimeProject, language: Language, compact = 
   const responsibilities = selectedResponsibilities(project);
   return `
   <article class="cv-experience-item${compact ? " cv-experience-item--compact" : ""}">
-    <p class="cv-experience-item__date">${formatRange(project.startDate, project.endDate, language)}</p>
+    ${renderExperienceDate(project.startDate, project.endDate, copy[language].present)}
     <div class="cv-experience-item__content">
       ${project.role ? `<h3>${localized(project.role, language)}</h3>` : ""}
       <p class="cv-experience-item__project">${localized(project.name, language)}${location ? `, ${location}` : ""}</p>

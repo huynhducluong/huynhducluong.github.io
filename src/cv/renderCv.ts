@@ -17,6 +17,7 @@ import {
 import type { Project } from "../types/career";
 import type { CvProjectSelection } from "../types/documents";
 import { documentThemes } from "../themes/documentThemes";
+import { renderExperienceDate } from "./renderExperienceDate";
 import { findRequired } from "./validateCv";
 
 const language = englishCvConfig.language;
@@ -132,9 +133,7 @@ const renderProjectExperience = (
 
   return `
     <article class="cv-experience-item${compact ? " cv-experience-item--compact" : ""}">
-      <p class="cv-experience-item__date">
-        ${formatRange(project.startDate, project.endDate)}
-      </p>
+      ${renderExperienceDate(project.startDate, project.endDate, "Present")}
       <div class="cv-experience-item__content">
         ${
           project.role
