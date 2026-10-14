@@ -16,6 +16,7 @@ import { loadActiveProfileDocumentRelease } from "./profileDocumentRepository";
 import { withoutTrashed } from "./activeContent";
 import { normalizeProfile } from "../shared/format";
 import { sortByMasterContentOrder } from "../shared/contentOrder";
+import { legacyPortfolioLayouts, normalizePortfolioLayouts } from "../portfolio/layouts";
 
 interface PortfolioContentRow {
   version: string;
@@ -60,13 +61,24 @@ export const normalizePortfolioContent = (content: PortfolioContent): PortfolioC
   closingHeading: localized(content.closingHeading as LocalizedText | string, portfolioContentSeed.closingHeading),
   closingText: localized(content.closingText as LocalizedText | string, portfolioContentSeed.closingText),
   imageOverlay: normalizeImageOverlay((content as Partial<PortfolioContent>).imageOverlay),
+  layouts: normalizePortfolioLayouts((content as Partial<PortfolioContent>).layouts, legacyPortfolioLayouts),
   profile: normalizeProfile(content.profile),
 });
 
-export const normalizePortfolioRuntimeData = (runtime: PortfolioRuntimeData): PortfolioRuntimeData => ({
-  ...runtime,
-  content: normalizePortfolioContent(runtime.content),
-});
+export const normalizePortfolioRuntimeData = (runtime: PortfolioRuntimeData): PortfolioRuntimeData => {
+  const hadLayoutConfig = Boolean((runtime.content as Partial<PortfolioContent>).layouts);
+  const content = normalizePortfolioContent(runtime.content);
+  if (!hadLayoutConfig) {
+    content.layouts.projectOverrides = Object.fromEntries(runtime.projects
+      .filter((project) => project.portfolioLayout === "feature" || project.portfolioLayout === "standard" || project.portfolioLayout === "compact")
+      .map((project) => [project.id, project.portfolioLayout]));
+  }
+  return {
+    ...runtime,
+    content,
+    credentials: runtime.credentials ?? [],
+  };
+};
 
 const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalizePortfolioContent({
   version: row.version,
@@ -80,6 +92,7 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalize
   closingText: localized(row.closing_text, portfolioContentSeed.closingText),
   theme: row.theme ?? { presetId: "personal-blue" },
   imageOverlay: structuredClone(portfolioContentSeed.imageOverlay),
+  layouts: structuredClone(legacyPortfolioLayouts),
   profile: normalizeProfile(row.profile),
   skillGroups: row.skill_groups ?? [],
 });
@@ -106,6 +119,7 @@ export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> =>
       withoutTrashed(toolResult.data as ToolRow[]).map(toolFromRow),
       (item) => item.displayOrder,
     ),
+    credentials: [],
   };
 };
 export const loadPublishedPortfolioRelease = async (): Promise<PortfolioRuntimeData> => {

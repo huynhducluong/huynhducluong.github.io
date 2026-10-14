@@ -6,6 +6,7 @@ import "../styles/portfolio-print.css";
 import "../styles/document-print-preview.css";
 import { loadPublishedPortfolioRelease } from "../services/documentRepository";
 import { loadPortfolioDraftData } from "../services/documentRepository";
+import { normalizePortfolioRuntimeData } from "../services/documentRepository";
 import { getAdminAccess, requireAdminAccess } from "../admin/auth";
 import { getProfileDocument } from "../services/profileDocumentRepository";
 import { applyDocumentTheme, resolveDocumentTheme } from "../themes/documentThemes";
@@ -20,7 +21,7 @@ import {
 } from "../shared/documentPrintPreview";
 import type { PortfolioRuntimeData } from "../types/portfolio";
 import type { StoredDocumentTheme } from "../types/theme";
-import { renderPortfolio } from "./renderPortfolio";
+import { renderPortfolio } from "./renderPortfolioV2";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
@@ -47,6 +48,7 @@ const applyPortfolioAppearance = (
 };
 
 const render = (data: PortfolioRuntimeData, language: Language = "en"): void => {
+  data = normalizePortfolioRuntimeData(data);
   document.documentElement.lang = language;
   document.title = `${profileName(data.content.profile.name, language)} | Portfolio`;
   app.innerHTML = `<main class="portfolio-preview-shell portfolio-preview-shell--public"><div class="portfolio-document" id="portfolio-document">${renderPortfolio(data, language)}</div></main>`;

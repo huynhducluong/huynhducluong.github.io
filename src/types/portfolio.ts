@@ -1,9 +1,39 @@
 import type { ContentPoint, LocalizedText, Profile, SkillGroup } from "./career";
+import type { CredentialSnapshot } from "./credential";
 import type { StoredDocumentTheme } from "./theme";
 
 export type PublicationStatus = "draft" | "published" | "archived";
-export type PortfolioLayout = "feature" | "standard" | "compact";
+export type LegacyPortfolioLayout = "feature" | "standard" | "compact";
+export type ProjectLayout =
+  | "project.classic"
+  | "project.balanced"
+  | "project.editorial"
+  | "project.technical"
+  | "project.portrait"
+  | "project.evidence"
+  | LegacyPortfolioLayout;
+export type PortfolioLayout = ProjectLayout;
+export type CoverLayout = "cover.classic" | "cover.split-image" | "cover.horizontal";
+export type ProfileLayout = "profile.classic" | "profile.portrait" | "profile.capability";
+export type ProjectIndexLayout = "index.classic" | "index.visual" | "index.editorial";
+export type AutomationLayout = "automation.classic" | "automation.workflow" | "automation.input-geometry";
+export type CredentialsLayout = "credentials.dual" | "credentials.bands";
+export type ClosingLayout = "closing.classic" | "closing.blue" | "closing.white";
 export type CvProjectDisplay = "detailed" | "compact";
+
+export interface PortfolioLayoutPreferences {
+  configVersion: 2;
+  cover: CoverLayout;
+  profile: ProfileLayout;
+  index: ProjectIndexLayout;
+  projectDefault: Exclude<ProjectLayout, LegacyPortfolioLayout>;
+  projectOverrides: Record<string, ProjectLayout>;
+  automationDefault: AutomationLayout;
+  automationOverrides: Record<string, AutomationLayout>;
+  credentials: CredentialsLayout;
+  includeCredentials: boolean;
+  closing: ClosingLayout;
+}
 
 export interface PortfolioImageOverlay {
   enabled: boolean;
@@ -22,14 +52,21 @@ export interface PortfolioContent {
   closingText: LocalizedText;
   theme: StoredDocumentTheme;
   imageOverlay: PortfolioImageOverlay;
+  layouts: PortfolioLayoutPreferences;
   profile: Profile;
   skillGroups: SkillGroup[];
+}
+
+export interface PortfolioCredential extends CredentialSnapshot {
+  includeInPortfolio: boolean;
+  portfolioOrder: number;
 }
 
 export interface PortfolioRuntimeData {
   content: PortfolioContent;
   projects: PortfolioProject[];
   tools: PortfolioTool[];
+  credentials?: PortfolioCredential[];
 }
 
 export interface DocumentReleaseSummary {
@@ -87,7 +124,7 @@ export interface PortfolioProject {
   displayOrder: number;
   includeInPortfolio: boolean;
   portfolioOrder: number;
-  portfolioLayout: PortfolioLayout;
+  portfolioLayout: ProjectLayout;
   includeInCv: boolean;
   cvOrder: number;
   cvDisplay: CvProjectDisplay;
@@ -112,6 +149,7 @@ export interface PortfolioTool {
   displayOrder: number;
   includeInPortfolio: boolean;
   portfolioOrder: number;
+  portfolioLayout?: AutomationLayout;
   includeInCv: boolean;
   cvOrder: number;
 }

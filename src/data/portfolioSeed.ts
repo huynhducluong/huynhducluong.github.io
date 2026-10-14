@@ -5,6 +5,7 @@ import { cvProjectSeedSettings, cvToolSeedSettings } from "./cvSeed";
 import { profile } from "./profile";
 import { skillGroups } from "./skills";
 import type { PortfolioContent } from "../types/portfolio";
+import { modernPortfolioLayouts } from "../portfolio/layouts";
 
 export const portfolioContentSeed: PortfolioContent = {
   version: "2026-09",
@@ -27,6 +28,7 @@ export const portfolioContentSeed: PortfolioContent = {
   },
   theme: { presetId: "personal-blue" },
   imageOverlay: { enabled: true, opacity: 0.28 },
+  layouts: structuredClone(modernPortfolioLayouts),
   profile,
   skillGroups,
 };

@@ -20,8 +20,15 @@ import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol
 import { documentThemes, resolveDocumentTheme } from "../themes/documentThemes";
 import { resolveCvBackgroundSelection } from "../cv/backgroundOrder";
 import type { LocalizedText, Profile } from "../types/career";
+import type { ProfessionalCredential } from "../types/credential";
 import type { CvBackgroundGroup, CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
-import type { PortfolioContent, PortfolioRuntimeData } from "../types/portfolio";
+import type {
+  AutomationLayout,
+  PortfolioContent,
+  PortfolioCredential,
+  PortfolioRuntimeData,
+  ProjectLayout,
+} from "../types/portfolio";
 import type {
   ProfileDocumentKind,
   ProfileDocumentRecord,
@@ -29,6 +36,17 @@ import type {
   ProfileDocumentStatus,
 } from "../types/profileDocument";
 import type { StoredDocumentTheme } from "../types/theme";
+import {
+  automationLayoutOptions,
+  closingLayoutOptions,
+  coverLayoutOptions,
+  credentialsLayoutOptions,
+  indexLayoutOptions,
+  portfolioPageCount,
+  profileLayoutOptions,
+  projectLayoutOptions,
+  type PortfolioLayoutOption,
+} from "../portfolio/layouts";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { confirmAdmin } from "./confirmDialog";
@@ -154,6 +172,63 @@ const portfolioImageTreatmentFields = (content: PortfolioContent): string => {
   });
 };
 
+const selectedLayoutLabel = <T extends string>(value: T, options: readonly PortfolioLayoutOption<T>[]): string =>
+  options.find((option) => option.id === value)?.label ?? String(value).replace(/^[^.]+\./, "").replaceAll("-", " ");
+
+const portfolioLayoutPicker = <T extends string>(
+  title: string,
+  note: string,
+  name: string,
+  value: T,
+  options: readonly PortfolioLayoutOption<T>[],
+): string => `<details class="admin-layout-picker">
+  <summary><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(note)}</small></span><em>${escapeHtml(selectedLayoutLabel(value, options))}</em></summary>
+  <div class="admin-layout-picker__options">${options.map((option) => `<label class="admin-layout-option" data-layout-preview="${escapeHtml(option.preview)}"><input type="radio" name="${escapeHtml(name)}" value="${escapeHtml(option.id)}"${option.id === value ? " checked" : ""}><span class="admin-layout-option__thumbnail" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="admin-layout-option__copy"><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.description)}</small></span></label>`).join("")}</div>
+</details>`;
+
+const legacyProjectLayoutLabel = (value: string): string => value === "feature" ? "Legacy Feature" : value === "compact" ? "Legacy Compact" : "Legacy Standard";
+const projectOverrideOptions = (value: ProjectLayout | undefined): string => {
+  const modern = projectLayoutOptions.map((option) => `<option value="${escapeHtml(option.id)}"${value === option.id ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("");
+  const legacy = value === "feature" || value === "standard" || value === "compact"
+    ? `<option value="${value}" selected>${legacyProjectLayoutLabel(value)}</option>`
+    : "";
+  return `<option value="default"${value ? "" : " selected"}>Use project default</option>${legacy}${modern}`;
+};
+
+const automationOverrideOptions = (value: AutomationLayout | undefined): string => `<option value="default"${value ? "" : " selected"}>Use automation default</option>${automationLayoutOptions.map((option) => `<option value="${escapeHtml(option.id)}"${value === option.id ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}`;
+
+const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
+  const { content } = runtime;
+  const availableProjects = runtime.projects.filter((item) => item.status === "published");
+  const availableTools = runtime.tools.filter((item) => item.status === "published");
+  const overrides = availableProjects.length || availableTools.length
+    ? `<div class="admin-layout-overrides">
+      ${availableProjects.length ? `<details class="admin-layout-override-group"><summary>Project overrides <span>${availableProjects.length}</span></summary><div>${availableProjects.map((item) => `<label><span><strong>${escapeHtml(item.name.en)}</strong><small>${item.includeInPortfolio ? "Selected · " : "Not selected · "}uses the default unless overridden.</small></span>${renderAdminSelectControl({ name: `project_layout_${item.id}`, attributes: 'aria-label="Project layout override"', options: projectOverrideOptions(content.layouts.projectOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
+      ${availableTools.length ? `<details class="admin-layout-override-group"><summary>Automation overrides <span>${availableTools.length}</span></summary><div>${availableTools.map((item) => `<label><span><strong>${escapeHtml(item.name)}</strong><small>${item.includeInPortfolio ? "Selected · " : "Not selected · "}Classic groups tools; other styles create one page per tool.</small></span>${renderAdminSelectControl({ name: `tool_layout_${item.id}`, attributes: 'aria-label="Automation layout override"', options: automationOverrideOptions(content.layouts.automationOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
+    </div>`
+    : '<p class="admin-empty">No published projects or tools are available for layout overrides.</p>';
+  return [
+    renderAdminSectionCard({ title: "Portfolio appearance", note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) }),
+    portfolioImageTreatmentFields(content),
+    renderAdminSectionCard({
+      title: "Page layouts",
+      note: "Choose one A4 landscape preset for each page type. Open a row to compare its options.",
+      className: "admin-layout-system-card",
+      content: `<div class="admin-layout-system">
+        ${portfolioLayoutPicker("Cover", "Document opening", "layout_cover", content.layouts.cover, coverLayoutOptions)}
+        ${portfolioLayoutPicker("Profile", "Professional profile", "layout_profile", content.layouts.profile, profileLayoutOptions)}
+        ${portfolioLayoutPicker("Project Index", "Selected work navigation", "layout_index", content.layouts.index, indexLayoutOptions)}
+        ${portfolioLayoutPicker("Projects", "Default for selected projects", "layout_project_default", content.layouts.projectDefault, projectLayoutOptions)}
+        ${portfolioLayoutPicker("Automation", "Default for selected tools", "layout_automation_default", content.layouts.automationDefault, automationLayoutOptions)}
+        <div class="admin-layout-credentials-toggle"><label class="admin-switch"><input type="checkbox" name="layout_credentials_enabled"${content.layouts.includeCredentials ? " checked" : ""}><span><strong>Include credentials page</strong><small>Uses safe document placeholders until public previews are explicitly prepared.</small></span></label></div>
+        ${portfolioLayoutPicker("Credentials", "Education and supporting documents", "layout_credentials", content.layouts.credentials, credentialsLayoutOptions)}
+        ${portfolioLayoutPicker("Thank you", "Portfolio closing", "layout_closing", content.layouts.closing, closingLayoutOptions)}
+      </div>`,
+    }),
+    renderAdminSectionCard({ title: "Item layout overrides", note: "Optional. Keep an item on the document default or give it a specialized layout.", content: overrides }),
+  ].join("");
+};
+
 const readTheme = (form: FormData): StoredDocumentTheme => {
   const presetId = text(form, "theme_preset") || "personal-blue";
   return presetId === "custom"
@@ -237,10 +312,24 @@ const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData, sharedProfi
   };
 };
 
-const composePortfolioDraft = (saved: PortfolioRuntimeData, shared: PortfolioRuntimeData, sharedProfile: Profile): PortfolioRuntimeData => {
+const portfolioCredentialLibrary = (credentials: ProfessionalCredential[]): PortfolioCredential[] => credentials
+  .filter((credential) => credential.status === "published")
+  .map((credential, index) => ({
+    ...credentialSnapshot(credential),
+    includeInPortfolio: false,
+    portfolioOrder: credential.displayOrder || index + 1,
+  }));
+
+const composePortfolioDraft = (
+  saved: PortfolioRuntimeData,
+  shared: PortfolioRuntimeData,
+  sharedProfile: Profile,
+  sharedCredentials: PortfolioCredential[],
+): PortfolioRuntimeData => {
   const normalizedSaved = normalizePortfolioRuntimeData(saved);
   const savedProjects = new Map(normalizedSaved.projects.map((item) => [item.id, item]));
   const savedTools = new Map(normalizedSaved.tools.map((item) => [item.id, item]));
+  const savedCredentials = new Map((normalizedSaved.credentials ?? []).map((item) => [item.id, item]));
   return {
     ...shared,
     content: {
@@ -264,6 +353,14 @@ const composePortfolioDraft = (saved: PortfolioRuntimeData, shared: PortfolioRun
         portfolioOrder: item.portfolioOrder,
       } : { ...item, includeInPortfolio: false };
     }),
+    credentials: sharedCredentials.map((item) => {
+      const selection = savedCredentials.get(item.id);
+      return selection ? {
+        ...item,
+        includeInPortfolio: selection.includeInPortfolio,
+        portfolioOrder: selection.portfolioOrder,
+      } : item;
+    }),
   };
 };
 
@@ -284,17 +381,19 @@ const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
     }));
     return;
   }
-  const [documents, shared, professional] = await Promise.all([
+  const [documents, shared, professional, credentials] = await Promise.all([
     listProfileDocuments<PortfolioRuntimeData>(kind),
     loadPortfolioDraftData(),
     loadProfessionalProfile(),
+    listProfessionalCredentials().catch(() => []),
   ]);
+  const sharedCredentials = portfolioCredentialLibrary(credentials);
   state.documents.portfolio = documents.map((document) => ({
     ...document,
     draftPayload: document.draftPayload
       ? document.status === "archived"
-        ? structuredClone(document.draftPayload)
-        : composePortfolioDraft(document.draftPayload, shared, professional.profile)
+        ? normalizePortfolioRuntimeData(structuredClone(document.draftPayload))
+        : composePortfolioDraft(document.draftPayload, shared, professional.profile, sharedCredentials)
       : null,
   }));
 };
@@ -325,17 +424,19 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
             : null,
         }));
       } else {
-        const [shared, professional] = await Promise.all([
+        const [shared, professional, credentials] = await Promise.all([
           loadPortfolioDraftData(),
           loadProfessionalProfile(),
+          listProfessionalCredentials().catch(() => []),
         ]);
+        shared.credentials = portfolioCredentialLibrary(credentials);
         const documents = await ensureProfileDocumentLibrary<PortfolioRuntimeData>(kind, shared);
         state.documents.portfolio = documents.map((document) => ({
           ...document,
           draftPayload: document.draftPayload
             ? document.status === "archived"
-              ? structuredClone(document.draftPayload)
-              : composePortfolioDraft(document.draftPayload, shared, professional.profile)
+              ? normalizePortfolioRuntimeData(structuredClone(document.draftPayload))
+              : composePortfolioDraft(document.draftPayload, shared, professional.profile, shared.credentials ?? [])
             : null,
         }));
       }
@@ -628,22 +729,20 @@ const portfolioContentPanel = (content: PortfolioContent): string => [
 
 const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => renderAdminSectionCard({
   title: "Portfolio content selection",
-  note: "Choose projects and tools. Display order follows Projects and Automation Tools.",
+  note: "Choose projects, tools and credentials. Display order follows their source libraries; layout choices live in Appearance.",
   content: `<div class="admin-document-selection">
     <h4>Projects</h4>
     ${runtime.projects.map((item) => {
       const ready = item.status === "published";
-      return `<article class="admin-document-selection__item admin-document-selection__item--project"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label>${renderAdminSelectControl({
-        name: `project_layout_${item.id}`,
-        attributes: `aria-label="Layout"${ready ? "" : " disabled"}`,
-        options: `<option value="feature"${item.portfolioLayout === "feature" ? " selected" : ""}>Feature</option><option value="standard"${item.portfolioLayout === "standard" ? " selected" : ""}>Standard</option><option value="compact"${item.portfolioLayout === "compact" ? " selected" : ""}>Compact</option>`,
-      })}<span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+      return `<article class="admin-document-selection__item admin-document-selection__item--tool"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
     <h4>Automation tools</h4>
     ${runtime.tools.map((item) => {
       const ready = item.status === "published";
       return `<article class="admin-document-selection__item admin-document-selection__item--tool"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
+    <h4>Credentials</h4>
+    ${(runtime.credentials ?? []).length ? (runtime.credentials ?? []).map((item) => `<article class="admin-document-selection__item admin-document-selection__item--tool"><label class="admin-switch"><input type="checkbox" name="portfolio_credential" value="${escapeHtml(item.id)}"${item.includeInPortfolio ? " checked" : ""}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.title.en)}">${escapeHtml(item.title.en || "Untitled credential")}</strong><small>${escapeHtml(item.issuer.en || item.kind.replaceAll("_", " "))}</small></span></label><span class="status status--published">Ready</span></article>`).join("") : '<p class="admin-empty">No published credentials are available. The Credentials page can still use safe placeholders.</p>'}
   </div>`,
 });
 
@@ -652,7 +751,24 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
   const form = new FormData(formElement);
   const projectIds = new Set(form.getAll("portfolio_project").map(String));
   const toolIds = new Set(form.getAll("portfolio_tool").map(String));
+  const credentialIds = new Set(form.getAll("portfolio_credential").map(String));
   const rawOverlayOpacity = Number(form.get("portfolio_image_overlay_opacity"));
+  const projectOverrides = { ...current.content.layouts.projectOverrides };
+  current.projects.forEach((item) => {
+    const key = `project_layout_${item.id}`;
+    if (!form.has(key)) return;
+    const value = String(form.get(key) ?? "default") as ProjectLayout | "default";
+    if (value === "default") delete projectOverrides[item.id];
+    else projectOverrides[item.id] = value;
+  });
+  const automationOverrides = { ...current.content.layouts.automationOverrides };
+  current.tools.forEach((item) => {
+    const key = `tool_layout_${item.id}`;
+    if (!form.has(key)) return;
+    const value = String(form.get(key) ?? "default") as AutomationLayout | "default";
+    if (value === "default") delete automationOverrides[item.id];
+    else automationOverrides[item.id] = value;
+  });
   const content: PortfolioContent = {
     ...current.content,
     version: text(form, "portfolio_version") || current.content.version,
@@ -671,6 +787,19 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
         ? Math.min(100, Math.max(0, rawOverlayOpacity)) / 100
         : portfolioContentSeed.imageOverlay.opacity,
     },
+    layouts: {
+      configVersion: 2,
+      cover: (text(form, "layout_cover") || current.content.layouts.cover) as PortfolioContent["layouts"]["cover"],
+      profile: (text(form, "layout_profile") || current.content.layouts.profile) as PortfolioContent["layouts"]["profile"],
+      index: (text(form, "layout_index") || current.content.layouts.index) as PortfolioContent["layouts"]["index"],
+      projectDefault: (text(form, "layout_project_default") || current.content.layouts.projectDefault) as PortfolioContent["layouts"]["projectDefault"],
+      projectOverrides,
+      automationDefault: (text(form, "layout_automation_default") || current.content.layouts.automationDefault) as AutomationLayout,
+      automationOverrides,
+      credentials: (text(form, "layout_credentials") || current.content.layouts.credentials) as PortfolioContent["layouts"]["credentials"],
+      includeCredentials: form.get("layout_credentials_enabled") === "on",
+      closing: (text(form, "layout_closing") || current.content.layouts.closing) as PortfolioContent["layouts"]["closing"],
+    },
     profile: {
       ...current.content.profile,
       professionalTitle: { en: text(form, "portfolio_profile_title_en"), vi: text(form, "portfolio_profile_title_vi") },
@@ -683,11 +812,16 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
       ...item,
       includeInPortfolio: projectIds.has(item.id),
       portfolioOrder: item.portfolioOrder,
-      portfolioLayout: String(form.get(`project_layout_${item.id}`) ?? item.portfolioLayout) as typeof item.portfolioLayout,
+      portfolioLayout: item.portfolioLayout,
     })),
     tools: current.tools.map((item) => ({
       ...item,
       includeInPortfolio: toolIds.has(item.id),
+      portfolioOrder: item.portfolioOrder,
+    })),
+    credentials: (current.credentials ?? []).map((item) => ({
+      ...item,
+      includeInPortfolio: credentialIds.has(item.id),
       portfolioOrder: item.portfolioOrder,
     })),
   };
@@ -775,13 +909,13 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   const contentPanel = kind === "cv" ? cvContentPanel(content as CvContent) : portfolioContentPanel(content as PortfolioContent);
   const selectionPanel = kind === "cv" ? cvSelectionPanel(runtime as CvRuntimeData) : portfolioSelectionPanel(runtime as PortfolioRuntimeData);
   const backgroundPanel = kind === "cv" ? cvBackgroundPanel(content as CvContent) : "";
-  const appearancePanel = `${renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) })}${kind === "portfolio" ? portfolioImageTreatmentFields(content as PortfolioContent) : ""}`;
+  const appearancePanel = kind === "portfolio"
+    ? portfolioAppearancePanel(runtime as PortfolioRuntimeData)
+    : renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) });
   const archived = selected.status === "archived";
   const initialPageCount = kind === "cv"
     ? 2
-    : 4
-      + (runtime as PortfolioRuntimeData).projects.filter((item) => item.includeInPortfolio).length
-      + ((runtime as PortfolioRuntimeData).tools.some((item) => item.includeInPortfolio) ? 1 : 0);
+    : portfolioPageCount(runtime as PortfolioRuntimeData);
   const languageControl = renderAdminPreviewLanguageToggle(state.previewLanguage[kind], "data-document-language-toggle");
   const zoomControls = renderPreviewZoomControls(state.zoom[kind]);
   const previewToolbar = renderAdminPreviewToolbar({
@@ -1188,6 +1322,12 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   });
   form.addEventListener("change", (event) => {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
+    if (target instanceof HTMLInputElement && target.type === "radio" && target.name.startsWith("layout_")) {
+      const picker = target.closest<HTMLDetailsElement>(".admin-layout-picker");
+      const label = target.closest<HTMLElement>(".admin-layout-option")?.querySelector<HTMLElement>(".admin-layout-option__copy strong")?.textContent;
+      const selected = picker?.querySelector<HTMLElement>("summary em");
+      if (selected && label) selected.textContent = label;
+    }
     if (target.name === "theme_preset" && target.value !== "custom") {
       const theme = documentThemes.find((item) => item.id === target.value);
       const primary = form.elements.namedItem("theme_primary");
