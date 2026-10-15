@@ -65,13 +65,21 @@ const purgeRows = async (
 
       const media = (mediaData ?? []) as StoredMedia[];
       const paths = media.map((image) => image.storage_path);
-      if (relation === "project_images" && media.length) {
-        const { data: cropData, error: cropError } = await admin
-          .from("project_image_crops")
-          .select("storage_path")
-          .in("project_image_id", media.map((image) => image.id));
-        if (cropError) throw new Error(`Cannot load project image crops: ${errorMessage(cropError)}`);
-        paths.push(...(cropData ?? []).map((crop) => crop.storage_path));
+      if (media.length) {
+        const cropSources = relation === "project_images"
+          ? [
+              { table: "project_image_crops", foreignKey: "project_image_id" },
+              { table: "project_media_crops", foreignKey: "project_image_id" },
+            ]
+          : [{ table: "tool_media_crops", foreignKey: "tool_image_id" }];
+        for (const source of cropSources) {
+          const { data: cropData, error: cropError } = await admin
+            .from(source.table)
+            .select("storage_path")
+            .in(source.foreignKey, media.map((image) => image.id));
+          if (cropError) throw new Error(`Cannot load ${source.table}: ${errorMessage(cropError)}`);
+          paths.push(...(cropData ?? []).map((crop) => crop.storage_path));
+        }
       }
 
       const uniquePaths = [...new Set(paths.filter(Boolean))];

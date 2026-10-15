@@ -1248,18 +1248,38 @@
 .admin-layout-overrides { display: grid; gap: .55rem; }
 [data-layout-override-group][hidden],
 [data-layout-override-item][hidden],
-[data-layout-overrides-empty][hidden] { display: none; }
-.admin-layout-override-group { overflow: hidden; border: 1px solid var(--admin-color-border); border-radius: .55rem; }
-.admin-layout-override-group > summary { display: flex; align-items: center; justify-content: space-between; padding: .7rem; color: var(--color-primary-dark); cursor: pointer; font-size: var(--admin-text-sm); font-weight: 800; }
-.admin-layout-override-group > summary span { padding: .18rem .4rem; border-radius: 999px; background: var(--admin-color-surface-muted); color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); }
-.admin-layout-override-group > div { display: grid; gap: .45rem; padding: .6rem; border-top: 1px solid var(--admin-color-border); background: var(--admin-color-surface-subtle); }
+[data-layout-overrides-empty][hidden],
+[data-portfolio-media-group][hidden] { display: none; }
+.admin-disclosure-group { overflow: hidden; border: 1px solid var(--admin-color-border); border-radius: .55rem; }
+.admin-disclosure-group > summary { display: flex; align-items: center; justify-content: space-between; padding: .7rem; color: var(--color-primary-dark); cursor: pointer; font-size: var(--admin-text-sm); font-weight: 800; }
+.admin-disclosure-group > summary span { padding: .18rem .4rem; border-radius: 999px; background: var(--admin-color-surface-muted); color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); }
+.admin-disclosure-group > div { display: grid; gap: .45rem; padding: .6rem; border-top: 1px solid var(--admin-color-border); background: var(--admin-color-surface-subtle); }
 .admin-layout-override-group label { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem); align-items: center; gap: .75rem; padding: .65rem; border: 1px solid var(--admin-color-border); border-radius: .5rem; background: var(--admin-color-surface); }
 .admin-layout-override-group label > span { display: grid; min-width: 0; gap: .12rem; }
 .admin-layout-override-group label strong { overflow: hidden; color: var(--admin-color-text); font-size: var(--admin-text-xs); text-overflow: ellipsis; white-space: nowrap; }
 .admin-layout-override-group label small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-weight: var(--admin-weight-regular); }
+.admin-portfolio-media-assignments { display: grid; gap: .85rem; }
+.admin-portfolio-media-item { display: grid; gap: .65rem; padding: .7rem; border: 1px solid var(--admin-color-border); border-radius: .55rem; background: var(--admin-color-surface-subtle); }
+.admin-portfolio-media-item[hidden],
+[data-portfolio-media-empty][hidden] { display: none; }
+.admin-portfolio-media-item > header { display: grid; min-width: 0; grid-template-columns: 3.5rem minmax(0, 1fr); align-items: center; gap: .65rem; }
+.admin-portfolio-media-item > header img,
+.admin-portfolio-media-item__placeholder { width: 3.5rem; height: 2.65rem; border: 1px solid var(--admin-color-border); border-radius: .35rem; background: var(--admin-color-surface-muted); object-fit: cover; }
+.admin-portfolio-media-item__placeholder { display: grid; place-items: center; color: var(--admin-color-text-muted); font-size: .55rem; text-align: center; }
+.admin-portfolio-media-item > header > span { display: grid; min-width: 0; gap: .12rem; }
+.admin-portfolio-media-item > header strong { overflow: hidden; font-size: var(--admin-text-xs); text-overflow: ellipsis; white-space: nowrap; }
+.admin-portfolio-media-item > header small { color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: 700; }
+.admin-portfolio-media-item__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
+.admin-portfolio-media-item__fields label { display: grid; min-width: 0; gap: .3rem; color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-weight: 700; }
+.admin-portfolio-media-item__fields label > span { display: flex; justify-content: space-between; gap: .4rem; }
+.admin-portfolio-media-item__fields label small { color: var(--admin-color-text-muted); font-size: .625rem; font-weight: 500; white-space: nowrap; }
+.admin-portfolio-media-item__fields .admin-select-control { width: 100%; }
 @container admin-form (max-width: 34rem) {
   .admin-layout-picker__options { grid-template-columns: 1fr; }
   .admin-layout-override-group label { grid-template-columns: 1fr; }
+}
+@container admin-form (max-width: 26rem) {
+  .admin-portfolio-media-item__fields { grid-template-columns: 1fr; }
 }
 
 .admin-document-frame {

@@ -22,10 +22,11 @@ interface AdminSectionCardOptions {
   className?: string;
 }
 
-interface AdminPreviewControlOption {
+export interface AdminPreviewControlOption {
   label: string;
   value: string;
   disabled?: boolean;
+  group?: string;
 }
 
 interface AdminPreviewSelectOptions {
@@ -153,6 +154,26 @@ export const renderAdminSectionCard = ({
   </section>`;
 };
 
+export const renderAdminPreviewOptions = (
+  options: AdminPreviewControlOption[],
+  activeValue: string,
+): string => {
+  let activeGroup: string | undefined;
+  let markup = "";
+
+  for (const option of options) {
+    if (option.group !== activeGroup) {
+      if (activeGroup !== undefined) markup += "</optgroup>";
+      activeGroup = option.group;
+      if (activeGroup !== undefined) markup += `<optgroup label="${escapeHtml(activeGroup)}">`;
+    }
+    markup += `<option value="${escapeHtml(option.value)}"${activeValue === option.value ? " selected" : ""}${option.disabled ? " disabled" : ""}>${escapeHtml(option.label)}</option>`;
+  }
+
+  if (activeGroup !== undefined) markup += "</optgroup>";
+  return markup;
+};
+
 export const renderAdminPreviewSelect = ({
   label,
   dataAttribute,
@@ -162,7 +183,7 @@ export const renderAdminPreviewSelect = ({
 }: AdminPreviewSelectOptions): string => `<label class="admin-preview-toolbar__select${className ? ` ${escapeHtml(className)}` : ""}">
   <span class="sr-only">${escapeHtml(label)}</span>
   <select ${escapeHtml(dataAttribute)} aria-label="${escapeHtml(label)}">
-    ${options.map((option) => `<option value="${escapeHtml(option.value)}"${activeValue === option.value ? " selected" : ""}${option.disabled ? " disabled" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+    ${renderAdminPreviewOptions(options, activeValue)}
   </select>
 </label>`;
 

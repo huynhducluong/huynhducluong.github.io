@@ -1,6 +1,11 @@
 import Cropper from "cropperjs";
-import { downloadStoredMedia, saveProjectCoverCrops, type ProjectImageCropRow } from "../services/projectCoverCropRepository";
-import type { PortfolioLayout } from "../types/portfolio";
+import {
+  downloadStoredMedia,
+  savePortfolioMediaCrops,
+  type PortfolioMediaCropRow,
+  type PortfolioMediaOwnerType,
+} from "../services/portfolioMediaCropRepository";
+import type { MediaCropProfile } from "../types/portfolio";
 import { setButtonBusy } from "./ui";
 
 interface CropState {
@@ -11,7 +16,7 @@ interface CropState {
 }
 
 interface CropLayoutConfig {
-  id: PortfolioLayout;
+  id: MediaCropProfile;
   label: string;
   frameWidth: number;
   frameHeight: number;
@@ -19,28 +24,29 @@ interface CropLayoutConfig {
   outputHeight: number;
 }
 
-export interface ProjectCoverCropTarget {
-  projectId: string;
+export interface PortfolioMediaCropTarget {
+  ownerType: PortfolioMediaOwnerType;
+  ownerId: string;
   imageId: string;
   storagePath: string;
-  preferredLayout: PortfolioLayout;
-  crops: ProjectImageCropRow[];
+  preferredProfile: MediaCropProfile;
+  crops: PortfolioMediaCropRow[];
 }
 
-interface ProjectCoverCropperCallbacks {
+interface PortfolioMediaCropperCallbacks {
   notify: (message: string, kind?: "info" | "error" | "success") => void;
-  onSaved: () => void | Promise<void>;
+  onSaved: (target: PortfolioMediaCropTarget) => void | Promise<void>;
 }
 
 const layouts: CropLayoutConfig[] = [
-  { id: "standard", label: "Standard", frameWidth: 164, frameHeight: 210, outputWidth: 1406, outputHeight: 1800 },
-  { id: "feature", label: "Feature", frameWidth: 178, frameHeight: 210, outputWidth: 1526, outputHeight: 1800 },
-  { id: "compact", label: "Compact", frameWidth: 138, frameHeight: 210, outputWidth: 1183, outputHeight: 1800 },
+  { id: "wide", label: "Wide", frameWidth: 21, frameHeight: 9, outputWidth: 1800, outputHeight: 771 },
+  { id: "landscape", label: "Landscape", frameWidth: 4, frameHeight: 3, outputWidth: 1600, outputHeight: 1200 },
+  { id: "portrait", label: "Portrait", frameWidth: 3, frameHeight: 4, outputWidth: 1350, outputHeight: 1800 },
 ];
 
 const selectionId = "project-cover-crop-selection";
 const maxSourcePixels = 80_000_000;
-const layoutById = (id: PortfolioLayout): CropLayoutConfig => layouts.find((item) => item.id === id) ?? layouts[0];
+const layoutById = (id: MediaCropProfile): CropLayoutConfig => layouts.find((item) => item.id === id) ?? layouts[0];
 const ratio = (layout: CropLayoutConfig): number => layout.frameWidth / layout.frameHeight;
 const frameLabel = (layout: CropLayoutConfig): string => `${layout.frameWidth}:${layout.frameHeight}`;
 
@@ -55,13 +61,13 @@ const cropperTemplate = (layout: CropLayoutConfig): string => `
     </cropper-selection>
   </cropper-canvas>`;
 
-export const renderProjectCoverCropDialog = (): string => `
+export const renderPortfolioMediaCropDialog = (): string => `
   <dialog class="admin-dialog admin-photo-crop-dialog admin-project-cover-crop-dialog" data-project-cover-crop-dialog aria-labelledby="project-cover-crop-title">
     <div class="admin-photo-crop-dialog__heading">
-      <div><p class="section-kicker">Portfolio cover</p><h2 id="project-cover-crop-title">Adjust cover crops</h2><p>Position the original image for each Portfolio layout.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Cover crop status" hidden></section></div>
-      <button class="admin-dialog-close" type="button" aria-label="Close cover crop dialog" data-project-cover-crop-cancel>&times;</button>
+      <div><p class="section-kicker">Portfolio media</p><h2 id="project-cover-crop-title">Adjust image crops</h2><p>Position the original once for reusable Portfolio formats.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Media crop status" hidden></section></div>
+      <button class="admin-dialog-close" type="button" aria-label="Close media crop dialog" data-project-cover-crop-cancel>&times;</button>
     </div>
-    <div class="admin-project-cover-crop-tabs" role="tablist" aria-label="Portfolio cover layout">
+    <div class="admin-project-cover-crop-tabs" role="tablist" aria-label="Portfolio media format">
       ${layouts.map((layout) => `<button type="button" role="tab" data-project-cover-crop-tab="${layout.id}"><span>${layout.label}</span><small data-project-cover-crop-status="${layout.id}">Auto</small></button>`).join("")}
     </div>
     <div class="admin-photo-crop-dialog__layout">
@@ -69,7 +75,7 @@ export const renderProjectCoverCropDialog = (): string => `
         <div class="admin-photo-crop-stage" data-project-cover-crop-stage></div>
       </section>
       <aside class="admin-photo-crop-preview admin-project-cover-crop-preview">
-        <p class="section-kicker">Portfolio preview</p>
+        <p class="section-kicker">Format preview</p>
         <div class="admin-project-cover-crop-preview__frame" data-project-cover-crop-preview></div>
         <div class="admin-project-cover-crop-preview__info">
           <strong data-project-cover-crop-layout-name>Standard</strong>
@@ -82,11 +88,11 @@ export const renderProjectCoverCropDialog = (): string => `
         <button class="button button--secondary admin-icon-button" type="button" aria-label="Zoom out" data-project-cover-zoom-out>&minus;</button>
         <label><span>Zoom</span><input type="range" min="1" max="4" step="0.05" value="1" data-project-cover-zoom></label>
         <button class="button button--secondary admin-icon-button" type="button" aria-label="Zoom in" data-project-cover-zoom-in>&plus;</button>
-        <button class="button button--secondary" type="button" data-project-cover-reset>Reset</button>
+        <button class="button button--secondary" type="button" data-project-cover-reset>Use automatic crop</button>
       </div>
       <div class="admin-actions admin-photo-crop-dialog__actions">
         <button class="button button--secondary" type="button" data-project-cover-crop-cancel>Cancel</button>
-        <button class="button" type="button" data-project-cover-crop-save>Save 3 crops</button>
+        <button class="button" type="button" data-project-cover-crop-save>Save changes</button>
       </div>
     </div>
   </dialog>`;
@@ -121,17 +127,17 @@ const defaultCrop = (image: HTMLImageElement, layout: CropLayoutConfig): CropSta
   return { x: 0, y: (1 - height) / 2, width: 1, height };
 };
 
-const rowState = (row: ProjectImageCropRow): CropState => ({
+const rowState = (row: PortfolioMediaCropRow): CropState => ({
   x: Number(row.crop_x),
   y: Number(row.crop_y),
   width: Number(row.crop_width),
   height: Number(row.crop_height),
 });
 
-export const bindProjectCoverCropper = (
+export const bindPortfolioMediaCropper = (
   root: ParentNode,
-  callbacks: ProjectCoverCropperCallbacks,
-): { open: (target: ProjectCoverCropTarget) => Promise<void> } => {
+  callbacks: PortfolioMediaCropperCallbacks,
+): { open: (target: PortfolioMediaCropTarget) => Promise<void> } => {
   const dialog = root.querySelector<HTMLDialogElement>("[data-project-cover-crop-dialog]");
   const stage = dialog?.querySelector<HTMLElement>("[data-project-cover-crop-stage]");
   const preview = dialog?.querySelector<HTMLElement>("[data-project-cover-crop-preview]");
@@ -140,22 +146,23 @@ export const bindProjectCoverCropper = (
   const zoom = dialog?.querySelector<HTMLInputElement>("[data-project-cover-zoom]");
   const save = dialog?.querySelector<HTMLButtonElement>("[data-project-cover-crop-save]");
 
-  let target: ProjectCoverCropTarget | undefined;
+  let target: PortfolioMediaCropTarget | undefined;
   let sourceUrl: string | undefined;
   let sourceImage: HTMLImageElement | undefined;
   let cropper: Cropper | undefined;
-  let activeLayout: PortfolioLayout = "standard";
+  let activeLayout: MediaCropProfile = "wide";
   let zoomLevel = 1;
   let baseImageWidth = 1;
   let restoring = false;
   let initialization = 0;
-  const states = new Map<PortfolioLayout, CropState>();
-  const persisted = new Set<PortfolioLayout>();
-  const adjusted = new Set<PortfolioLayout>();
+  const states = new Map<MediaCropProfile, CropState>();
+  const persisted = new Set<MediaCropProfile>();
+  const adjusted = new Set<MediaCropProfile>();
+  const automatic = new Set<MediaCropProfile>();
 
   const refreshStatus = (): void => {
     layouts.forEach((layout) => {
-      const label = adjusted.has(layout.id) ? "Adjusted" : persisted.has(layout.id) ? "Saved" : "Auto";
+      const label = adjusted.has(layout.id) ? "Modified" : persisted.has(layout.id) && !automatic.has(layout.id) ? "Custom" : "Auto";
       const status = dialog?.querySelector<HTMLElement>(`[data-project-cover-crop-status="${layout.id}"]`);
       if (status) status.textContent = label;
     });
@@ -182,6 +189,7 @@ export const bindProjectCoverCropper = (
     states.clear();
     persisted.clear();
     adjusted.clear();
+    automatic.clear();
     zoomLevel = 1;
     if (zoom) zoom.value = "1";
     if (sourceUrl) URL.revokeObjectURL(sourceUrl);
@@ -231,7 +239,7 @@ export const bindProjectCoverCropper = (
     if (zoom) zoom.value = String(nextLevel);
   };
 
-  const initializeLayout = async (layoutId: PortfolioLayout): Promise<void> => {
+  const initializeLayout = async (layoutId: MediaCropProfile): Promise<void> => {
     if (!stage || !preview || !sourceImage || !sourceUrl) return;
     const run = ++initialization;
     cleanupCropper();
@@ -242,7 +250,7 @@ export const bindProjectCoverCropper = (
     preview.style.aspectRatio = String(ratio(layout));
 
     const image = new Image();
-    image.alt = "Project cover source";
+    image.alt = "Portfolio media source";
     image.src = sourceUrl;
     stage.append(image);
     cropper = new Cropper(image, { container: stage, template: cropperTemplate(layout) });
@@ -288,6 +296,7 @@ export const bindProjectCoverCropper = (
       requestAnimationFrame(() => {
         syncZoom();
         if (!restoring) {
+          automatic.delete(activeLayout);
           adjusted.add(activeLayout);
           rememberActiveState();
           refreshStatus();
@@ -310,12 +319,13 @@ export const bindProjectCoverCropper = (
     if (!sourceImage) return;
     const state = defaultCrop(sourceImage, layoutById(activeLayout));
     states.set(activeLayout, state);
-    adjusted.add(activeLayout);
+    adjusted.delete(activeLayout);
+    if (persisted.has(activeLayout)) automatic.add(activeLayout);
     void initializeLayout(activeLayout);
   });
   dialog.querySelectorAll<HTMLButtonElement>("[data-project-cover-crop-tab]").forEach((button) => {
     button.addEventListener("click", () => {
-      const next = button.dataset.projectCoverCropTab as PortfolioLayout;
+      const next = button.dataset.projectCoverCropTab as MediaCropProfile;
       if (next === activeLayout) return;
       rememberActiveState();
       void initializeLayout(next).catch((error: Error) => callbacks.notify(error.message, "error"));
@@ -334,9 +344,16 @@ export const bindProjectCoverCropper = (
   save.addEventListener("click", () => {
     if (!sourceImage || !target) return;
     rememberActiveState();
+    const changedProfiles = layouts.filter((layout) => adjusted.has(layout.id));
+    const removedProfiles = [...automatic].filter((profile) => persisted.has(profile));
+    if (!changedProfiles.length && !removedProfiles.length) {
+      close();
+      callbacks.notify("No custom crop changes were needed.", "info");
+      return;
+    }
     setButtonBusy(save, true, "Saving crops…");
     void (async () => {
-      const outputs = await Promise.all(layouts.map(async (layout) => {
+      const outputs = await Promise.all(changedProfiles.map(async (layout) => {
         const state = states.get(layout.id) ?? defaultCrop(sourceImage as HTMLImageElement, layout);
         const canvas = document.createElement("canvas");
         canvas.width = layout.outputWidth;
@@ -357,7 +374,7 @@ export const bindProjectCoverCropper = (
           layout.outputHeight,
         );
         return {
-          layout: layout.id,
+          profile: layout.id,
           blob: await canvasToWebp(canvas),
           cropX: state.x,
           cropY: state.y,
@@ -367,10 +384,11 @@ export const bindProjectCoverCropper = (
           height: layout.outputHeight,
         };
       }));
-      await saveProjectCoverCrops(target.projectId, target.imageId, outputs);
+      await savePortfolioMediaCrops(target.ownerType, target.ownerId, target.imageId, outputs, removedProfiles);
+      const savedTarget = target;
       close();
-      await callbacks.onSaved();
-      callbacks.notify("Portfolio cover crops saved. Republish the Portfolio to update the public release.", "success");
+      await callbacks.onSaved(savedTarget);
+      callbacks.notify("Portfolio image crops saved. Republish the Portfolio to update the public release.", "success");
     })()
       .catch((error: Error) => callbacks.notify(error.message, "error"))
       .finally(() => { if (save.isConnected) setButtonBusy(save, false); });
@@ -381,10 +399,10 @@ export const bindProjectCoverCropper = (
       cleanup();
       try {
         target = nextTarget;
-        activeLayout = nextTarget.preferredLayout;
+        activeLayout = nextTarget.preferredProfile;
         nextTarget.crops.forEach((crop) => {
-          states.set(crop.layout, rowState(crop));
-          persisted.add(crop.layout);
+          states.set(crop.profile, rowState(crop));
+          persisted.add(crop.profile);
         });
         const blob = await downloadStoredMedia(nextTarget.storagePath);
         sourceUrl = URL.createObjectURL(blob);
@@ -395,7 +413,7 @@ export const bindProjectCoverCropper = (
         layouts.forEach((layout) => {
           if (!states.has(layout.id)) states.set(layout.id, defaultCrop(sourceImage as HTMLImageElement, layout));
         });
-        meta.textContent = `${sourceImage.naturalWidth} × ${sourceImage.naturalHeight}px original · WebP output up to 1526 × 1800px`;
+        meta.textContent = `${sourceImage.naturalWidth} × ${sourceImage.naturalHeight}px original · Reusable WebP output up to 1800px`;
         refreshStatus();
         dialog.showModal();
         await nextFrame();
@@ -407,3 +425,7 @@ export const bindProjectCoverCropper = (
     },
   };
 };
+
+// Kept as aliases while the Admin route remains lazily loaded under its original module name.
+export const renderProjectCoverCropDialog = renderPortfolioMediaCropDialog;
+export const bindProjectCoverCropper = bindPortfolioMediaCropper;

@@ -62,6 +62,10 @@ export const normalizePortfolioContent = (content: PortfolioContent): PortfolioC
   closingText: localized(content.closingText as LocalizedText | string, portfolioContentSeed.closingText),
   imageOverlay: normalizeImageOverlay((content as Partial<PortfolioContent>).imageOverlay),
   layouts: normalizePortfolioLayouts((content as Partial<PortfolioContent>).layouts, legacyPortfolioLayouts),
+  mediaAssignments: {
+    projects: content.mediaAssignments?.projects ?? {},
+    tools: content.mediaAssignments?.tools ?? {},
+  },
   profile: normalizeProfile(content.profile),
 });
 
@@ -93,6 +97,7 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalize
   theme: row.theme ?? { presetId: "personal-blue" },
   imageOverlay: structuredClone(portfolioContentSeed.imageOverlay),
   layouts: structuredClone(legacyPortfolioLayouts),
+  mediaAssignments: structuredClone(portfolioContentSeed.mediaAssignments),
   profile: normalizeProfile(row.profile),
   skillGroups: row.skill_groups ?? [],
 });
@@ -100,8 +105,8 @@ const contentFromRow = (row: PortfolioContentRow): PortfolioContent => normalize
 export const loadPortfolioDraftData = async (): Promise<PortfolioRuntimeData> => {
   const [contentResult, projectResult, toolResult] = await Promise.all([
     supabase.from("portfolio_content").select("*").eq("id", "primary").maybeSingle(),
-    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("display_order").order("id"),
-    supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("display_order").order("id"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*), project_media_crops(*))").is("deleted_at", null).order("display_order").order("id"),
+    supabase.from("automation_tools").select("*, tool_images(*, tool_media_crops(*))").is("deleted_at", null).order("display_order").order("id"),
   ]);
   if (contentResult.error) throw contentResult.error;
   if (projectResult.error) throw projectResult.error;

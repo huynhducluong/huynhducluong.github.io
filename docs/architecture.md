@@ -19,7 +19,7 @@ Each output owns its composition:
 
 - Projects and Automation Tools own the canonical cross-channel `display_order`; the Admin master lists provide drag-and-drop plus keyboard/touch reorder controls.
 - Website draft content owns Website inclusion and Homepage highlighting in `website_content.content_selection`; its output follows the shared Project/Tool order.
-- Each CV document draft owns Professional Profile background ordering, detailed/compact project selection, summary visibility, responsibility bullets and tool selection; each Portfolio draft owns selection and project layout. Both consume the shared Project/Tool order.
+- Each CV document draft owns Professional Profile background ordering, detailed/compact project selection, summary visibility, responsibility bullets and tool selection. Each Portfolio draft owns selection, layout and Primary/Supporting media assignments. Both consume the shared Project/Tool order.
 - Cover Letters keep their independent evidence references.
 
 Legacy Project/Tool distribution columns remain readable for migration and old-release compatibility, but current Admin editors no longer write them. Existing published releases remain immutable snapshots.
@@ -28,7 +28,7 @@ Legacy Project/Tool distribution columns remain readable for migration and old-r
 
 1. Create/import shared Project or Tool content: status is `draft`.
 2. Edit text and upload sanitized public-ready images.
-3. Resolve the Admin Ready check, then mark the shared item **Ready**. Required English detail content, technologies, a cover image and cover alt text block Ready; Vietnamese completeness and project crops are recommendations.
+3. Resolve the Admin Ready check, then mark the shared item **Ready**. Required English detail content, technologies, a cover image and cover alt text block Ready; Vietnamese completeness is a recommendation. Custom Portfolio crops remain optional because every media slot has an automatic fallback.
 4. Select Ready items per channel; change their shared order once in Projects or Automation Tools.
 5. Review that output's preview and publish its release.
 
@@ -39,6 +39,8 @@ Project/Tool content saves automatically return a Ready item to Draft when a req
 ## Media lifecycle
 
 Release JSON stores immutable content plus versioned Storage paths. Removing media from a draft deletes its editable metadata, but the stored object is retained whenever any Website, CV or Portfolio release still references that path. Crop replacement and Trash purging use the same release-reference check. Unreferenced objects may be removed immediately; referenced objects remain available so historical and active releases never lose their images.
+
+Portfolio layouts request semantic media slots rather than layout-specific files. A draft assigns a Primary visual and, only where needed, a different Supporting visual. Each slot requests one of three reusable crop profiles: `wide` (21:9), `landscape` (4:3) or `portrait` (3:4). Both Projects and Tools use the same model. The renderer prefers a saved profile crop and otherwise uses the original image with the layout's `object-fit` behavior, so editors crop only images that need manual composition.
 
 Professional credentials are a normalized shared library. A credential may stand alone or link to an Education/Language entry; its evidence files live in the private `portfolio-private-documents` bucket. Original certificates, diplomas, transcripts and score reports are available only to authenticated Admin users through short-lived signed URLs. CV sync copies only Ready credential metadata into its draft and release—never private file paths or signed URLs.
 
@@ -53,7 +55,7 @@ Professional credentials are a normalized shared library. A credential may stand
 
 ## Admin performance model
 
-The Admin shell and workspace styles load eagerly in a deterministic cascade, with `admin-ui.css` remaining the final normalization layer. Website/Profile, CV/Portfolio, Cover Letter and Project crop JavaScript remains route-loaded. Route initialization requests only the data required by the selected workspace; shared Profile, Credential, Profile Photo and health reads use short-lived in-memory request deduplication. Successful mutations replace or invalidate their cache entry, and private document files and signed URLs are never persisted in the cache.
+The Admin shell and workspace styles load eagerly in a deterministic cascade, with `admin-ui.css` remaining the final normalization layer. Website/Profile, CV/Portfolio, Cover Letter and Portfolio media-crop JavaScript remains route-loaded. Route initialization requests only the data required by the selected workspace; shared Profile, Credential, Profile Photo and health reads use short-lived in-memory request deduplication. Successful mutations replace or invalidate their cache entry, and private document files and signed URLs are never persisted in the cache.
 
 Admin media outside the viewport uses native lazy image decoding. Interactive rows and cards do not use guessed intrinsic heights, avoiding scroll and layout shifts as content enters the viewport. CI measures the compressed JavaScript and CSS referenced by the built `/admin/` HTML so an accidental bundle increase cannot silently degrade startup performance.
 

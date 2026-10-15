@@ -1,7 +1,8 @@
 import { supabaseConfig } from "../config/supabase";
 import type { LocalizedText, ContentPoint } from "../types/career";
 import type {
-  PortfolioLayout,
+  LegacyPortfolioLayout,
+  MediaCropProfile,
   PortfolioMedia,
   PortfolioMediaCrop,
   PortfolioProject,
@@ -13,9 +14,23 @@ import { supabase } from "./supabaseClient";
 import { withoutTrashed } from "./activeContent";
 import { sortByMasterContentOrder } from "../shared/contentOrder";
 
-interface MediaCropRow {
+interface LegacyMediaCropRow {
   id: string;
-  layout: PortfolioLayout;
+  layout: LegacyPortfolioLayout;
+  storage_path: string;
+  crop_x: number;
+  crop_y: number;
+  crop_width: number;
+  crop_height: number;
+  width: number;
+  height: number;
+  mime_type: string;
+  file_size: number;
+}
+
+interface ProfileMediaCropRow {
+  id: string;
+  profile: MediaCropProfile;
   storage_path: string;
   crop_x: number;
   crop_y: number;
@@ -34,7 +49,9 @@ interface MediaRow {
   caption: LocalizedText | null;
   kind: "cover" | "gallery";
   display_order: number;
-  project_image_crops?: MediaCropRow[];
+  project_image_crops?: LegacyMediaCropRow[];
+  project_media_crops?: ProfileMediaCropRow[];
+  tool_media_crops?: ProfileMediaCropRow[];
 }
 
 export interface ProjectRow {
@@ -59,7 +76,7 @@ export interface ProjectRow {
   display_order: number;
   include_in_portfolio: boolean;
   portfolio_order: number;
-  portfolio_layout: PortfolioLayout;
+  portfolio_layout: PortfolioProject["portfolioLayout"];
   include_in_cv: boolean;
   cv_order: number;
   cv_display: "detailed" | "compact";
@@ -95,11 +112,11 @@ const toMedia = (row: MediaRow): PortfolioMedia => {
   const { data } = supabase.storage
     .from(supabaseConfig.storageBucket)
     .getPublicUrl(row.storage_path);
-  const crops = Object.fromEntries((row.project_image_crops ?? []).map((crop): [PortfolioLayout, PortfolioMediaCrop] => {
+  const legacyCrops = (row.project_image_crops ?? []).map((crop): [LegacyPortfolioLayout, PortfolioMediaCrop] => {
     const cropUrl = supabase.storage.from(supabaseConfig.storageBucket).getPublicUrl(crop.storage_path).data.publicUrl;
     return [crop.layout, {
       id: crop.id,
-      layout: crop.layout,
+      profile: crop.layout,
       storagePath: crop.storage_path,
       publicUrl: cropUrl,
       cropX: Number(crop.crop_x),
@@ -111,7 +128,25 @@ const toMedia = (row: MediaRow): PortfolioMedia => {
       mimeType: crop.mime_type,
       fileSize: Number(crop.file_size),
     }];
-  })) as Partial<Record<PortfolioLayout, PortfolioMediaCrop>>;
+  });
+  const profileCrops = [...(row.project_media_crops ?? []), ...(row.tool_media_crops ?? [])].map((crop): [MediaCropProfile, PortfolioMediaCrop] => {
+    const cropUrl = supabase.storage.from(supabaseConfig.storageBucket).getPublicUrl(crop.storage_path).data.publicUrl;
+    return [crop.profile, {
+      id: crop.id,
+      profile: crop.profile,
+      storagePath: crop.storage_path,
+      publicUrl: cropUrl,
+      cropX: Number(crop.crop_x),
+      cropY: Number(crop.crop_y),
+      cropWidth: Number(crop.crop_width),
+      cropHeight: Number(crop.crop_height),
+      width: crop.width,
+      height: crop.height,
+      mimeType: crop.mime_type,
+      fileSize: Number(crop.file_size),
+    }];
+  });
+  const crops = Object.fromEntries([...legacyCrops, ...profileCrops]) as PortfolioMedia["crops"];
   return {
     id: row.id,
     storagePath: row.storage_path,
@@ -176,8 +211,8 @@ export const toolFromRow = (row: ToolRow): PortfolioTool => ({
   cvOrder: row.cv_order ?? 100,
 });
 
-const projectSelect = "*, project_images(*, project_image_crops(*))";
-const toolSelect = "*, tool_images(*)";
+const projectSelect = "*, project_images(*, project_image_crops(*), project_media_crops(*))";
+const toolSelect = "*, tool_images(*, tool_media_crops(*))";
 
 export const supabasePortfolioRepository: PortfolioRepository = {
   async listPublishedProjects(): Promise<PortfolioProject[]> {

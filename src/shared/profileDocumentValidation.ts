@@ -1,6 +1,12 @@
 import type { CvRuntimeData } from "../types/cvContent";
 import type { PortfolioRuntimeData } from "../types/portfolio";
 import type { ProfileDocumentKind } from "../types/profileDocument";
+import { resolveAutomationLayout, resolveProjectLayout } from "../portfolio/layouts";
+import {
+  automationMediaRequirement,
+  projectMediaRequirement,
+  resolvePortfolioMedia,
+} from "../portfolio/mediaSlots";
 
 const MAX_DETAILED_CV_PROJECTS = 7;
 const MAX_COMPACT_CV_PROJECTS = 8;
@@ -55,10 +61,36 @@ export const validateProfileDocument = (
 
   const data = runtime as PortfolioRuntimeData | null | undefined;
   if (!data) return ["Portfolio draft is not loaded."];
-  return [
+  const issues = [
     !data.content.profile.name.en && "Add a full name in Professional Profile.",
     !data.content.profile.email && "Add an email address in Professional Profile.",
     !data.content.title && "Document title is required.",
     !data.projects.some((item) => item.includeInPortfolio) && "Select at least one Portfolio project.",
   ].filter((item): item is string => Boolean(item));
+
+  data.projects.filter((item) => item.includeInPortfolio).forEach((project, index) => {
+    const label = project.name.en.trim() || `Portfolio project ${index + 1}`;
+    const requirement = projectMediaRequirement(resolveProjectLayout(data, project.id, project.portfolioLayout));
+    const media = resolvePortfolioMedia(project.images, data.content.mediaAssignments.projects[project.id]);
+    if (requirement.primary && !media.primary) {
+      issues.push(`Add a Primary visual for "${label}".`);
+    }
+    if (requirement.supportingRequired && !media.supporting) {
+      issues.push(`Add a different Supporting visual for "${label}" because its layout uses two images.`);
+    }
+  });
+
+  data.tools.filter((item) => item.includeInPortfolio).forEach((tool, index) => {
+    const label = tool.name.trim() || `Portfolio tool ${index + 1}`;
+    const requirement = automationMediaRequirement(resolveAutomationLayout(data, tool.id));
+    const media = resolvePortfolioMedia(tool.images, data.content.mediaAssignments.tools[tool.id]);
+    if (requirement.primary && !media.primary) {
+      issues.push(`Add a Primary visual for "${label}".`);
+    }
+    if (requirement.supportingRequired && !media.supporting) {
+      issues.push(`Add a different Supporting visual for "${label}" because its layout uses two images.`);
+    }
+  });
+
+  return issues;
 };

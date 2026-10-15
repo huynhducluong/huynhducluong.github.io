@@ -300,9 +300,15 @@ html, body { background: #dfe8ec; }
 .portfolio-automation__workflow-grid { display: grid; grid-template-columns: 105mm 1fr; gap: 15mm; margin-top: 14mm; }
 .portfolio-automation__workflow-grid > aside { display: flex; flex-direction: column; gap: 10mm; padding: 8mm; background: var(--document-surface-muted); }
 .portfolio-automation__workflow-grid > aside section p:last-child { margin-top: 4mm !important; color: var(--document-text-muted); font-size: 11pt; }
-.portfolio-automation__workflow-grid main > .portfolio-kicker { margin-bottom: 6mm; }
-.portfolio-automation__workflow-grid ol { display: grid; gap: 5mm; list-style: none; }
-.portfolio-automation__workflow-grid li { display: grid; gap: 2mm; padding: 5mm; border-radius: 2mm; background: var(--document-surface-muted); }
+.portfolio-automation__visual { margin-bottom: 4mm; }
+.portfolio-automation__image { display: block; width: 100%; object-fit: cover; }
+.portfolio-automation__visual > .portfolio-automation__image,
+.portfolio-automation__visual > .portfolio-image-placeholder { height: 38mm; }
+.portfolio-automation__visual figcaption,
+.portfolio-automation__media-pair figcaption { margin-top: 2mm; color: var(--document-text-muted); font-size: 7pt; }
+.portfolio-automation__workflow-grid main > .portfolio-kicker { margin-bottom: 3mm; }
+.portfolio-automation__workflow-grid ol { display: grid; gap: 3mm; list-style: none; }
+.portfolio-automation__workflow-grid li { display: grid; gap: 1mm; padding: 3mm 4mm; border-radius: 2mm; background: var(--document-surface-muted); }
 .portfolio-automation__workflow-grid li:last-child { background: var(--document-primary); color: var(--document-on-primary); }
 .portfolio-automation__workflow-grid li span { color: var(--document-primary); font-size: 7pt; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
 .portfolio-automation__workflow-grid li:last-child span { color: inherit; }
@@ -312,6 +318,12 @@ html, body { background: #dfe8ec; }
 .portfolio-automation__geometry-grid > section > article span { color: var(--document-primary); font-size: 7pt; font-weight: 900; letter-spacing: .12em; text-transform: uppercase; }
 .portfolio-automation__geometry-grid > section > p:last-child { display: grid; gap: 2mm; margin-top: 8mm !important; color: var(--document-text-muted); font-size: 8pt; }
 .portfolio-automation__geometry-grid > figure { padding: 7mm; background: var(--document-surface-muted); }
+.portfolio-automation__media-pair { display: grid; align-content: start; gap: 5mm; }
+.portfolio-automation__media-pair figure { min-width: 0; padding: 4mm; background: var(--document-surface-muted); }
+.portfolio-automation__media-pair figure:first-child > .portfolio-automation__image,
+.portfolio-automation__media-pair figure:first-child > .portfolio-image-placeholder { height: 58mm; }
+.portfolio-automation__media-pair figure:last-child > .portfolio-automation__image,
+.portfolio-automation__media-pair figure:last-child > .portfolio-image-placeholder { height: 32mm; }
 .portfolio-geometry-diagram { position: relative; height: 82mm; margin-top: 10mm; overflow: hidden; }
 .portfolio-geometry-diagram::before,
 .portfolio-geometry-diagram::after { position: absolute; right: 10mm; left: 5mm; height: 7mm; border-radius: 100% 0 0 0; background: var(--document-primary); content: ""; transform: rotate(-9deg); }

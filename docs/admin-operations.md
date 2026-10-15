@@ -33,6 +33,14 @@ After applying it:
 
 Education and Language cards link to the same credential library. Save a newly created Education or Language entry before linking a credential to it.
 
+## Portfolio media crop profiles
+
+Apply `supabase/migrations/202610150001_portfolio_media_crop_profiles.sql` before deploying the matching frontend build. It creates reusable `wide`, `landscape` and `portrait` crops for both Project and Tool media. The previous Project cover-crop table remains intact so older releases and legacy portrait crops continue to render.
+
+Redeploy `supabase/functions/purge-admin-trash` with the same release so scheduled permanent deletion also cleans the new Project and Tool crop assets.
+
+After applying it, refresh Admin and verify that Media for both Projects and Automation Tools shows `Adjust crops`. A crop stays `Auto` until an editor changes that profile; only modified profiles are generated and stored. Returning a profile to automatic crop removes its editable crop row without removing any file referenced by a published release.
+
 ## Release quality gate
 
 Run the same command locally that GitHub Actions runs before deployment:
@@ -49,7 +57,7 @@ The current initial budgets are 115 kB gzip for JavaScript and 26 kB gzip for CS
 npm run check:admin-bundle
 ```
 
-Website/Profile, CV/Portfolio, Cover Letter and Project crop JavaScript modules load on demand. Workspace CSS is intentionally part of the initial Admin bundle to preserve deterministic layout and responsive behavior.
+Website/Profile, CV/Portfolio, Cover Letter and Portfolio media-crop JavaScript modules load on demand. Workspace CSS is intentionally part of the initial Admin bundle to preserve deterministic layout and responsive behavior.
 
 Use `npm run test:watch` while developing Admin behavior. Use `npm run test` for one deterministic CI-style run.
 

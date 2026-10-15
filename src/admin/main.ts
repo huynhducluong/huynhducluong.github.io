@@ -35,11 +35,12 @@ import { sortByMasterContentOrder } from "../shared/contentOrder";
 import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
 import { loadProfessionalProfile } from "../services/websiteRepository";
-import { downloadStoredMedia, type ProjectImageCropRow } from "../services/projectCoverCropRepository";
+import { type ProjectImageCropRow } from "../services/projectCoverCropRepository";
+import { downloadStoredMedia, type PortfolioMediaCropRow } from "../services/portfolioMediaCropRepository";
 import { loadAdminSchemaHealth, parseAdminSchemaHealth, removeUnreferencedStoragePaths, type AdminSchemaHealth } from "../services/adminSystemRepository";
 import { projectFromRow, toolFromRow, type ProjectRow, type ToolRow } from "../services/supabasePortfolioRepository";
 import type { CvProjectDisplay } from "../types/cvContent";
-import type { PublicationStatus } from "../types/portfolio";
+import type { MediaCropProfile, PublicationStatus } from "../types/portfolio";
 import type { Profile } from "../types/career";
 import { validateProjectReadiness, validateToolReadiness, type ContentValidationResult } from "./contentValidation";
 import type { ProfileDocumentKind } from "./profileDocumentWorkspace";
@@ -57,6 +58,8 @@ interface AdminMediaRow {
   mime_type: string | null;
   file_size: number | null;
   project_image_crops?: ProjectImageCropRow[];
+  project_media_crops?: PortfolioMediaCropRow[];
+  tool_media_crops?: PortfolioMediaCropRow[];
 }
 
 interface AdminProjectRow {
@@ -704,11 +707,13 @@ const orderedProjectMedia = (media: AdminMediaRow[]): AdminMediaRow[] => [...med
 
 const downloadIcon = `<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>`;
 
-const mediaLibrary = (type: AdminItemType, mediaRows: AdminMediaRow[]): string => {
+const mediaLibrary = (mediaRows: AdminMediaRow[]): string => {
   const media = orderedProjectMedia(mediaRows);
   if (!media.length) return '<p class="admin-empty">No saved images yet.</p>';
   const firstGalleryIndex = media[0]?.kind === "cover" ? 1 : 0;
-  return `<div class="admin-media-list">${media.map((item, index) => `
+  return `<div class="admin-media-list">${media.map((item, index) => {
+    const customCropCount = [...(item.project_media_crops ?? []), ...(item.tool_media_crops ?? [])].length;
+    return `
     <article class="admin-media-row" data-media-id="${escapeHtml(item.id)}">
       <div class="admin-media-row__preview"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}" loading="lazy" decoding="async"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
       <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
@@ -720,14 +725,15 @@ const mediaLibrary = (type: AdminItemType, mediaRows: AdminMediaRow[]): string =
       </div>
       <div class="admin-media-row__actions">
         <button type="button" class="admin-media-action--icon" data-media-download aria-label="Download original image" title="Download original">${downloadIcon}</button>
-        ${type === "project" && item.kind === "cover" ? `<button type="button" data-media-crops>Adjust crops <small>${item.project_image_crops?.length ?? 0}/3</small></button>` : ""}
+        <button type="button" data-media-crops>Adjust crops <small>${customCropCount ? `${customCropCount} custom` : "Auto"}</small></button>
         ${item.kind === "cover" ? "" : `<button type="button" data-media-cover>Set cover</button>
         <button type="button" class="admin-media-action--icon" data-media-move="up" ${index === firstGalleryIndex ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button>
         <button type="button" class="admin-media-action--icon" data-media-move="down" ${index === media.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button>`}
         <button type="button" data-media-save>Save</button>
         <button type="button" class="admin-danger" data-media-delete>Delete</button>
       </div>
-    </article>`).join("")}</div>`;
+    </article>`;
+  }).join("")}</div>`;
 };
 
 const mediaPanel = (type: AdminItemType, media: AdminMediaRow[]): string => {
@@ -741,7 +747,7 @@ const mediaPanel = (type: AdminItemType, media: AdminMediaRow[]): string => {
     : "Choose the primary tool visual, edit alt text and order supporting screenshots.";
   return `<div class="admin-media-panel" data-editor-panel="media" data-media-owner="${type}" ${panelState("media")}>
     <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload</button></form>
-    <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(type, media)}</section>
+    <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(media)}</section>
   </div>`;
 };
 
@@ -919,7 +925,7 @@ const workspaceView = (): string => {
     ? coverLetterWorkspaceModule.coverLetterWorkspaceView()
     : renderAdminWorkspaceState({ kind: "loading", eyebrow: "Applications", title: "Loading Cover Letters", message: "Preparing application drafts and evidence." });
   if (!adminContentLoaded) return renderAdminWorkspaceState({ kind: "loading", eyebrow: "Content", title: "Loading content", message: "Preparing projects, tools and media metadata." });
-  if (activeView === "projects" && !projectCoverCropperModule) return renderAdminWorkspaceState({ kind: "loading", eyebrow: "Projects", title: "Loading project editor", message: "Preparing project media and crop tools." });
+  if ((activeView === "projects" || activeView === "tools") && !projectCoverCropperModule) return renderAdminWorkspaceState({ kind: "loading", eyebrow: activeView === "projects" ? "Projects" : "Automation tools", title: `Loading ${activeView === "projects" ? "project" : "tool"} editor`, message: "Preparing media and crop tools." });
   if (activeView === "trash") {
     const item = selectedTrashItem();
     return item ? trashInspector(item) : renderAdminWorkspaceState({
@@ -991,7 +997,7 @@ const dashboardView = (): void => {
         <div class="admin-actions"><button class="button" type="submit" data-password-update-submit>Save password</button><button class="button button--secondary" type="button" data-password-close>Cancel</button></div>
       </form>
     </dialog>
-    ${activeView === "projects" && projectCoverCropperModule ? projectCoverCropperModule.renderProjectCoverCropDialog() : ""}
+    ${(activeView === "projects" || activeView === "tools") && projectCoverCropperModule ? projectCoverCropperModule.renderPortfolioMediaCropDialog() : ""}
     <div class="admin-reorder-menu" data-reorder-menu popover="auto" role="menu" aria-label="Reorder item">
       <button type="button" role="menuitem" data-reorder-edge="first"><span aria-hidden="true">⇈</span>Move to first</button>
       <button type="button" role="menuitem" data-reorder-edge="last"><span aria-hidden="true">⇊</span>Move to last</button>
@@ -1009,8 +1015,8 @@ const loadProjects = async (): Promise<void> => {
   const selectedProjectWasPersisted = Boolean(selectedProjectId && projects.some((item) => item.id === selectedProjectId));
   const selectedToolWasPersisted = Boolean(selectedToolId && tools.some((item) => item.id === selectedToolId));
   const [projectResult, toolResult] = await Promise.all([
-    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").order("display_order").order("id"),
-    supabase.from("automation_tools").select("*, tool_images(*)").order("display_order").order("id"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*), project_media_crops(*))").order("display_order").order("id"),
+    supabase.from("automation_tools").select("*, tool_images(*, tool_media_crops(*))").order("display_order").order("id"),
   ]);
   if (projectResult.error) throw projectResult.error;
   if (toolResult.error) throw toolResult.error;
@@ -1216,7 +1222,12 @@ const permanentlyDeleteTrashItem = async (type: AdminItemType, id: string): Prom
   const media = type === "project"
     ? projects.find((project) => project.id === id)?.project_images ?? []
     : tools.find((tool) => tool.id === id)?.tool_images ?? [];
-  const paths = media.flatMap((entry) => [entry.storage_path, ...(entry.project_image_crops ?? []).map((crop) => crop.storage_path)]);
+  const paths = media.flatMap((entry) => [
+    entry.storage_path,
+    ...(entry.project_image_crops ?? []).map((crop) => crop.storage_path),
+    ...(entry.project_media_crops ?? []).map((crop) => crop.storage_path),
+    ...(entry.tool_media_crops ?? []).map((crop) => crop.storage_path),
+  ]);
   const { error } = await supabase.rpc("purge_admin_item", { target_type: type, target_id: id });
   if (error) throw error;
   let cleanup = { removed: [] as string[], retained: [] as string[] };
@@ -1525,7 +1536,7 @@ const setMediaCover = async (type: AdminItemType, mediaId: string): Promise<void
   if (error) throw error;
   await persistMediaOrder(type, [cover, ...ordered.filter((item) => item.id !== mediaId)]);
   await refreshSelectedMediaOwner(type, owner.id);
-  message(`${owner.label} cover image updated.${type === "project" ? " Adjust its Portfolio crops when needed." : ""}`, "success");
+  message(`${owner.label} cover image updated. Adjust its Portfolio crops when needed.`, "success");
 };
 
 const mediaFileExtension = (media: AdminMediaRow): string => {
@@ -1616,7 +1627,11 @@ const deleteSavedMedia = async (type: AdminItemType, mediaId: string): Promise<v
   if (!media || !(await confirmAdmin({ eyebrow: `${owner.label} media`, title: "Delete this image?", message: "It will be removed from the draft. Stored files are retained automatically when a published release still references them.", confirmLabel: "Delete image", tone: "danger" }))) return;
   const { error: metadataError } = await supabase.from(owner.table).delete().eq("id", mediaId);
   if (metadataError) throw metadataError;
-  const cropPaths = type === "project" ? (media.project_image_crops ?? []).map((crop) => crop.storage_path) : [];
+  const cropPaths = [
+    ...(media.project_image_crops ?? []).map((crop) => crop.storage_path),
+    ...(media.project_media_crops ?? []).map((crop) => crop.storage_path),
+    ...(media.tool_media_crops ?? []).map((crop) => crop.storage_path),
+  ];
   let cleanup = { removed: [] as string[], retained: [] as string[] };
   let cleanupWarning = "";
   try {
@@ -1762,11 +1777,10 @@ const bindDashboard = (): void => {
     reorderMenu.hidePopover();
     void reorderMasterItem(type, id, edge).catch((error: Error) => message(error.message, "error"));
   }));
-  const coverCropper = projectCoverCropperModule?.bindProjectCoverCropper(app, {
+  const coverCropper = projectCoverCropperModule?.bindPortfolioMediaCropper(app, {
     notify: message,
-    onSaved: async () => {
-      const projectId = selectedProject?.id;
-      if (projectId) await refreshSelectedMediaOwner("project", projectId);
+    onSaved: async (target) => {
+      await refreshSelectedMediaOwner(target.ownerType, target.ownerId);
     },
   });
   app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", async () => {
@@ -1797,7 +1811,7 @@ const bindDashboard = (): void => {
       : nextView === "projects" || nextView === "tools" || nextView === "trash"
         ? Promise.all([
             ensureAdminContent(),
-            nextView === "projects" ? loadProjectCoverCropperModule() : Promise.resolve(),
+            nextView === "projects" || nextView === "tools" ? loadProjectCoverCropperModule() : Promise.resolve(),
           ]).then(() => {
             if (nextView === "projects") {
               selectedItemType = "project";
@@ -1881,19 +1895,23 @@ const bindDashboard = (): void => {
         message(error instanceof Error ? error.message : "Save pending changes first.", "error");
         return;
       }
-      const project = selectedProject;
-      const media = project?.project_images.find((item) => item.id === mediaId);
-      if (!project || !media || media.kind !== "cover") return;
+      const owner = selectedMediaOwner(type);
+      const media = owner?.media.find((item) => item.id === mediaId);
+      if (!owner || !media) return;
       const button = event.currentTarget as HTMLButtonElement;
       const idleContent = button.innerHTML;
       button.disabled = true;
       button.textContent = "Loading…";
+      const preferredProfile: MediaCropProfile = type === "tool" && media.kind === "cover"
+        ? "wide"
+        : media.kind === "cover" ? "portrait" : "landscape";
       void coverCropper.open({
-          projectId: project.id,
+          ownerType: type,
+          ownerId: owner.id,
           imageId: media.id,
           storagePath: media.storage_path,
-          preferredLayout: project.portfolio_layout,
-          crops: media.project_image_crops ?? [],
+          preferredProfile,
+          crops: type === "project" ? media.project_media_crops ?? [] : media.tool_media_crops ?? [],
         })
         .catch((error: Error) => message(error.message, "error"))
         .finally(() => {
@@ -2041,7 +2059,7 @@ const initialize = async (): Promise<void> => {
     } else if (activeView === "projects" || activeView === "tools" || activeView === "trash") {
       await Promise.all([
         ensureAdminContent(),
-        activeView === "projects" ? loadProjectCoverCropperModule() : Promise.resolve(),
+        activeView === "projects" || activeView === "tools" ? loadProjectCoverCropperModule() : Promise.resolve(),
       ]);
     } else if (activeView === "cover-letters") {
       const module = await loadCoverLetterWorkspaceModule();

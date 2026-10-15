@@ -4,6 +4,7 @@ import type { StoredDocumentTheme } from "./theme";
 
 export type PublicationStatus = "draft" | "published" | "archived";
 export type LegacyPortfolioLayout = "feature" | "standard" | "compact";
+export type MediaCropProfile = "wide" | "landscape" | "portrait";
 export type ProjectLayout =
   | "project.classic"
   | "project.balanced"
@@ -35,6 +36,16 @@ export interface PortfolioLayoutPreferences {
   closing: ClosingLayout;
 }
 
+export interface PortfolioMediaAssignment {
+  primaryMediaId?: string;
+  supportingMediaId?: string;
+}
+
+export interface PortfolioMediaAssignments {
+  projects: Record<string, PortfolioMediaAssignment>;
+  tools: Record<string, PortfolioMediaAssignment>;
+}
+
 export interface PortfolioImageOverlay {
   enabled: boolean;
   opacity: number;
@@ -53,6 +64,7 @@ export interface PortfolioContent {
   theme: StoredDocumentTheme;
   imageOverlay: PortfolioImageOverlay;
   layouts: PortfolioLayoutPreferences;
+  mediaAssignments: PortfolioMediaAssignments;
   profile: Profile;
   skillGroups: SkillGroup[];
 }
@@ -83,12 +95,12 @@ export interface PortfolioMedia {
   caption?: LocalizedText;
   kind: "cover" | "gallery";
   displayOrder: number;
-  crops?: Partial<Record<PortfolioLayout, PortfolioMediaCrop>>;
+  crops?: Partial<Record<MediaCropProfile | LegacyPortfolioLayout, PortfolioMediaCrop>>;
 }
 
 export interface PortfolioMediaCrop {
   id: string;
-  layout: PortfolioLayout;
+  profile: MediaCropProfile | LegacyPortfolioLayout;
   storagePath: string;
   publicUrl?: string;
   cropX: number;

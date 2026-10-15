@@ -7,10 +7,11 @@ The website uses the public publishable key in `src/config/supabase.ts`. Never a
 1. Open the Supabase project SQL editor and run `supabase/migrations/202609270001_portfolio_cms.sql`.
 2. Run `supabase/migrations/202609280001_cover_letters.sql`.
 3. Run `supabase/migrations/202609290001_unified_admin_cv.sql` to enable the unified Admin, CV content, CV releases, and Cover/Gallery media management.
-4. In Authentication settings, keep email enabled and add the production GitHub Pages URL plus its `/admin/` URL to the allowed redirect URLs.
-5. Disable public user signup. In Authentication > Users, invite `huynhluong321998@gmail.com`.
-6. After that user exists, run `supabase/bootstrap-admin.sql` in the SQL editor.
-7. Open `/admin/`, request a magic link, and sign in.
+4. Apply all later timestamped migrations in order, including `202610150001_portfolio_media_crop_profiles.sql` for shared Project/Tool crop profiles.
+5. In Authentication settings, keep email enabled and add the production GitHub Pages URL plus its `/admin/` URL to the allowed redirect URLs.
+6. Disable public user signup. In Authentication > Users, invite `huynhluong321998@gmail.com`.
+7. After that user exists, run `supabase/bootstrap-admin.sql` in the SQL editor.
+8. Open `/admin/`, request a magic link, and sign in.
 
 All newly created projects and tools default to `draft` at both database and UI level. Uploading an image does not publish its parent record. A public page can read image metadata only when its project/tool is published.
 

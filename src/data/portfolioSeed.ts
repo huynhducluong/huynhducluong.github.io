@@ -29,6 +29,7 @@ export const portfolioContentSeed: PortfolioContent = {
   theme: { presetId: "personal-blue" },
   imageOverlay: { enabled: true, opacity: 0.28 },
   layouts: structuredClone(modernPortfolioLayouts),
+  mediaAssignments: { projects: {}, tools: {} },
   profile,
   skillGroups,
 };

@@ -41,7 +41,12 @@ const image = (project: PortfolioProject, language: Language): string => {
   if (!media) {
     return `<div class="portfolio-image-placeholder"><span>${copy[language].imagePlaceholder}</span></div>`;
   }
-  const crop = media.crops?.[project.portfolioLayout];
+  const legacyCropKey = project.portfolioLayout === "feature"
+    || project.portfolioLayout === "standard"
+    || project.portfolioLayout === "compact"
+    ? project.portfolioLayout
+    : "portrait";
+  const crop = media.crops?.[legacyCropKey];
   const source = crop
     ? crop.publicUrl ?? (/^https?:\/\//i.test(crop.storagePath) ? crop.storagePath : assetUrl(crop.storagePath))
     : media.publicUrl ?? (/^https?:\/\//i.test(media.storagePath) ? media.storagePath : assetUrl(media.storagePath));

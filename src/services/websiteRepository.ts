@@ -127,8 +127,8 @@ export const loadWebsiteDraftData = async (): Promise<WebsiteRuntimeData> => {
   const [contentResult, professional, projectResult, toolResult] = await Promise.all([
     supabase.from("website_content").select("*").eq("id", "primary").maybeSingle(),
     loadProfessionalProfile(),
-    supabase.from("projects").select("*, project_images(*, project_image_crops(*))").is("deleted_at", null).order("display_order").order("id"),
-    supabase.from("automation_tools").select("*, tool_images(*)").is("deleted_at", null).order("display_order").order("id"),
+    supabase.from("projects").select("*, project_images(*, project_image_crops(*), project_media_crops(*))").is("deleted_at", null).order("display_order").order("id"),
+    supabase.from("automation_tools").select("*, tool_images(*, tool_media_crops(*))").is("deleted_at", null).order("display_order").order("id"),
   ]);
   if (contentResult.error) throw contentResult.error;
   if (projectResult.error) throw projectResult.error;

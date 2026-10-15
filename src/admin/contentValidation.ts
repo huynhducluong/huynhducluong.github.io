@@ -55,8 +55,6 @@ export const validateProjectReadiness = (project: PortfolioProject): ContentVali
   const coverResult = validateCover(project.images, "Project");
   errors.push(...coverResult.errors);
   warnings.push(...coverResult.warnings);
-  const cover = project.images.find((image) => image.kind === "cover");
-  if (cover && Object.keys(cover.crops ?? {}).length < 3) warnings.push("Project cover crops are incomplete (recommended: 3/3).");
   return { errors, warnings };
 };
 

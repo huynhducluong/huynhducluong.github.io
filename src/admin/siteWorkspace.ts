@@ -42,6 +42,7 @@ import {
   formatAdminDateTime,
   renderAdminDocumentHeader,
   renderAdminPreviewLanguageToggle,
+  renderAdminPreviewOptions,
   renderAdminPreviewSelect,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
@@ -49,12 +50,16 @@ import {
   renderAdminWorkspaceState,
   setButtonBusy,
 } from "./ui";
+import {
+  normalizeWebsitePreviewPage,
+  websitePreviewPageOptions,
+  type WebsitePreviewPage,
+} from "./websitePreviewPages";
 
 export type SiteWorkspaceKind = "homepage" | "profile";
 type WebsiteTab = "general" | "sections" | "featured" | "appearance";
 type ProfileTab = "identity" | "photos" | "experience" | "education" | "credentials" | "skills" | "languages";
 type WebsiteViewport = "desktop" | "laptop" | "tablet" | "mobile";
-type WebsitePreviewPage = "homepage" | "projects" | "tools" | `project:${string}` | `tool:${string}`;
 type WebsitePreviewData = WebsiteRuntimeData & { previewLanguage?: Language };
 
 interface WorkspaceCallbacks {
@@ -761,8 +766,7 @@ const validateProfileLanguages = (languages: LanguageSkill[]): string | null => 
 
 const websiteView = (): string => {
   const runtime = state.runtime!;
-  if (state.previewPage.startsWith("project:") && !runtime.projects.some((item) => item.id === state.previewPage.slice("project:".length) && item.status === "published")) state.previewPage = "projects";
-  if (state.previewPage.startsWith("tool:") && !runtime.tools.some((item) => item.id === state.previewPage.slice("tool:".length) && item.status === "published")) state.previewPage = "tools";
+  state.previewPage = normalizeWebsitePreviewPage(state.previewPage, runtime);
   const content = runtime.content;
   const tab = state.websiteTab;
   const publishValidation = validateWebsitePublish(runtime);
@@ -790,13 +794,7 @@ const websiteView = (): string => {
     dataAttribute: "data-website-preview-page",
     activeValue: state.previewPage,
     className: "admin-preview-toolbar__select--page",
-    options: [
-      { label: "Homepage", value: "homepage" },
-      { label: "Projects", value: "projects" },
-      { label: "Automation", value: "tools" },
-      ...runtime.projects.filter((item) => item.status === "published").map((item) => ({ label: `Project · ${item.name.en || item.slug}`, value: `project:${item.id}` })),
-      ...runtime.tools.filter((item) => item.status === "published").map((item) => ({ label: `Tool · ${item.name || item.slug}`, value: `tool:${item.id}` })),
-    ],
+    options: websitePreviewPageOptions(runtime),
   });
   const languageControls = renderAdminPreviewLanguageToggle(state.previewLanguage, "data-website-language-toggle");
   const zoomControls = renderPreviewZoomControls(state.previewZoom);
@@ -901,6 +899,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const websiteForm = root.querySelector<HTMLFormElement>("[data-website-form]");
   const profileForm = root.querySelector<HTMLFormElement>("[data-profile-form]");
   const previewIframe = root.querySelector<HTMLIFrameElement>("[data-website-iframe]");
+  const previewPageSelect = root.querySelector<HTMLSelectElement>("[data-website-preview-page]");
   const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
   const previewFrame = root.querySelector<HTMLElement>(".admin-site-frame");
   previewSender?.disconnect();
@@ -968,6 +967,25 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       if (previewTimer !== undefined) window.clearTimeout(previewTimer);
       previewTimer = window.setTimeout(sendPreview, 180);
     }
+  };
+  const openWebsitePreviewPage = (nextPage: WebsitePreviewPage, runtime = state.runtime): void => {
+    if (!previewIframe || nextPage === state.previewPage) return;
+    state.previewPage = nextPage;
+    if (previewPageSelect) previewPageSelect.value = nextPage;
+    setPreviewStatus("Loading…", "warning");
+    previewFrame?.scrollTo({ top: 0, left: 0 });
+    previewZoomController?.resetFit();
+    previewController?.setLoading(`Preparing ${websitePreviewTitle(nextPage)} preview…`);
+    previewIframe.title = `${websitePreviewTitle(nextPage)} draft preview`;
+    previewIframe.src = websitePreviewPath(nextPage, runtime);
+  };
+  const syncWebsitePreviewPageOptions = (): void => {
+    if (!websiteForm || !previewPageSelect) return;
+    const runtime = readWebsiteForm(websiteForm);
+    const nextPage = normalizeWebsitePreviewPage(state.previewPage, runtime);
+    previewPageSelect.innerHTML = renderAdminPreviewOptions(websitePreviewPageOptions(runtime), nextPage);
+    previewPageSelect.value = nextPage;
+    openWebsitePreviewPage(nextPage, runtime);
   };
   const commitProfileDraft = (): ProfessionalProfileContent | null => {
     if (!profileForm || !state.runtime) return null;
@@ -1502,6 +1520,9 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   websiteForm?.addEventListener("input", markDirty);
   websiteForm?.addEventListener("change", (event) => {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
+    const selectionChanged = target instanceof HTMLInputElement
+      && target.type === "checkbox"
+      && (target.name.startsWith("website_") || target.name.startsWith("featured_"));
     if (target.name === "website_theme_preset" && target.value !== "custom") {
       const theme = documentThemes.find((item) => item.id === target.value);
       const primary = websiteForm.elements.namedItem("website_theme_primary");
@@ -1521,6 +1542,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       const featuredToggle = websiteForm.querySelector<HTMLInputElement>(`input[name="${featuredName}"][value="${CSS.escape(target.value)}"]`);
       if (featuredToggle) featuredToggle.checked = false;
     }
+    if (selectionChanged) syncWebsitePreviewPageOptions();
     markDirty();
   });
   profileForm?.addEventListener("input", (event) => {
@@ -1556,16 +1578,9 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     if (previewFrame) previewFrame.dataset.viewport = state.viewport;
     previewZoomController?.resetFit();
   });
-  root.querySelector<HTMLSelectElement>("[data-website-preview-page]")?.addEventListener("change", (event) => {
+  previewPageSelect?.addEventListener("change", (event) => {
     const nextPage = (event.currentTarget as HTMLSelectElement).value as WebsitePreviewPage;
-    if (!previewIframe || nextPage === state.previewPage) return;
-    state.previewPage = nextPage;
-    setPreviewStatus("Loading…", "warning");
-    previewFrame?.scrollTo({ top: 0, left: 0 });
-    previewZoomController?.resetFit();
-    previewController?.setLoading(`Preparing ${websitePreviewTitle(nextPage)} preview…`);
-    previewIframe.title = `${websitePreviewTitle(nextPage)} draft preview`;
-    previewIframe.src = websitePreviewPath(nextPage, state.runtime);
+    openWebsitePreviewPage(nextPage, websiteForm ? readWebsiteForm(websiteForm) : state.runtime);
   });
   root.querySelector<HTMLButtonElement>("[data-website-language-toggle]")?.addEventListener("click", (event) => {
     state.previewLanguage = state.previewLanguage === "en" ? "vi" : "en";

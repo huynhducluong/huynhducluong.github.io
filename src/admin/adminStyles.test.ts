@@ -69,4 +69,40 @@ describe("Admin stylesheet contract", () => {
     expect(mainSource).toContain('class="admin-nav__icon-shell"');
     expect(mainSource).not.toMatch(/navButton\([^\n]+,\s*"0[1-9]"\)/);
   });
+
+  it("keeps Portfolio media compact and aligned with shared Admin controls", () => {
+    const overridesPosition = profileDocumentWorkspaceSource.indexOf('title: "Item layout overrides"');
+    const mediaPosition = profileDocumentWorkspaceSource.indexOf('title: "Portfolio media"');
+    expect(overridesPosition).toBeGreaterThanOrEqual(0);
+    expect(mediaPosition).toBeGreaterThan(overridesPosition);
+    expect(profileDocumentWorkspaceSource).toContain("data-portfolio-media-group");
+    expect(profileDocumentWorkspaceSource).toContain("renderAdminSelectControl({ name: `project_primary_media_");
+    expect(profileDocumentWorkspaceSource).not.toContain("image.alt.en ?");
+    expect(profileDocumentWorkspaceSource).not.toContain("Required by layout");
+    expect(profileDocumentWorkspaceSource).toContain('aria-required="true"');
+  });
+
+  it("separates Portfolio credentials into the ordered Background tab", () => {
+    expect(profileDocumentWorkspaceSource).toContain(
+      '[["content", "Content"], ["selection", "Projects & tools"], ["background", "Background"], ["appearance", "Appearance"]]',
+    );
+    const selectionStart = profileDocumentWorkspaceSource.indexOf("const portfolioSelectionPanel");
+    const backgroundStart = profileDocumentWorkspaceSource.indexOf("const portfolioBackgroundPanel");
+    const formReaderStart = profileDocumentWorkspaceSource.indexOf("const readPortfolioForm");
+    expect(selectionStart).toBeGreaterThanOrEqual(0);
+    expect(backgroundStart).toBeGreaterThan(selectionStart);
+    expect(formReaderStart).toBeGreaterThan(backgroundStart);
+    expect(profileDocumentWorkspaceSource.slice(selectionStart, backgroundStart)).not.toContain('name="portfolio_credential"');
+    expect(profileDocumentWorkspaceSource.slice(backgroundStart, formReaderStart)).toContain('name="portfolio_credential"');
+  });
+
+  it("rebases editable document lists on their source-library order", () => {
+    expect(profileDocumentWorkspaceSource).not.toContain("portfolioOrder: selection.portfolioOrder");
+    expect(profileDocumentWorkspaceSource).toContain("portfolioOrder: item.portfolioOrder");
+    expect(profileDocumentWorkspaceSource).toContain("experiences: structuredClone(professional.experiences)");
+    expect(profileDocumentWorkspaceSource).toContain("education: structuredClone(professional.education)");
+    expect(profileDocumentWorkspaceSource).toContain("skillGroups: structuredClone(professional.skillGroups)");
+    expect(profileDocumentWorkspaceSource).toContain("languages: structuredClone(professional.languages)");
+    expect(profileDocumentWorkspaceSource).toContain("previousBackgroundSelection");
+  });
 });

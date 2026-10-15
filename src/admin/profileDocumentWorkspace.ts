@@ -14,13 +14,14 @@ import {
   renameProfileDocument,
   saveProfileDocument,
 } from "../services/profileDocumentRepository";
-import { degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
+import { assetUrl, degreeClassificationValue, escapeHtml, type Language } from "../shared/format";
+import { sortByMasterContentOrder } from "../shared/contentOrder";
 import { validateProfileDocument } from "../shared/profileDocumentValidation";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes, resolveDocumentTheme } from "../themes/documentThemes";
 import { resolveCvBackgroundSelection } from "../cv/backgroundOrder";
 import type { LocalizedText, Profile } from "../types/career";
-import type { ProfessionalCredential } from "../types/credential";
+import type { CredentialSnapshot, ProfessionalCredential } from "../types/credential";
 import type { CvBackgroundGroup, CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
 import type {
   AutomationLayout,
@@ -36,6 +37,7 @@ import type {
   ProfileDocumentStatus,
 } from "../types/profileDocument";
 import type { StoredDocumentTheme } from "../types/theme";
+import type { ProfessionalProfileContent } from "../types/website";
 import {
   automationLayoutOptions,
   closingLayoutOptions,
@@ -45,8 +47,16 @@ import {
   portfolioPageCount,
   profileLayoutOptions,
   projectLayoutOptions,
+  resolveAutomationLayout,
+  resolveProjectLayout,
   type PortfolioLayoutOption,
 } from "../portfolio/layouts";
+import {
+  automationMediaRequirement,
+  mediaRequirementLabel,
+  projectMediaRequirement,
+  resolvePortfolioMedia,
+} from "../portfolio/mediaSlots";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { confirmAdmin } from "./confirmDialog";
@@ -217,6 +227,53 @@ const projectOverrideOptions = (value: ProjectLayout | undefined): string => {
 
 const automationOverrideOptions = (value: AutomationLayout | undefined): string => `<option value="default"${value ? "" : " selected"}>Use automation default</option>${automationLayoutOptions.map((option) => `<option value="${escapeHtml(option.id)}"${value === option.id ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}`;
 
+const portfolioMediaOptions = (
+  images: PortfolioRuntimeData["projects"][number]["images"],
+  selectedId: string | undefined,
+  allowEmpty = false,
+): string => `${allowEmpty ? `<option value=""${selectedId ? "" : " selected"}>No supporting image</option>` : ""}${images.map((image, index) => {
+  const label = `${image.kind === "cover" ? "Cover" : "Gallery"} · Image ${String(index + 1).padStart(2, "0")}`;
+  return `<option value="${escapeHtml(image.id)}"${selectedId === image.id ? " selected" : ""}>${escapeHtml(label)}</option>`;
+}).join("")}`;
+
+const portfolioMediaAssignmentsPanel = (runtime: PortfolioRuntimeData): string => {
+  const selectedProjectCount = runtime.projects.filter((item) => item.status === "published" && item.includeInPortfolio).length;
+  const selectedToolCount = runtime.tools.filter((item) => item.status === "published" && item.includeInPortfolio).length;
+  const projectItems = runtime.projects.filter((item) => item.status === "published").map((item) => {
+    const assignment = runtime.content.mediaAssignments.projects[item.id];
+    const resolved = resolvePortfolioMedia(item.images, assignment);
+    const layout = resolveProjectLayout(runtime, item.id, item.portfolioLayout);
+    const requirement = projectMediaRequirement(layout);
+    const preview = resolved.primary?.publicUrl ?? (resolved.primary ? assetUrl(resolved.primary.storagePath) : "");
+    return `<article class="admin-portfolio-media-item" data-portfolio-media-item data-portfolio-media-kind="project" data-portfolio-media-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}>
+      <header>${preview ? `<img src="${escapeHtml(preview)}" alt="">` : '<span class="admin-portfolio-media-item__placeholder" aria-hidden="true">No image</span>'}<span><strong>${escapeHtml(item.name.en)}</strong><small data-portfolio-media-requirement>${escapeHtml(mediaRequirementLabel(requirement))}</small></span></header>
+      <div class="admin-portfolio-media-item__fields">
+        <label><span>Primary visual <small data-portfolio-primary-status${requirement.primary ? " hidden" : ""}>${requirement.primary ? "" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `project_primary_media_${item.id}`, attributes: `data-portfolio-primary-select${requirement.primary ? ' aria-required="true"' : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.primary?.id) })}</label>
+        <label><span>Supporting visual <small data-portfolio-supporting-status${requirement.supportingRequired ? " hidden" : ""}>${requirement.supporting ? requirement.supportingRequired ? "" : "Optional" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `project_supporting_media_${item.id}`, attributes: `data-portfolio-supporting-select${requirement.supporting ? requirement.supportingRequired ? ' aria-required="true"' : "" : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.supporting?.id, true) })}</label>
+      </div>
+    </article>`;
+  }).join("");
+  const toolItems = runtime.tools.filter((item) => item.status === "published").map((item) => {
+    const assignment = runtime.content.mediaAssignments.tools[item.id];
+    const resolved = resolvePortfolioMedia(item.images, assignment);
+    const layout = resolveAutomationLayout(runtime, item.id);
+    const requirement = automationMediaRequirement(layout);
+    const preview = resolved.primary?.publicUrl ?? (resolved.primary ? assetUrl(resolved.primary.storagePath) : "");
+    return `<article class="admin-portfolio-media-item" data-portfolio-media-item data-portfolio-media-kind="tool" data-portfolio-media-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}>
+      <header>${preview ? `<img src="${escapeHtml(preview)}" alt="">` : '<span class="admin-portfolio-media-item__placeholder" aria-hidden="true">No image</span>'}<span><strong>${escapeHtml(item.name)}</strong><small data-portfolio-media-requirement>${escapeHtml(mediaRequirementLabel(requirement))}</small></span></header>
+      <div class="admin-portfolio-media-item__fields">
+        <label><span>Primary visual <small data-portfolio-primary-status${requirement.primary ? " hidden" : ""}>${requirement.primary ? "" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `tool_primary_media_${item.id}`, attributes: `data-portfolio-primary-select${requirement.primary ? ' aria-required="true"' : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.primary?.id) })}</label>
+        <label><span>Supporting visual <small data-portfolio-supporting-status${requirement.supportingRequired ? " hidden" : ""}>${requirement.supporting ? requirement.supportingRequired ? "" : "Optional" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `tool_supporting_media_${item.id}`, attributes: `data-portfolio-supporting-select${requirement.supporting ? requirement.supportingRequired ? ' aria-required="true"' : "" : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.supporting?.id, true) })}</label>
+      </div>
+    </article>`;
+  }).join("");
+  return `<div class="admin-portfolio-media-assignments" data-portfolio-media-assignments>
+    ${projectItems ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="project"${selectedProjectCount ? "" : " hidden"}><summary>Projects <span data-portfolio-media-count>${selectedProjectCount}</span></summary><div>${projectItems}</div></details>` : ""}
+    ${toolItems ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="tool"${selectedToolCount ? "" : " hidden"}><summary>Automation tools <span data-portfolio-media-count>${selectedToolCount}</span></summary><div>${toolItems}</div></details>` : ""}
+    <p class="admin-empty" data-portfolio-media-empty${selectedProjectCount || selectedToolCount ? " hidden" : ""}>Select projects or tools to configure their Portfolio visuals.</p>
+  </div>`;
+};
+
 const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
   const { content } = runtime;
   const availableProjects = runtime.projects.filter((item) => item.status === "published");
@@ -225,8 +282,8 @@ const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
   const selectedTools = availableTools.filter((item) => item.includeInPortfolio);
   const overrides = availableProjects.length || availableTools.length
     ? `<div class="admin-layout-overrides" data-layout-overrides>
-      ${availableProjects.length ? `<details class="admin-layout-override-group" data-layout-override-group="project"${selectedProjects.length ? "" : " hidden"}><summary>Project overrides <span data-layout-override-count>${selectedProjects.length}</span></summary><div>${availableProjects.map((item) => `<label data-layout-override-item data-layout-override-kind="project" data-layout-override-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}><span><strong>${escapeHtml(item.name.en)}</strong><small>Uses the project default unless overridden.</small></span>${renderAdminSelectControl({ name: `project_layout_${item.id}`, attributes: 'aria-label="Project layout override"', options: projectOverrideOptions(content.layouts.projectOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
-      ${availableTools.length ? `<details class="admin-layout-override-group" data-layout-override-group="tool"${selectedTools.length ? "" : " hidden"}><summary>Automation overrides <span data-layout-override-count>${selectedTools.length}</span></summary><div>${availableTools.map((item) => `<label data-layout-override-item data-layout-override-kind="tool" data-layout-override-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}><span><strong>${escapeHtml(item.name)}</strong><small>Classic groups tools; other styles create one page per tool.</small></span>${renderAdminSelectControl({ name: `tool_layout_${item.id}`, attributes: 'aria-label="Automation layout override"', options: automationOverrideOptions(content.layouts.automationOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
+      ${availableProjects.length ? `<details class="admin-disclosure-group admin-layout-override-group" data-layout-override-group="project"${selectedProjects.length ? "" : " hidden"}><summary>Project overrides <span data-layout-override-count>${selectedProjects.length}</span></summary><div>${availableProjects.map((item) => `<label data-layout-override-item data-layout-override-kind="project" data-layout-override-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}><span><strong>${escapeHtml(item.name.en)}</strong><small>Uses the project default unless overridden.</small></span>${renderAdminSelectControl({ name: `project_layout_${item.id}`, attributes: 'aria-label="Project layout override"', options: projectOverrideOptions(content.layouts.projectOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
+      ${availableTools.length ? `<details class="admin-disclosure-group admin-layout-override-group" data-layout-override-group="tool"${selectedTools.length ? "" : " hidden"}><summary>Automation overrides <span data-layout-override-count>${selectedTools.length}</span></summary><div>${availableTools.map((item) => `<label data-layout-override-item data-layout-override-kind="tool" data-layout-override-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}><span><strong>${escapeHtml(item.name)}</strong><small>Classic groups tools; other styles create one page per tool.</small></span>${renderAdminSelectControl({ name: `tool_layout_${item.id}`, attributes: 'aria-label="Automation layout override"', options: automationOverrideOptions(content.layouts.automationOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
       <p class="admin-empty" data-layout-overrides-empty${selectedProjects.length || selectedTools.length ? " hidden" : ""}>Select projects or tools in “Projects &amp; tools” to customize their layouts.</p>
     </div>`
     : '<p class="admin-empty">No published projects or tools are available for layout overrides.</p>';
@@ -248,6 +305,11 @@ const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
       </div>`,
     }),
     renderAdminSectionCard({ title: "Item layout overrides", note: "Optional. Keep an item on the document default or give it a specialized layout.", content: overrides }),
+    renderAdminSectionCard({
+      title: "Portfolio media",
+      note: "Choose the primary and supporting visuals used by this Portfolio draft. Crops are reused from the source Media library.",
+      content: portfolioMediaAssignmentsPanel(runtime),
+    }),
   ].join("");
 };
 
@@ -297,12 +359,32 @@ const inheritSharedProfile = (shared: Profile, tailored: Profile): Profile => ({
   summary: structuredClone(tailored.summary),
 });
 
-const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData, sharedProfile: Profile): CvRuntimeData => {
+const composeCvDraft = (
+  saved: CvRuntimeData,
+  shared: CvRuntimeData,
+  professional: ProfessionalProfileContent,
+  sharedCredentials: CredentialSnapshot[] | null,
+): CvRuntimeData => {
   const savedProjects = [...saved.detailedProjects, ...saved.compactProjects];
   const savedProjectSelection = new Map(savedProjects.map((item) => [item.id, item]));
   const savedToolSelection = new Map(saved.tools.map((item) => [item.id, item]));
   const sharedProjects = shared.availableProjects ?? [...shared.detailedProjects, ...shared.compactProjects];
   const sharedTools = shared.availableTools ?? shared.tools;
+  const previousBackgroundSelection = resolveCvBackgroundSelection(saved.content);
+  const nextContent: CvContent = {
+    ...saved.content,
+    profile: inheritSharedProfile(professional.profile, saved.content.profile),
+    experiences: structuredClone(professional.experiences),
+    education: structuredClone(professional.education),
+    credentials: structuredClone(sharedCredentials ?? saved.content.credentials ?? []),
+    skillGroups: structuredClone(professional.skillGroups),
+    languages: structuredClone(professional.languages),
+  };
+  nextContent.backgroundSelection = resolveCvBackgroundSelection({
+    ...nextContent,
+    backgroundSelection: previousBackgroundSelection,
+  });
+  delete nextContent.backgroundOrder;
   const availableProjects = sharedProjects.map((item) => {
     const selection = savedProjectSelection.get(item.id);
     const ready = item.status === undefined || item.status === "published";
@@ -321,11 +403,7 @@ const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData, sharedProfi
     return selection && ready ? { ...item, includeInCv: true, cvOrder: item.cvOrder } : { ...item, includeInCv: false };
   });
   return {
-    content: {
-      ...saved.content,
-      profile: inheritSharedProfile(sharedProfile, saved.content.profile),
-      credentials: saved.content.credentials ?? [],
-    },
+    content: nextContent,
     detailedProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "detailed").sort((a, b) => a.cvOrder - b.cvOrder),
     compactProjects: availableProjects.filter((item) => item.includeInCv && item.cvDisplay === "compact").sort((a, b) => a.cvOrder - b.cvOrder),
     tools: availableTools.filter((item) => item.includeInCv).sort((a, b) => a.cvOrder - b.cvOrder),
@@ -334,19 +412,24 @@ const composeCvDraft = (saved: CvRuntimeData, shared: CvRuntimeData, sharedProfi
   };
 };
 
-const portfolioCredentialLibrary = (credentials: ProfessionalCredential[]): PortfolioCredential[] => credentials
-  .filter((credential) => credential.status === "published")
-  .map((credential, index) => ({
-    ...credentialSnapshot(credential),
+const publishedCredentialSnapshots = (credentials: ProfessionalCredential[]): CredentialSnapshot[] =>
+  sortByMasterContentOrder(
+    credentials.filter((credential) => credential.status === "published"),
+    (credential) => credential.displayOrder,
+  ).map(credentialSnapshot);
+
+const portfolioCredentialLibrary = (credentials: ProfessionalCredential[]): PortfolioCredential[] => publishedCredentialSnapshots(credentials)
+  .map((credential) => ({
+    ...credential,
     includeInPortfolio: false,
-    portfolioOrder: credential.displayOrder || index + 1,
+    portfolioOrder: credential.displayOrder,
   }));
 
 const composePortfolioDraft = (
   saved: PortfolioRuntimeData,
   shared: PortfolioRuntimeData,
   sharedProfile: Profile,
-  sharedCredentials: PortfolioCredential[],
+  sharedCredentials: PortfolioCredential[] | null,
 ): PortfolioRuntimeData => {
   const normalizedSaved = normalizePortfolioRuntimeData(saved);
   const savedProjects = new Map(normalizedSaved.projects.map((item) => [item.id, item]));
@@ -375,12 +458,12 @@ const composePortfolioDraft = (
         portfolioOrder: item.portfolioOrder,
       } : { ...item, includeInPortfolio: false };
     }),
-    credentials: sharedCredentials.map((item) => {
+    credentials: (sharedCredentials ?? normalizedSaved.credentials ?? []).map((item) => {
       const selection = savedCredentials.get(item.id);
       return selection ? {
         ...item,
         includeInPortfolio: selection.includeInPortfolio,
-        portfolioOrder: selection.portfolioOrder,
+        portfolioOrder: item.portfolioOrder,
       } : item;
     }),
   };
@@ -388,17 +471,19 @@ const composePortfolioDraft = (
 
 const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
   if (kind === "cv") {
-    const [documents, shared, professional] = await Promise.all([
+    const [documents, shared, professional, credentials] = await Promise.all([
       listProfileDocuments<CvRuntimeData>(kind),
       loadCvData({ adminPreview: true, preferRelease: false }),
       loadProfessionalProfile(),
+      listProfessionalCredentials().catch(() => null),
     ]);
+    const sharedCredentials = credentials ? publishedCredentialSnapshots(credentials) : null;
     state.documents.cv = documents.map((document) => ({
       ...document,
       draftPayload: document.draftPayload
         ? document.status === "archived"
           ? structuredClone(document.draftPayload)
-          : composeCvDraft(document.draftPayload, shared, professional.profile)
+          : composeCvDraft(document.draftPayload, shared, professional, sharedCredentials)
         : null,
     }));
     return;
@@ -407,9 +492,9 @@ const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
     listProfileDocuments<PortfolioRuntimeData>(kind),
     loadPortfolioDraftData(),
     loadProfessionalProfile(),
-    listProfessionalCredentials().catch(() => []),
+    listProfessionalCredentials().catch(() => null),
   ]);
-  const sharedCredentials = portfolioCredentialLibrary(credentials);
+  const sharedCredentials = credentials ? portfolioCredentialLibrary(credentials) : null;
   state.documents.portfolio = documents.map((document) => ({
     ...document,
     draftPayload: document.draftPayload
@@ -432,33 +517,37 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
   request = (async () => {
     try {
       if (kind === "cv") {
-        const [shared, professional] = await Promise.all([
+        const [shared, professional, credentials] = await Promise.all([
           loadCvData({ adminPreview: true, preferRelease: false }),
           loadProfessionalProfile(),
+          listProfessionalCredentials().catch(() => null),
         ]);
+        const sharedCredentials = credentials ? publishedCredentialSnapshots(credentials) : null;
+        if (sharedCredentials) shared.content.credentials = structuredClone(sharedCredentials);
         const documents = await ensureProfileDocumentLibrary<CvRuntimeData>(kind, shared);
         state.documents.cv = documents.map((document) => ({
           ...document,
           draftPayload: document.draftPayload
             ? document.status === "archived"
               ? structuredClone(document.draftPayload)
-              : composeCvDraft(document.draftPayload, shared, professional.profile)
+              : composeCvDraft(document.draftPayload, shared, professional, sharedCredentials)
             : null,
         }));
       } else {
         const [shared, professional, credentials] = await Promise.all([
           loadPortfolioDraftData(),
           loadProfessionalProfile(),
-          listProfessionalCredentials().catch(() => []),
+          listProfessionalCredentials().catch(() => null),
         ]);
-        shared.credentials = portfolioCredentialLibrary(credentials);
+        const sharedCredentials = credentials ? portfolioCredentialLibrary(credentials) : null;
+        if (sharedCredentials) shared.credentials = structuredClone(sharedCredentials);
         const documents = await ensureProfileDocumentLibrary<PortfolioRuntimeData>(kind, shared);
         state.documents.portfolio = documents.map((document) => ({
           ...document,
           draftPayload: document.draftPayload
             ? document.status === "archived"
               ? normalizePortfolioRuntimeData(structuredClone(document.draftPayload))
-              : composePortfolioDraft(document.draftPayload, shared, professional.profile, shared.credentials ?? [])
+              : composePortfolioDraft(document.draftPayload, shared, professional.profile, sharedCredentials)
             : null,
         }));
       }
@@ -751,7 +840,7 @@ const portfolioContentPanel = (content: PortfolioContent): string => [
 
 const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => renderAdminSectionCard({
   title: "Portfolio content selection",
-  note: "Choose projects, tools and credentials. Display order follows their source libraries; layout choices live in Appearance.",
+  note: "Choose projects and tools. Display order follows their source libraries; layout choices live in Appearance.",
   content: `<div class="admin-document-selection">
     <h4>Projects</h4>
     ${runtime.projects.map((item) => {
@@ -763,6 +852,13 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
       const ready = item.status === "published";
       return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
+  </div>`,
+});
+
+const portfolioBackgroundPanel = (runtime: PortfolioRuntimeData): string => renderAdminSectionCard({
+  title: "Portfolio background",
+  note: "Choose the credentials that support this Portfolio. Display order follows the Credentials library.",
+  content: `<div class="admin-document-selection">
     <h4>Credentials</h4>
     ${(runtime.credentials ?? []).length ? (runtime.credentials ?? []).map((item) => `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_credential" value="${escapeHtml(item.id)}" data-selection-primary${item.includeInPortfolio ? " checked" : ""}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.title.en)}">${escapeHtml(item.title.en || "Untitled credential")}</strong><small>${escapeHtml(item.issuer.en || item.kind.replaceAll("_", " "))}</small></span></label><span class="status status--published">Ready</span></article>`).join("") : '<p class="admin-empty">No published credentials are available. The Credentials page can still use safe placeholders.</p>'}
   </div>`,
@@ -790,6 +886,30 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
     const value = String(form.get(key) ?? "default") as AutomationLayout | "default";
     if (value === "default") delete automationOverrides[item.id];
     else automationOverrides[item.id] = value;
+  });
+  const projectMediaAssignments = { ...current.content.mediaAssignments.projects };
+  current.projects.forEach((item) => {
+    const primaryKey = `project_primary_media_${item.id}`;
+    const supportingKey = `project_supporting_media_${item.id}`;
+    if (!form.has(primaryKey) && !form.has(supportingKey)) return;
+    const primaryMediaId = text(form, primaryKey);
+    const supportingMediaId = text(form, supportingKey);
+    projectMediaAssignments[item.id] = {
+      ...(primaryMediaId ? { primaryMediaId } : {}),
+      ...(supportingMediaId && supportingMediaId !== primaryMediaId ? { supportingMediaId } : {}),
+    };
+  });
+  const toolMediaAssignments = { ...current.content.mediaAssignments.tools };
+  current.tools.forEach((item) => {
+    const primaryKey = `tool_primary_media_${item.id}`;
+    const supportingKey = `tool_supporting_media_${item.id}`;
+    if (!form.has(primaryKey) && !form.has(supportingKey)) return;
+    const primaryMediaId = text(form, primaryKey);
+    const supportingMediaId = text(form, supportingKey);
+    toolMediaAssignments[item.id] = {
+      ...(primaryMediaId ? { primaryMediaId } : {}),
+      ...(supportingMediaId && supportingMediaId !== primaryMediaId ? { supportingMediaId } : {}),
+    };
   });
   const content: PortfolioContent = {
     ...current.content,
@@ -822,6 +942,10 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
       includeCredentials: form.get("layout_credentials_enabled") === "on",
       closing: (text(form, "layout_closing") || current.content.layouts.closing) as PortfolioContent["layouts"]["closing"],
     },
+    mediaAssignments: {
+      projects: projectMediaAssignments,
+      tools: toolMediaAssignments,
+    },
     profile: {
       ...current.content.profile,
       professionalTitle: { en: text(form, "portfolio_profile_title_en"), vi: text(form, "portfolio_profile_title_vi") },
@@ -851,7 +975,7 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
 
 const tabs = (kind: ProfileDocumentKind): Array<[DocumentTab, string]> => kind === "cv"
   ? [["content", "Profile"], ["background", "Background"], ["selection", "Projects & tools"], ["appearance", "Appearance"]]
-  : [["content", "Content"], ["selection", "Projects & tools"], ["appearance", "Appearance"]];
+  : [["content", "Content"], ["selection", "Projects & tools"], ["background", "Background"], ["appearance", "Appearance"]];
 
 const documentLabel = (kind: ProfileDocumentKind): string => kind === "cv" ? "CV" : "Portfolio";
 const documentPlural = (kind: ProfileDocumentKind): string => kind === "cv" ? "CVs" : "Portfolios";
@@ -930,7 +1054,9 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   const previewPath = `${publicPath}?preview=1&embedded=1${kind === "portfolio" ? "&scroll=internal" : ""}`;
   const contentPanel = kind === "cv" ? cvContentPanel(content as CvContent) : portfolioContentPanel(content as PortfolioContent);
   const selectionPanel = kind === "cv" ? cvSelectionPanel(runtime as CvRuntimeData) : portfolioSelectionPanel(runtime as PortfolioRuntimeData);
-  const backgroundPanel = kind === "cv" ? cvBackgroundPanel(content as CvContent) : "";
+  const backgroundPanel = kind === "cv"
+    ? cvBackgroundPanel(content as CvContent)
+    : portfolioBackgroundPanel(runtime as PortfolioRuntimeData);
   const appearancePanel = kind === "portfolio"
     ? portfolioAppearancePanel(runtime as PortfolioRuntimeData)
     : renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) });
@@ -967,7 +1093,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
           </nav>
           <form id="${kind}-document-form" data-document-form>
             <section data-document-panel="content"${activeTab === "content" ? "" : " hidden"}>${contentPanel}</section>
-            ${kind === "cv" ? `<section data-document-panel="background"${activeTab === "background" ? "" : " hidden"}>${backgroundPanel}</section>` : ""}
+            <section data-document-panel="background"${activeTab === "background" ? "" : " hidden"}>${backgroundPanel}</section>
             <section data-document-panel="selection"${activeTab === "selection" ? "" : " hidden"}>${selectionPanel}</section>
             <section data-document-panel="appearance"${activeTab === "appearance" ? "" : " hidden"}>${appearancePanel}</section>
           </form>
@@ -1351,25 +1477,100 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   });
   const syncPortfolioLayoutOverrides = (): void => {
     const overrides = form.querySelector<HTMLElement>("[data-layout-overrides]");
-    if (!overrides) return;
+    const mediaAssignments = form.querySelector<HTMLElement>("[data-portfolio-media-assignments]");
+    if (!overrides && !mediaAssignments) return;
     const syncGroup = (kind: "project" | "tool", inputName: "portfolio_project" | "portfolio_tool"): number => {
       const selectedIds = new Set(Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${inputName}"]:checked`), (input) => input.value));
-      const group = overrides.querySelector<HTMLDetailsElement>(`[data-layout-override-group="${kind}"]`);
-      if (!group) return 0;
-      group.querySelectorAll<HTMLElement>(`[data-layout-override-item][data-layout-override-kind="${kind}"]`).forEach((item) => {
-        item.hidden = !selectedIds.has(item.dataset.layoutOverrideId ?? "");
-      });
-      const count = group.querySelector<HTMLElement>("[data-layout-override-count]");
+      const group = overrides?.querySelector<HTMLDetailsElement>(`[data-layout-override-group="${kind}"]`);
+      group?.querySelectorAll<HTMLElement>(`[data-layout-override-item][data-layout-override-kind="${kind}"]`).forEach((item) => {
+          item.hidden = !selectedIds.has(item.dataset.layoutOverrideId ?? "");
+        });
+      const count = group?.querySelector<HTMLElement>("[data-layout-override-count]");
       if (count) count.textContent = String(selectedIds.size);
-      group.hidden = selectedIds.size === 0;
-      if (group.hidden) group.open = false;
+      if (group) {
+        group.hidden = selectedIds.size === 0;
+        if (group.hidden) group.open = false;
+      }
+      mediaAssignments?.querySelectorAll<HTMLElement>(`[data-portfolio-media-item][data-portfolio-media-kind="${kind}"]`).forEach((item) => {
+        item.hidden = !selectedIds.has(item.dataset.portfolioMediaId ?? "");
+      });
+      const mediaGroup = mediaAssignments?.querySelector<HTMLDetailsElement>(`[data-portfolio-media-group="${kind}"]`);
+      const mediaCount = mediaGroup?.querySelector<HTMLElement>("[data-portfolio-media-count]");
+      if (mediaCount) mediaCount.textContent = String(selectedIds.size);
+      if (mediaGroup) {
+        mediaGroup.hidden = selectedIds.size === 0;
+        if (mediaGroup.hidden) mediaGroup.open = false;
+      }
       return selectedIds.size;
     };
     const selectedCount = syncGroup("project", "portfolio_project") + syncGroup("tool", "portfolio_tool");
-    const empty = overrides.querySelector<HTMLElement>("[data-layout-overrides-empty]");
+    const empty = overrides?.querySelector<HTMLElement>("[data-layout-overrides-empty]");
     if (empty) empty.hidden = selectedCount > 0;
+    const mediaEmpty = mediaAssignments?.querySelector<HTMLElement>("[data-portfolio-media-empty]");
+    if (mediaEmpty) mediaEmpty.hidden = selectedCount > 0;
+  };
+  const syncPortfolioMediaRequirements = (): void => {
+    if (kind !== "portfolio" || !state.portfolio) return;
+    form.querySelectorAll<HTMLElement>("[data-portfolio-media-item]").forEach((item) => {
+      const itemKind = item.dataset.portfolioMediaKind as "project" | "tool" | undefined;
+      const itemId = item.dataset.portfolioMediaId;
+      if (!itemKind || !itemId) return;
+      const defaultName = itemKind === "project" ? "layout_project_default" : "layout_automation_default";
+      const overrideName = itemKind === "project" ? `project_layout_${itemId}` : `tool_layout_${itemId}`;
+      const defaultLayout = (form.elements.namedItem(defaultName) as HTMLSelectElement | null)?.value;
+      const overrideLayout = (form.elements.namedItem(overrideName) as HTMLSelectElement | null)?.value;
+      const layout = overrideLayout && overrideLayout !== "default" ? overrideLayout : defaultLayout;
+      const requirement = itemKind === "project"
+        ? projectMediaRequirement(layout as ProjectLayout)
+        : automationMediaRequirement(layout as AutomationLayout);
+      const primary = item.querySelector<HTMLSelectElement>("[data-portfolio-primary-select]");
+      const supporting = item.querySelector<HTMLSelectElement>("[data-portfolio-supporting-select]");
+      const primaryStatus = item.querySelector<HTMLElement>("[data-portfolio-primary-status]");
+      const supportingStatus = item.querySelector<HTMLElement>("[data-portfolio-supporting-status]");
+      const requirementLabel = item.querySelector<HTMLElement>("[data-portfolio-media-requirement]");
+      if (primary) {
+        primary.disabled = !requirement.primary;
+        if (requirement.primary) primary.setAttribute("aria-required", "true");
+        else primary.removeAttribute("aria-required");
+      }
+      if (supporting) {
+        supporting.disabled = !requirement.supporting;
+        if (requirement.supportingRequired) supporting.setAttribute("aria-required", "true");
+        else supporting.removeAttribute("aria-required");
+      }
+      if (primaryStatus) {
+        primaryStatus.textContent = requirement.primary ? "" : "Not used by layout";
+        primaryStatus.hidden = Boolean(requirement.primary);
+      }
+      if (supportingStatus) {
+        supportingStatus.textContent = requirement.supporting
+          ? requirement.supportingRequired ? "" : "Optional"
+          : "Not used by layout";
+        supportingStatus.hidden = Boolean(requirement.supportingRequired);
+      }
+      if (requirementLabel) requirementLabel.textContent = mediaRequirementLabel(requirement);
+    });
+  };
+  const keepMediaAssignmentsDistinct = (item: HTMLElement): void => {
+    const primary = item.querySelector<HTMLSelectElement>("[data-portfolio-primary-select]");
+    const supporting = item.querySelector<HTMLSelectElement>("[data-portfolio-supporting-select]");
+    if (primary?.value && supporting?.value === primary.value) supporting.value = "";
   };
   syncPortfolioLayoutOverrides();
+  syncPortfolioMediaRequirements();
+  form.querySelectorAll<HTMLElement>("[data-portfolio-media-item]").forEach((item) => {
+    item.querySelectorAll<HTMLSelectElement>("[data-portfolio-primary-select], [data-portfolio-supporting-select]")
+      .forEach((select) => select.addEventListener("change", () => keepMediaAssignmentsDistinct(item)));
+  });
+  form.addEventListener("change", (event) => {
+    const target = event.target as HTMLSelectElement;
+    if (target.name === "layout_project_default"
+      || target.name === "layout_automation_default"
+      || target.name.startsWith("project_layout_")
+      || target.name.startsWith("tool_layout_")) {
+      syncPortfolioMediaRequirements();
+    }
+  });
   form.addEventListener("click", (event) => {
     if (!(event.target instanceof Element)) return;
     const trigger = event.target.closest<HTMLButtonElement>("[data-layout-disclosure]");
