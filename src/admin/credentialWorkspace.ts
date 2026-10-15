@@ -3,6 +3,7 @@ import {
   createProfessionalCredential,
   deleteCredentialAsset,
   openCredentialAsset,
+  reorderProfessionalCredentials,
   updateProfessionalCredential,
   uploadCredentialAsset,
 } from "../services/credentialRepository";
@@ -58,7 +59,12 @@ const relationLabel = (credential: ProfessionalCredential, professional: Profess
 
 const statusLabel = (status: ProfessionalCredential["status"]): string => status === "published" ? "Ready" : status === "draft" ? "Draft" : "Archived";
 
-const credentialCard = (credential: ProfessionalCredential, professional: ProfessionalProfileContent): string => {
+const credentialCard = (
+  credential: ProfessionalCredential,
+  professional: ProfessionalProfileContent,
+  index: number,
+  total: number,
+): string => {
   const assets = credential.assets.map((asset) => `<li>
     <span class="admin-credential-file__icon" aria-hidden="true">${asset.mimeType === "application/pdf" ? "PDF" : "IMG"}</span>
     <span><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(documentKindLabels[asset.documentKind])} · ${formatFileSize(asset.fileSize)} · Private</small></span>
@@ -66,9 +72,16 @@ const credentialCard = (credential: ProfessionalCredential, professional: Profes
     ${credential.status === "archived" ? "" : `<button class="button button--secondary admin-button--danger" type="button" data-credential-asset-delete="${escapeHtml(asset.id)}" data-credential-id="${escapeHtml(credential.id)}">Delete</button>`}
   </li>`).join("");
   return `<article class="admin-credential-card${credential.status === "archived" ? " is-archived" : ""}" data-credential-card="${escapeHtml(credential.id)}">
-    <header>
+    <header class="admin-credential-card__heading admin-profile-entry-card__heading">
       <div><p>${escapeHtml(credentialKindLabels[credential.kind])}</p><h4>${escapeHtml(credential.title.en || "Untitled credential")}</h4><small>${escapeHtml(credential.issuer.en || "Issuer not set")}</small></div>
-      <span class="status status--${credential.status}">${statusLabel(credential.status)}</span>
+      <div class="admin-credential-card__actions admin-profile-entry-card__actions">
+        <span class="status status--${credential.status}">${statusLabel(credential.status)}</span>
+        <button class="button button--secondary admin-icon-button" type="button" data-credential-move="up" data-credential-id="${escapeHtml(credential.id)}" aria-label="Move ${escapeHtml(credential.title.en || "credential")} up" title="Move up"${index === 0 ? " disabled" : ""}>&#8593;</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-credential-move="down" data-credential-id="${escapeHtml(credential.id)}" aria-label="Move ${escapeHtml(credential.title.en || "credential")} down" title="Move down"${index === total - 1 ? " disabled" : ""}>&#8595;</button>
+        ${credential.status === "archived"
+          ? `<button class="button button--secondary" type="button" data-credential-restore="${escapeHtml(credential.id)}">Restore as draft</button>`
+          : `<button class="button button--secondary" type="button" data-credential-edit="${escapeHtml(credential.id)}">Edit details</button><button class="button button--secondary admin-button--danger" type="button" data-credential-archive="${escapeHtml(credential.id)}">Archive</button>`}
+      </div>
     </header>
     <dl>
       <div><dt>Linked to</dt><dd>${escapeHtml(relationLabel(credential, professional))}</dd></div>
@@ -77,11 +90,6 @@ const credentialCard = (credential: ProfessionalCredential, professional: Profes
       <div><dt>Evidence</dt><dd>${credential.assets.length} private file${credential.assets.length === 1 ? "" : "s"}</dd></div>
     </dl>
     ${credential.description.en ? `<p class="admin-credential-card__description">${escapeHtml(credential.description.en)}</p>` : ""}
-    <div class="admin-credential-card__actions">
-      ${credential.status === "archived"
-        ? `<button class="button button--secondary" type="button" data-credential-restore="${escapeHtml(credential.id)}">Restore as draft</button>`
-        : `<button class="button button--secondary" type="button" data-credential-edit="${escapeHtml(credential.id)}">Edit details</button><button class="button button--secondary admin-button--danger" type="button" data-credential-archive="${escapeHtml(credential.id)}">Archive</button>`}
-    </div>
     ${credential.status === "archived" ? "" : `<section class="admin-credential-files"><div><h5>Evidence documents</h5><p>Original files remain private and are never added automatically to public releases.</p></div>${assets ? `<ul>${assets}</ul>` : '<div class="admin-empty-state"><div><strong>No evidence files</strong><small>Add a certificate image, diploma, transcript or score report.</small></div></div>'}<div class="admin-credential-upload"><label>Document type<select data-credential-upload-kind>${Object.entries(documentKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label><button class="button button--secondary" type="button" data-credential-upload-trigger="${escapeHtml(credential.id)}">+ Add private file</button><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-credential-upload="${escapeHtml(credential.id)}" hidden></div></section>`}
   </article>`;
 };
@@ -118,7 +126,7 @@ export const renderProfessionalCredentials = (
   title: "Credentials",
   note: "Qualifications, certificates and licenses shared across your professional profile. Evidence files are private by default.",
   headerActions: '<button class="button admin-action-new" type="button" data-credential-new>+ Add credential</button>',
-  content: `<div data-credential-workspace>${credentials.length ? `<div class="admin-credential-list">${credentials.map((item) => credentialCard(item, professional)).join("")}</div>` : '<div class="admin-empty-state"><div><strong>No credentials yet</strong><small>Add a professional certification, academic degree or language exam.</small></div></div>'}${credentialDialog(professional)}</div>`,
+  content: `<div data-credential-workspace>${credentials.length ? `<div class="admin-credential-list" data-credential-list>${credentials.map((item, index) => credentialCard(item, professional, index, credentials.length)).join("")}</div>` : '<div class="admin-empty-state"><div><strong>No credentials yet</strong><small>Add a professional certification, academic degree or language exam.</small></div></div>'}${credentialDialog(professional)}</div>`,
 });
 
 export const renderLinkedCredentials = (
@@ -176,6 +184,7 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
     if (noExpiry.checked) expiry.value = "";
   };
   noExpiry?.addEventListener("change", setExpiryState);
+  let reorderBusy = false;
 
   const openEditor = (credential?: ProfessionalCredential, preset?: { type: CredentialRelationType; id: string }): void => {
     if (!dialog || !form) return;
@@ -214,6 +223,46 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
   dialog?.querySelectorAll<HTMLButtonElement>("[data-credential-cancel]").forEach((button) => button.addEventListener("click", closeEditor));
   dialog?.addEventListener("cancel", (event) => { event.preventDefault(); closeEditor(); });
   root.querySelector<HTMLButtonElement>("[data-credential-new]")?.addEventListener("click", () => openEditor());
+  root.querySelectorAll<HTMLButtonElement>("[data-credential-move]").forEach((button) => button.addEventListener("click", () => {
+    if (reorderBusy) return;
+    const id = button.dataset.credentialId;
+    const direction = button.dataset.credentialMove as "up" | "down" | undefined;
+    if (!id || !direction) return;
+    const current = callbacks.getCredentials();
+    const index = current.findIndex((item) => item.id === id);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (index < 0 || target < 0 || target >= current.length) return;
+    const reordered = [...current];
+    [reordered[index], reordered[target]] = [reordered[target], reordered[index]];
+    const list = root.querySelector<HTMLElement>("[data-credential-list]");
+    const controls = Array.from(root.querySelectorAll<HTMLButtonElement>("[data-credential-move]"));
+    const disabledStates = controls.map((control) => control.disabled);
+    reorderBusy = true;
+    list?.setAttribute("aria-busy", "true");
+    controls.forEach((control) => { control.disabled = true; });
+    callbacks.beforeMutation();
+    void reorderProfessionalCredentials(reordered.map((item) => item.id))
+      .then((credentials) => {
+        callbacks.setCredentials(credentials);
+        callbacks.rerender();
+        requestAnimationFrame(() => {
+          const card = root.querySelector<HTMLElement>(`[data-credential-card="${CSS.escape(id)}"]`);
+          const preferred = card?.querySelector<HTMLButtonElement>(`[data-credential-move="${direction}"]`);
+          const fallback = card?.querySelector<HTMLButtonElement>("[data-credential-move]:not(:disabled), [data-credential-edit], [data-credential-restore]");
+          card?.scrollIntoView({ block: "nearest" });
+          (preferred && !preferred.disabled ? preferred : fallback)?.focus({ preventScroll: true });
+        });
+        callbacks.notify(`Credential moved ${direction}.`, "success");
+      })
+      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .finally(() => {
+        reorderBusy = false;
+        if (list?.isConnected) list.removeAttribute("aria-busy");
+        controls.forEach((control, controlIndex) => {
+          if (control.isConnected) control.disabled = disabledStates[controlIndex];
+        });
+      });
+  }));
   root.querySelectorAll<HTMLButtonElement>("[data-credential-edit]").forEach((button) => button.addEventListener("click", () => {
     const credential = callbacks.getCredentials().find((item) => item.id === button.dataset.credentialEdit);
     if (credential) openEditor(credential);

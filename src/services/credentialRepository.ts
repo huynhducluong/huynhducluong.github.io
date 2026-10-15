@@ -126,6 +126,13 @@ const fetchProfessionalCredentials = async (): Promise<ProfessionalCredential[]>
 export const listProfessionalCredentials = async (force = false): Promise<ProfessionalCredential[]> =>
   structuredClone(await credentialCache.get(fetchProfessionalCredentials, force));
 
+export const reorderProfessionalCredentials = async (orderedIds: string[]): Promise<ProfessionalCredential[]> => {
+  const { error } = await supabase.rpc("reorder_admin_content", { target_type: "credential", ordered_ids: orderedIds });
+  if (error) throw error;
+  credentialCache.invalidate();
+  return listProfessionalCredentials(true);
+};
+
 export const createProfessionalCredential = async (input: ProfessionalCredentialInput): Promise<ProfessionalCredential> => {
   const { data, error } = await supabase
     .from("professional_credentials")

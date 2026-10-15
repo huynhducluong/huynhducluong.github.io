@@ -225,7 +225,7 @@ const panelState = (tab: CoverLetterEditorTab): string => editorTab === tab ? ""
 const evidenceChecks = (items: CoverLetterEvidenceOption[], name: "projectIds" | "toolIds"): string => {
   if (!items.length) return '<p class="admin-empty">No records available.</p>';
   return items
-    .map((item) => `<label class="evidence-option"><input type="checkbox" name="${name}" value="${escapeHtml(item.id)}" ${letter[name].includes(item.id) ? "checked" : ""}${disabled()}><span><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(item.status)}</small></span></label>`)
+    .map((item) => `<label class="evidence-option admin-selection-card admin-selection-card--single"><input type="checkbox" name="${name}" value="${escapeHtml(item.id)}" data-selection-primary ${letter[name].includes(item.id) ? "checked" : ""}${disabled()}><span data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(item.status)}</small></span></label>`)
     .join("");
 };
 
@@ -317,9 +317,9 @@ const editorView = (): string => {
                 note: "Private references only; order follows Projects and Automation Tools.",
                 className: "admin-cl-evidence-card",
                 content: `<div class="admin-cl-evidence">
-                  <div class="admin-cl-evidence-heading"><h4>Projects</h4><small>${letter.projectIds.length} selected</small></div>
+                  <div class="admin-cl-evidence-heading"><h4>Projects</h4><small data-evidence-count="projectIds">${letter.projectIds.length} selected</small></div>
                   <div class="evidence-grid">${evidenceChecks(projects, "projectIds")}</div>
-                  <div class="admin-cl-evidence-heading"><h4>Automation tools</h4><small>${letter.toolIds.length} selected</small></div>
+                  <div class="admin-cl-evidence-heading"><h4>Automation tools</h4><small data-evidence-count="toolIds">${letter.toolIds.length} selected</small></div>
                   <div class="evidence-grid">${evidenceChecks(tools, "toolIds")}</div>
                 </div>`,
               })}
@@ -658,7 +658,19 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   });
 
   const form = root.querySelector<HTMLFormElement>("[data-cl-form]");
-  form?.addEventListener("input", () => { markDirty(root, callbacks); updatePreview(root); });
+  const syncEvidenceCount = (name: "projectIds" | "toolIds"): void => {
+    if (!form) return;
+    const count = root.querySelector<HTMLElement>(`[data-evidence-count="${name}"]`);
+    if (count) count.textContent = `${form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`).length} selected`;
+  };
+  form?.addEventListener("input", (event) => {
+    const target = event.target;
+    if (target instanceof HTMLInputElement && (target.name === "projectIds" || target.name === "toolIds")) {
+      syncEvidenceCount(target.name);
+    }
+    markDirty(root, callbacks);
+    updatePreview(root);
+  });
   form?.addEventListener("change", (event) => {
     const target = event.target as HTMLInputElement | HTMLSelectElement;
     if (target.name === "themePreset" && target.value !== "custom") {

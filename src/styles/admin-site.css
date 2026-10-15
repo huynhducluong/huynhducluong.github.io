@@ -1377,16 +1377,22 @@ button.admin-profile-photo-control {
 }
 
 .admin-credential-card.is-archived { opacity: .72; }
-.admin-credential-card > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+.admin-credential-list[aria-busy="true"] { cursor: wait; }
+.admin-credential-card > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
 .admin-credential-card > header p { color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: 800; text-transform: uppercase; }
 .admin-credential-card > header h4 { margin-top: .15rem; font-size: var(--admin-text-base); }
-.admin-credential-card > header small { display: block; margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); }
+.admin-credential-card > header small { display: block; margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-regular); letter-spacing: normal; text-transform: none; }
 .admin-credential-card > dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .65rem; margin: 0; }
 .admin-credential-card > dl div { padding: .65rem; border: 1px solid var(--admin-color-border); border-radius: .45rem; background: #fff; }
 .admin-credential-card dt { color: var(--color-text-muted); font-size: var(--admin-text-2xs); font-weight: 800; text-transform: uppercase; }
 .admin-credential-card dd { margin: .2rem 0 0; font-size: var(--admin-text-xs); font-weight: 700; }
 .admin-credential-card__description { color: var(--color-text-muted); font-size: var(--admin-text-sm); }
-.admin-credential-card__actions { display: flex; flex-wrap: wrap; gap: .5rem; }
+.admin-credential-card__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+
+@container admin-form (max-width: 40rem) {
+  .admin-credential-card > header { align-items: flex-start; }
+  .admin-credential-card__actions { width: 100%; justify-content: flex-start; }
+}
 
 .admin-credential-files { display: grid; gap: .75rem; padding-top: .9rem; border-top: 1px solid var(--admin-color-border); }
 .admin-credential-files h5 { font-size: var(--admin-text-sm); }

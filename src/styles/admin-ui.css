@@ -1692,6 +1692,78 @@ html.admin-app button.is-busy::before {
   scrollbar-gutter: stable;
 }
 
+/* Shared selection language for Admin cards with one primary inclusion state. */
+.admin-selection-card {
+  border-color: var(--admin-color-border);
+  background: var(--admin-color-surface);
+  transition: border-color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+.admin-selection-card:hover:not(:has([data-selection-primary]:disabled)) {
+  border-color: var(--admin-color-border-strong);
+}
+
+.admin-selection-card--single:has([data-selection-primary]:checked),
+.admin-selection-card--dual:has([data-selection-primary]:checked),
+.admin-selection-card--dual:has([data-selection-secondary]:checked),
+.admin-selection-card--disclosure:has([data-selection-primary]:checked) {
+  border-color: color-mix(in srgb, var(--color-primary) 30%, var(--admin-color-border));
+  background: var(--admin-color-selected);
+}
+
+.admin-selection-card--single:focus-within,
+.admin-selection-card--dual:focus-within,
+.admin-selection-card--disclosure:has([data-selection-primary]:focus-visible) {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--admin-color-focus-ring);
+}
+
+.admin-selection-card :is([data-selection-primary], [data-selection-secondary]) {
+  flex: 0 0 auto;
+  width: 1rem !important;
+  height: 1rem;
+  margin: 0;
+  padding: 0;
+  accent-color: var(--color-primary);
+}
+
+.admin-selection-card--single:not(:has([data-selection-primary]:checked)) [data-selection-content],
+.admin-selection-card--dual:not(:has([data-selection-primary]:checked)):not(:has([data-selection-secondary]:checked)) [data-selection-content],
+.admin-selection-card--disclosure:not(:has([data-selection-primary]:checked)) [data-selection-content] {
+  opacity: .62;
+}
+
+.admin-selection-card:has([data-selection-primary]:disabled) {
+  background: var(--admin-color-surface-subtle);
+}
+
+.admin-selection-card:has([data-selection-primary]:disabled) [data-selection-content],
+.admin-selection-card:has([data-selection-primary]:disabled) .admin-selection-card__control {
+  opacity: .55;
+}
+
+label.admin-selection-card--single,
+.admin-selection-card--single label:has(> [data-selection-primary]),
+.admin-selection-card--disclosure label:has(> [data-selection-primary]),
+.admin-selection-card__control {
+  cursor: pointer;
+}
+
+.admin-selection-card:has([data-selection-primary]:disabled) :is(label, .admin-selection-card__control) {
+  cursor: not-allowed;
+}
+
+.admin-selection-card__control {
+  padding: .18rem .35rem;
+  border-radius: .35rem;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.admin-selection-card__control--secondary:has([data-selection-secondary]:checked) {
+  background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  color: var(--color-primary-dark);
+}
+
 /* At laptop widths, retain nested panes instead of falling back to a page-length scroll. */
 @media (max-width: 1180px) {
   .admin-workspace:has(> .admin-document-workspace),

@@ -182,9 +182,29 @@ const portfolioLayoutPicker = <T extends string>(
   value: T,
   options: readonly PortfolioLayoutOption<T>[],
 ): string => `<details class="admin-layout-picker">
-  <summary><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(note)}</small></span><em>${escapeHtml(selectedLayoutLabel(value, options))}</em></summary>
+  <summary><span><strong>${escapeHtml(title)}</strong><small>${escapeHtml(note)}</small></span><em data-layout-selected>${escapeHtml(selectedLayoutLabel(value, options))}</em></summary>
   <div class="admin-layout-picker__options">${options.map((option) => `<label class="admin-layout-option" data-layout-preview="${escapeHtml(option.preview)}"><input type="radio" name="${escapeHtml(name)}" value="${escapeHtml(option.id)}"${option.id === value ? " checked" : ""}><span class="admin-layout-option__thumbnail" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="admin-layout-option__copy"><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.description)}</small></span></label>`).join("")}</div>
 </details>`;
+
+const portfolioOptionalLayoutPicker = <T extends string>(
+  title: string,
+  note: string,
+  name: string,
+  value: T,
+  options: readonly PortfolioLayoutOption<T>[],
+  enabledName: string,
+  enabled: boolean,
+): string => `<div class="admin-layout-picker admin-layout-picker--optional admin-selection-card admin-selection-card--disclosure" data-optional-layout-picker>
+  <div class="admin-layout-picker__optional-header">
+    <label class="admin-layout-picker__optional-toggle"><input type="checkbox" name="${escapeHtml(enabledName)}" data-selection-primary${enabled ? " checked" : ""}><span class="sr-only">Include ${escapeHtml(title)} page in portfolio</span></label>
+    <button class="admin-layout-picker__optional-disclosure" type="button" aria-expanded="false" aria-controls="portfolio-credentials-layout-options" data-layout-disclosure>
+      <span class="admin-layout-picker__optional-copy" data-selection-content><strong>${escapeHtml(title)}</strong><small>${escapeHtml(note)}</small></span>
+      <em data-layout-selected>${escapeHtml(selectedLayoutLabel(value, options))}</em>
+      <span class="admin-layout-picker__optional-icon" aria-hidden="true"></span>
+    </button>
+  </div>
+  <div class="admin-layout-picker__options" id="portfolio-credentials-layout-options" data-layout-panel hidden>${options.map((option) => `<label class="admin-layout-option" data-layout-preview="${escapeHtml(option.preview)}"><input type="radio" name="${escapeHtml(name)}" value="${escapeHtml(option.id)}"${option.id === value ? " checked" : ""}><span class="admin-layout-option__thumbnail" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="admin-layout-option__copy"><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.description)}</small></span></label>`).join("")}<p class="admin-layout-picker__note">Safe document placeholders are used until public credential previews are prepared.</p></div>
+</div>`;
 
 const legacyProjectLayoutLabel = (value: string): string => value === "feature" ? "Legacy Feature" : value === "compact" ? "Legacy Compact" : "Legacy Standard";
 const projectOverrideOptions = (value: ProjectLayout | undefined): string => {
@@ -201,10 +221,13 @@ const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
   const { content } = runtime;
   const availableProjects = runtime.projects.filter((item) => item.status === "published");
   const availableTools = runtime.tools.filter((item) => item.status === "published");
+  const selectedProjects = availableProjects.filter((item) => item.includeInPortfolio);
+  const selectedTools = availableTools.filter((item) => item.includeInPortfolio);
   const overrides = availableProjects.length || availableTools.length
-    ? `<div class="admin-layout-overrides">
-      ${availableProjects.length ? `<details class="admin-layout-override-group"><summary>Project overrides <span>${availableProjects.length}</span></summary><div>${availableProjects.map((item) => `<label><span><strong>${escapeHtml(item.name.en)}</strong><small>${item.includeInPortfolio ? "Selected · " : "Not selected · "}uses the default unless overridden.</small></span>${renderAdminSelectControl({ name: `project_layout_${item.id}`, attributes: 'aria-label="Project layout override"', options: projectOverrideOptions(content.layouts.projectOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
-      ${availableTools.length ? `<details class="admin-layout-override-group"><summary>Automation overrides <span>${availableTools.length}</span></summary><div>${availableTools.map((item) => `<label><span><strong>${escapeHtml(item.name)}</strong><small>${item.includeInPortfolio ? "Selected · " : "Not selected · "}Classic groups tools; other styles create one page per tool.</small></span>${renderAdminSelectControl({ name: `tool_layout_${item.id}`, attributes: 'aria-label="Automation layout override"', options: automationOverrideOptions(content.layouts.automationOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
+    ? `<div class="admin-layout-overrides" data-layout-overrides>
+      ${availableProjects.length ? `<details class="admin-layout-override-group" data-layout-override-group="project"${selectedProjects.length ? "" : " hidden"}><summary>Project overrides <span data-layout-override-count>${selectedProjects.length}</span></summary><div>${availableProjects.map((item) => `<label data-layout-override-item data-layout-override-kind="project" data-layout-override-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}><span><strong>${escapeHtml(item.name.en)}</strong><small>Uses the project default unless overridden.</small></span>${renderAdminSelectControl({ name: `project_layout_${item.id}`, attributes: 'aria-label="Project layout override"', options: projectOverrideOptions(content.layouts.projectOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
+      ${availableTools.length ? `<details class="admin-layout-override-group" data-layout-override-group="tool"${selectedTools.length ? "" : " hidden"}><summary>Automation overrides <span data-layout-override-count>${selectedTools.length}</span></summary><div>${availableTools.map((item) => `<label data-layout-override-item data-layout-override-kind="tool" data-layout-override-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}><span><strong>${escapeHtml(item.name)}</strong><small>Classic groups tools; other styles create one page per tool.</small></span>${renderAdminSelectControl({ name: `tool_layout_${item.id}`, attributes: 'aria-label="Automation layout override"', options: automationOverrideOptions(content.layouts.automationOverrides[item.id]) })}</label>`).join("")}</div></details>` : ""}
+      <p class="admin-empty" data-layout-overrides-empty${selectedProjects.length || selectedTools.length ? " hidden" : ""}>Select projects or tools in “Projects &amp; tools” to customize their layouts.</p>
     </div>`
     : '<p class="admin-empty">No published projects or tools are available for layout overrides.</p>';
   return [
@@ -214,14 +237,13 @@ const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
       title: "Page layouts",
       note: "Choose one A4 landscape preset for each page type. Open a row to compare its options.",
       className: "admin-layout-system-card",
-      content: `<div class="admin-layout-system">
+      content: `<div class="admin-layout-system" role="group" aria-label="Portfolio page layouts" data-layout-accordion>
         ${portfolioLayoutPicker("Cover", "Document opening", "layout_cover", content.layouts.cover, coverLayoutOptions)}
         ${portfolioLayoutPicker("Profile", "Professional profile", "layout_profile", content.layouts.profile, profileLayoutOptions)}
         ${portfolioLayoutPicker("Project Index", "Selected work navigation", "layout_index", content.layouts.index, indexLayoutOptions)}
         ${portfolioLayoutPicker("Projects", "Default for selected projects", "layout_project_default", content.layouts.projectDefault, projectLayoutOptions)}
         ${portfolioLayoutPicker("Automation", "Default for selected tools", "layout_automation_default", content.layouts.automationDefault, automationLayoutOptions)}
-        <div class="admin-layout-credentials-toggle"><label class="admin-switch"><input type="checkbox" name="layout_credentials_enabled"${content.layouts.includeCredentials ? " checked" : ""}><span><strong>Include credentials page</strong><small>Uses safe document placeholders until public previews are explicitly prepared.</small></span></label></div>
-        ${portfolioLayoutPicker("Credentials", "Education and supporting documents", "layout_credentials", content.layouts.credentials, credentialsLayoutOptions)}
+        ${portfolioOptionalLayoutPicker("Credentials", "Education and supporting documents", "layout_credentials", content.layouts.credentials, credentialsLayoutOptions, "layout_credentials_enabled", content.layouts.includeCredentials)}
         ${portfolioLayoutPicker("Thank you", "Portfolio closing", "layout_closing", content.layouts.closing, closingLayoutOptions)}
       </div>`,
     }),
@@ -489,9 +511,9 @@ const backgroundRow = ({ group, id, title, meta, selected }: {
   title: string;
   meta: string;
   selected: boolean;
-}): string => `<label class="admin-switch admin-cv-background__item${selected ? " is-selected" : ""}">
-  <input type="checkbox" name="cv_background_${group}" value="${escapeHtml(id)}" data-cv-background-toggle${selected ? " checked" : ""}>
-  <span class="admin-cv-background__identity"><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>
+}): string => `<label class="admin-switch admin-cv-background__item admin-selection-card admin-selection-card--single${selected ? " is-selected" : ""}">
+  <input type="checkbox" name="cv_background_${group}" value="${escapeHtml(id)}" data-cv-background-toggle data-selection-primary${selected ? " checked" : ""}>
+  <span class="admin-cv-background__identity" data-selection-content><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>
 </label>`;
 
 const backgroundCount = (selected: number, total: number): string => {
@@ -612,8 +634,8 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
           const selection = selectedTools.get(item.id);
           const ready = item.status === undefined || item.status === "published";
           const displayStatus = ready ? "published" : item.status ?? "draft";
-          return `<article class="admin-cv-selection__tool">
-            <label class="admin-switch"><input type="checkbox" name="cv_tool" value="${escapeHtml(item.id)}"${selection ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-cv-selection__identity"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong></span></label>
+          return `<article class="admin-cv-selection__tool admin-selection-card admin-selection-card--single">
+            <label class="admin-switch"><input type="checkbox" name="cv_tool" value="${escapeHtml(item.id)}" data-selection-primary${selection ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-cv-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong></span></label>
             <span class="status status--${displayStatus}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span>
           </article>`;
         }).join("")}
@@ -734,15 +756,15 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
     <h4>Projects</h4>
     ${runtime.projects.map((item) => {
       const ready = item.status === "published";
-      return `<article class="admin-document-selection__item admin-document-selection__item--tool"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
     <h4>Automation tools</h4>
     ${runtime.tools.map((item) => {
       const ready = item.status === "published";
-      return `<article class="admin-document-selection__item admin-document-selection__item--tool"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}"${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
     <h4>Credentials</h4>
-    ${(runtime.credentials ?? []).length ? (runtime.credentials ?? []).map((item) => `<article class="admin-document-selection__item admin-document-selection__item--tool"><label class="admin-switch"><input type="checkbox" name="portfolio_credential" value="${escapeHtml(item.id)}"${item.includeInPortfolio ? " checked" : ""}><span class="admin-document-selection__identity"><strong title="${escapeHtml(item.title.en)}">${escapeHtml(item.title.en || "Untitled credential")}</strong><small>${escapeHtml(item.issuer.en || item.kind.replaceAll("_", " "))}</small></span></label><span class="status status--published">Ready</span></article>`).join("") : '<p class="admin-empty">No published credentials are available. The Credentials page can still use safe placeholders.</p>'}
+    ${(runtime.credentials ?? []).length ? (runtime.credentials ?? []).map((item) => `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_credential" value="${escapeHtml(item.id)}" data-selection-primary${item.includeInPortfolio ? " checked" : ""}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.title.en)}">${escapeHtml(item.title.en || "Untitled credential")}</strong><small>${escapeHtml(item.issuer.en || item.kind.replaceAll("_", " "))}</small></span></label><span class="status status--published">Ready</span></article>`).join("") : '<p class="admin-empty">No published credentials are available. The Credentials page can still use safe placeholders.</p>'}
   </div>`,
 });
 
@@ -1305,7 +1327,64 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     if (previewTimer !== undefined) window.clearTimeout(previewTimer);
     previewTimer = window.setTimeout(() => sendPreview(kind, form), 180);
   };
+  const setOptionalLayoutPickerOpen = (picker: HTMLElement, open: boolean): void => {
+    const trigger = picker.querySelector<HTMLButtonElement>("[data-layout-disclosure]");
+    const panel = picker.querySelector<HTMLElement>("[data-layout-panel]");
+    if (!trigger || !panel) return;
+    trigger.setAttribute("aria-expanded", String(open));
+    panel.hidden = !open;
+    picker.classList.toggle("is-open", open);
+  };
+  const closeOtherLayoutPickers = (current: HTMLElement): void => {
+    const accordion = current.closest<HTMLElement>("[data-layout-accordion]");
+    if (!accordion) return;
+    accordion.querySelectorAll<HTMLDetailsElement>("details.admin-layout-picker[open]").forEach((picker) => {
+      if (picker !== current) picker.open = false;
+    });
+    const optionalPicker = accordion.querySelector<HTMLElement>("[data-optional-layout-picker]");
+    if (optionalPicker && optionalPicker !== current) setOptionalLayoutPickerOpen(optionalPicker, false);
+  };
+  form.querySelectorAll<HTMLDetailsElement>("[data-layout-accordion] details.admin-layout-picker").forEach((picker) => {
+    picker.addEventListener("toggle", () => {
+      if (picker.open) closeOtherLayoutPickers(picker);
+    });
+  });
+  const syncPortfolioLayoutOverrides = (): void => {
+    const overrides = form.querySelector<HTMLElement>("[data-layout-overrides]");
+    if (!overrides) return;
+    const syncGroup = (kind: "project" | "tool", inputName: "portfolio_project" | "portfolio_tool"): number => {
+      const selectedIds = new Set(Array.from(form.querySelectorAll<HTMLInputElement>(`input[name="${inputName}"]:checked`), (input) => input.value));
+      const group = overrides.querySelector<HTMLDetailsElement>(`[data-layout-override-group="${kind}"]`);
+      if (!group) return 0;
+      group.querySelectorAll<HTMLElement>(`[data-layout-override-item][data-layout-override-kind="${kind}"]`).forEach((item) => {
+        item.hidden = !selectedIds.has(item.dataset.layoutOverrideId ?? "");
+      });
+      const count = group.querySelector<HTMLElement>("[data-layout-override-count]");
+      if (count) count.textContent = String(selectedIds.size);
+      group.hidden = selectedIds.size === 0;
+      if (group.hidden) group.open = false;
+      return selectedIds.size;
+    };
+    const selectedCount = syncGroup("project", "portfolio_project") + syncGroup("tool", "portfolio_tool");
+    const empty = overrides.querySelector<HTMLElement>("[data-layout-overrides-empty]");
+    if (empty) empty.hidden = selectedCount > 0;
+  };
+  syncPortfolioLayoutOverrides();
+  form.addEventListener("click", (event) => {
+    if (!(event.target instanceof Element)) return;
+    const trigger = event.target.closest<HTMLButtonElement>("[data-layout-disclosure]");
+    if (!trigger) return;
+    const picker = trigger.closest<HTMLElement>("[data-optional-layout-picker]");
+    const panel = picker?.querySelector<HTMLElement>("[data-layout-panel]");
+    if (!picker || !panel) return;
+    const open = trigger.getAttribute("aria-expanded") !== "true";
+    if (open) closeOtherLayoutPickers(picker);
+    setOptionalLayoutPickerOpen(picker, open);
+  });
   form.addEventListener("input", (event) => {
+    if (event.target instanceof HTMLInputElement && (event.target.name === "portfolio_project" || event.target.name === "portfolio_tool")) {
+      syncPortfolioLayoutOverrides();
+    }
     if (event.target instanceof HTMLInputElement && event.target.matches("[data-cv-background-toggle]")) {
       const group = event.target.closest<HTMLElement>("[data-cv-background-group]");
       const checked = group?.querySelectorAll<HTMLInputElement>("[data-cv-background-toggle]:checked").length ?? 0;
@@ -1325,7 +1404,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     if (target instanceof HTMLInputElement && target.type === "radio" && target.name.startsWith("layout_")) {
       const picker = target.closest<HTMLDetailsElement>(".admin-layout-picker");
       const label = target.closest<HTMLElement>(".admin-layout-option")?.querySelector<HTMLElement>(".admin-layout-option__copy strong")?.textContent;
-      const selected = picker?.querySelector<HTMLElement>("summary em");
+      const selected = picker?.querySelector<HTMLElement>("[data-layout-selected]");
       if (selected && label) selected.textContent = label;
     }
     if (target.name === "theme_preset" && target.value !== "custom") {

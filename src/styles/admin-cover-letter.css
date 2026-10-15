@@ -122,7 +122,8 @@
 .admin-cl-evidence-heading h4 { font-size: var(--admin-text-sm); }
 .admin-cl-evidence-heading small { flex: 0 0 auto; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
 .admin-cover-letter-form .evidence-grid { min-width: 0; grid-template-columns: minmax(0, 1fr); gap: .45rem; }
-.admin-cover-letter-form .evidence-option { grid-template-columns: auto minmax(0, 1fr); gap: .5rem; padding: .55rem .65rem; border-radius: .45rem; background: #fafcfc; }
+.admin-cover-letter-form .evidence-option { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .5rem; padding: .55rem .65rem; border-radius: .45rem; background: var(--admin-color-surface); cursor: pointer; }
+.admin-cover-letter-form .evidence-option input { margin-top: 0; }
 .admin-cover-letter-form .evidence-option strong { font-size: var(--admin-text-xs); }
 .admin-cover-letter-form .evidence-option small { margin-top: .12rem; font-size: var(--admin-text-2xs); }
 
