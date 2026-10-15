@@ -13,6 +13,9 @@ export const formatAdminDate = (value: string | number | Date): string =>
 export const formatAdminDateTime = (value: string | number | Date): string =>
   adminDateTimeFormatter.format(new Date(value));
 
+export const renderAdminFieldLabel = (label: string, required = false): string =>
+  `<span class="admin-field-label">${escapeHtml(label)}${required ? '<span class="admin-required-mark" aria-hidden="true">*</span><span class="sr-only"> (required)</span>' : ""}</span>`;
+
 interface AdminSectionCardOptions {
   title: string;
   note?: string;
@@ -50,6 +53,7 @@ interface AdminYearSelectOptions {
   minYear?: number;
   maxYear?: number;
   attributes?: string;
+  required?: boolean;
 }
 
 interface AdminSelectControlOptions {
@@ -219,6 +223,7 @@ export const renderAdminYearSelect = ({
   minYear = 1950,
   maxYear = new Date().getFullYear() + 10,
   attributes = "",
+  required = false,
 }: AdminYearSelectOptions): string => {
   const currentValue = /^\d{4}$/.test(value) ? Number(value) : null;
   const years = Array.from(
@@ -232,10 +237,10 @@ export const renderAdminYearSelect = ({
   const option = (optionValue: string, optionLabel: string): string => `<button type="button" role="option" aria-selected="${optionValue === value}" data-admin-year-option data-year-value="${escapeHtml(optionValue)}">${escapeHtml(optionLabel)}</button>`;
 
   return `<div class="admin-year-field">
-    <span class="admin-year-field__label" id="${escapeHtml(controlId)}-label">${escapeHtml(label)}</span>
+    <span class="admin-year-field__label" id="${escapeHtml(controlId)}-label">${renderAdminFieldLabel(label, required)}</span>
     <div class="admin-year-picker" data-admin-year-picker>
       <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(value)}"${attributes ? ` ${attributes}` : ""} data-admin-year-input>
-      <button class="admin-year-picker__control" type="button" aria-labelledby="${escapeHtml(controlId)}-label" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(listId)}" data-admin-year-toggle>
+      <button class="admin-year-picker__control" type="button" aria-labelledby="${escapeHtml(controlId)}-label" aria-haspopup="listbox" aria-expanded="false" aria-controls="${escapeHtml(listId)}"${required ? ' aria-required="true"' : ""} data-admin-year-toggle>
         <span data-admin-year-value>${escapeHtml(value || "Select year")}</span>
         <span class="admin-select-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span>
       </button>

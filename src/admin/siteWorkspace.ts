@@ -41,6 +41,7 @@ import {
   formatAdminDate,
   formatAdminDateTime,
   renderAdminDocumentHeader,
+  renderAdminFieldLabel,
   renderAdminPreviewLanguageToggle,
   renderAdminPreviewOptions,
   renderAdminPreviewSelect,
@@ -134,12 +135,12 @@ const websitePreviewTitle = (page: WebsitePreviewPage): string => {
 const value = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const lines = (text: string): string[] => text.split(/\r?\n/).map((item) => item.trim()).filter(Boolean);
 const commaList = (text: string): string[] => text.split(",").map((item) => item.trim()).filter(Boolean);
-const field = (label: string, name: string, current: string, type = "text", dataAttribute = ""): string =>
-  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(current)}"${dataAttribute ? ` ${dataAttribute}` : ""}></label>`;
-const area = (label: string, name: string, current: string, rows = 4): string =>
-  `<label>${escapeHtml(label)}<textarea name="${escapeHtml(name)}" rows="${rows}">${escapeHtml(current)}</textarea></label>`;
-const bilingual = (label: string, name: string, text: { en: string; vi: string }): string =>
-  `<div class="admin-site-bilingual">${field(`${label} (EN)`, `${name}_en`, text.en)}${field(`${label} (VI)`, `${name}_vi`, text.vi)}</div>`;
+const field = (label: string, name: string, current: string, type = "text", dataAttribute = "", required = false): string =>
+  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${renderAdminFieldLabel(label, required)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(current)}"${dataAttribute ? ` ${dataAttribute}` : ""}${required ? ' aria-required="true"' : ""}></label>`;
+const area = (label: string, name: string, current: string, rows = 4, required = false): string =>
+  `<label>${renderAdminFieldLabel(label, required)}<textarea name="${escapeHtml(name)}" rows="${rows}"${required ? ' aria-required="true"' : ""}>${escapeHtml(current)}</textarea></label>`;
+const bilingual = (label: string, name: string, text: { en: string; vi: string }, required = false): string =>
+  `<div class="admin-site-bilingual">${field(`${label} (EN)`, `${name}_en`, text.en, "text", "", required)}${field(`${label} (VI)`, `${name}_vi`, text.vi, "text", "", required)}</div>`;
 
 const profileInitials = (name: string): string => name
   .trim()
@@ -222,7 +223,7 @@ const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
 const renderProfilePhotoRenameDialog = (): string => `<dialog class="admin-dialog admin-photo-rename-dialog" data-profile-photo-rename-dialog aria-labelledby="profile-photo-rename-title">
   <form data-profile-photo-rename-form>
     <div><p class="section-kicker">Profile photo library</p><h2 id="profile-photo-rename-title">Rename photo</h2><p>Use a short name that makes this photo easy to identify.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Photo rename status" hidden></section></div>
-    <label>Photo name<input type="text" maxlength="120" required data-profile-photo-rename-input></label>
+    <label>${renderAdminFieldLabel("Photo name", true)}<input type="text" maxlength="120" required data-profile-photo-rename-input></label>
     <div class="admin-actions"><button class="button button--secondary" type="button" data-profile-photo-rename-cancel>Cancel</button><button class="button" type="submit" data-profile-photo-rename-save>Save name</button></div>
   </form>
 </dialog>`;
@@ -276,15 +277,15 @@ const websiteGeneral = (content: WebsiteContent): string => [
   renderAdminSectionCard({
     title: "Website SEO",
     note: "Edit browser and search-result titles and descriptions.",
-    content: `${bilingual("SEO title", "seo_title", content.seoTitle)}
-      <div class="admin-site-bilingual">${area("SEO description (EN)", "seo_description_en", content.seoDescription.en, 4)}${area("SEO description (VI)", "seo_description_vi", content.seoDescription.vi, 4)}</div>`,
+    content: `${bilingual("SEO title", "seo_title", content.seoTitle, true)}
+      <div class="admin-site-bilingual">${area("SEO description (EN)", "seo_description_en", content.seoDescription.en, 4, true)}${area("SEO description (VI)", "seo_description_vi", content.seoDescription.vi, 4, true)}</div>`,
   }),
   renderAdminSectionCard({
     title: "Website hero",
     note: "Edit the homepage introduction shown above the main content.",
-    content: `${bilingual("Hero eyebrow", "hero_eyebrow", content.heroEyebrow)}
-      ${bilingual("Professional focus", "focus", content.focus)}
-      ${bilingual("Specialization", "specialization", content.specialization)}`,
+    content: `${bilingual("Hero eyebrow", "hero_eyebrow", content.heroEyebrow, true)}
+      ${bilingual("Professional focus", "focus", content.focus, true)}
+      ${bilingual("Specialization", "specialization", content.specialization, true)}`,
   }),
   renderAdminSectionCard({
     title: "Website listings",
@@ -439,16 +440,16 @@ const profileIdentity = (professional: ProfessionalProfileContent, photos: Profi
   title: "Profile identity",
   note: "Shared contact and profile details used across all outputs.",
   content: `<div class="admin-form-grid">
-    <label class="admin-derived-field"><span class="admin-derived-field__heading"><span>Full name</span><span class="admin-derived-field__output" id="profile-name-english">EN <span aria-hidden="true">·</span> <strong data-profile-name-english>${escapeHtml(profileName(professional.profile.name, "en"))}</strong></span></span><input name="profile_name" type="text" value="${escapeHtml(profileName(professional.profile.name, "vi"))}" aria-describedby="profile-name-english" data-profile-name-input></label>
-    ${field("Email", "profile_email", professional.profile.email, "email")}
+    <label class="admin-derived-field"><span class="admin-derived-field__heading"><span>${renderAdminFieldLabel("Full name", true)}</span><span class="admin-derived-field__output" id="profile-name-english">EN <span aria-hidden="true">·</span> <strong data-profile-name-english>${escapeHtml(profileName(professional.profile.name, "en"))}</strong></span></span><input name="profile_name" type="text" value="${escapeHtml(profileName(professional.profile.name, "vi"))}" aria-describedby="profile-name-english" aria-required="true" data-profile-name-input></label>
+    ${field("Email", "profile_email", professional.profile.email, "email", "", true)}
     ${field("Phone", "profile_phone", professional.profile.phone, "tel")}
     ${profilePhotoControl(professional, photos)}
-    ${field("Professional title (EN)", "profile_title_en", professional.profile.professionalTitle.en)}
+    ${field("Professional title (EN)", "profile_title_en", professional.profile.professionalTitle.en, "text", "", true)}
     ${field("Professional title (VI)", "profile_title_vi", professional.profile.professionalTitle.vi)}
     ${field("Location (EN)", "profile_location_en", professional.profile.location.en)}
     ${field("Location (VI)", "profile_location_vi", professional.profile.location.vi)}
   </div>
-  <div class="admin-site-bilingual">${area("Summary (EN)", "profile_summary_en", professional.profile.summary.en, 6)}${area("Summary (VI)", "profile_summary_vi", professional.profile.summary.vi, 6)}</div>`,
+  <div class="admin-site-bilingual">${area("Summary (EN)", "profile_summary_en", professional.profile.summary.en, 6, true)}${area("Summary (VI)", "profile_summary_vi", professional.profile.summary.vi, 6)}</div>`,
 });
 
 const experienceFieldName = (id: string, fieldName: string): string => `profile_experience_${id}_${fieldName}`;
@@ -478,9 +479,9 @@ const experienceLocationCombobox = (item: Experience): string => {
   const listId = `${inputId}-list`;
   const displayValue = experienceLocationLabel(selectedCode, item.location.en);
   return `<div class="admin-location-field">
-    <label for="${escapeHtml(inputId)}">Country / region</label>
+    <label for="${escapeHtml(inputId)}">${renderAdminFieldLabel("Country / region", true)}</label>
     <div class="admin-location-combobox" data-location-combobox>
-      <input id="${escapeHtml(inputId)}" name="${escapeHtml(experienceFieldName(item.id, "location_label"))}" value="${escapeHtml(displayValue)}" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${escapeHtml(listId)}" placeholder="Search country or region" data-location-input>
+      <input id="${escapeHtml(inputId)}" name="${escapeHtml(experienceFieldName(item.id, "location_label"))}" value="${escapeHtml(displayValue)}" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${escapeHtml(listId)}" aria-required="true" placeholder="Search country or region" data-location-input>
       <input name="${escapeHtml(experienceFieldName(item.id, "location_code"))}" value="${escapeHtml(selectedCode ?? "__legacy__")}" type="hidden" data-location-code>
       <button class="admin-location-combobox__toggle" type="button" aria-label="Show country or region options" aria-expanded="false" tabindex="-1" data-location-toggle><svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
       <div class="admin-location-combobox__list" id="${escapeHtml(listId)}" role="listbox" data-location-list hidden>
@@ -504,15 +505,15 @@ const experienceCard = (item: Experience, index: number, total: number): string 
     </header>
     <div class="admin-experience-card__fields admin-profile-entry-card__fields">
       <div class="admin-form-grid">
-        ${field("Company", experienceFieldName(item.id, "company"), item.company, "text", `data-experience-company="${escapeHtml(item.id)}"`)}
+        ${field("Company", experienceFieldName(item.id, "company"), item.company, "text", `data-experience-company="${escapeHtml(item.id)}"`, true)}
         ${experienceLocationCombobox(item)}
       </div>
       <div class="admin-site-bilingual">
-        ${field("Position (EN)", experienceFieldName(item.id, "position_en"), item.position.en)}
+        ${field("Position (EN)", experienceFieldName(item.id, "position_en"), item.position.en, "text", "", true)}
         ${field("Position (VI)", experienceFieldName(item.id, "position_vi"), item.position.vi)}
       </div>
       <div class="admin-form-grid">
-        ${field("Start", experienceFieldName(item.id, "start"), item.startDate, "month")}
+        ${field("Start", experienceFieldName(item.id, "start"), item.startDate, "month", "", true)}
         ${field("End (blank = Present)", experienceFieldName(item.id, "end"), item.endDate ?? "", "month")}
       </div>
       <div class="admin-site-bilingual">
@@ -556,11 +557,11 @@ const educationCard = (item: Education, index: number, total: number, credential
     </header>
     <div class="admin-profile-entry-card__fields">
       <div class="admin-site-bilingual">
-        ${field("Institution (EN)", educationFieldName(item.id, "institution_en"), item.institution.en, "text", `data-education-institution="${escapeHtml(item.id)}"`)}
+        ${field("Institution (EN)", educationFieldName(item.id, "institution_en"), item.institution.en, "text", `data-education-institution="${escapeHtml(item.id)}"`, true)}
         ${field("Institution (VI)", educationFieldName(item.id, "institution_vi"), item.institution.vi)}
       </div>
       <div class="admin-site-bilingual">
-        ${field("Field of study (EN)", educationFieldName(item.id, "field_en"), item.field.en)}
+        ${field("Field of study (EN)", educationFieldName(item.id, "field_en"), item.field.en, "text", "", true)}
         ${field("Field of study (VI)", educationFieldName(item.id, "field_vi"), item.field.vi)}
       </div>
       <div class="admin-site-bilingual">
@@ -568,8 +569,8 @@ const educationCard = (item: Education, index: number, total: number, credential
         ${field("Degree classification (VI)", educationFieldName(item.id, "classification_vi"), degreeClassificationValue(item.classification?.vi ?? "", "vi"))}
       </div>
       <div class="admin-form-grid">
-        ${renderAdminYearSelect({ label: "Start year", name: educationFieldName(item.id, "start"), value: item.startDate })}
-        ${renderAdminYearSelect({ label: "End year", name: educationFieldName(item.id, "end"), value: item.endDate })}
+        ${renderAdminYearSelect({ label: "Start year", name: educationFieldName(item.id, "start"), value: item.startDate, required: true })}
+        ${renderAdminYearSelect({ label: "End year", name: educationFieldName(item.id, "end"), value: item.endDate, required: true })}
       </div>
       ${renderLinkedCredentials(credentials, "education", item.id)}
     </div>
@@ -612,7 +613,7 @@ const languageCard = (item: LanguageSkill, index: number, total: number, credent
     </header>
     <div class="admin-profile-entry-card__fields">
       <div class="admin-site-bilingual">
-        ${field("Name (EN)", languageFieldName(item.id, "name_en"), item.name.en, "text", `data-language-name="${escapeHtml(item.id)}"`)}
+        ${field("Name (EN)", languageFieldName(item.id, "name_en"), item.name.en, "text", `data-language-name="${escapeHtml(item.id)}"`, true)}
         ${field("Name (VI)", languageFieldName(item.id, "name_vi"), item.name.vi)}
       </div>
       <div class="admin-site-bilingual">

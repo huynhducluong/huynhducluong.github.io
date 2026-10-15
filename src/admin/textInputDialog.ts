@@ -35,7 +35,7 @@ const ensureDialog = (): HTMLDialogElement => {
       <p id="admin-text-input-description" data-admin-text-input-description></p>
       <section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Input status" hidden></section>
     </div>
-    <label><span data-admin-text-input-label></span><input type="text" required data-admin-text-input></label>
+    <label><span><span data-admin-text-input-label></span><span class="admin-required-mark" aria-hidden="true">*</span><span class="sr-only"> (required)</span></span><input type="text" required data-admin-text-input></label>
     <div class="admin-actions">
       <button class="button button--secondary" type="button" data-admin-text-input-cancel>Cancel</button>
       <button class="button" type="submit" data-admin-text-input-submit></button>

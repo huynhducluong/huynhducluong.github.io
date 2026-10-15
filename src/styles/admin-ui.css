@@ -36,6 +36,16 @@ html.admin-app {
 
 html.admin-app body { background: var(--admin-color-canvas); }
 
+.admin-field-label { display: inline; }
+
+.admin-required-mark {
+  display: inline-block;
+  margin-inline-start: .2em;
+  color: var(--admin-color-danger);
+  font-weight: var(--admin-weight-bold);
+  line-height: 1;
+}
+
 html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   outline: 2px solid var(--admin-color-focus);
   outline-offset: 2px;

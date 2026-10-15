@@ -73,6 +73,7 @@ import {
   formatAdminDate,
   formatAdminDateTime,
   renderAdminDocumentHeader,
+  renderAdminFieldLabel,
   renderAdminPreviewToolbar,
   renderAdminPreviewLanguageToggle,
   renderAdminSelectControl,
@@ -133,14 +134,14 @@ let previewSender: PreviewSender | undefined;
 let previewZoomController: PreviewZoomController | undefined;
 
 const text = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
-const field = (label: string, name: string, value: string, type = "text"): string =>
-  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${escapeHtml(label)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(value)}"></label>`;
-const area = (label: string, name: string, value: string, rows = 5): string =>
-  `<label>${escapeHtml(label)}<textarea name="${escapeHtml(name)}" rows="${rows}">${escapeHtml(value)}</textarea></label>`;
-const localizedFields = (label: string, name: string, value: LocalizedText): string =>
-  `<div class="admin-site-bilingual">${field(`${label} (EN)`, `${name}_en`, value.en)}${field(`${label} (VI)`, `${name}_vi`, value.vi)}</div>`;
-const localizedAreas = (label: string, name: string, value: LocalizedText, rows = 5): string =>
-  `<div class="admin-site-bilingual">${area(`${label} (EN)`, `${name}_en`, value.en, rows)}${area(`${label} (VI)`, `${name}_vi`, value.vi, rows)}</div>`;
+const field = (label: string, name: string, value: string, type = "text", required = false): string =>
+  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${renderAdminFieldLabel(label, required)}<input name="${escapeHtml(name)}" type="${type}" value="${escapeHtml(value)}"${required ? ' aria-required="true"' : ""}></label>`;
+const area = (label: string, name: string, value: string, rows = 5, required = false): string =>
+  `<label>${renderAdminFieldLabel(label, required)}<textarea name="${escapeHtml(name)}" rows="${rows}"${required ? ' aria-required="true"' : ""}>${escapeHtml(value)}</textarea></label>`;
+const localizedFields = (label: string, name: string, value: LocalizedText, requiredEnglish = false): string =>
+  `<div class="admin-site-bilingual">${field(`${label} (EN)`, `${name}_en`, value.en, "text", requiredEnglish)}${field(`${label} (VI)`, `${name}_vi`, value.vi)}</div>`;
+const localizedAreas = (label: string, name: string, value: LocalizedText, rows = 5, requiredEnglish = false): string =>
+  `<div class="admin-site-bilingual">${area(`${label} (EN)`, `${name}_en`, value.en, rows, requiredEnglish)}${area(`${label} (VI)`, `${name}_vi`, value.vi, rows)}</div>`;
 
 const themeFields = (theme: StoredDocumentTheme): string => renderDocumentThemeFields({
   theme,
@@ -248,8 +249,8 @@ const portfolioMediaAssignmentsPanel = (runtime: PortfolioRuntimeData): string =
     return `<article class="admin-portfolio-media-item" data-portfolio-media-item data-portfolio-media-kind="project" data-portfolio-media-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}>
       <header>${preview ? `<img src="${escapeHtml(preview)}" alt="">` : '<span class="admin-portfolio-media-item__placeholder" aria-hidden="true">No image</span>'}<span><strong>${escapeHtml(item.name.en)}</strong><small data-portfolio-media-requirement>${escapeHtml(mediaRequirementLabel(requirement))}</small></span></header>
       <div class="admin-portfolio-media-item__fields">
-        <label><span>Primary visual <small data-portfolio-primary-status${requirement.primary ? " hidden" : ""}>${requirement.primary ? "" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `project_primary_media_${item.id}`, attributes: `data-portfolio-primary-select${requirement.primary ? ' aria-required="true"' : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.primary?.id) })}</label>
-        <label><span>Supporting visual <small data-portfolio-supporting-status${requirement.supportingRequired ? " hidden" : ""}>${requirement.supporting ? requirement.supportingRequired ? "" : "Optional" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `project_supporting_media_${item.id}`, attributes: `data-portfolio-supporting-select${requirement.supporting ? requirement.supportingRequired ? ' aria-required="true"' : "" : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.supporting?.id, true) })}</label>
+        <label><span>Primary visual<span class="admin-required-mark" aria-hidden="true" data-portfolio-primary-required${requirement.primary ? "" : " hidden"}>*</span> <small data-portfolio-primary-status${requirement.primary ? " hidden" : ""}>${requirement.primary ? "" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `project_primary_media_${item.id}`, attributes: `data-portfolio-primary-select${requirement.primary ? ' aria-required="true"' : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.primary?.id) })}</label>
+        <label><span>Supporting visual<span class="admin-required-mark" aria-hidden="true" data-portfolio-supporting-required${requirement.supportingRequired ? "" : " hidden"}>*</span> <small data-portfolio-supporting-status${requirement.supportingRequired ? " hidden" : ""}>${requirement.supporting ? requirement.supportingRequired ? "" : "Optional" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `project_supporting_media_${item.id}`, attributes: `data-portfolio-supporting-select${requirement.supporting ? requirement.supportingRequired ? ' aria-required="true"' : "" : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.supporting?.id, true) })}</label>
       </div>
     </article>`;
   }).join("");
@@ -262,8 +263,8 @@ const portfolioMediaAssignmentsPanel = (runtime: PortfolioRuntimeData): string =
     return `<article class="admin-portfolio-media-item" data-portfolio-media-item data-portfolio-media-kind="tool" data-portfolio-media-id="${escapeHtml(item.id)}"${item.includeInPortfolio ? "" : " hidden"}>
       <header>${preview ? `<img src="${escapeHtml(preview)}" alt="">` : '<span class="admin-portfolio-media-item__placeholder" aria-hidden="true">No image</span>'}<span><strong>${escapeHtml(item.name)}</strong><small data-portfolio-media-requirement>${escapeHtml(mediaRequirementLabel(requirement))}</small></span></header>
       <div class="admin-portfolio-media-item__fields">
-        <label><span>Primary visual <small data-portfolio-primary-status${requirement.primary ? " hidden" : ""}>${requirement.primary ? "" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `tool_primary_media_${item.id}`, attributes: `data-portfolio-primary-select${requirement.primary ? ' aria-required="true"' : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.primary?.id) })}</label>
-        <label><span>Supporting visual <small data-portfolio-supporting-status${requirement.supportingRequired ? " hidden" : ""}>${requirement.supporting ? requirement.supportingRequired ? "" : "Optional" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `tool_supporting_media_${item.id}`, attributes: `data-portfolio-supporting-select${requirement.supporting ? requirement.supportingRequired ? ' aria-required="true"' : "" : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.supporting?.id, true) })}</label>
+        <label><span>Primary visual<span class="admin-required-mark" aria-hidden="true" data-portfolio-primary-required${requirement.primary ? "" : " hidden"}>*</span> <small data-portfolio-primary-status${requirement.primary ? " hidden" : ""}>${requirement.primary ? "" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `tool_primary_media_${item.id}`, attributes: `data-portfolio-primary-select${requirement.primary ? ' aria-required="true"' : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.primary?.id) })}</label>
+        <label><span>Supporting visual<span class="admin-required-mark" aria-hidden="true" data-portfolio-supporting-required${requirement.supportingRequired ? "" : " hidden"}>*</span> <small data-portfolio-supporting-status${requirement.supportingRequired ? " hidden" : ""}>${requirement.supporting ? requirement.supportingRequired ? "" : "Optional" : "Not used by layout"}</small></span>${renderAdminSelectControl({ name: `tool_supporting_media_${item.id}`, attributes: `data-portfolio-supporting-select${requirement.supporting ? requirement.supportingRequired ? ' aria-required="true"' : "" : " disabled"}`, options: portfolioMediaOptions(item.images, resolved.supporting?.id, true) })}</label>
       </div>
     </article>`;
   }).join("");
@@ -586,8 +587,8 @@ const cvContentPanel = (content: CvContent): string => [
   renderAdminSectionCard({
     title: "Target profile",
     note: "Tailor the title and summary for this CV and role.",
-    content: `${localizedFields("Professional title", "profile_title", content.profile.professionalTitle)}
-    ${localizedAreas("Professional summary", "profile_summary", content.profile.summary)}`,
+    content: `${localizedFields("Professional title", "profile_title", content.profile.professionalTitle, true)}
+    ${localizedAreas("Professional summary", "profile_summary", content.profile.summary, 5, true)}`,
     actions: '<button class="button button--secondary" type="button" data-sync-target-profile>Sync from Professional Profile</button>',
   }),
 ].join("");
@@ -698,7 +699,7 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
     title: "CV content selection",
     note: "Choose projects, presentation, responsibilities and tools for this CV draft.",
     content: `<div class="admin-cv-selection">
-      <section><h4>Projects</h4><div class="admin-cv-selection__list">
+      <section><h4>${renderAdminFieldLabel("Projects", true)}</h4><div class="admin-cv-selection__list">
         ${projects.map((item) => {
           const selection = selectedProjects.get(item.id);
           const display = selection?.cvDisplay ?? "excluded";
@@ -714,7 +715,7 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
             })}</label>
             <label class="admin-switch"><input type="checkbox" name="cv_project_summary_${escapeHtml(item.id)}"${selection?.cvShowSummary ? " checked" : ""}${ready ? "" : " disabled"}><span>Show summary</span></label>
             <span class="status status--${displayStatus}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span>
-            <fieldset class="admin-cv-selection__responsibilities" data-cv-responsibilities${display === "detailed" ? "" : " hidden"}><legend>Responsibilities</legend>${item.responsibilities.length ? item.responsibilities.map((responsibility) => `<label><input type="checkbox" name="cv_project_responsibility_${escapeHtml(item.id)}" value="${escapeHtml(responsibility.id)}"${responsibilityIds.has(responsibility.id) ? " checked" : ""}${ready ? "" : " disabled"}><span>${escapeHtml(responsibility.text.en)}</span></label>`).join("") : '<p class="admin-empty">No responsibilities saved.</p>'}</fieldset>
+            <fieldset class="admin-cv-selection__responsibilities" data-cv-responsibilities${display === "detailed" ? "" : " hidden"}><legend>${renderAdminFieldLabel("Responsibilities", true)}</legend>${item.responsibilities.length ? item.responsibilities.map((responsibility) => `<label><input type="checkbox" name="cv_project_responsibility_${escapeHtml(item.id)}" value="${escapeHtml(responsibility.id)}"${responsibilityIds.has(responsibility.id) ? " checked" : ""}${ready ? "" : " disabled"}><span>${escapeHtml(responsibility.text.en)}</span></label>`).join("") : '<p class="admin-empty">No responsibilities saved.</p>'}</fieldset>
           </article>`;
         }).join("")}
       </div></section>
@@ -817,7 +818,7 @@ const portfolioContentPanel = (content: PortfolioContent): string => [
       ${field("Portfolio version", "portfolio_version", content.version)}
       ${renderAdminYearSelect({ label: "Cover year", name: "portfolio_year", value: content.year })}
     </div>
-    ${field("Document title", "portfolio_title", content.title)}
+    ${field("Document title", "portfolio_title", content.title, "text", true)}
     ${localizedFields("Cover kicker", "portfolio_kicker", content.kicker)}`,
   }),
   renderAdminSectionCard({
@@ -842,7 +843,7 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
   title: "Portfolio content selection",
   note: "Choose projects and tools. Display order follows their source libraries; layout choices live in Appearance.",
   content: `<div class="admin-document-selection">
-    <h4>Projects</h4>
+    <h4>${renderAdminFieldLabel("Projects", true)}</h4>
     ${runtime.projects.map((item) => {
       const ready = item.status === "published";
       return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
@@ -1527,6 +1528,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       const supporting = item.querySelector<HTMLSelectElement>("[data-portfolio-supporting-select]");
       const primaryStatus = item.querySelector<HTMLElement>("[data-portfolio-primary-status]");
       const supportingStatus = item.querySelector<HTMLElement>("[data-portfolio-supporting-status]");
+      const primaryRequired = item.querySelector<HTMLElement>("[data-portfolio-primary-required]");
+      const supportingRequired = item.querySelector<HTMLElement>("[data-portfolio-supporting-required]");
       const requirementLabel = item.querySelector<HTMLElement>("[data-portfolio-media-requirement]");
       if (primary) {
         primary.disabled = !requirement.primary;
@@ -1548,6 +1551,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
           : "Not used by layout";
         supportingStatus.hidden = Boolean(requirement.supportingRequired);
       }
+      if (primaryRequired) primaryRequired.hidden = !requirement.primary;
+      if (supportingRequired) supportingRequired.hidden = !requirement.supportingRequired;
       if (requirementLabel) requirementLabel.textContent = mediaRequirementLabel(requirement);
     });
   };

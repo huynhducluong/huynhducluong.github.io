@@ -1,7 +1,7 @@
 import Cropper from "cropperjs";
 import type { ProfilePhotoAsset } from "../types/profilePhoto";
 import { createProfilePhoto } from "../services/profilePhotoRepository";
-import { setButtonBusy } from "./ui";
+import { renderAdminFieldLabel, setButtonBusy } from "./ui";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 const maxSourceBytes = 20 * 1024 * 1024;
@@ -41,7 +41,7 @@ export const renderProfilePhotoCropDialog = (): string => `
           <div><cropper-viewer selection="#profile-photo-crop-selection" resize="both"></cropper-viewer><span>Square</span></div>
           <div><cropper-viewer class="is-round" selection="#profile-photo-crop-selection" resize="both"></cropper-viewer><span>CV / Portfolio</span></div>
         </div>
-        <label>Photo name<input type="text" maxlength="120" data-profile-photo-crop-name></label>
+        <label>${renderAdminFieldLabel("Photo name", true)}<input type="text" maxlength="120" aria-required="true" data-profile-photo-crop-name></label>
         <p data-profile-photo-crop-meta></p>
       </aside>
     </div>

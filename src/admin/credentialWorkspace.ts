@@ -19,7 +19,7 @@ import type {
 } from "../types/credential";
 import { confirmAdmin } from "./confirmDialog";
 import { clearAdminDialogStatus } from "./toast";
-import { formatAdminDate, renderAdminSectionCard, setButtonBusy } from "./ui";
+import { formatAdminDate, renderAdminFieldLabel, renderAdminSectionCard, setButtonBusy } from "./ui";
 
 const credentialKindLabels: Record<CredentialKind, string> = {
   professional_certification: "Professional certification",
@@ -109,9 +109,9 @@ const credentialDialog = (professional: ProfessionalProfileContent): string => `
         <label>Credential type<select name="credential_kind">${Object.entries(credentialKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label>
         <label>Linked profile entry<select name="credential_relation">${relationOptions(professional)}</select></label>
       </div>
-      <div class="admin-site-bilingual"><label>Title (EN)<input name="credential_title_en" maxlength="180" required></label><label>Title (VI)<input name="credential_title_vi" maxlength="180"></label></div>
-      <div class="admin-site-bilingual"><label>Issuer (EN)<input name="credential_issuer_en" maxlength="180" required></label><label>Issuer (VI)<input name="credential_issuer_vi" maxlength="180"></label></div>
-      <div class="admin-credential-date-grid"><label>Issue date<input name="credential_issued_on" type="date" required></label><label>Expiry date<input name="credential_expires_on" type="date" data-credential-expiry></label><label class="admin-switch admin-credential-no-expiry"><input name="credential_no_expiry" type="checkbox" checked data-credential-no-expiry><span>This credential does not expire</span></label></div>
+      <div class="admin-site-bilingual"><label>${renderAdminFieldLabel("Title (EN)", true)}<input name="credential_title_en" maxlength="180" required></label><label>${renderAdminFieldLabel("Title (VI)")}<input name="credential_title_vi" maxlength="180"></label></div>
+      <div class="admin-site-bilingual"><label>${renderAdminFieldLabel("Issuer (EN)", true)}<input name="credential_issuer_en" maxlength="180" required></label><label>${renderAdminFieldLabel("Issuer (VI)")}<input name="credential_issuer_vi" maxlength="180"></label></div>
+      <div class="admin-credential-date-grid"><label>${renderAdminFieldLabel("Issue date", true)}<input name="credential_issued_on" type="date" required></label><label><span>Expiry date<span data-credential-expiry-required hidden><span class="admin-required-mark" aria-hidden="true">*</span><span class="sr-only"> (required)</span></span></span><input name="credential_expires_on" type="date" data-credential-expiry></label><label class="admin-switch admin-credential-no-expiry"><input name="credential_no_expiry" type="checkbox" checked data-credential-no-expiry><span>This credential does not expire</span></label></div>
       <div class="admin-form-grid"><label>Credential number<input name="credential_number" maxlength="180"></label><label>Verification URL<input name="credential_url" type="url" placeholder="https://"></label></div>
       <div class="admin-site-bilingual"><label>Description (EN)<textarea name="credential_description_en" rows="2"></textarea></label><label>Description (VI)<textarea name="credential_description_vi" rows="2"></textarea></label></div>
     </div>
@@ -178,9 +178,13 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
   const title = dialog?.querySelector<HTMLElement>("[data-credential-dialog-title]");
   const noExpiry = dialog?.querySelector<HTMLInputElement>("[data-credential-no-expiry]");
   const expiry = dialog?.querySelector<HTMLInputElement>("[data-credential-expiry]");
+  const expiryRequired = dialog?.querySelector<HTMLElement>("[data-credential-expiry-required]");
   const setExpiryState = (): void => {
     if (!expiry || !noExpiry) return;
     expiry.disabled = noExpiry.checked;
+    expiry.required = !noExpiry.checked;
+    expiry.setAttribute("aria-required", String(!noExpiry.checked));
+    if (expiryRequired) expiryRequired.hidden = noExpiry.checked;
     if (noExpiry.checked) expiry.value = "";
   };
   noExpiry?.addEventListener("change", setExpiryState);

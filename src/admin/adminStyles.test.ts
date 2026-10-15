@@ -80,6 +80,17 @@ describe("Admin stylesheet contract", () => {
     expect(profileDocumentWorkspaceSource).not.toContain("image.alt.en ?");
     expect(profileDocumentWorkspaceSource).not.toContain("Required by layout");
     expect(profileDocumentWorkspaceSource).toContain('aria-required="true"');
+    expect(profileDocumentWorkspaceSource).toContain("data-portfolio-primary-required");
+    expect(profileDocumentWorkspaceSource).toContain("data-portfolio-supporting-required");
+  });
+
+  it("uses one styled required marker and keeps generated slugs optional to enter", () => {
+    expect(mainSource).toContain('field("Slug", "slug", project.slug, "text", "Auto-generated from project name")');
+    expect(mainSource).toContain('field("Slug", "slug", tool.slug, "text", "Auto-generated from tool name")');
+    expect(mainSource).not.toContain('"Slug *"');
+    expect(siteWorkspaceSource).toContain('field("Institution (EN)"');
+    expect(siteWorkspaceSource).not.toContain('"Institution (VI) *"');
+    expect(credentialWorkspaceSource).toContain("data-credential-expiry-required");
   });
 
   it("separates Portfolio credentials into the ordered Background tab", () => {

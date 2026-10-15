@@ -16,6 +16,7 @@ import {
   bindAdminYearPickers,
   formatAdminDateTime,
   renderAdminEditorHeader,
+  renderAdminFieldLabel,
   renderAdminSectionCard,
   renderAdminWorkspaceState,
 } from "./ui";
@@ -476,7 +477,7 @@ const loginView = (): void => {
           <button class="admin-auth-tabs__button" type="button" role="tab" aria-selected="false" aria-controls="magic-link-panel" data-auth-mode="magic-link">Magic Link</button>
         </div>
         <form id="password-panel" role="tabpanel" data-password-login-form>
-          <label>Password
+          <label>${renderAdminFieldLabel("Password", true)}
             <span class="admin-password-field">
               <input name="password" type="password" autocomplete="current-password" required autofocus>
               <button type="button" data-password-visibility aria-label="Show password">Show</button>
@@ -688,8 +689,8 @@ const contentList = (): string => {
   }).join("");
 };
 
-const field = (label: string, name: string, value = "", type = "text", placeholder = ""): string =>
-  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${label}<input name="${name}" type="${type}" value="${escapeHtml(value)}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ""}></label>`;
+const field = (label: string, name: string, value = "", type = "text", placeholder = "", required = false): string =>
+  `<label${type === "month" ? ' class="admin-date-field"' : ""}>${renderAdminFieldLabel(label, required)}<input name="${name}" type="${type}" value="${escapeHtml(value)}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ""}${required ? ' aria-required="true"' : ""}></label>`;
 
 const contentStatusLabel = (status: PublicationStatus): string =>
   status === "published" ? "Ready" : status.charAt(0).toUpperCase() + status.slice(1);
@@ -718,7 +719,7 @@ const mediaLibrary = (mediaRows: AdminMediaRow[]): string => {
       <div class="admin-media-row__preview"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}" loading="lazy" decoding="async"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
       <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
       <div class="admin-media-row__fields">
-        <label><span>Alt text (EN)</span><input value="${escapeHtml(item.alt.en)}" data-media-alt-en></label>
+        <label><span>${renderAdminFieldLabel("Alt text (EN)", item.kind === "cover")}</span><input value="${escapeHtml(item.alt.en)}"${item.kind === "cover" ? ' aria-required="true"' : ""} data-media-alt-en></label>
         <label><span>Alt text (VI)</span><input value="${escapeHtml(item.alt.vi)}" data-media-alt-vi></label>
         <label><span>Caption (EN)</span><input value="${escapeHtml(item.caption?.en ?? "")}" data-media-caption-en></label>
         <label><span>Caption (VI)</span><input value="${escapeHtml(item.caption?.vi ?? "")}" data-media-caption-vi></label>
@@ -798,13 +799,13 @@ const editor = (project: AdminProjectRow): string => `
           title: "Project overview",
           note: "Edit identity, dates, slug and optional video. Output selection is managed in Website, CV and Portfolio.",
           content: `<div class="admin-form-grid">
-          ${field("Project name (EN) *", "name_en", project.name.en)}${field("Project name (VI)", "name_vi", project.name.vi)}
+          ${field("Project name (EN)", "name_en", project.name.en, "text", "", true)}${field("Project name (VI)", "name_vi", project.name.vi)}
           ${field("Role (EN)", "role_en", project.role?.en ?? "")}${field("Role (VI)", "role_vi", project.role?.vi ?? "")}
           ${field("Location (EN)", "location_en", project.location.en)}${field("Location (VI)", "location_vi", project.location.vi)}
           ${field("Start", "start_date", project.start_date ?? "", "month")}
           ${field("End (blank = Present)", "end_date", project.is_current ? "" : project.end_date ?? "", "month")}
-          ${field("Slug *", "slug", project.slug)}
-          ${field("YouTube URL (optional)", "youtube_url", project.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}
+          ${field("Slug", "slug", project.slug, "text", "Auto-generated from project name")}
+          ${field("YouTube URL", "youtube_url", project.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}
         </div>`,
         })}
         ${readinessCard("project", project)}
@@ -813,12 +814,12 @@ const editor = (project: AdminProjectRow): string => `
         ${renderAdminSectionCard({
           title: "Project content",
           note: "Edit paired EN and VI project descriptions.",
-          content: `<div class="admin-form-grid"><label>Summary (EN)<textarea name="summary_en" rows="7">${escapeHtml(project.summary?.en ?? "")}</textarea></label><label>Summary (VI)<textarea name="summary_vi" rows="7">${escapeHtml(project.summary?.vi ?? "")}</textarea></label></div>
-            <div class="admin-form-grid"><label>Challenge (EN)<textarea name="challenge_en" rows="6">${escapeHtml(project.challenge?.en ?? "")}</textarea></label><label>Challenge (VI)<textarea name="challenge_vi" rows="6">${escapeHtml(project.challenge?.vi ?? "")}</textarea></label></div>
-            <div class="admin-form-grid"><label>Approach (EN)<textarea name="approach_en" rows="6">${escapeHtml(project.approach?.en ?? "")}</textarea></label><label>Approach (VI)<textarea name="approach_vi" rows="6">${escapeHtml(project.approach?.vi ?? "")}</textarea></label></div>
-            <div class="admin-form-grid"><label>Outcome (EN)<textarea name="outcome_en" rows="6">${escapeHtml(project.outcome?.en ?? "")}</textarea></label><label>Outcome (VI)<textarea name="outcome_vi" rows="6">${escapeHtml(project.outcome?.vi ?? "")}</textarea></label></div>
-            <div class="admin-form-grid"><label>Responsibilities (EN, one item per line)<textarea name="responsibilities_en" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label><label>Responsibilities (VI, one item per line)<textarea name="responsibilities_vi" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.vi).join("\n"))}</textarea></label></div>
-            <label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}"></label>`,
+          content: `<div class="admin-form-grid"><label>${renderAdminFieldLabel("Summary (EN)", true)}<textarea name="summary_en" rows="7" aria-required="true">${escapeHtml(project.summary?.en ?? "")}</textarea></label><label>${renderAdminFieldLabel("Summary (VI)")}<textarea name="summary_vi" rows="7">${escapeHtml(project.summary?.vi ?? "")}</textarea></label></div>
+            <div class="admin-form-grid"><label>${renderAdminFieldLabel("Challenge (EN)", true)}<textarea name="challenge_en" rows="6" aria-required="true">${escapeHtml(project.challenge?.en ?? "")}</textarea></label><label>${renderAdminFieldLabel("Challenge (VI)")}<textarea name="challenge_vi" rows="6">${escapeHtml(project.challenge?.vi ?? "")}</textarea></label></div>
+            <div class="admin-form-grid"><label>${renderAdminFieldLabel("Approach (EN)", true)}<textarea name="approach_en" rows="6" aria-required="true">${escapeHtml(project.approach?.en ?? "")}</textarea></label><label>${renderAdminFieldLabel("Approach (VI)")}<textarea name="approach_vi" rows="6">${escapeHtml(project.approach?.vi ?? "")}</textarea></label></div>
+            <div class="admin-form-grid"><label>${renderAdminFieldLabel("Outcome (EN)", true)}<textarea name="outcome_en" rows="6" aria-required="true">${escapeHtml(project.outcome?.en ?? "")}</textarea></label><label>${renderAdminFieldLabel("Outcome (VI)")}<textarea name="outcome_vi" rows="6">${escapeHtml(project.outcome?.vi ?? "")}</textarea></label></div>
+            <div class="admin-form-grid"><label>${renderAdminFieldLabel("Responsibilities (EN, one item per line)", true)}<textarea name="responsibilities_en" rows="9" aria-required="true">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label><label>${renderAdminFieldLabel("Responsibilities (VI, one item per line)")}<textarea name="responsibilities_vi" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.vi).join("\n"))}</textarea></label></div>
+            <label>${renderAdminFieldLabel("Technologies (comma separated)", true)}<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}" aria-required="true"></label>`,
         })}
       </section>
     </form>
@@ -839,11 +840,11 @@ const toolEditor = (tool: AdminToolRow): string => `
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
-        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug, technologies and optional video. Output selection is managed in Website, CV and Portfolio.", content: `<div class="admin-form-grid">${field("Tool name *", "name", tool.name)}${field("Slug *", "slug", tool.slug)}</div><label>Technologies (comma separated)<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}"></label>${field("YouTube URL (optional)", "youtube_url", tool.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}` })}
+        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug, technologies and optional video. Output selection is managed in Website, CV and Portfolio.", content: `<div class="admin-form-grid">${field("Tool name", "name", tool.name, "text", "", true)}${field("Slug", "slug", tool.slug, "text", "Auto-generated from tool name")}</div><label>${renderAdminFieldLabel("Technologies (comma separated)", true)}<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}" aria-required="true"></label>${field("YouTube URL", "youtube_url", tool.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}` })}
         ${readinessCard("tool", tool)}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
-        ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>Problem (EN)<textarea name="problem_en" rows="6">${escapeHtml(tool.problem.en)}</textarea></label><label>Problem (VI)<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>Solution (EN)<textarea name="solution_en" rows="6">${escapeHtml(tool.solution.en)}</textarea></label><label>Solution (VI)<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>Benefit (EN)<textarea name="benefit_en" rows="5">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>Benefit (VI)<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
+        ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>${renderAdminFieldLabel("Problem (EN)", true)}<textarea name="problem_en" rows="6" aria-required="true">${escapeHtml(tool.problem.en)}</textarea></label><label>${renderAdminFieldLabel("Problem (VI)")}<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>${renderAdminFieldLabel("Solution (EN)", true)}<textarea name="solution_en" rows="6" aria-required="true">${escapeHtml(tool.solution.en)}</textarea></label><label>${renderAdminFieldLabel("Solution (VI)")}<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>${renderAdminFieldLabel("Benefit (EN)", true)}<textarea name="benefit_en" rows="5" aria-required="true">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>${renderAdminFieldLabel("Benefit (VI)")}<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
       </section>
     </form>
     ${mediaPanel("tool", tool.tool_images)}
@@ -991,8 +992,8 @@ const dashboardView = (): void => {
       <form data-password-update-form>
         <div><p class="section-kicker">Account security</p><h2>Set or change password</h2></div>
         <p>Use at least 12 characters. The password is sent directly to Supabase Auth and is never stored in this website's code.</p>
-        <label>New password<input name="new_password" type="password" autocomplete="new-password" minlength="12" required></label>
-        <label>Confirm password<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" required></label>
+        <label>${renderAdminFieldLabel("New password", true)}<input name="new_password" type="password" autocomplete="new-password" minlength="12" required></label>
+        <label>${renderAdminFieldLabel("Confirm password", true)}<input name="confirm_password" type="password" autocomplete="new-password" minlength="12" required></label>
         <p class="admin-message" data-password-message role="status"></p>
         <div class="admin-actions"><button class="button" type="submit" data-password-update-submit>Save password</button><button class="button button--secondary" type="button" data-password-close>Cancel</button></div>
       </form>
@@ -1288,7 +1289,7 @@ const renderUploadQueue = (): void => {
       <div class="admin-media-row__details"><strong title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</strong><small>${formatMediaType(item.file.type)} · ${formatMediaSize(item.file.size)}</small></div>
       <div class="admin-media-row__fields admin-media-row__fields--pending">
         <label><span>Use as</span><select data-pending-kind><option value="cover" ${item.kind === "cover" ? "selected" : ""}>Cover</option><option value="gallery" ${item.kind === "gallery" ? "selected" : ""}>Gallery</option></select></label>
-        <label><span>Alt text (EN)</span><input value="${escapeHtml(item.altEn)}" data-pending-alt-en></label>
+        <label><span>${renderAdminFieldLabel("Alt text (EN)", item.kind === "cover")}</span><input value="${escapeHtml(item.altEn)}"${item.kind === "cover" ? ' aria-required="true"' : ""} data-pending-alt-en></label>
         <label><span>Alt text (VI)</span><input value="${escapeHtml(item.altVi)}" data-pending-alt-vi></label>
         <label><span>Caption (EN)</span><input value="${escapeHtml(item.captionEn)}" data-pending-caption-en></label>
         <label><span>Caption (VI)</span><input value="${escapeHtml(item.captionVi)}" data-pending-caption-vi></label>

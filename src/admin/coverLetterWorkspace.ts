@@ -21,6 +21,7 @@ import { renderDocumentThemeFields } from "./documentThemeFields";
 import {
   formatAdminDate,
   renderAdminDocumentHeader,
+  renderAdminFieldLabel,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
   renderAdminWorkspaceState,
@@ -83,10 +84,10 @@ const disabled = (): string => locked() ? " disabled" : "";
 const fieldValue = (name: keyof CoverLetterInput): string => escapeHtml(String(letter[name]));
 
 const input = (label: string, name: keyof CoverLetterInput, type = "text", required = false): string =>
-  `<label>${label}<input name="${name}" type="${type}" value="${fieldValue(name)}"${required ? " required" : ""}${disabled()}></label>`;
+  `<label>${renderAdminFieldLabel(label, required)}<input name="${name}" type="${type}" value="${fieldValue(name)}"${required ? " required" : ""}${disabled()}></label>`;
 
 const textarea = (label: string, name: keyof CoverLetterInput, rows: number, required = false): string =>
-  `<label>${label}<textarea name="${name}" rows="${rows}"${required ? " required" : ""}${disabled()}>${fieldValue(name)}</textarea></label>`;
+  `<label>${renderAdminFieldLabel(label, required)}<textarea name="${name}" rows="${rows}"${required ? " required" : ""}${disabled()}>${fieldValue(name)}</textarea></label>`;
 
 const syncUrl = (id?: string): void => {
   updateAdminRoute({ view: "cover-letters", item: id ?? (editorOpen ? "new" : null), tab: editorOpen ? editorTab : null });
@@ -298,17 +299,17 @@ const editorView = (): string => {
               ${renderAdminSectionCard({
                 title: "Application details",
                 note: "Identify the role, company and recipient.",
-                content: `<div class="admin-form-grid admin-cl-application-grid">${input("Company name *", "companyName", "text", true)}${input("Position title *", "positionTitle", "text", true)}${input("Application date *", "applicationDate", "date", true)}${input("Recipient name", "recipientName")}${input("Recipient title", "recipientTitle")}${input("Salutation *", "salutation", "text", true)}</div>
+                content: `<div class="admin-form-grid admin-cl-application-grid">${input("Company name", "companyName", "text", true)}${input("Position title", "positionTitle", "text", true)}${input("Application date", "applicationDate", "date", true)}${input("Recipient name", "recipientName")}${input("Recipient title", "recipientTitle")}${input("Salutation", "salutation", "text", true)}</div>
                   ${textarea("Company address", "companyAddress", 3)}`,
               })}
               ${renderAdminSectionCard({
                 title: "Letter body",
                 note: "Keep claims factual and aim for 250–400 words.",
-                content: `${textarea("Opening paragraph *", "openingParagraph", 5, true)}
-                  ${textarea("Experience and fit *", "fitParagraph", 7, true)}
-                  ${textarea("Why this company *", "companyParagraph", 6, true)}
-                  ${textarea("Closing paragraph *", "closingParagraph", 5, true)}
-                  ${input("Sign-off *", "signOff", "text", true)}`,
+                content: `${textarea("Opening paragraph", "openingParagraph", 5, true)}
+                  ${textarea("Experience and fit", "fitParagraph", 7, true)}
+                  ${textarea("Why this company", "companyParagraph", 6, true)}
+                  ${textarea("Closing paragraph", "closingParagraph", 5, true)}
+                  ${input("Sign-off", "signOff", "text", true)}`,
               })}
             </section>
             <section class="admin-editor-panel" data-cl-panel="evidence" ${panelState("evidence")}>
