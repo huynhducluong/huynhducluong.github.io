@@ -41,6 +41,22 @@ Redeploy `supabase/functions/purge-admin-trash` with the same release so schedul
 
 After applying it, refresh Admin and verify that Media for both Projects and Automation Tools shows `Adjust crops`. A crop stays `Auto` until an editor changes that profile; only modified profiles are generated and stored. Returning a profile to automatic crop removes its editable crop row without removing any file referenced by a published release.
 
+## RPC execute privileges
+
+Apply `supabase/migrations/202610270001_revoke_rpc_default_execute.sql` after `202610150002_professional_credential_order.sql`. Supabase grants EXECUTE on new public functions directly to `anon` and `authenticated`, so `revoke ... from public` alone does not remove them. The migration removes anon access to every Admin RPC and limits the internal cover-letter helper and the trash-purge secret/Cron checks to their trusted callers.
+
+Verify the result in the SQL Editor; only `is_portfolio_admin` should allow anon:
+
+```sql
+select p.oid::regprocedure as function_name,
+       has_function_privilege('anon', p.oid, 'execute') as anon_execute,
+       has_function_privilege('authenticated', p.oid, 'execute') as authenticated_execute
+from pg_proc p
+join pg_namespace n on n.oid = p.pronamespace
+where n.nspname = 'public' and p.prosecdef
+order by 1;
+```
+
 ## Release quality gate
 
 Run the same command locally that GitHub Actions runs before deployment:

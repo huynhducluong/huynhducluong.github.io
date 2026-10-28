@@ -187,8 +187,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-weight: var(--admin-weight-bold);
 }
 
-.admin-editor__heading small,
-.admin-channel-grid small {
+.admin-editor__heading small {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-medium);
 }
@@ -211,11 +210,6 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-size: var(--admin-text-sm);
   font-weight: var(--admin-weight-regular);
   line-height: var(--admin-line-default);
-}
-
-.admin-channel-grid strong {
-  font-size: var(--admin-text-base);
-  font-weight: var(--admin-weight-semibold);
 }
 
 /* Dashboard */
@@ -258,8 +252,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-size: var(--admin-title-lg);
 }
 
-.admin-cl-empty > div:first-child > p:last-child,
-.admin-cl-loading p {
+.admin-cl-empty > div:first-child > p:last-child {
   font-size: var(--admin-text-sm);
 }
 
@@ -281,8 +274,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-document-header p:last-child,
-.admin-document-actions > span,
-.admin-form-help {
+.admin-document-actions > span {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-medium);
 }
@@ -304,28 +296,13 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 }
 
 .admin-document-cards h4,
-.admin-document-selection h4,
-.admin-document-validation strong {
+.admin-document-selection h4 {
   font-size: var(--admin-text-sm);
   font-weight: var(--admin-weight-semibold);
 }
 
-.admin-document-summary-grid span,
-.admin-document-validation,
-.admin-document-releases {
-  font-size: var(--admin-text-xs);
-  font-weight: var(--admin-weight-regular);
-}
-
-.admin-document-summary-grid strong {
-  font-size: var(--admin-title-md);
-  font-weight: var(--admin-weight-bold);
-  font-variant-numeric: tabular-nums;
-}
-
 /* Dialogs and system views */
-.admin-dialog h2,
-.admin-placeholder h2 {
+.admin-dialog h2 {
   font-size: var(--admin-title-md);
 }
 

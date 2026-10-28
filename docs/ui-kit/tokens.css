@@ -1,0 +1,129 @@
+/*
+ * Starter tokens extracted from huynhducluong.github.io (2026-10).
+ * Copy into a new project as src/styles/tokens.css and change values, not names.
+ * Source of truth in this repo: src/styles/tokens.css, src/styles/admin-ui.css,
+ * src/styles/admin-typography.css, src/themes/documentThemes.ts.
+ */
+
+/* 1. Public website ------------------------------------------------------- */
+:root {
+  color-scheme: light;
+  --color-primary: #087ea4;
+  --color-primary-dark: #075f7d;
+  --color-primary-light: #dff5fb;
+  --color-accent: #f6b73c;
+  --color-text: #12212b;
+  --color-text-muted: #53636d;
+  --color-background: #f7fafb;
+  --color-surface: #ffffff;
+  --color-surface-strong: #eaf2f5;
+  --color-border: #d7e1e5;
+  --color-dark: #102d3b;
+  --font-heading: "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
+  --font-body: Inter, Aptos, "Segoe UI", Arial, sans-serif;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-lg: clamp(1.05rem, 1.8vw, 1.25rem);
+  --font-size-xl: clamp(1.4rem, 3vw, 2rem);
+  --font-size-2xl: clamp(2rem, 5vw, 3.5rem);
+  --font-size-hero: clamp(3rem, 9vw, 7.5rem);
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --content-max-width: 1200px;
+  --radius-sm: 0.35rem;
+  --radius-md: 0.75rem;
+  --radius-lg: 1.25rem;
+  --shadow-card: 0 20px 60px rgb(16 45 59 / 10%);
+  --transition-fast: 180ms ease;
+}
+
+/* 2. Admin / back-office app (scope with a class on <html>) --------------- */
+html.admin-app {
+  --admin-font-family: "Inter Variable", "Segoe UI", Arial, sans-serif;
+  --admin-color-canvas: #eef3f6;
+  --admin-color-surface: #ffffff;
+  --admin-color-surface-subtle: #f7fafb;
+  --admin-color-surface-muted: #eaf2f5;
+  --admin-color-border: #d7e1e5;
+  --admin-color-border-strong: #b9cbd2;
+  --admin-color-text: #12212b;
+  --admin-color-text-muted: #53636d;
+  --admin-color-hover: #f0f6f8;
+  --admin-color-selected: #e8f6fa;
+  --admin-color-focus: #087ea4;
+  --admin-color-focus-ring: rgb(8 126 164 / 18%);
+  --admin-color-success: #14723a;
+  --admin-color-success-surface: #d8f5e3;
+  --admin-color-warning: #7a5200;
+  --admin-color-warning-surface: #fff0c9;
+  --admin-color-danger: #a02626;
+  --admin-color-danger-border: #d59a9a;
+  --admin-color-danger-surface: #fff0f0;
+  --admin-control-height: 2.5rem;
+  --admin-control-height-sm: 2rem;
+  --admin-control-height-lg: 2.75rem;
+  --admin-control-radius: .45rem;
+  --admin-control-padding-x: .875rem;
+  --admin-radius-sm: .375rem;
+  --admin-radius-md: .55rem;
+  --admin-radius-lg: .8rem;
+  --admin-shadow-card: 0 8px 24px rgb(16 45 59 / 6%);
+  --admin-workspace-gutter: 1.25rem;
+  --admin-workspace-header-min-height: 6.75rem;
+  --admin-document-columns: minmax(0, 44fr) minmax(0, 56fr);
+  --admin-tabs-height: 3.25rem;
+  --admin-text-2xs: .75rem;
+  --admin-text-xs: .8125rem;
+  --admin-text-sm: .875rem;
+  --admin-text-base: .875rem;
+  --admin-text-lg: 1rem;
+  --admin-title-sm: 1.125rem;
+  --admin-title-md: 1.375rem;
+  --admin-title-lg: 1.625rem;
+  --admin-line-compact: 1.3;
+  --admin-line-default: 1.5;
+  --admin-weight-regular: 400;
+  --admin-weight-medium: 500;
+  --admin-weight-semibold: 600;
+  --admin-weight-bold: 700;
+}
+
+/* 3. Printable documents: defaults = "Personal Blue" (preset #087fb6 / #14a8d6, primary darkened to #0772a4 for 4.5:1 contrast).
+ * At runtime applyDocumentTheme() overwrites these on the document root. */
+.document-root {
+  --document-primary: #0772a4;
+  --document-primary-strong: #055276;
+  --document-accent: #14a8d6;
+  --document-on-primary: #ffffff;
+  --document-on-accent: #111820;
+  --document-text: #111820;
+  --document-text-muted: #4c5d67;
+  --document-surface: #ffffff;
+  --document-surface-muted: #e6f1f6;
+  --document-border: #b0d2e2;
+}
+
+/* 4. Baseline behavior every surface keeps -------------------------------- */
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}

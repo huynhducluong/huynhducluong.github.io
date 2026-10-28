@@ -1,8 +1,11 @@
+/// <reference types="vitest/config" />
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 
 export default defineConfig({
   base: "/",
+  // Stylesheet contract tests import CSS with ?raw; without this Vitest replaces CSS with an empty string.
+  test: { css: true },
   build: {
     rollupOptions: {
       input: {

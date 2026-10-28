@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { cvContentSeed, cvRuntimeSeed } from "../data/cvSeed";
 import type { CredentialSnapshot } from "../types/credential";
-import { orderedCvBackground, resolveCvBackgroundOrder, resolveCvBackgroundSelection } from "./backgroundOrder";
+import { newCvBackgroundKeys, orderedCvBackground, resolveCvBackgroundOrder, resolveCvBackgroundSelection } from "./backgroundOrder";
 import { renderDynamicCv } from "./renderDynamicCv";
 
 const credential: CredentialSnapshot = {
@@ -95,5 +95,30 @@ describe("CV page density", () => {
 
     expect(html).toContain("&lt;script&gt;alert(&quot;cv&quot;)&lt;/script&gt;");
     expect(html).not.toContain('<script>alert("cv")</script>');
+  });
+});
+
+describe("New CV background entries", () => {
+  it("flags unselected entries that were added after the draft was saved", () => {
+    const saved = structuredClone(cvContentSeed);
+    saved.backgroundSelection = resolveCvBackgroundSelection(saved);
+    const current = structuredClone(saved);
+    const added = { ...structuredClone(current.education[0]), id: "education-new" };
+    current.education = [added, ...current.education];
+    current.credentials = [credential];
+
+    expect([...newCvBackgroundKeys(saved, current)].sort()).toEqual(["credentials:credential-1", "education:education-new"]);
+  });
+
+  it("does not flag entries once they are selected or already known", () => {
+    const saved = structuredClone(cvContentSeed);
+    saved.credentials = [credential];
+    saved.backgroundSelection = { ...resolveCvBackgroundSelection(saved), credentialIds: [] };
+    const current = structuredClone(saved);
+    const added = { ...structuredClone(current.languages[0]), id: "language-new" };
+    current.languages = [...current.languages, added];
+    current.backgroundSelection = { ...resolveCvBackgroundSelection(current), languageIds: [...resolveCvBackgroundSelection(current).languageIds, added.id] };
+
+    expect(newCvBackgroundKeys(saved, current).size).toBe(0);
   });
 });

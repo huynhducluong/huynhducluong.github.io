@@ -69,6 +69,7 @@ interface WorkspaceCallbacks {
   notify: (message: string, kind?: "info" | "error" | "success") => void;
   updateAdminIdentity: (profile: Profile, persist?: boolean) => void;
   onProfessionalProfileSaved: (professional: ProfessionalProfileContent) => void;
+  onProfessionalCredentialsChanged: () => void;
 }
 
 const state: {
@@ -808,7 +809,7 @@ const websiteView = (): string => {
     ${renderAdminDocumentHeader({
       eyebrow: "Website",
       title: "Homepage",
-      meta: `<span class="status status--draft">Draft</span><span>${latest ? `Last published ${formatAdminDateTime(latest.publishedAt)}` : "Not published yet"}</span>`,
+      meta: `<span class="status status--draft">Draft</span><span class="admin-document-meta__detail">${latest ? `Last published ${formatAdminDateTime(latest.publishedAt)}` : "Not published yet"}</span>`,
       saveState: '<span data-site-save-state data-dirty="false" aria-live="polite">Saved</span>',
       utilityActions: `<button class="button button--secondary admin-action-utility" type="button" data-website-history-open>History (${state.releases.length})</button>`,
       saveActions: '<button class="button button--secondary admin-action-save" type="submit" form="website-editor-form">Save draft</button>',
@@ -837,7 +838,7 @@ const profileView = (): string => {
     ${renderAdminDocumentHeader({
       eyebrow: "Shared content",
       title: "Professional Profile",
-      meta: "Single source for Website, Curriculum Vitae, Portfolio and Cover Letters",
+      meta: '<span class="admin-document-meta__detail">Single source for Website, Curriculum Vitae, Portfolio and Cover Letters</span>',
       saveState: '<span data-site-save-state data-dirty="false" aria-live="polite">Saved</span>',
       saveActions: '<button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button>',
     })}
@@ -1311,7 +1312,10 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   bindProfessionalCredentials(root, {
     getCredentials: () => state.credentials,
     getProfessional: () => state.runtime!.professional,
-    setCredentials: (credentials) => { state.credentials = credentials; },
+    setCredentials: (credentials) => {
+      state.credentials = credentials;
+      callbacks.onProfessionalCredentialsChanged();
+    },
     beforeMutation: () => { commitProfileDraft(); },
     activateCredentialsTab: () => {
       state.profileTab = "credentials";

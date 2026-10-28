@@ -24,6 +24,12 @@ import { clearAdminToasts, showAdminToast } from "./toast";
 import { confirmAdmin } from "./confirmDialog";
 import { readAdminRoute, updateAdminRoute } from "./adminRoute";
 import {
+  applyAdminHeaderDensity,
+  bindAdminHeaderDensityToggle,
+  readAdminHeaderDensity,
+  renderAdminHeaderDensityToggle,
+} from "./headerDensity";
+import {
   bindAdminBeforeUnload,
   clearAdminDirty,
   hasAnyAdminDirtyState,
@@ -151,6 +157,7 @@ interface CollectionRevealIntent {
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
 document.documentElement.classList.add("admin-app");
+applyAdminHeaderDensity(readAdminHeaderDensity());
 document.title = adminDocumentTitle();
 
 let projects: AdminProjectRow[] = [];
@@ -974,7 +981,7 @@ const dashboardView = (): void => {
         <div class="admin-rail__footer"><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div>
       </aside>
       <section class="admin-main">
-        <header class="admin-header"><div><small>${adminBrand.breadcrumb} /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message sr-only" data-admin-message></p><a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></header>
+        <header class="admin-header"><div><small>${adminBrand.breadcrumb} /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message sr-only" data-admin-message></p><div class="admin-header__actions">${renderAdminHeaderDensityToggle()}<a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></div></header>
         <div class="admin-layout ${showCollection ? "has-collection" : ""}">
           ${showCollection ? `<aside class="admin-collection">
             <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
@@ -1763,6 +1770,7 @@ const bindContentItemActions = (root: ParentNode = app): void => {
 };
 
 const bindDashboard = (): void => {
+  bindAdminHeaderDensityToggle(app);
   const passwordDialog = app.querySelector<HTMLDialogElement>("[data-password-dialog]");
   const reorderMenu = app.querySelector<HTMLElement>("[data-reorder-menu]");
   reorderMenu?.addEventListener("toggle", () => {
@@ -2018,6 +2026,9 @@ const bindDashboard = (): void => {
       onProfessionalProfileSaved: (professional) => {
         profileDocumentWorkspaceModule?.invalidateProfileDocumentWorkspace();
         coverLetterWorkspaceModule?.updateCoverLetterSharedProfile(professional);
+      },
+      onProfessionalCredentialsChanged: () => {
+        profileDocumentWorkspaceModule?.invalidateProfileDocumentWorkspace();
       },
     });
   }

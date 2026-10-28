@@ -275,16 +275,16 @@ body.document-embedded .cv-preview-shell {
   --cv-font-sidebar-primary: 8.75pt;
   --cv-font-sidebar-secondary: 8pt;
   --cv-font-sidebar-list: 8.25pt;
-  --document-primary: #087fb6;
-  --document-primary-strong: #075d80;
+  --document-primary: #0772a4;
+  --document-primary-strong: #055276;
   --document-accent: #14a8d6;
   --document-on-primary: #ffffff;
   --document-on-accent: #111820;
   --document-text: #111820;
   --document-text-muted: #4c5d67;
   --document-surface: #ffffff;
-  --document-surface-muted: #e7f3f8;
-  --document-border: #aecfdc;
+  --document-surface-muted: #e6f1f6;
+  --document-border: #b0d2e2;
 
   display: grid;
   width: 210mm;

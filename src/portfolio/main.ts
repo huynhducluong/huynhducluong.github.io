@@ -22,6 +22,7 @@ import {
 import type { PortfolioRuntimeData } from "../types/portfolio";
 import type { StoredDocumentTheme } from "../types/theme";
 import { renderPortfolio } from "./renderPortfolioV2";
+import { findPortfolioLayoutIssues } from "./safeArea";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
@@ -64,9 +65,6 @@ const render = (data: PortfolioRuntimeData, language: Language = "en"): void => 
   updatePhoto();
 };
 
-const portfolioOverflowCount = (): number => [...app.querySelectorAll<HTMLElement>(".portfolio-page")]
-  .filter((page) => page.scrollHeight > page.clientHeight + 1 || page.scrollWidth > page.clientWidth + 1)
-  .length;
 
 const renderPrintPreviewChrome = (documentId: string, internalTitle: string, status: string, data: PortfolioRuntimeData): void => {
   document.body.classList.add("document-print-preview", "document-print-preview--landscape");
@@ -84,7 +82,7 @@ const renderPrintPreviewChrome = (documentId: string, internalTitle: string, sta
 
   const readiness = (): string[] => [
     ...validateProfileDocument("portfolio", data),
-    ...(portfolioOverflowCount() ? ["Content exceeds one or more fixed A4 landscape page boundaries."] : []),
+    ...findPortfolioLayoutIssues(app),
   ];
   const updateReadiness = (): boolean => {
     const issues = readiness();

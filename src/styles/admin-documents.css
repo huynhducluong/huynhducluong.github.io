@@ -44,44 +44,6 @@
   height: 100%;
 }
 
-.admin-document-library__empty {
-  display: grid;
-  width: min(100% - 3rem, 44rem);
-  min-height: 100%;
-  align-content: center;
-  justify-items: start;
-  gap: 1.25rem;
-  margin-inline: auto;
-  padding-block: 2rem;
-}
-
-.admin-document-library__empty h1 {
-  margin-top: .3rem;
-  font-family: inherit;
-  font-size: var(--admin-title-lg);
-}
-
-.admin-document-library__empty p:last-child {
-  max-width: 39rem;
-  margin-top: .45rem;
-  color: var(--admin-color-text-muted);
-  font-size: var(--admin-text-sm);
-  line-height: 1.55;
-}
-
-.admin-document-library__back {
-  display: none;
-  margin-bottom: .45rem;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: var(--color-primary-dark);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--admin-text-xs);
-  font-weight: var(--admin-weight-bold);
-}
-
 .admin-document-active {
   color: var(--admin-color-success);
   font-size: var(--admin-text-2xs);
@@ -355,44 +317,6 @@
   margin: 0;
   color: var(--color-primary-dark);
   font-size: var(--admin-text-sm);
-}
-
-.admin-document-summary-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: .65rem;
-}
-
-.admin-document-summary-grid article {
-  padding: .85rem;
-  border: 1px solid var(--color-border);
-  border-radius: .6rem;
-  background: #f9fbfb;
-}
-
-.admin-document-summary-grid strong,
-.admin-document-summary-grid span {
-  display: block;
-}
-
-.admin-document-summary-grid strong {
-  color: var(--color-primary);
-  font-size: var(--admin-title-md);
-}
-
-.admin-document-summary-grid span {
-  margin: .15rem 0 .55rem;
-  color: var(--color-text-muted);
-  font-size: var(--admin-text-2xs);
-  font-weight: 800;
-}
-
-.admin-document-summary-grid ul {
-  display: grid;
-  gap: .3rem;
-  margin: 0;
-  padding-left: 1rem;
-  font-size: var(--admin-text-xs);
 }
 
 .admin-document-theme {
@@ -844,13 +768,6 @@
   }
 }
 
-.admin-form-help {
-  margin: 0;
-  color: var(--color-text-muted);
-  font-size: var(--admin-text-xs);
-  line-height: 1.5;
-}
-
 .admin-document-selection {
   container: document-selection / inline-size;
   display: grid;
@@ -870,10 +787,6 @@
   border: 1px solid #e5ebee;
   border-radius: .5rem;
   background: var(--admin-color-surface);
-}
-
-.admin-document-selection__item--project {
-  grid-template-columns: minmax(0, 1fr) 6.5rem auto;
 }
 
 .admin-document-selection__item--tool {
@@ -926,18 +839,6 @@
 .admin-cv-selection .status {
   flex: 0 0 auto;
   justify-self: end;
-}
-
-@container document-selection (max-width: 34rem) {
-  .admin-document-selection__item--project {
-    grid-template-columns: minmax(0, 1fr) auto;
-  }
-
-  .admin-document-selection__item--project > .admin-select-control {
-    grid-column: 1 / -1;
-    grid-row: 2;
-    width: 100%;
-  }
 }
 
 .admin-cv-selection {
@@ -1161,6 +1062,19 @@
   transition: border-color 120ms ease, background 120ms ease, box-shadow 120ms ease;
 }
 
+.admin-cv-background__item.admin-switch:has(> .status) { grid-template-columns: auto minmax(0, 1fr) auto; }
+
+.admin-cv-background__notice {
+  margin: 0 0 1rem;
+  padding: .65rem .8rem;
+  border: 1px solid var(--admin-color-border);
+  border-left: 3px solid var(--admin-color-focus);
+  border-radius: var(--admin-radius-md);
+  background: var(--admin-color-selected);
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-sm);
+}
+
 .admin-cv-background__item:hover { border-color: var(--admin-color-border-strong); }
 .admin-cv-background__item.is-selected { border-color: color-mix(in srgb, var(--color-primary) 28%, var(--admin-color-border)); background: var(--admin-color-selected); }
 .admin-cv-background__item:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgb(8 127 182 / 12%); }
@@ -1356,28 +1270,6 @@
   margin: 0;
   color: var(--admin-color-success);
   font-weight: 700;
-}
-
-.admin-document-loading {
-  display: grid;
-  min-height: 30rem;
-  place-items: center;
-  align-content: center;
-  gap: .8rem;
-  color: var(--color-text-muted);
-}
-
-.admin-document-loading span {
-  width: 2rem;
-  height: 2rem;
-  border: 3px solid #d9e2e6;
-  border-top-color: var(--color-primary);
-  border-radius: 999px;
-  animation: admin-document-spin .8s linear infinite;
-}
-
-@keyframes admin-document-spin {
-  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 1480px) {

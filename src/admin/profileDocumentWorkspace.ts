@@ -19,7 +19,7 @@ import { sortByMasterContentOrder } from "../shared/contentOrder";
 import { validateProfileDocument } from "../shared/profileDocumentValidation";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { documentThemes, resolveDocumentTheme } from "../themes/documentThemes";
-import { resolveCvBackgroundSelection } from "../cv/backgroundOrder";
+import { backgroundEntryKey, newCvBackgroundKeys, resolveCvBackgroundSelection } from "../cv/backgroundOrder";
 import type { LocalizedText, Profile } from "../types/career";
 import type { CredentialSnapshot, ProfessionalCredential } from "../types/credential";
 import type { CvBackgroundGroup, CvContent, CvRuntimeData, CvRuntimeProject, CvRuntimeTool } from "../types/cvContent";
@@ -51,6 +51,7 @@ import {
   resolveProjectLayout,
   type PortfolioLayoutOption,
 } from "../portfolio/layouts";
+import { findPortfolioLayoutIssues } from "../portfolio/safeArea";
 import {
   automationMediaRequirement,
   mediaRequirementLabel,
@@ -111,6 +112,8 @@ const state: {
   filter: Record<ProfileDocumentKind, DocumentFilter>;
   search: Record<ProfileDocumentKind, string>;
   dirty: Record<ProfileDocumentKind, boolean>;
+  /** Unselected background entries added to Professional Profile since each draft was last saved. Never persisted. */
+  newEntries: Record<ProfileDocumentKind, Map<string, Set<string>>>;
 } = {
   cv: null,
   portfolio: null,
@@ -126,6 +129,7 @@ const state: {
   filter: { cv: "all", portfolio: "all" },
   search: { cv: "", portfolio: "" },
   dirty: { cv: false, portfolio: false },
+  newEntries: { cv: new Map(), portfolio: new Map() },
 };
 
 let previewTimer: number | undefined;
@@ -429,7 +433,7 @@ const portfolioCredentialLibrary = (credentials: ProfessionalCredential[]): Port
 const composePortfolioDraft = (
   saved: PortfolioRuntimeData,
   shared: PortfolioRuntimeData,
-  sharedProfile: Profile,
+  professional: ProfessionalProfileContent,
   sharedCredentials: PortfolioCredential[] | null,
 ): PortfolioRuntimeData => {
   const normalizedSaved = normalizePortfolioRuntimeData(saved);
@@ -440,7 +444,8 @@ const composePortfolioDraft = (
     ...shared,
     content: {
       ...normalizedSaved.content,
-      profile: inheritSharedProfile(sharedProfile, normalizedSaved.content.profile),
+      profile: inheritSharedProfile(professional.profile, normalizedSaved.content.profile),
+      skillGroups: structuredClone(professional.skillGroups),
     },
     projects: shared.projects.map((item) => {
       const selection = savedProjects.get(item.id);
@@ -470,6 +475,38 @@ const composePortfolioDraft = (
   };
 };
 
+const composeCvDocument = (
+  document: ProfileDocumentRecord<CvRuntimeData>,
+  shared: CvRuntimeData,
+  professional: ProfessionalProfileContent,
+  sharedCredentials: CredentialSnapshot[] | null,
+): ProfileDocumentRecord<CvRuntimeData> => {
+  if (!document.draftPayload) return { ...document, draftPayload: null };
+  if (document.status === "archived") return { ...document, draftPayload: structuredClone(document.draftPayload) };
+  const draftPayload = composeCvDraft(document.draftPayload, shared, professional, sharedCredentials);
+  state.newEntries.cv.set(document.id, newCvBackgroundKeys(document.draftPayload.content, draftPayload.content));
+  return { ...document, draftPayload };
+};
+
+const composePortfolioDocument = (
+  document: ProfileDocumentRecord<PortfolioRuntimeData>,
+  shared: PortfolioRuntimeData,
+  professional: ProfessionalProfileContent,
+  sharedCredentials: PortfolioCredential[] | null,
+): ProfileDocumentRecord<PortfolioRuntimeData> => {
+  if (!document.draftPayload) return { ...document, draftPayload: null };
+  if (document.status === "archived") return { ...document, draftPayload: normalizePortfolioRuntimeData(structuredClone(document.draftPayload)) };
+  const draftPayload = composePortfolioDraft(document.draftPayload, shared, professional, sharedCredentials);
+  const known = new Set((document.draftPayload.credentials ?? []).map((item) => item.id));
+  state.newEntries.portfolio.set(document.id, new Set((draftPayload.credentials ?? [])
+    .filter((item) => !item.includeInPortfolio && !known.has(item.id))
+    .map((item) => backgroundEntryKey("credentials", item.id))));
+  return { ...document, draftPayload };
+};
+
+const newEntryKeys = (kind: ProfileDocumentKind): Set<string> =>
+  state.newEntries[kind].get(state.selectedId[kind] ?? "") ?? new Set();
+
 const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
   if (kind === "cv") {
     const [documents, shared, professional, credentials] = await Promise.all([
@@ -479,14 +516,7 @@ const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
       listProfessionalCredentials().catch(() => null),
     ]);
     const sharedCredentials = credentials ? publishedCredentialSnapshots(credentials) : null;
-    state.documents.cv = documents.map((document) => ({
-      ...document,
-      draftPayload: document.draftPayload
-        ? document.status === "archived"
-          ? structuredClone(document.draftPayload)
-          : composeCvDraft(document.draftPayload, shared, professional, sharedCredentials)
-        : null,
-    }));
+    state.documents.cv = documents.map((document) => composeCvDocument(document, shared, professional, sharedCredentials));
     return;
   }
   const [documents, shared, professional, credentials] = await Promise.all([
@@ -496,14 +526,7 @@ const refreshDocuments = async (kind: ProfileDocumentKind): Promise<void> => {
     listProfessionalCredentials().catch(() => null),
   ]);
   const sharedCredentials = credentials ? portfolioCredentialLibrary(credentials) : null;
-  state.documents.portfolio = documents.map((document) => ({
-    ...document,
-    draftPayload: document.draftPayload
-      ? document.status === "archived"
-        ? normalizePortfolioRuntimeData(structuredClone(document.draftPayload))
-        : composePortfolioDraft(document.draftPayload, shared, professional.profile, sharedCredentials)
-      : null,
-  }));
+  state.documents.portfolio = documents.map((document) => composePortfolioDocument(document, shared, professional, sharedCredentials));
 };
 
 export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promise<void> => {
@@ -526,14 +549,7 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
         const sharedCredentials = credentials ? publishedCredentialSnapshots(credentials) : null;
         if (sharedCredentials) shared.content.credentials = structuredClone(sharedCredentials);
         const documents = await ensureProfileDocumentLibrary<CvRuntimeData>(kind, shared);
-        state.documents.cv = documents.map((document) => ({
-          ...document,
-          draftPayload: document.draftPayload
-            ? document.status === "archived"
-              ? structuredClone(document.draftPayload)
-              : composeCvDraft(document.draftPayload, shared, professional, sharedCredentials)
-            : null,
-        }));
+        state.documents.cv = documents.map((document) => composeCvDocument(document, shared, professional, sharedCredentials));
       } else {
         const [shared, professional, credentials] = await Promise.all([
           loadPortfolioDraftData(),
@@ -543,14 +559,7 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
         const sharedCredentials = credentials ? portfolioCredentialLibrary(credentials) : null;
         if (sharedCredentials) shared.credentials = structuredClone(sharedCredentials);
         const documents = await ensureProfileDocumentLibrary<PortfolioRuntimeData>(kind, shared);
-        state.documents.portfolio = documents.map((document) => ({
-          ...document,
-          draftPayload: document.draftPayload
-            ? document.status === "archived"
-              ? normalizePortfolioRuntimeData(structuredClone(document.draftPayload))
-              : composePortfolioDraft(document.draftPayload, shared, professional.profile, sharedCredentials)
-            : null,
-        }));
+        state.documents.portfolio = documents.map((document) => composePortfolioDocument(document, shared, professional, sharedCredentials));
       }
       const preferred = preferredDocument(kind, state.documents[kind]);
       if (!preferred) throw new Error(`No initialized ${kind === "cv" ? "CV" : "Portfolio"} document is available.`);
@@ -595,16 +604,26 @@ const cvContentPanel = (content: CvContent): string => [
 
 const backgroundRange = (start: string, end: string | null): string => `${start || "Start not set"} – ${end || "Present"}`;
 
-const backgroundRow = ({ group, id, title, meta, selected }: {
+const backgroundRow = ({ group, id, title, meta, selected, isNew = false, inputName = `cv_background_${group}` }: {
   group: CvBackgroundGroup;
   id: string;
   title: string;
   meta: string;
   selected: boolean;
+  isNew?: boolean;
+  inputName?: string;
 }): string => `<label class="admin-switch admin-cv-background__item admin-selection-card admin-selection-card--single${selected ? " is-selected" : ""}">
-  <input type="checkbox" name="cv_background_${group}" value="${escapeHtml(id)}" data-cv-background-toggle data-selection-primary${selected ? " checked" : ""}>
+  <input type="checkbox" name="${escapeHtml(inputName)}" value="${escapeHtml(id)}" data-cv-background-toggle data-selection-primary${selected ? " checked" : ""}>
   <span class="admin-cv-background__identity" data-selection-content><strong>${escapeHtml(title)}</strong><small>${escapeHtml(meta)}</small></span>
+  ${isNew ? '<span class="status status--new" title="Added in Professional Profile after this draft was last saved">New</span>' : ""}
 </label>`;
+
+const backgroundNewNotice = (count: number, documentName: string): string => count
+  ? `<p class="admin-cv-background__notice" role="status">${count} new item${count === 1 ? "" : "s"} in Professional Profile ${count === 1 ? "is" : "are"} not on this ${documentName} yet. Select ${count === 1 ? "it" : "them"} below to include ${count === 1 ? "it" : "them"}.</p>`
+  : "";
+
+const credentialBackgroundMeta = (item: CredentialSnapshot): string =>
+  [item.issuer.en, item.issuedOn?.slice(0, 4), item.credentialNumber].filter(Boolean).join(" · ");
 
 const backgroundCount = (selected: number, total: number): string => {
   if (!total) return "0";
@@ -633,12 +652,15 @@ const cvBackgroundPanel = (content: CvContent): string => {
     skillGroups: new Set(selection.skillGroupIds),
     languages: new Set(selection.languageIds),
   };
+  const newKeys = newEntryKeys("cv");
+  const isNew = (group: CvBackgroundGroup, id: string): boolean => newKeys.has(backgroundEntryKey(group, id));
   const experienceRows = content.experiences.map((item) => backgroundRow({
     group: "experiences",
     id: item.id,
     title: item.company,
     meta: [item.position.en, item.location.en, backgroundRange(item.startDate, item.endDate)].filter(Boolean).join(" · "),
     selected: selected.experiences.has(item.id),
+    isNew: isNew("experiences", item.id),
   })).join("");
   const educationRows = content.education.map((item) => {
     const classification = degreeClassificationValue(item.classification?.en ?? "", "en");
@@ -652,14 +674,16 @@ const cvBackgroundPanel = (content: CvContent): string => {
         `${item.startDate} – ${item.endDate}`,
       ].filter(Boolean).join(" · "),
       selected: selected.education.has(item.id),
+      isNew: isNew("education", item.id),
     });
   }).join("");
   const credentialRows = (content.credentials ?? []).map((item) => backgroundRow({
     group: "credentials",
     id: item.id,
     title: item.title.en,
-    meta: [item.issuer.en, item.issuedOn?.slice(0, 4), item.credentialNumber].filter(Boolean).join(" · "),
+    meta: credentialBackgroundMeta(item),
     selected: selected.credentials.has(item.id),
+    isNew: isNew("credentials", item.id),
   })).join("");
   const skillRows = content.skillGroups.map((item) => backgroundRow({
     group: "skillGroups",
@@ -667,6 +691,7 @@ const cvBackgroundPanel = (content: CvContent): string => {
     title: item.title.en,
     meta: item.items.map((skill) => skill.label.en).join(" · "),
     selected: selected.skillGroups.has(item.id),
+    isNew: isNew("skillGroups", item.id),
   })).join("");
   const languageRows = content.languages.map((item) => backgroundRow({
     group: "languages",
@@ -674,19 +699,20 @@ const cvBackgroundPanel = (content: CvContent): string => {
     title: item.name.en,
     meta: item.proficiency?.en || "Proficiency not set",
     selected: selected.languages.has(item.id),
+    isNew: isNew("languages", item.id),
   })).join("");
   return renderAdminSectionCard({
     title: "CV background",
-    note: "Choose what appears on this CV. Order follows Professional Profile.",
+    note: "Choose what appears on this CV. Content and order follow Professional Profile automatically.",
     className: "admin-cv-background",
-    content: `<div class="admin-cv-background__groups">
+    content: `${backgroundNewNotice(newKeys.size, "CV")}<div class="admin-cv-background__groups">
         ${backgroundGroup({ group: "experiences", title: "Experience", note: "Choose employment history for the CV sidebar.", rows: experienceRows, selected: selection.experienceIds.length, total: content.experiences.length, empty: "No experience entries in Professional Profile." })}
         ${backgroundGroup({ group: "education", title: "Education", note: "Choose qualifications for the CV sidebar.", rows: educationRows, selected: selection.educationIds.length, total: content.education.length, empty: "No education entries in Professional Profile." })}
-        ${backgroundGroup({ group: "credentials", title: "Credentials", note: "Choose Ready credentials for this CV.", rows: credentialRows, selected: selection.credentialIds.length, total: (content.credentials ?? []).length, empty: "No Ready credentials have been synced." })}
+        ${backgroundGroup({ group: "credentials", title: "Credentials", note: "Choose Ready credentials for this CV.", rows: credentialRows, selected: selection.credentialIds.length, total: (content.credentials ?? []).length, empty: "No Ready credentials in Professional Profile." })}
         ${backgroundGroup({ group: "skillGroups", title: "Skill groups", note: "Each selected group becomes its own CV section.", rows: skillRows, selected: selection.skillGroupIds.length, total: content.skillGroups.length, empty: "No skill groups in Professional Profile." })}
         ${backgroundGroup({ group: "languages", title: "Languages", note: "Choose languages for the CV sidebar.", rows: languageRows, selected: selection.languageIds.length, total: content.languages.length, empty: "No languages in Professional Profile." })}
       </div>`,
-    actions: '<button class="button button--secondary" type="button" data-sync-professional-profile>Sync latest</button><button class="button button--secondary" type="button" data-admin-view="profile">Edit Professional Profile</button>',
+    actions: '<button class="button button--secondary" type="button" data-admin-view="profile">Edit Professional Profile</button>',
   });
 };
 
@@ -856,14 +882,28 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
   </div>`,
 });
 
-const portfolioBackgroundPanel = (runtime: PortfolioRuntimeData): string => renderAdminSectionCard({
-  title: "Portfolio background",
-  note: "Choose the credentials that support this Portfolio. Display order follows the Credentials library.",
-  content: `<div class="admin-document-selection">
-    <h4>Credentials</h4>
-    ${(runtime.credentials ?? []).length ? (runtime.credentials ?? []).map((item) => `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_credential" value="${escapeHtml(item.id)}" data-selection-primary${item.includeInPortfolio ? " checked" : ""}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.title.en)}">${escapeHtml(item.title.en || "Untitled credential")}</strong><small>${escapeHtml(item.issuer.en || item.kind.replaceAll("_", " "))}</small></span></label><span class="status status--published">Ready</span></article>`).join("") : '<p class="admin-empty">No published credentials are available. The Credentials page can still use safe placeholders.</p>'}
-  </div>`,
-});
+const portfolioBackgroundPanel = (runtime: PortfolioRuntimeData): string => {
+  const credentials = runtime.credentials ?? [];
+  const newKeys = newEntryKeys("portfolio");
+  const rows = credentials.map((item) => backgroundRow({
+    group: "credentials",
+    id: item.id,
+    title: item.title.en || "Untitled credential",
+    meta: credentialBackgroundMeta(item) || item.kind.replaceAll("_", " "),
+    selected: item.includeInPortfolio,
+    isNew: newKeys.has(backgroundEntryKey("credentials", item.id)),
+    inputName: "portfolio_credential",
+  })).join("");
+  return renderAdminSectionCard({
+    title: "Portfolio background",
+    note: "Choose what appears on this Portfolio. Content and order follow Professional Profile automatically.",
+    className: "admin-cv-background",
+    content: `${backgroundNewNotice(newKeys.size, "Portfolio")}<div class="admin-cv-background__groups">
+        ${backgroundGroup({ group: "credentials", title: "Credentials", note: "Every two selected credentials fill one Education & credentials page.", rows, selected: credentials.filter((item) => item.includeInPortfolio).length, total: credentials.length, empty: "No Ready credentials in Professional Profile. The Credentials page keeps safe placeholders." })}
+      </div>`,
+    actions: '<button class="button button--secondary" type="button" data-admin-view="profile">Edit Professional Profile</button>',
+  });
+};
 
 const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData => {
   const current = state.portfolio ?? { content: structuredClone(portfolioContentSeed), projects: [], tools: [] };
@@ -1162,6 +1202,7 @@ export const invalidateProfileDocumentWorkspace = (): void => {
   state.phase = { cv: "idle", portfolio: "idle" };
   state.errors = {};
   state.previewLanguage = { cv: "en", portfolio: "en" };
+  state.newEntries = { cv: new Map(), portfolio: new Map() };
 };
 
 export const markProfileDocumentWorkspaceStale = (): void => {
@@ -1170,6 +1211,7 @@ export const markProfileDocumentWorkspaceStale = (): void => {
 };
 
 export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocumentKind, callbacks: WorkspaceCallbacks): void => {
+  let layoutIssues: string[] = [];
   root.querySelector<HTMLButtonElement>("[data-profile-document-retry]")?.addEventListener("click", () => {
     state.phase[kind] = "idle";
     delete state.errors[kind];
@@ -1226,6 +1268,10 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       const pageCount = iframe.contentDocument?.querySelectorAll(kind === "cv" ? ".cv-page" : ".portfolio-page").length ?? 0;
       const pageCountLabel = root.querySelector<HTMLElement>("[data-preview-page-count]");
       if (pageCountLabel && pageCount) pageCountLabel.textContent = `${pageCount} page${pageCount === 1 ? "" : "s"}`;
+      if (kind === "portfolio" && iframe.contentDocument) {
+        layoutIssues = findPortfolioLayoutIssues(iframe.contentDocument);
+        updateValidation(validateProfileDocument(kind, previewPayload(kind, form)));
+      }
     })
     : undefined;
   iframe?.addEventListener("error", () => previewController?.setError(`${documentLabel(kind)} preview is unavailable.`));
@@ -1424,7 +1470,9 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     ].includes(target.name)
     || target instanceof HTMLSelectElement && target.name === "theme_preset"
   );
-  const updateValidation = (issues: string[]): void => {
+  // Layout issues come from the rendered preview; they are reported but do not block publishing.
+  const updateValidation = (contentIssues: string[]): void => {
+    const issues = [...contentIssues, ...layoutIssues];
     const status = root.querySelector<HTMLButtonElement>("[data-document-validation-open]");
     const content = root.querySelector<HTMLElement>("[data-document-validation-content]");
     if (status) {
@@ -1707,32 +1755,6 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       })
       .catch((error: Error) => callbacks.notify(error.message, "error"));
   });
-  root.querySelectorAll("[data-sync-professional-profile]").forEach((button) => button.addEventListener("click", () => {
-    void Promise.all([loadProfessionalProfile(), listProfessionalCredentials().catch(() => [])])
-      .then(([professional, credentials]) => {
-        if (kind === "cv" && state.cv) {
-          state.cv = readCvRuntimeForm(form);
-          const previousSelection = resolveCvBackgroundSelection(state.cv.content);
-          const nextContent: CvContent = {
-            ...state.cv.content,
-            profile: inheritSharedProfile(professional.profile, state.cv.content.profile),
-            experiences: structuredClone(professional.experiences),
-            education: structuredClone(professional.education),
-            credentials: credentials.filter((item) => item.status === "published").map(credentialSnapshot),
-            skillGroups: structuredClone(professional.skillGroups),
-            languages: structuredClone(professional.languages),
-          };
-          nextContent.backgroundSelection = resolveCvBackgroundSelection({ ...nextContent, backgroundSelection: previousSelection });
-          delete nextContent.backgroundOrder;
-          state.cv.content = nextContent;
-          state.dirty.cv = true;
-        }
-        callbacks.setDirty(true);
-        callbacks.rerender();
-        callbacks.notify("CV background synced from Professional Profile.", "success");
-      })
-      .catch((error: Error) => callbacks.notify(error.message, "error"));
-  }));
   root.querySelector("[data-sync-cv-profile]")?.addEventListener("click", async () => {
     await ensureProfileDocumentWorkspace("cv");
     const source = state.documents.cv.find((item) => item.isActive)?.draftPayload

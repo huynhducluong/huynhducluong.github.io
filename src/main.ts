@@ -135,7 +135,7 @@ const renderPage = (language: Language): void => {
   const homeSkills = skillGroups.flatMap((group) => group.items);
   const navigationLinks = websiteNavigationItems
     .filter((item) => content.sections[item.section])
-    .map((item) => `<li><a href="${item.href}">${escapeHtml(localize(item.label, language))}</a></li>`)
+    .map((item) => `<li><a href="${item.href}">${localize(item.label, language)}</a></li>`)
     .join("");
 
   document.documentElement.lang = language;

@@ -356,6 +356,66 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   white-space: nowrap;
 }
 
+.admin-document-meta__detail:first-child::before { content: none; }
+
+/* Compact density keeps one row. Title, status, save state and every action
+   stay visible; secondary meta remains available through the meta tooltip. */
+html.admin-app[data-header-density="compact"] .admin-document-header {
+  min-height: 0;
+  padding-block: .5rem;
+}
+
+html.admin-app[data-header-density="compact"] .admin-document-header__identity {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+}
+
+html.admin-app[data-header-density="compact"] .admin-document-header__identity > .section-kicker,
+html.admin-app[data-header-density="compact"] .admin-document-meta > :not(.status, .admin-document-meta__active) {
+  display: none;
+}
+
+html.admin-app[data-header-density="compact"] .admin-document-header__identity > h1 {
+  min-width: 0;
+  margin: 0;
+  font-size: var(--admin-title-sm);
+}
+
+html.admin-app[data-header-density="compact"] .admin-document-header__identity > .admin-document-meta {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.admin-header__actions {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+
+.admin-header .admin-header__density-toggle {
+  display: inline-grid;
+  width: var(--admin-control-height);
+  min-width: 0;
+  padding: 0;
+  place-items: center;
+}
+
+.admin-header__density-toggle svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentcolor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+}
+
+.admin-header__density-toggle[aria-pressed="true"] { background: var(--admin-color-selected); }
+
+/* The toggle only applies to workspaces that render the shared document header. */
+.admin-main:not(:has(.admin-document-header)) .admin-header__density-toggle { display: none; }
+
 @container (max-width: 64rem) {
   .admin-document-header {
     grid-template-columns: minmax(0, 1fr);
@@ -440,6 +500,11 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-shell :where(.status--archived) {
   background: #e7ebed;
   color: #4a555b;
+}
+
+.admin-shell :where(.status--new) {
+  background: var(--admin-color-selected);
+  color: var(--admin-color-focus);
 }
 
 .admin-shell .admin-message[data-kind="success"] { color: var(--admin-color-success); }
@@ -780,41 +845,10 @@ html.admin-app button.is-busy::before {
 
 .admin-workspace { overflow: auto; }
 
-.admin-workspace-loading__controls,
-.admin-workspace-loading__list {
-  display: grid;
-  gap: .7rem;
-  padding: 1rem;
-}
-
-.admin-workspace-loading__controls {
-  border-bottom: 1px solid var(--admin-color-border);
-}
-
-.admin-workspace-loading__controls span,
-.admin-workspace-loading__list span {
-  display: block;
-  border-radius: var(--admin-radius-sm);
-  background: linear-gradient(100deg, var(--admin-color-surface-muted) 25%, var(--admin-color-hover) 45%, var(--admin-color-surface-muted) 65%);
-  background-size: 220% 100%;
-  animation: admin-workspace-shimmer 1.2s ease-in-out infinite;
-}
-
-.admin-workspace-loading__controls span:first-child { height: var(--admin-control-height); }
-.admin-workspace-loading__controls span:last-child { width: 78%; height: var(--admin-control-height-sm); }
-.admin-workspace-loading__list span { height: 4.3rem; }
-.admin-workspace-loading__list span:nth-child(2) { width: 92%; }
-.admin-workspace-loading__list span:nth-child(3) { width: 84%; }
-
-@keyframes admin-workspace-shimmer {
-  to { background-position-x: -220%; }
-}
-
 .admin-workspace:has(> .admin-document-workspace),
 .admin-workspace:has(> .admin-site-workspace),
 .admin-workspace:has(> .admin-profile-workspace),
-.admin-workspace:has(> .admin-cl-shell),
-.admin-workspace:has(> .admin-cl-loading) {
+.admin-workspace:has(> .admin-cl-shell) {
   overflow: hidden;
 }
 
@@ -1345,8 +1379,7 @@ html.admin-app button.is-busy::before {
 }
 
 .admin-shell .admin-filter-row button,
-.admin-shell .admin-content-item__actions button,
-.admin-shell .admin-cl-back {
+.admin-shell .admin-content-item__actions button {
   display: inline-flex;
   min-height: var(--admin-control-height-sm);
   align-items: center;
@@ -1358,40 +1391,10 @@ html.admin-app button.is-busy::before {
   line-height: 1.2;
 }
 
-.admin-shell :where(.admin-filter-row button, .admin-content-item__actions button, .admin-cl-back):hover {
+.admin-shell :where(.admin-filter-row button, .admin-content-item__actions button):hover {
   border-color: var(--admin-color-border-strong);
   background: var(--admin-color-hover);
   color: var(--color-primary-dark);
-}
-
-.admin-workspace > .admin-placeholder--centered {
-  display: grid;
-  width: min(100%, 38rem);
-  min-height: 100%;
-  place-content: center;
-  justify-items: center;
-  gap: 1rem;
-  margin-inline: auto;
-  border: 0;
-  background: transparent;
-  box-shadow: none;
-  text-align: center;
-}
-
-.admin-placeholder--centered > div:last-child { display: grid; justify-items: center; gap: .35rem; }
-.admin-placeholder--centered h2 { font-size: var(--admin-title-md); }
-.admin-placeholder--centered p:last-child { color: var(--color-text-muted); font-size: var(--admin-text-sm); }
-
-.admin-placeholder__icon {
-  display: grid;
-  width: 3rem;
-  height: 3rem;
-  place-items: center;
-  border-radius: 999px;
-  background: var(--color-primary-light);
-  color: var(--color-primary-dark);
-  font-size: var(--admin-title-sm);
-  font-weight: var(--admin-weight-bold);
 }
 
 @media (max-width: 1280px) {
@@ -1401,7 +1404,6 @@ html.admin-app button.is-busy::before {
   }
   .admin-layout.has-collection { grid-template-columns: 19rem minmax(0, 1fr); }
   .admin-cl-shell { grid-template-columns: 19rem minmax(0, 1fr); }
-  .admin-channel-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-document-header,
   .admin-editor__heading { gap: 1rem; padding-inline: 1rem; }
 }
@@ -1540,9 +1542,7 @@ html.admin-app button.is-busy::before {
   .admin-collection { border-right: 0; border-bottom: 1px solid var(--admin-color-border); }
   .admin-form-grid,
   .admin-site-bilingual,
-  .admin-channel-grid,
-  .admin-document-theme,
-  .admin-document-summary-grid { grid-template-columns: 1fr; }
+  .admin-document-theme { grid-template-columns: 1fr; }
 
   .admin-document-header,
   .admin-editor__heading {
@@ -1568,9 +1568,6 @@ html.admin-app button.is-busy::before {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .admin-document-loading span { animation: none; }
-  .admin-workspace-loading__controls span,
-  .admin-workspace-loading__list span { animation: none; }
   .admin-document-title-switcher,
   .admin-document-title-switcher__icon svg { transition: none; }
   html.admin-app button.is-busy::before,

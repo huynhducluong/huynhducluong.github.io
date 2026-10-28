@@ -74,6 +74,24 @@ const readableTextColor = (background: string): string => {
 export const isHexColor = (color: string): boolean =>
   HEX_COLOR_PATTERN.test(color);
 
+/** WCAG AA for body text; documents print 7–10 pt text on and in the primary color. */
+export const DOCUMENT_TEXT_CONTRAST = 4.5;
+
+const SURFACE_MUTED_MIX = 0.9;
+
+// Primary is text on white and on the muted surface, and a background behind text: darken it until all three read.
+const readablePrimary = (color: string): string => {
+  let candidate = color;
+  for (let step = 1; step <= 50; step += 1) {
+    if (
+      getContrastRatio(candidate, mixColors(candidate, "#ffffff", SURFACE_MUTED_MIX)) >= DOCUMENT_TEXT_CONTRAST &&
+      getContrastRatio(candidate, readableTextColor(candidate)) >= DOCUMENT_TEXT_CONTRAST
+    ) return candidate;
+    candidate = mixColors(color, "#000000", step * 0.02);
+  }
+  return candidate;
+};
+
 export const buildDocumentThemeTokens = (
   primary: string,
   accent: string,
@@ -82,7 +100,7 @@ export const buildDocumentThemeTokens = (
     throw new Error("Document theme colors must use six-digit HEX values.");
   }
 
-  const normalizedPrimary = primary.toLowerCase();
+  const normalizedPrimary = readablePrimary(primary.toLowerCase());
   const normalizedAccent = accent.toLowerCase();
 
   return {
@@ -94,7 +112,7 @@ export const buildDocumentThemeTokens = (
     text: "#111820",
     textMuted: "#4c5d67",
     surface: "#ffffff",
-    surfaceMuted: mixColors(normalizedPrimary, "#ffffff", 0.9),
+    surfaceMuted: mixColors(normalizedPrimary, "#ffffff", SURFACE_MUTED_MIX),
     border: mixColors(normalizedPrimary, "#ffffff", 0.68),
   };
 };

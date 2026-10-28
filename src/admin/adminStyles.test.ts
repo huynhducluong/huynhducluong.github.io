@@ -103,8 +103,20 @@ describe("Admin stylesheet contract", () => {
     expect(selectionStart).toBeGreaterThanOrEqual(0);
     expect(backgroundStart).toBeGreaterThan(selectionStart);
     expect(formReaderStart).toBeGreaterThan(backgroundStart);
-    expect(profileDocumentWorkspaceSource.slice(selectionStart, backgroundStart)).not.toContain('name="portfolio_credential"');
-    expect(profileDocumentWorkspaceSource.slice(backgroundStart, formReaderStart)).toContain('name="portfolio_credential"');
+    expect(profileDocumentWorkspaceSource.slice(selectionStart, backgroundStart)).not.toContain("portfolio_credential");
+    expect(profileDocumentWorkspaceSource.slice(backgroundStart, formReaderStart)).toContain('inputName: "portfolio_credential"');
+  });
+
+  it("composes Portfolio skill groups from Professional Profile", () => {
+    const composeStart = profileDocumentWorkspaceSource.indexOf("const composePortfolioDraft");
+    const composeEnd = profileDocumentWorkspaceSource.indexOf("const composeCvDocument");
+    expect(composeStart).toBeGreaterThanOrEqual(0);
+    expect(profileDocumentWorkspaceSource.slice(composeStart, composeEnd)).toContain("skillGroups: structuredClone(professional.skillGroups)");
+  });
+
+  it("refreshes CV and Portfolio workspaces after credential changes", () => {
+    expect(siteWorkspaceSource).toContain("callbacks.onProfessionalCredentialsChanged();");
+    expect(mainSource).toMatch(/onProfessionalCredentialsChanged: \(\) => \{\s*profileDocumentWorkspaceModule\?\.invalidateProfileDocumentWorkspace\(\);/);
   });
 
   it("rebases editable document lists on their source-library order", () => {

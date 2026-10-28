@@ -35,10 +35,6 @@ input, textarea, select { width: 100%; padding: .7rem .8rem; border: 1px solid v
 textarea { resize: vertical; }
 .admin-actions { display: flex; flex-wrap: wrap; gap: var(--space-3); }
 .admin-upload { margin-top: var(--space-6); box-shadow: none; }
-.admin-responsibility-picker { display: grid; gap: var(--space-4); padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-sm); }
-.admin-responsibility-picker legend { padding-inline: .4rem; color: var(--color-primary-dark); font-size: var(--font-size-sm); font-weight: 900; }
-.admin-responsibility-picker label { display: flex; align-items: flex-start; gap: .65rem; font-weight: 600; }
-.admin-responsibility-picker input { width: auto; margin-top: .2rem; }
 .admin-date-field { min-width: 0; }
 .admin-date-field input { min-width: 0; }
 .admin-media-list { display: grid; overflow: hidden; border: 1px solid var(--admin-color-border); border-radius: .55rem; background: #fff; }
@@ -546,20 +542,6 @@ input, textarea, select { padding: .62rem .7rem; border-radius: .45rem; font-siz
 input:focus, textarea:focus, select:focus { border-color: var(--color-primary); outline: 3px solid rgb(8 126 164 / 10%); }
 textarea { line-height: 1.5; }
 
-.admin-channel-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .8rem; }
-.admin-channel-grid article {
-  display: grid;
-  align-content: start;
-  gap: .85rem;
-  padding: 1rem;
-  border: 1px solid var(--color-border);
-  border-radius: .6rem;
-  background: var(--admin-color-surface-subtle);
-}
-.admin-channel-grid strong,
-.admin-channel-grid small { display: block; }
-.admin-channel-grid strong { font-size: var(--admin-text-base); }
-.admin-channel-grid small { margin-top: .2rem; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
 .admin-switch { display: flex; align-items: center; gap: .5rem; color: var(--color-text); }
 .admin-switch input { width: auto; }
 
@@ -676,8 +658,7 @@ textarea { line-height: 1.5; }
 .admin-workflow strong { font-size: var(--admin-text-sm); }
 .admin-workflow small { margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-2xs); line-height: 1.4; }
 
-.admin-workspace > .admin-trash-detail,
-.admin-workspace > .admin-placeholder {
+.admin-workspace > .admin-trash-detail {
   max-width: 76rem;
   padding: 1.4rem;
   border-radius: .8rem;

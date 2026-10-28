@@ -3,6 +3,7 @@ import type {
   ClosingLayout,
   CoverLayout,
   CredentialsLayout,
+  PortfolioCredential,
   PortfolioLayoutPreferences,
   PortfolioRuntimeData,
   ProfileLayout,
@@ -114,6 +115,22 @@ export const resolveProjectLayout = (data: PortfolioRuntimeData, projectId: stri
 export const resolveAutomationLayout = (data: PortfolioRuntimeData, toolId: string): AutomationLayout =>
   data.content.layouts.automationOverrides[toolId] ?? data.content.layouts.automationDefault;
 
+export const PORTFOLIO_CREDENTIALS_PER_PAGE = 2;
+
+export const selectedPortfolioCredentials = (data: PortfolioRuntimeData): PortfolioCredential[] =>
+  (data.credentials ?? []).filter((item) => item.includeInPortfolio).sort((a, b) => a.portfolioOrder - b.portfolioOrder);
+
+/** An empty selection still yields one page so the layout keeps its placeholders. */
+export const portfolioCredentialPages = (data: PortfolioRuntimeData): PortfolioCredential[][] => {
+  if (!data.content.layouts.includeCredentials) return [];
+  const selected = selectedPortfolioCredentials(data);
+  if (!selected.length) return [[]];
+  return Array.from(
+    { length: Math.ceil(selected.length / PORTFOLIO_CREDENTIALS_PER_PAGE) },
+    (_, page) => selected.slice(page * PORTFOLIO_CREDENTIALS_PER_PAGE, (page + 1) * PORTFOLIO_CREDENTIALS_PER_PAGE),
+  );
+};
+
 export const portfolioPageCount = (data: PortfolioRuntimeData): number => {
   const selectedTools = data.tools.filter((tool) => tool.includeInPortfolio);
   const toolLayouts = selectedTools.map((tool) => resolveAutomationLayout(data, tool.id));
@@ -122,5 +139,5 @@ export const portfolioPageCount = (data: PortfolioRuntimeData): number => {
   return 4
     + data.projects.filter((project) => project.includeInPortfolio).length
     + automationPages
-    + (data.content.layouts.includeCredentials ? 1 : 0);
+    + portfolioCredentialPages(data).length;
 };

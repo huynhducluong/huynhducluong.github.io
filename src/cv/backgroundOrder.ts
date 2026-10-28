@@ -74,3 +74,23 @@ const backgroundOrderKeys: Record<CvBackgroundGroup, keyof CvBackgroundOrder> = 
 };
 
 export const backgroundOrderKey = (group: CvBackgroundGroup): keyof CvBackgroundOrder => backgroundOrderKeys[group];
+
+export const backgroundEntryKey = (group: CvBackgroundGroup, id: string): string => `${group}:${id}`;
+
+const backgroundGroups = Object.keys(backgroundOrderKeys) as CvBackgroundGroup[];
+
+const backgroundItems = (content: CvContent, group: CvBackgroundGroup): ReadonlyArray<{ id: string }> =>
+  (content[group] ?? []) as ReadonlyArray<{ id: string }>;
+
+/** Unselected entries in `current` that were not part of the previously saved snapshot. */
+export const newCvBackgroundKeys = (previous: CvContent, current: CvContent): Set<string> => {
+  const known = new Set(backgroundGroups.flatMap((group) => backgroundItems(previous, group).map((item) => backgroundEntryKey(group, item.id))));
+  const selection = resolveCvBackgroundSelection(current);
+  return new Set(backgroundGroups.flatMap((group) => {
+    const selected = new Set(selection[backgroundOrderKeys[group]]);
+    return backgroundItems(current, group)
+      .filter((item) => !selected.has(item.id))
+      .map((item) => backgroundEntryKey(group, item.id))
+      .filter((key) => !known.has(key));
+  }));
+};

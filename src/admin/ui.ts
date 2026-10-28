@@ -104,6 +104,11 @@ export const renderAdminWorkspaceState = ({
   <div><p class="section-kicker">${escapeHtml(eyebrow)}</p><h2>${escapeHtml(title)}</h2><p>${escapeHtml(message)}</p>${actions ? `<div class="admin-actions">${actions}</div>` : ""}</div>
 </section>`;
 
+// Meta markup is already escaped; separators replace span boundaries so the
+// compact header can expose hidden details through the meta tooltip.
+export const adminDocumentMetaText = (meta: string): string =>
+  meta.replace(/<\/span>\s*<span[^>]*>/g, " · ").replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
+
 export const renderAdminDocumentHeader = ({
   eyebrow,
   title,
@@ -118,7 +123,7 @@ export const renderAdminDocumentHeader = ({
   <div class="admin-document-header__identity">
     <p class="section-kicker">${escapeHtml(eyebrow)}</p>
     <h1 class="admin-document-title"${titleContent ? "" : ` title="${escapeHtml(title)}"`}>${titleContent ?? escapeHtml(title)}</h1>
-    <p class="admin-document-meta">${meta}</p>
+    <p class="admin-document-meta" title="${adminDocumentMetaText(meta)}">${meta}</p>
   </div>
   <div class="admin-document-actions">
     ${saveState}${utilityActions}${moreActions}${saveActions}${primaryActions}
