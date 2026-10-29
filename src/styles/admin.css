@@ -351,7 +351,7 @@ body:has(.admin-shell) {
 
 .admin-layout.has-collection {
   display: grid;
-  grid-template-columns: 21.5rem minmax(0, 1fr);
+  grid-template-columns: var(--admin-collection-width) minmax(0, 1fr);
 }
 
 .admin-collection {

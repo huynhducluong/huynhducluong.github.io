@@ -748,11 +748,11 @@ const mediaPanel = (type: AdminItemType, media: AdminMediaRow[]): string => {
   const isProject = type === "project";
   const uploadTitle = isProject ? "Project media" : "Tool media";
   const uploadNote = isProject
-    ? "Add a cover and gallery images for the project. JPEG, PNG, WebP or AVIF up to 5 MB."
-    : "Add a primary cover and gallery screenshots showing the tool workflow or output. JPEG, PNG, WebP or AVIF up to 5 MB.";
+    ? "Cover and gallery images. JPEG, PNG, WebP, AVIF ≤ 5 MB."
+    : "Cover and workflow images. JPEG, PNG, WebP, AVIF ≤ 5 MB.";
   const libraryNote = isProject
     ? "Choose the cover image, alt text and gallery order."
-    : "Choose the primary tool visual, edit alt text and order supporting screenshots.";
+    : "Choose the cover, alt text and screenshot order.";
   return `<div class="admin-media-panel" data-editor-panel="media" data-media-owner="${type}" ${panelState("media")}>
     <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload</button></form>
     <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(media)}</section>
@@ -782,7 +782,7 @@ const readinessCard = (type: AdminItemType, item: AdminProjectRow | AdminToolRow
         <div><strong>${result.warnings.length ? `${result.warnings.length} recommendation${result.warnings.length === 1 ? "" : "s"}` : "No recommendations"}</strong>${result.warnings.length ? `<ul>${result.warnings.map((issue) => `<li>${escapeHtml(issue)}</li>`).join("")}</ul>` : ""}</div>
       </div>`
     : '<p class="admin-readiness-ready">Required content and recommended translations are complete.</p>';
-  return renderAdminSectionCard({ title: "Ready check", note: "Required fixes block Ready status. Recommendations do not block publishing.", content, className: result.errors.length ? "admin-readiness admin-readiness--blocked" : "admin-readiness" });
+  return renderAdminSectionCard({ title: "Ready check", note: "Required fixes block Ready; recommendations do not.", content, className: result.errors.length ? "admin-readiness admin-readiness--blocked" : "admin-readiness" });
 };
 
 const savedDetailPreviewUrl = (type: AdminItemType, slug: string): string =>
@@ -804,7 +804,7 @@ const editor = (project: AdminProjectRow): string => `
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
         ${renderAdminSectionCard({
           title: "Project overview",
-          note: "Edit identity, dates, slug and optional video. Output selection is managed in Website, CV and Portfolio.",
+          note: "Name, dates, slug and video. Selected per output.",
           content: `<div class="admin-form-grid">
           ${field("Project name (EN)", "name_en", project.name.en, "text", "", true)}${field("Project name (VI)", "name_vi", project.name.vi)}
           ${field("Role (EN)", "role_en", project.role?.en ?? "")}${field("Role (VI)", "role_vi", project.role?.vi ?? "")}
@@ -847,7 +847,7 @@ const toolEditor = (tool: AdminToolRow): string => `
     <form id="tool-editor" class="admin-editor" data-tool-form>
       <input name="id" type="hidden" value="${escapeHtml(tool.id)}">
       <section class="admin-editor-panel" data-editor-panel="overview" ${panelState("overview")}>
-        ${renderAdminSectionCard({ title: "Tool overview", note: "Edit the tool name, slug, technologies and optional video. Output selection is managed in Website, CV and Portfolio.", content: `<div class="admin-form-grid">${field("Tool name", "name", tool.name, "text", "", true)}${field("Slug", "slug", tool.slug, "text", "Auto-generated from tool name")}</div><label>${renderAdminFieldLabel("Technologies (comma separated)", true)}<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}" aria-required="true"></label>${field("YouTube URL", "youtube_url", tool.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}` })}
+        ${renderAdminSectionCard({ title: "Tool overview", note: "Name, slug, technologies and video. Selected per output.", content: `<div class="admin-form-grid">${field("Tool name", "name", tool.name, "text", "", true)}${field("Slug", "slug", tool.slug, "text", "Auto-generated from tool name")}</div><label>${renderAdminFieldLabel("Technologies (comma separated)", true)}<input name="technologies" value="${escapeHtml(tool.technologies.join(", "))}" aria-required="true"></label>${field("YouTube URL", "youtube_url", tool.youtube_url ?? "", "url", "https://www.youtube.com/watch?v=...")}` })}
         ${readinessCard("tool", tool)}
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
@@ -889,8 +889,11 @@ const overviewView = (): string => {
     && adminSchemaHealth.checks.contentReadiness;
   const lastPurgeRunSucceeded = adminSchemaHealth.trashPurge.lastRunStatus === "succeeded";
   const lastPurgeRunLabel = adminSchemaHealth.trashPurge.lastRunAt
-    ? `${formatAdminDateTime(adminSchemaHealth.trashPurge.lastRunAt)} · ${adminSchemaHealth.trashPurge.lastRunStatus ?? "unknown"}`
-    : "Awaiting the first scheduled run";
+    ? formatAdminDateTime(adminSchemaHealth.trashPurge.lastRunAt)
+    : "Awaiting first run";
+  const lastPurgeRunStatus = adminSchemaHealth.trashPurge.lastRunAt
+    ? adminSchemaHealth.trashPurge.lastRunStatus ?? "unknown"
+    : "No run yet";
   return `
     <section class="admin-overview">
       <div class="admin-page-heading"><div><p class="section-kicker">Workspace overview</p><h1>Content dashboard</h1><p>Manage website content, CV data and publish-ready documents from one place.</p></div></div>
@@ -905,11 +908,11 @@ const overviewView = (): string => {
       <section class="admin-overview-card admin-health-card${adminSchemaHealth.healthy ? "" : " has-warning"}" aria-labelledby="admin-health-title">
         <div class="admin-card-heading"><div><h2 id="admin-health-title">Operational health</h2><p>Live checks for publishing safety and automatic Trash cleanup.</p></div><span aria-label="${adminSchemaHealth.healthy ? "All required checks passed" : "One or more checks need attention"}">${adminSchemaHealth.healthy ? "OK" : "!"}</span></div>
         <ul class="admin-health-list">
-          <li class="${coreSchemaHealthy ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Publishing database</strong><small>Transactional publishing, readiness and release-aware media</small></div><b>${coreSchemaHealthy ? "Ready" : "Update migration"}</b></li>
-          <li class="${adminSchemaHealth.checks.purgeServiceRole ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Purge database access</strong><small>Least-privilege access for the Edge Function service role</small></div><b>${adminSchemaHealth.checks.purgeServiceRole ? "Ready" : "Check grants"}</b></li>
-          <li class="${adminSchemaHealth.checks.trashPurgeSchedule ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Daily Trash cleanup</strong><small>${escapeHtml(adminSchemaHealth.trashPurge.localTime)} · ${escapeHtml(adminSchemaHealth.trashPurge.schedule ?? "Not scheduled")}</small></div><b>${adminSchemaHealth.checks.trashPurgeSchedule ? "Active" : "Check Cron"}</b></li>
-          <li class="${adminSchemaHealth.checks.credentialStorage ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Private credential storage</strong><small>Protected images, certificates and PDF evidence</small></div><b>${adminSchemaHealth.checks.credentialStorage ? "Ready" : "Update migration"}</b></li>
-          <li class="${adminSchemaHealth.trashPurge.lastRunAt ? (lastPurgeRunSucceeded ? "is-healthy" : "has-warning") : "is-pending"}"><span aria-hidden="true"></span><div><strong>Latest scheduled run</strong><small>${escapeHtml(lastPurgeRunLabel)}</small></div><b>${adminSchemaHealth.trashPurge.lastRunAt ? (lastPurgeRunSucceeded ? "Passed" : "Review") : "Pending"}</b></li>
+          <li class="${coreSchemaHealthy ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Publishing database</strong><small>Publishing and readiness</small></div><b>${coreSchemaHealthy ? "Ready" : "Update migration"}</b></li>
+          <li class="${adminSchemaHealth.checks.purgeServiceRole ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Purge database access</strong><small>Edge Function role</small></div><b>${adminSchemaHealth.checks.purgeServiceRole ? "Ready" : "Check grants"}</b></li>
+          <li class="${adminSchemaHealth.checks.trashPurgeSchedule ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Daily Trash cleanup</strong><small title="${escapeHtml(adminSchemaHealth.trashPurge.schedule ?? "Not scheduled")}">${escapeHtml(adminSchemaHealth.trashPurge.localTime)}</small></div><b>${adminSchemaHealth.checks.trashPurgeSchedule ? "Active" : "Check Cron"}</b></li>
+          <li class="${adminSchemaHealth.checks.credentialStorage ? "is-healthy" : "has-warning"}"><span aria-hidden="true"></span><div><strong>Private credential storage</strong><small>Certificates and PDFs</small></div><b>${adminSchemaHealth.checks.credentialStorage ? "Ready" : "Update migration"}</b></li>
+          <li class="${adminSchemaHealth.trashPurge.lastRunAt ? (lastPurgeRunSucceeded ? "is-healthy" : "has-warning") : "is-pending"}"><span aria-hidden="true"></span><div><strong>Latest scheduled run</strong><small title="${escapeHtml(lastPurgeRunStatus)}">${escapeHtml(lastPurgeRunLabel)}</small></div><b>${adminSchemaHealth.trashPurge.lastRunAt ? (lastPurgeRunSucceeded ? "Passed" : "Review") : "Pending"}</b></li>
         </ul>
       </section>
       <div class="admin-overview-grid">
@@ -978,7 +981,7 @@ const dashboardView = (): void => {
           <p>Applications</p>${navButton("cover-letters", "Cover letters")}
           <p>System</p>${navButton("trash", "Trash")}
         </nav>
-        <div class="admin-rail__footer"><button type="button" data-password-open>Account security</button><button type="button" data-sign-out>Sign out</button></div>
+        <div class="admin-rail__footer"><button type="button" data-password-open title="Account security">Security</button><button type="button" data-sign-out>Sign out</button></div>
       </aside>
       <section class="admin-main">
         <header class="admin-header"><div><small>${adminBrand.breadcrumb} /</small><strong>${viewTitle[activeView]}</strong></div><p class="admin-message sr-only" data-admin-message></p><div class="admin-header__actions">${renderAdminHeaderDensityToggle()}<a class="button button--secondary" href="${import.meta.env.BASE_URL}" target="_blank" rel="noreferrer">View website</a></div></header>

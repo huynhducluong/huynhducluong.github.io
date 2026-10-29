@@ -22,3 +22,7 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Admin screenshot session and output (scripts/admin-screenshots.mjs)
+.auth/
+tmp/screenshots/

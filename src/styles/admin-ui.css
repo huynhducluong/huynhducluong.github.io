@@ -30,6 +30,8 @@ html.admin-app {
   --admin-shadow-card: 0 8px 24px rgb(16 45 59 / 6%);
   --admin-workspace-gutter: 1.25rem;
   --admin-workspace-header-min-height: 6.75rem;
+  /* Collection list beside an editor: 21.5rem on the laptop, wider on 1920/2560 monitors so item names fit. */
+  --admin-collection-width: clamp(21.5rem, 22vw, 30rem);
   --admin-document-columns: minmax(0, 44fr) minmax(0, 56fr);
   --admin-tabs-height: 3.25rem;
 }
@@ -337,10 +339,10 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
   content: "";
 }
 
+/* Block (not flex) so text-overflow can show an ellipsis when the detail is squeezed. */
 .admin-document-meta__detail {
-  display: inline-flex;
+  display: block;
   min-width: 0;
-  align-items: center;
 }
 
 .admin-document-meta__detail::before {

@@ -213,7 +213,7 @@ const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
     </article>`).join("");
   return renderAdminSectionCard({
     title: "Profile photo library",
-    note: "Store, rename and delete reusable square photos. Choose the active photo in Identity.",
+    note: "Reusable square photos. Set the active one in Identity.",
     headerActions: '<button class="button admin-action-new" type="button" data-profile-photo-upload-trigger>+ Add photo</button><input class="admin-photo-upload-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-profile-photo-upload>',
     content: cards
       ? `<div class="admin-photo-library">${cards}</div>`
@@ -283,7 +283,7 @@ const websiteGeneral = (content: WebsiteContent): string => [
   }),
   renderAdminSectionCard({
     title: "Website hero",
-    note: "Edit the homepage introduction shown above the main content.",
+    note: "Homepage introduction shown above the main content.",
     content: `${bilingual("Hero eyebrow", "hero_eyebrow", content.heroEyebrow, true)}
       ${bilingual("Professional focus", "focus", content.focus, true)}
       ${bilingual("Specialization", "specialization", content.specialization, true)}`,
@@ -439,7 +439,7 @@ const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
 
 const profileIdentity = (professional: ProfessionalProfileContent, photos: ProfilePhotoAsset[]): string => renderAdminSectionCard({
   title: "Profile identity",
-  note: "Shared contact and profile details used across all outputs.",
+  note: "Contact and profile details shared by all outputs.",
   content: `<div class="admin-form-grid">
     <label class="admin-derived-field"><span class="admin-derived-field__heading"><span>${renderAdminFieldLabel("Full name", true)}</span><span class="admin-derived-field__output" id="profile-name-english">EN <span aria-hidden="true">·</span> <strong data-profile-name-english>${escapeHtml(profileName(professional.profile.name, "en"))}</strong></span></span><input name="profile_name" type="text" value="${escapeHtml(profileName(professional.profile.name, "vi"))}" aria-describedby="profile-name-english" aria-required="true" data-profile-name-input></label>
     ${field("Email", "profile_email", professional.profile.email, "email", "", true)}
@@ -821,7 +821,7 @@ const websiteView = (): string => {
           <section data-website-panel="general"${tab === "general" ? "" : " hidden"}>${websiteGeneral(content)}</section>
           <section data-website-panel="sections"${tab === "sections" ? "" : " hidden"}>${websiteSections(content)}</section>
           <section data-website-panel="featured"${tab === "featured" ? "" : " hidden"}>${websiteFeatured(runtime)}</section>
-          <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: "Homepage appearance", note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) })}</section>
+          <section data-website-panel="appearance"${tab === "appearance" ? "" : " hidden"}>${renderAdminSectionCard({ title: "Homepage appearance", note: "Draft colors; published releases keep their theme.", content: themeFields(content.theme) })}</section>
         </form>
       </section>
       <aside class="admin-site-preview">${previewToolbar}<div class="admin-site-frame" data-viewport="${state.viewport}" data-zoom="${state.previewZoom.mode}" tabindex="0" aria-label="Scrollable website preview"><div class="admin-embedded-preview-stage" data-embedded-preview-stage><iframe title="${websitePreviewTitle(state.previewPage)} draft preview" src="${websitePreviewPath(state.previewPage, runtime)}" data-website-iframe scrolling="no" tabindex="-1"></iframe></div></div></aside>

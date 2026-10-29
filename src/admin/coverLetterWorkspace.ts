@@ -315,7 +315,7 @@ const editorView = (): string => {
             <section class="admin-editor-panel" data-cl-panel="evidence" ${panelState("evidence")}>
               ${renderAdminSectionCard({
                 title: "Supporting evidence",
-                note: "Private references only; order follows Projects and Automation Tools.",
+                note: "Private references; order follows the source libraries.",
                 className: "admin-cl-evidence-card",
                 content: `<div class="admin-cl-evidence">
                   <div class="admin-cl-evidence-heading"><h4>Projects</h4><small data-evidence-count="projectIds">${letter.projectIds.length} selected</small></div>
@@ -328,7 +328,7 @@ const editorView = (): string => {
             <section class="admin-editor-panel" data-cl-panel="appearance" ${panelState("appearance")}>
               ${renderAdminSectionCard({
                 title: "Cover Letter appearance",
-                note: "Choose draft colors; finalized letters keep their saved theme.",
+                note: "Draft colors; finalized letters keep their theme.",
                 content: renderDocumentThemeFields({
                   theme: letter.theme,
                   names: { preset: "themePreset", primary: "themePrimary", accent: "themeAccent" },

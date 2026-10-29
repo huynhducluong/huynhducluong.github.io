@@ -161,7 +161,7 @@ const portfolioImageTreatmentFields = (content: PortfolioContent): string => {
   const enabled = content.imageOverlay?.enabled !== false;
   return renderAdminSectionCard({
     title: "Project image treatment",
-    note: "Control the Primary color tint applied to project feature images.",
+    note: "Primary color tint applied to project feature images.",
     className: "admin-image-treatment-card",
     content: `<div class="admin-image-treatment" data-image-overlay-control>
       <div class="admin-image-treatment__top">
@@ -293,11 +293,11 @@ const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
     </div>`
     : '<p class="admin-empty">No published projects or tools are available for layout overrides.</p>';
   return [
-    renderAdminSectionCard({ title: "Portfolio appearance", note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) }),
+    renderAdminSectionCard({ title: "Portfolio appearance", note: "Draft colors; published releases keep their theme.", content: themeFields(content.theme) }),
     portfolioImageTreatmentFields(content),
     renderAdminSectionCard({
       title: "Page layouts",
-      note: "Choose one A4 landscape preset for each page type. Open a row to compare its options.",
+      note: "Pick one A4 landscape preset per page type.",
       className: "admin-layout-system-card",
       content: `<div class="admin-layout-system" role="group" aria-label="Portfolio page layouts" data-layout-accordion>
         ${portfolioLayoutPicker("Cover", "Document opening", "layout_cover", content.layouts.cover, coverLayoutOptions)}
@@ -309,10 +309,10 @@ const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
         ${portfolioLayoutPicker("Thank you", "Portfolio closing", "layout_closing", content.layouts.closing, closingLayoutOptions)}
       </div>`,
     }),
-    renderAdminSectionCard({ title: "Item layout overrides", note: "Optional. Keep an item on the document default or give it a specialized layout.", content: overrides }),
+    renderAdminSectionCard({ title: "Item layout overrides", note: "Optional. Give an item its own layout.", content: overrides }),
     renderAdminSectionCard({
       title: "Portfolio media",
-      note: "Choose the primary and supporting visuals used by this Portfolio draft. Crops are reused from the source Media library.",
+      note: "Cover and supporting visuals. Crops come from Media.",
       content: portfolioMediaAssignmentsPanel(runtime),
     }),
   ].join("");
@@ -580,7 +580,7 @@ export const ensureProfileDocumentWorkspace = (kind: ProfileDocumentKind): Promi
 const latestReleaseMeta = (kind: ProfileDocumentKind): string => {
   const release = state.releases[kind][0];
   return release
-    ? `<span class="admin-document-meta__detail">Version ${escapeHtml(release.version)}</span><span class="admin-document-meta__detail">Published ${formatAdminDateTime(release.publishedAt)}</span>`
+    ? `<span class="admin-document-meta__detail">v${escapeHtml(release.version)}</span><span class="admin-document-meta__detail">Published ${formatAdminDate(release.publishedAt)}</span>`
     : '<span class="admin-document-meta__detail">Not published yet</span>';
 };
 
@@ -703,7 +703,7 @@ const cvBackgroundPanel = (content: CvContent): string => {
   })).join("");
   return renderAdminSectionCard({
     title: "CV background",
-    note: "Choose what appears on this CV. Content and order follow Professional Profile automatically.",
+    note: "Choose what appears. Order follows Professional Profile.",
     className: "admin-cv-background",
     content: `${backgroundNewNotice(newKeys.size, "CV")}<div class="admin-cv-background__groups">
         ${backgroundGroup({ group: "experiences", title: "Experience", note: "Choose employment history for the CV sidebar.", rows: experienceRows, selected: selection.experienceIds.length, total: content.experiences.length, empty: "No experience entries in Professional Profile." })}
@@ -723,7 +723,7 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
   const tools = runtime.availableTools ?? runtime.tools;
   return renderAdminSectionCard({
     title: "CV content selection",
-    note: "Choose projects, presentation, responsibilities and tools for this CV draft.",
+    note: "Projects, presentation, responsibilities and tools.",
     content: `<div class="admin-cv-selection">
       <section><h4>${renderAdminFieldLabel("Projects", true)}</h4><div class="admin-cv-selection__list">
         ${projects.map((item) => {
@@ -867,7 +867,7 @@ const portfolioContentPanel = (content: PortfolioContent): string => [
 
 const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => renderAdminSectionCard({
   title: "Portfolio content selection",
-  note: "Choose projects and tools. Display order follows their source libraries; layout choices live in Appearance.",
+  note: "Order follows source libraries; layouts live in Appearance.",
   content: `<div class="admin-document-selection">
     <h4>${renderAdminFieldLabel("Projects", true)}</h4>
     ${runtime.projects.map((item) => {
@@ -896,7 +896,7 @@ const portfolioBackgroundPanel = (runtime: PortfolioRuntimeData): string => {
   })).join("");
   return renderAdminSectionCard({
     title: "Portfolio background",
-    note: "Choose what appears on this Portfolio. Content and order follow Professional Profile automatically.",
+    note: "Choose what appears. Order follows Professional Profile.",
     className: "admin-cv-background",
     content: `${backgroundNewNotice(newKeys.size, "Portfolio")}<div class="admin-cv-background__groups">
         ${backgroundGroup({ group: "credentials", title: "Credentials", note: "Every two selected credentials fill one Education & credentials page.", rows, selected: credentials.filter((item) => item.includeInPortfolio).length, total: credentials.length, empty: "No Ready credentials in Professional Profile. The Credentials page keeps safe placeholders." })}
@@ -1100,7 +1100,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
     : portfolioBackgroundPanel(runtime as PortfolioRuntimeData);
   const appearancePanel = kind === "portfolio"
     ? portfolioAppearancePanel(runtime as PortfolioRuntimeData)
-    : renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Choose draft colors; published releases keep their saved theme.", content: themeFields(content.theme) });
+    : renderAdminSectionCard({ title: `${documentLabel(kind)} appearance`, note: "Draft colors; published releases keep their theme.", content: themeFields(content.theme) });
   const archived = selected.status === "archived";
   const initialPageCount = kind === "cv"
     ? 2
@@ -1119,7 +1119,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
         eyebrow: `${documentLabel(kind)} document`,
         title: selected.internalTitle,
         titleContent: `<button class="admin-document-title-switcher" type="button" data-profile-document-library-open aria-haspopup="dialog" aria-controls="${kind}-document-library" aria-expanded="false" aria-label="Switch ${documentLabel(kind)}. Current document: ${escapeHtml(selected.internalTitle)}"><span class="admin-document-title-switcher__label">${escapeHtml(selected.internalTitle)}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button>`,
-        meta: `<span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-meta__active">Active public version</span>' : ""}${latestReleaseMeta(kind)}`,
+        meta: `<span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-meta__active">Live</span>' : ""}${latestReleaseMeta(kind)}`,
         saveState: '<span data-document-save-state data-dirty="false" aria-live="polite">Saved</span>',
         utilityActions: `<button class="button button--secondary admin-action-utility" type="button" data-document-history-open aria-haspopup="dialog" aria-controls="${kind}-release-history-dialog">History (${state.releases[kind].length})</button>`,
         moreActions: `<details class="admin-document-more"><summary>More</summary><div><button type="button" data-document-print>Print / PDF</button><button type="button" data-profile-document-rename>Rename</button><button type="button" data-profile-document-duplicate>Duplicate</button>${!archived && !selected.isActive ? '<button type="button" data-profile-document-archive>Archive</button>' : ""}</div></details>`,

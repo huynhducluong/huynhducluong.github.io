@@ -74,7 +74,7 @@ Hidden meta remains readable through the meta tooltip (`adminDocumentMetaText`).
 
 ## 6. Forms
 
-- Group fields in `renderAdminSectionCard` with a title and a one-line note.
+- Group fields in `renderAdminSectionCard` with a title and a one-line note. The note is clipped to one line, so keep it at 60 characters or fewer (it must fit the narrow side cards on the 1440px laptop) and do not repeat the title.
 - Required fields use `renderAdminFieldLabel(label, true)` and the matching `required` / `aria-required` attribute.
 - Paired localized fields always appear English first, then Vietnamese, labelled `(EN)` and `(VI)`.
 - Validation errors appear next to the field they belong to; publish-blocking issues are also listed in the pre-publish check dialog. Do not use a toast as the only place an error is shown.
@@ -115,6 +115,31 @@ Icons are inline SVG on a 16×16 (controls) or 24×24 (navigation) view box, dra
 Existing breakpoints: `1280px`, `1180px`, `900px` (rail/mobile switch; `901px` for desktop-only rules), `720px`, `560px`, and the `64rem` container query on document headers. Reuse these instead of adding new values.
 
 Below the container breakpoint, the header identity stacks above the actions and the actions wrap; action order never changes.
+
+### Target screens
+
+The owner works on these three screens. Every Admin layout change must look right at all three CSS viewports (resolution ÷ Windows scale, minus taskbar and browser chrome). Heights are approximate for a maximized Chrome window; confirm with `innerWidth`/`innerHeight` when it matters.
+
+| Screen | Physical | Scale | CSS viewport | Band |
+|---|---|---|---|---|
+| Laptop | 2880×1800 | 200% (DPR 2) | 1440 × 731 (measured) | 1281–1480 wide; height in the 621–760 band (compact rail) |
+| Monitor 1 | 2560×1440 | 100% | 2560 × ≈1300 | wide desktop (no rule above 1480) |
+| Monitor 2 | 1920×1080 | 100% | 1920 × ≈940 | wide desktop (no rule above 1480) |
+
+Mobile breakpoints (`900px` and below) stay supported but are not the daily target.
+
+### Visual check
+
+After any Admin layout change, capture the affected views at the three target screens and look at the images before calling the change done. `scripts/admin-screenshots.mjs` holds the same viewports as the table above; keep them in sync.
+
+- `npm run shots:login` — once per machine (and when the session expires): opens Chromium, you sign in, the session is saved to `.auth/admin.json` (git-ignored).
+- `npm run shots` — starts Vite on port 5199 and writes `tmp/screenshots/<screen>/<view>.png` for every view.
+- `npm run shots -- --views=cv,portfolio --screens=laptop` — limit the run.
+- `npm run shots -- --path="/admin/?view=projects&item=new" --name=new-project` — capture a specific route.
+
+The run opens every workspace tab and warns when a page scrolls horizontally, an element extends past the right edge, or a single-line text is clipped. Clipped fixed copy (notes, meta, health descriptions) must be shortened; clipped user data (long project names, slugs) is acceptable when it shows an ellipsis and a `title` tooltip.
+
+Collection lists beside an editor (Content, CV/Portfolio library, Cover letters) use `--admin-collection-width`, which grows from 21.5rem on the laptop to 30rem on wide monitors; the `1280px` and `1180px` rules still narrow it.
 
 ## 12. CSS and bundle rules
 

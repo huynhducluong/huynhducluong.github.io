@@ -124,7 +124,7 @@ export const renderProfessionalCredentials = (
   credentials: ProfessionalCredential[],
 ): string => renderAdminSectionCard({
   title: "Credentials",
-  note: "Qualifications, certificates and licenses shared across your professional profile. Evidence files are private by default.",
+  note: "Certificates, degrees and licenses. Evidence stays private.",
   headerActions: '<button class="button admin-action-new" type="button" data-credential-new>+ Add credential</button>',
   content: `<div data-credential-workspace>${credentials.length ? `<div class="admin-credential-list" data-credential-list>${credentials.map((item, index) => credentialCard(item, professional, index, credentials.length)).join("")}</div>` : '<div class="admin-empty-state"><div><strong>No credentials yet</strong><small>Add a professional certification, academic degree or language exam.</small></div></div>'}${credentialDialog(professional)}</div>`,
 });
