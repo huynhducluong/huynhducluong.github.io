@@ -136,7 +136,7 @@
 
 .admin-location-combobox > [data-location-input] {
   width: 100%;
-  padding-right: 3rem !important;
+  padding-right: var(--admin-chevron-reserve) !important;
 }
 
 .admin-location-combobox__toggle {
@@ -144,7 +144,7 @@
   top: 1px;
   right: 1px;
   display: grid;
-  width: 2.5rem;
+  width: var(--admin-chevron-slot);
   height: calc(100% - 2px);
   padding: 0;
   place-items: center;
@@ -153,21 +153,6 @@
   background: linear-gradient(90deg, transparent, var(--admin-color-surface) 32%);
   color: var(--admin-color-text-muted);
   cursor: pointer;
-}
-
-.admin-location-combobox__toggle svg {
-  width: 1rem;
-  height: 1rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.75;
-  transition: transform 140ms ease;
-}
-
-.admin-location-combobox.is-open .admin-location-combobox__toggle svg {
-  transform: rotate(180deg);
 }
 
 .admin-location-combobox__toggle:hover {
@@ -239,8 +224,9 @@
 }
 
 @container admin-form (max-width: 40rem) {
+  /* stretch, not flex-start: a flex-start column sizes the title to its full text and defeats the ellipsis. */
   .admin-profile-entry-card__heading {
-    align-items: flex-start;
+    align-items: stretch;
     flex-direction: column;
   }
 
@@ -268,10 +254,11 @@
   height: var(--admin-control-height);
   min-width: 0;
   min-height: var(--admin-control-height);
-  grid-template-columns: 1.8rem minmax(0, 1fr) auto;
+  /* The last column is the shared chevron slot, so the arrow lines up with every other Admin select. */
+  grid-template-columns: 1.8rem minmax(0, 1fr) var(--admin-chevron-slot);
   align-items: center;
   gap: .55rem;
-  padding: .25rem .55rem;
+  padding: .25rem 0 .25rem .55rem;
   border: 1px solid var(--admin-color-border);
   border-radius: var(--admin-control-radius);
   background: #fff;
@@ -342,25 +329,8 @@ button.admin-profile-photo-control {
 
 .admin-profile-photo-chevron {
   display: grid;
-  width: 1rem;
-  height: 1rem;
   place-items: center;
   color: var(--admin-color-text-muted);
-  transition: transform .16s ease;
-}
-
-.admin-profile-photo-chevron svg {
-  width: 100%;
-  height: 100%;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.75;
-}
-
-.admin-profile-photo-picker.is-open .admin-profile-photo-chevron {
-  transform: rotate(180deg);
 }
 
 .admin-profile-photo-options {
@@ -467,7 +437,7 @@ button.admin-profile-photo-control {
 .admin-photo-library-card {
   display: grid;
   min-width: 0;
-  overflow: hidden;
+  /* No overflow: hidden here, or the More menu would be clipped; the image rounds its own corners. */
   border: 1px solid var(--admin-color-border);
   border-radius: .65rem;
   background: #fff;
@@ -476,6 +446,7 @@ button.admin-profile-photo-control {
 .admin-photo-library-card__image {
   aspect-ratio: 1;
   overflow: hidden;
+  border-radius: calc(.65rem - 1px) calc(.65rem - 1px) 0 0;
   background: var(--admin-color-surface-muted);
 }
 
@@ -501,21 +472,20 @@ button.admin-profile-photo-control {
   overflow-wrap: anywhere;
 }
 
-.admin-photo-library-card__actions {
+/* Name and the shared More (⋯) menu; Rename and Delete live in the menu (§6.4). */
+.admin-photo-library-card__title {
   display: grid;
-  width: 100%;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
   gap: .4rem;
 }
 
-.admin-photo-library-card__actions .button {
-  width: 100%;
-  min-width: 0;
+.admin-photo-library-card .admin-document-more .admin-more-menu__trigger {
+  width: var(--admin-control-height-sm);
+  min-width: var(--admin-control-height-sm);
+  height: var(--admin-control-height-sm);
   min-height: var(--admin-control-height-sm);
-  margin: 0;
-  padding: .3rem .45rem;
-  font-size: var(--admin-text-2xs);
-  line-height: 1;
 }
 
 .admin-photo-library-card__body p,
@@ -542,50 +512,18 @@ button.admin-profile-photo-control {
   justify-content: flex-end;
 }
 
+/* Crop dialogs: header, close button and gutters come from .admin-dialog__header in admin-ui.css (§8.1). */
 .admin-dialog.admin-photo-crop-dialog {
   width: min(calc(100% - 2rem), 68rem);
   max-height: calc(100dvh - 2rem);
   overflow: auto;
 }
 
-.admin-photo-crop-dialog__heading {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1.35rem 1.5rem 1rem;
-  border-bottom: 1px solid var(--admin-color-border);
-}
-
-.admin-photo-crop-dialog__heading h2 {
-  margin-top: .2rem;
-}
-
-.admin-photo-crop-dialog__heading p:last-child {
-  margin-top: .25rem;
-  font-size: var(--admin-text-sm);
-}
-
-.admin-dialog-close {
-  display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid var(--admin-color-border);
-  border-radius: 50%;
-  background: #fff;
-  color: var(--color-text);
-  cursor: pointer;
-  font-size: 1.35rem;
-  line-height: 1;
-}
-
 .admin-photo-crop-dialog__layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 16rem;
-  gap: 1.25rem;
-  padding: 1.25rem 1.5rem;
+  gap: 1rem;
+  padding: 1rem var(--admin-dialog-gutter);
 }
 
 .admin-photo-crop-editor,
@@ -600,7 +538,7 @@ button.admin-profile-photo-control {
   height: min(58dvh, 34rem);
   min-height: 22rem;
   overflow: hidden;
-  border-radius: .55rem;
+  border-radius: var(--admin-radius-md);
   background: #102c39;
 }
 
@@ -612,6 +550,7 @@ button.admin-profile-photo-control {
 
 .admin-photo-crop-controls {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: .5rem;
 }
@@ -622,18 +561,75 @@ button.admin-profile-photo-control {
   flex: 1;
   align-items: center;
   gap: .55rem;
+  color: var(--admin-color-text-muted);
   font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-semibold);
 }
 
+/* A slider, not a text field: drop the shared input box so the focus ring hugs the track. */
+.admin-shell .admin-photo-crop-controls input[type="range"],
 .admin-photo-crop-controls input[type="range"] {
   width: 100%;
+  min-width: 0;
+  min-height: 1.5rem;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  accent-color: var(--color-primary);
+}
+
+.admin-shell .admin-photo-crop-controls input[type="range"]:focus-visible,
+.admin-photo-crop-controls input[type="range"]:focus-visible {
+  outline: 2px solid var(--admin-color-focus);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+
+.admin-photo-crop-controls output {
+  min-width: 2.75rem;
+  color: var(--admin-color-text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.admin-crop-zoom-button svg {
+  width: 1rem;
+  height: 1rem;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-width: 1.75;
+}
+
+/* Preview frames place the full source with cropPreviewStyle(); overflow shows only the crop. */
+.admin-crop-preview-frame {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 1;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-color-surface-muted);
+}
+
+.admin-crop-preview-frame.is-round {
+  border-radius: 50%;
+}
+
+.admin-crop-preview-frame img,
+.admin-crop-tab__thumb img {
+  position: absolute;
+  display: block;
+  max-width: none;
+  max-height: none;
 }
 
 .admin-photo-crop-preview {
-  padding: 1rem;
+  padding: .9rem;
   border: 1px solid var(--admin-color-border);
-  border-radius: .6rem;
-  background: var(--admin-color-surface-muted);
+  border-radius: var(--admin-radius-md);
+  background: var(--admin-color-surface-subtle);
 }
 
 .admin-photo-crop-preview__images {
@@ -648,19 +644,6 @@ button.admin-profile-photo-control {
   color: var(--admin-color-text-muted);
   font-size: var(--admin-text-2xs);
   text-align: center;
-}
-
-.admin-photo-crop-preview cropper-viewer {
-  display: block;
-  width: 100%;
-  aspect-ratio: 1;
-  overflow: hidden;
-  border: 1px solid var(--admin-color-border);
-  background: #fff;
-}
-
-.admin-photo-crop-preview cropper-viewer.is-round {
-  border-radius: 50%;
 }
 
 .admin-photo-crop-preview label {
@@ -684,35 +667,11 @@ button.admin-profile-photo-control {
 
 .admin-photo-crop-dialog__actions {
   justify-content: flex-end;
-  padding: 1rem 1.5rem 1.25rem;
+  padding: .75rem var(--admin-dialog-gutter);
   border-top: 1px solid var(--admin-color-border);
 }
 
-.admin-project-cover-crop-tabs {
-  display: flex;
-  gap: .45rem;
-  padding: .7rem 1rem;
-  overflow-x: auto;
-  border-bottom: 1px solid var(--admin-color-border);
-}
-
-.admin-project-cover-crop-tabs button {
-  display: flex;
-  min-width: 8rem;
-  align-items: center;
-  justify-content: space-between;
-  gap: .75rem;
-  padding: .6rem .75rem;
-  border: 1px solid var(--admin-color-border);
-  border-radius: .45rem;
-  background: #fff;
-  color: var(--admin-color-text);
-  cursor: pointer;
-  font: inherit;
-  font-size: var(--admin-text-xs);
-  font-weight: var(--admin-weight-bold);
-}
-
+/* Portfolio media: one tab per format, each with a live thumbnail of its crop. */
 .admin-dialog.admin-project-cover-crop-dialog {
   width: min(calc(100vw - 1rem), 72rem);
   height: min(46rem, calc(100dvh - 1rem));
@@ -725,25 +684,109 @@ button.admin-profile-photo-control {
   grid-template-rows: auto auto minmax(0, 1fr) auto;
 }
 
-.admin-project-cover-crop-dialog .admin-photo-crop-dialog__heading {
+.admin-project-cover-crop-tabs {
+  display: flex;
+  gap: .5rem;
+  padding: .65rem var(--admin-dialog-gutter);
+  overflow-x: auto;
+  border-bottom: 1px solid var(--admin-color-border);
+}
+
+.admin-project-cover-crop-tabs button {
+  display: flex;
+  min-height: 3rem;
+  flex: 0 0 auto;
   align-items: center;
-  padding: .8rem 1rem .7rem;
+  gap: .6rem;
+  padding: .4rem .7rem .4rem .45rem;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-control-radius);
+  background: var(--admin-color-surface);
+  color: var(--admin-color-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 140ms ease, background-color 140ms ease;
 }
 
-.admin-project-cover-crop-dialog .admin-photo-crop-dialog__heading h2 {
-  margin-top: .1rem;
+.admin-project-cover-crop-tabs button:hover {
+  border-color: var(--admin-color-border-strong);
+  background: var(--admin-color-hover);
 }
 
-.admin-project-cover-crop-dialog .admin-photo-crop-dialog__heading p:last-child {
-  margin-top: .15rem;
+.admin-project-cover-crop-tabs button.is-active {
+  border-color: var(--color-primary);
+  background: var(--admin-color-selected);
+  color: var(--color-primary-dark);
+}
+
+.admin-project-cover-crop-tabs button:focus-visible {
+  border-color: var(--admin-color-focus);
+  outline: 0;
+  box-shadow: 0 0 0 3px var(--admin-color-focus-ring);
+}
+
+.admin-crop-tab__thumb {
+  position: relative;
+  display: block;
+  height: 2rem;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid var(--admin-color-border);
+  border-radius: .25rem;
+  background: var(--admin-color-surface-muted);
+}
+
+.admin-crop-tab__text {
+  display: grid;
+  gap: .05rem;
+}
+
+.admin-crop-tab__text strong {
+  font-size: var(--admin-text-sm);
+  font-weight: var(--admin-weight-semibold);
+  line-height: 1.2;
+}
+
+.admin-crop-tab__text small {
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-crop-tab__status {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .12rem .45rem;
+  border-radius: 999px;
+  background: var(--admin-color-surface-muted);
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-crop-tab__status[hidden] {
+  display: none;
+}
+
+.admin-crop-tab__status[data-kind="edited"] {
+  background: var(--admin-color-warning-surface);
+  color: var(--admin-color-warning);
+}
+
+.admin-crop-tab__status[data-kind="edited"]::before {
+  width: .4rem;
+  height: .4rem;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
 }
 
 .admin-project-cover-crop-dialog .admin-photo-crop-dialog__layout {
   min-height: 0;
   grid-template-columns: minmax(0, 1fr) clamp(12rem, 22vw, 15rem);
-  gap: 1rem;
   overflow: hidden;
-  padding: .8rem 1rem;
 }
 
 .admin-project-cover-crop-dialog .admin-photo-crop-editor {
@@ -756,84 +799,25 @@ button.admin-profile-photo-control {
   min-height: 0;
 }
 
-.admin-project-cover-crop-footer {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 1rem;
-  padding: .65rem 1rem;
-  border-top: 1px solid var(--admin-color-border);
-  background: #fff;
-}
-
-.admin-project-cover-crop-footer .admin-photo-crop-controls {
-  min-width: 0;
-}
-
-.admin-project-cover-crop-footer .admin-photo-crop-controls label {
-  max-width: 30rem;
-}
-
-.admin-project-cover-crop-footer .admin-photo-crop-dialog__actions {
-  flex-wrap: nowrap;
-  padding: 0;
-  border: 0;
-}
-
-.admin-project-cover-crop-tabs button:hover,
-.admin-project-cover-crop-tabs button.is-active {
-  border-color: var(--color-primary);
-  background: var(--admin-color-hover);
-  color: var(--color-primary-dark);
-}
-
-.admin-project-cover-crop-tabs small {
-  color: var(--admin-color-text-muted);
-  font-size: .625rem;
-  font-weight: var(--admin-weight-bold);
-}
-
-.admin-project-cover-crop-preview__frame {
-  position: relative;
-  width: 100%;
-  max-height: 100%;
-  overflow: hidden;
-  border: 1px solid var(--admin-color-border);
-  border-radius: .45rem;
-  background: var(--document-primary-strong, #0b526f);
-}
-
-.admin-project-cover-crop-preview__frame cropper-viewer {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.admin-project-cover-crop-preview__frame > span {
-  position: absolute;
-  top: .65rem;
-  left: .65rem;
-  z-index: 1;
-  display: grid;
-  width: 2.2rem;
-  height: 2.2rem;
-  place-items: center;
-  background: var(--document-accent, #f6b73c);
-  color: #102c39;
-  font-size: var(--admin-text-sm);
-  font-weight: 900;
-}
-
 .admin-project-cover-crop-preview {
   min-height: 0;
   grid-template-rows: auto minmax(0, 1fr) auto;
   align-content: stretch;
-  gap: .55rem;
+  gap: .6rem;
   padding: .75rem;
 }
 
-.admin-project-cover-crop-preview__frame {
-  align-self: start;
+/* The frame fits the free space at the output ratio, centered, so tall and wide formats both read well. */
+.admin-project-cover-crop-preview__canvas {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  container-type: size;
+}
+
+.admin-project-cover-crop-preview__canvas .admin-crop-preview-frame {
+  width: min(100cqw, 100cqh * var(--admin-crop-ratio, 1));
+  aspect-ratio: var(--admin-crop-ratio, 1);
 }
 
 .admin-project-cover-crop-preview__info {
@@ -852,26 +836,39 @@ button.admin-profile-photo-control {
   line-height: 1.45;
 }
 
+.admin-project-cover-crop-footer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  padding: .65rem var(--admin-dialog-gutter);
+  border-top: 1px solid var(--admin-color-border);
+  background: var(--admin-color-surface);
+}
+
+.admin-project-cover-crop-footer .admin-photo-crop-controls label {
+  max-width: 30rem;
+}
+
+.admin-project-cover-crop-footer .admin-photo-crop-dialog__actions {
+  flex-wrap: nowrap;
+  padding: 0;
+  border: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-project-cover-crop-tabs button { transition: none; }
+}
+
 @media (max-height: 680px) {
   .admin-dialog.admin-project-cover-crop-dialog {
     height: calc(100dvh - .5rem);
     max-height: calc(100dvh - .5rem);
   }
 
-  .admin-project-cover-crop-dialog .admin-photo-crop-dialog__heading {
-    padding-block: .55rem;
-  }
-
-  .admin-project-cover-crop-dialog .admin-photo-crop-dialog__heading p:last-child {
-    display: none;
-  }
-
-  .admin-project-cover-crop-tabs {
-    padding-block: .45rem;
-  }
-
+  .admin-project-cover-crop-tabs,
   .admin-project-cover-crop-dialog .admin-photo-crop-dialog__layout {
-    padding-block: .55rem;
+    padding-block: .5rem;
   }
 
   .admin-project-cover-crop-footer {
@@ -886,13 +883,6 @@ button.admin-profile-photo-control {
 
   .admin-project-cover-crop-preview {
     padding: .6rem;
-  }
-
-  .admin-project-cover-crop-preview__frame > span {
-    top: .4rem;
-    left: .4rem;
-    width: 1.8rem;
-    height: 1.8rem;
   }
 }
 
@@ -914,10 +904,6 @@ button.admin-profile-photo-control {
     flex-wrap: wrap;
   }
 
-  .admin-project-cover-crop-tabs {
-    padding-inline: 1rem;
-  }
-
   .admin-dialog.admin-project-cover-crop-dialog {
     width: calc(100vw - .5rem);
     height: calc(100dvh - .5rem);
@@ -928,16 +914,16 @@ button.admin-profile-photo-control {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* The tab thumbnails keep showing every crop when the side preview is hidden. */
   .admin-project-cover-crop-preview {
     display: none;
   }
 
   .admin-project-cover-crop-footer {
-    grid-template-columns: minmax(0, 1fr) auto;
     gap: .6rem;
   }
 
-  .admin-project-cover-crop-footer .admin-photo-crop-controls label span {
+  .admin-project-cover-crop-footer .admin-photo-crop-controls label > span {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -947,25 +933,8 @@ button.admin-profile-photo-control {
 }
 
 @media (max-width: 560px) {
-  .admin-project-cover-crop-dialog .admin-photo-crop-dialog__heading {
-    padding-inline: .75rem;
-  }
-
-  .admin-project-cover-crop-tabs {
-    padding-inline: .75rem;
-  }
-
-  .admin-project-cover-crop-tabs button {
-    min-width: 7rem;
-  }
-
-  .admin-project-cover-crop-dialog .admin-photo-crop-dialog__layout {
-    padding-inline: .75rem;
-  }
-
   .admin-project-cover-crop-footer {
     grid-template-columns: 1fr;
-    padding-inline: .75rem;
   }
 
   .admin-project-cover-crop-footer .admin-photo-crop-dialog__actions {
@@ -1369,49 +1338,110 @@ button.admin-profile-photo-control {
 
 .admin-credential-card {
   display: grid;
-  gap: 1rem;
+  gap: .75rem;
   padding: 1rem;
   border: 1px solid var(--admin-color-border);
-  border-radius: .65rem;
+  border-radius: var(--admin-radius-md);
   background: var(--admin-color-surface-subtle);
 }
 
-.admin-credential-card.is-archived { opacity: .72; }
+/* Archived reads as muted through color, never through opacity (§6.4). */
+.admin-credential-card.is-archived { border-style: dashed; background: var(--admin-color-surface-muted); }
 .admin-credential-list[aria-busy="true"] { cursor: wait; }
-.admin-credential-card > header { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
-.admin-credential-card > header p { color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: 800; text-transform: uppercase; }
-.admin-credential-card > header h4 { margin-top: .15rem; font-size: var(--admin-text-base); }
-.admin-credential-card > header small { display: block; margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-regular); letter-spacing: normal; text-transform: none; }
-.admin-credential-card > dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr)); gap: .65rem; margin: 0; }
-.admin-credential-card > dl div { padding: .65rem; border: 1px solid var(--admin-color-border); border-radius: .45rem; background: #fff; }
-.admin-credential-card dt { color: var(--color-text-muted); font-size: var(--admin-text-2xs); font-weight: 800; text-transform: uppercase; }
-.admin-credential-card dd { margin: .2rem 0 0; font-size: var(--admin-text-xs); font-weight: 700; }
-.admin-credential-card__description { color: var(--color-text-muted); font-size: var(--admin-text-sm); }
+.admin-credential-card__eyebrow { display: flex; min-width: 0; align-items: center; gap: .5rem; color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: var(--admin-weight-bold); letter-spacing: .04em; text-transform: uppercase; }
+.admin-credential-card > header h4 { margin-top: .2rem; font-size: var(--admin-text-base); }
+.admin-credential-card > header small { display: block; overflow: hidden; margin-top: .15rem; color: var(--admin-color-text-muted); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-regular); letter-spacing: normal; text-overflow: ellipsis; text-transform: none; white-space: nowrap; }
+
+/* Facts as one meta line separated by dots, not boxed tiles. */
+.admin-credential-card__meta { display: flex; min-width: 0; flex-wrap: wrap; align-items: center; gap: .25rem 0; margin: 0; color: var(--admin-color-text); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-semibold); }
+.admin-credential-card__meta > * { display: inline-flex; min-width: 0; max-width: 100%; align-items: center; }
+.admin-credential-card__meta > * + *::before { margin-inline: .5rem; color: var(--admin-color-border-strong); content: "·"; }
+.admin-credential-card__link { gap: .3rem; padding: 0; border: 0; background: transparent; color: var(--color-primary-dark); cursor: pointer; font: inherit; text-align: left; text-decoration: underline; text-decoration-color: color-mix(in srgb, currentColor 35%, transparent); text-underline-offset: .18em; }
+.admin-credential-card__link:hover { text-decoration-color: currentColor; }
+.admin-credential-card__link:focus-visible { border-radius: .2rem; outline: 2px solid var(--admin-color-focus); outline-offset: 2px; }
+.admin-credential-card__link > span:first-child { flex: 0 0 auto; color: var(--admin-color-text-muted); }
+.admin-credential-card__warning { color: var(--admin-color-warning); }
+.admin-credential-card__description { display: -webkit-box; overflow: hidden; margin: 0; color: var(--admin-color-text-muted); font-size: var(--admin-text-sm); line-height: 1.5; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
 .admin-credential-card__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
 
 @container admin-form (max-width: 40rem) {
-  .admin-credential-card > header { align-items: flex-start; }
+  .admin-credential-card > header { align-items: stretch; flex-direction: column; }
   .admin-credential-card__actions { width: 100%; justify-content: flex-start; }
+  /* Narrow cards stack the facts, so a wrapped line never starts with a separator. */
+  .admin-credential-card__meta { flex-direction: column; align-items: flex-start; gap: .3rem; }
+  .admin-credential-card__meta > * + *::before { display: none; }
 }
 
-.admin-credential-files { display: grid; gap: .75rem; padding-top: .9rem; border-top: 1px solid var(--admin-color-border); }
-.admin-credential-files h5 { font-size: var(--admin-text-sm); }
-.admin-credential-files > div > p { margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); }
-.admin-credential-files ul { display: grid; gap: .45rem; margin: 0; padding: 0; list-style: none; }
-.admin-credential-files li { display: grid; grid-template-columns: 2.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .6rem; padding: .6rem; border: 1px solid var(--admin-color-border); border-radius: .45rem; background: #fff; }
-.admin-credential-files li strong,
-.admin-credential-files li small { display: block; }
-.admin-credential-files li strong { overflow: hidden; font-size: var(--admin-text-xs); text-overflow: ellipsis; white-space: nowrap; }
-.admin-credential-files li small { margin-top: .1rem; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
+/* Evidence: header row with the count and "+ Add file", one row per file, then the pending upload row. */
+.admin-credential-files { display: grid; gap: .5rem; padding-top: .75rem; border-top: 1px solid var(--admin-color-border); }
+.admin-credential-files__header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .75rem; }
+.admin-credential-files h5 { font-size: var(--admin-text-sm); white-space: nowrap; }
+.admin-credential-files h5 small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-weight: var(--admin-weight-semibold); }
+.admin-credential-files__header .button { flex: 0 0 auto; }
+.admin-credential-files__empty { margin: 0; color: var(--admin-color-text-muted); font-size: var(--admin-text-xs); }
+.admin-credential-files ul { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.admin-credential-files li,
+.admin-credential-pending { display: grid; min-width: 0; grid-template-columns: 2.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .6rem; padding: .5rem .6rem; border: 1px solid var(--admin-color-border); border-radius: var(--admin-control-radius); background: var(--admin-color-surface); }
+.admin-credential-pending { grid-template-columns: 2.4rem minmax(0, 1fr) minmax(9rem, 12rem) auto auto; border-style: dashed; background: var(--admin-color-selected); }
+.admin-credential-pending[hidden] { display: none; }
+.admin-credential-pending__kind { display: flex; min-width: 0; align-items: center; gap: .45rem; font-size: var(--admin-text-xs); }
+.admin-credential-pending__kind .admin-select-control { flex: 1; }
+.admin-credential-file__identity { display: grid; min-width: 0; gap: .1rem; }
+.admin-credential-file__name { color: var(--admin-color-text); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-bold); }
+.admin-credential-file__identity small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); }
 .admin-credential-file__icon { display: grid; height: 2rem; place-items: center; border-radius: .35rem; background: var(--color-primary-light); color: var(--color-primary-dark); font-size: .58rem; font-weight: 900; }
-.admin-credential-upload { display: grid; grid-template-columns: minmax(12rem, 18rem) auto; align-items: end; gap: .65rem; }
 
-.admin-linked-credentials { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: .8rem; padding: .8rem; border: 1px dashed var(--admin-color-border); border-radius: .5rem; background: var(--admin-color-surface-subtle); }
-.admin-linked-credentials strong,
-.admin-linked-credentials small { display: block; }
-.admin-linked-credentials strong { font-size: var(--admin-text-sm); }
-.admin-linked-credentials small { margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
-.admin-linked-credentials > div:last-child { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: .4rem; }
+@container admin-form (max-width: 40rem) {
+  .admin-credential-pending { grid-template-columns: 2.4rem minmax(0, 1fr); }
+  .admin-credential-pending__kind { grid-column: 1 / -1; }
+  .admin-credential-pending .button { grid-column: span 1; }
+}
+
+/* Linked credentials: a fixed header row, then one full-width row per credential (§6.2). */
+.admin-linked-credentials { display: grid; min-width: 0; gap: .6rem; padding: .75rem; border: 1px dashed var(--admin-color-border); border-radius: var(--admin-radius-md); background: var(--admin-color-surface-subtle); }
+.admin-linked-credentials__header { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: .75rem; }
+.admin-linked-credentials__header > div { display: flex; flex: 0 0 auto; align-items: baseline; gap: .5rem; white-space: nowrap; }
+.admin-linked-credentials__header strong { font-size: var(--admin-text-sm); }
+.admin-linked-credentials__header small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); }
+.admin-linked-credentials__header .button { flex: 0 0 auto; }
+.admin-linked-credentials__list { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
+.admin-linked-credentials__empty { margin: 0; color: var(--admin-color-text-muted); font-size: var(--admin-text-xs); }
+.admin-linked-credential {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--admin-control-height);
+  grid-template-columns: 6.25rem minmax(0, 1fr) auto auto 1rem;
+  align-items: center;
+  gap: .6rem;
+  padding: .45rem .65rem;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-control-radius);
+  background: var(--admin-color-surface);
+  color: var(--admin-color-text);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: border-color 140ms ease, background-color 140ms ease;
+}
+.admin-linked-credential:not(:has(.status)) { grid-template-columns: 6.25rem minmax(0, 1fr) auto 1rem; }
+.admin-linked-credential:hover { border-color: var(--admin-color-border-strong); background: var(--admin-color-hover); }
+.admin-linked-credential:focus-visible { border-color: var(--admin-color-focus); outline: 0; box-shadow: 0 0 0 3px var(--admin-color-focus-ring); }
+.admin-linked-credential__kind { overflow: hidden; color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: var(--admin-weight-bold); letter-spacing: .04em; text-overflow: ellipsis; text-transform: uppercase; white-space: nowrap; }
+.admin-linked-credential__title { color: var(--color-primary-dark); font-size: var(--admin-text-sm); font-weight: var(--admin-weight-semibold); }
+.admin-linked-credential__meta { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.admin-linked-credential__chevron { display: grid; place-items: center; color: var(--admin-color-text-muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-linked-credential { transition: none; }
+}
+
+@container admin-form (max-width: 40rem) {
+  .admin-linked-credentials__header { flex-wrap: wrap; }
+  .admin-linked-credential { grid-template-columns: minmax(0, 1fr) auto auto 1rem; row-gap: .1rem; }
+  .admin-linked-credential:not(:has(.status)) { grid-template-columns: minmax(0, 1fr) auto 1rem; }
+  .admin-linked-credential__kind { grid-column: 1 / -1; }
+}
 
 .admin-credential-dialog {
   width: min(56rem, calc(100vw - 1.5rem));
@@ -1431,26 +1461,11 @@ button.admin-profile-photo-control {
   padding: 0;
 }
 
-.admin-credential-dialog__header {
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: .9rem 1.1rem .8rem;
-  border-bottom: 1px solid var(--admin-color-border);
-  background: var(--admin-color-surface);
-}
-
-.admin-credential-dialog__header > div { min-width: 0; }
-.admin-credential-dialog__header h2 { margin-top: .1rem; font-size: var(--admin-title-sm); }
-.admin-credential-dialog__header p:not(.section-kicker) { max-width: 44rem; margin-top: .2rem; color: var(--color-text-muted); font-size: var(--admin-text-xs); line-height: 1.45; }
-
 .admin-credential-dialog__body {
   display: grid;
   min-height: 0;
   gap: .7rem;
-  padding: .8rem 1.1rem;
+  padding: .8rem var(--admin-dialog-gutter);
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-width: none;
@@ -1464,27 +1479,9 @@ button.admin-profile-photo-control {
 .admin-credential-dialog__footer select { padding: .5rem .65rem; }
 .admin-credential-dialog__body textarea { min-height: 3.7rem; max-height: 7rem; }
 
-.admin-credential-date-grid {
-  display: grid;
-  min-width: 0;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) minmax(12rem, .9fr);
-  align-items: end;
-  gap: .65rem .8rem;
-}
-
-.admin-credential-date-grid > label { min-width: 0; }
-
-.admin-credential-no-expiry {
-  min-height: var(--admin-control-height);
-  padding: .45rem .65rem;
-  border: 1px solid var(--admin-color-border);
-  border-radius: var(--admin-control-radius);
-  background: var(--admin-color-surface-subtle);
-  font-size: var(--admin-text-xs);
-  line-height: 1.3;
-}
-
-.admin-credential-no-expiry input { flex: 0 0 auto; }
+/* Issue and expiry dates follow the form's two-column grid; "Does not expire" sits in the expiry label row (§6.3). */
+.admin-credential-date-grid { align-items: start; }
+.admin-credential-expiry { display: grid; min-width: 0; align-content: start; gap: .28rem; }
 
 .admin-credential-dialog__footer {
   display: grid;
@@ -1492,20 +1489,12 @@ button.admin-profile-photo-control {
   grid-template-columns: minmax(9rem, 14rem) minmax(0, 1fr);
   align-items: end;
   gap: 1rem;
-  padding: .7rem 1.1rem .8rem;
+  padding: .7rem var(--admin-dialog-gutter) .8rem;
   border-top: 1px solid var(--admin-color-border);
   background: var(--admin-color-surface);
 }
 
 .admin-credential-dialog__footer .admin-actions { justify-content: flex-end; }
-
-@media (max-width: 48rem) {
-  .admin-linked-credentials { grid-template-columns: 1fr; }
-  .admin-linked-credentials > div:last-child { justify-content: flex-start; }
-  .admin-credential-files li { grid-template-columns: 2.4rem minmax(0, 1fr); }
-  .admin-credential-files li .button { grid-column: span 1; }
-  .admin-credential-upload { grid-template-columns: 1fr; }
-}
 
 @media (max-width: 42rem) {
   .admin-credential-dialog {
@@ -1515,29 +1504,19 @@ button.admin-profile-photo-control {
   }
 
   .admin-credential-dialog form { max-height: calc(100dvh - .75rem); }
-  .admin-credential-dialog__header,
-  .admin-credential-dialog__body,
-  .admin-credential-dialog__footer { padding-inline: .85rem; }
-  .admin-credential-date-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .admin-credential-no-expiry { grid-column: 1 / -1; }
   .admin-credential-dialog__footer { grid-template-columns: minmax(8rem, 11rem) minmax(0, 1fr); gap: .65rem; }
 }
 
 @media (max-width: 34rem) {
   .admin-credential-date-grid,
   .admin-credential-dialog__footer { grid-template-columns: 1fr; }
-  .admin-credential-no-expiry { grid-column: auto; }
   .admin-credential-dialog__footer .admin-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .admin-credential-dialog__footer .button { width: 100%; }
 }
 
 @media (max-height: 44rem) {
-  .admin-credential-dialog__header { padding-block: .65rem .55rem; }
   .admin-credential-dialog__body { gap: .5rem; padding-block: .6rem; }
   .admin-credential-dialog__footer { padding-block: .55rem .65rem; }
   .admin-credential-dialog__body textarea { min-height: 3.25rem; }
 }
 
-@media (max-height: 36rem) {
-  .admin-credential-dialog__header p:not(.section-kicker) { display: none; }
-}

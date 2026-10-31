@@ -19,12 +19,37 @@ import type {
 } from "../types/credential";
 import { confirmAdmin } from "./confirmDialog";
 import { clearAdminDialogStatus } from "./toast";
-import { formatAdminDate, renderAdminFieldLabel, renderAdminSectionCard, setButtonBusy } from "./ui";
+import {
+  adminArrowDownIcon,
+  adminArrowUpIcon,
+  adminChevronRightIcon,
+  formatAdminDate,
+  renderAdminDialogHeader,
+  renderAdminFieldLabel,
+  renderAdminMoreMenu,
+  renderAdminSectionCard,
+  renderAdminSelectControl,
+  renderAdminTruncatedText,
+  revealAdminElement,
+  setButtonBusy,
+} from "./ui";
 
 const credentialKindLabels: Record<CredentialKind, string> = {
   professional_certification: "Professional certification",
   academic_degree: "Academic degree",
   language_exam: "Language exam",
+  license: "License",
+  course: "Course",
+  award: "Award",
+  membership: "Membership",
+  other: "Other",
+};
+
+/** Badge text for compact rows; the full label stays in the editor and the credential card. */
+const credentialKindShortLabels: Record<CredentialKind, string> = {
+  professional_certification: "Certification",
+  academic_degree: "Degree",
+  language_exam: "Exam",
   license: "License",
   course: "Course",
   award: "Award",
@@ -45,52 +70,87 @@ const formatFileSize = (bytes: number): string => bytes < 1024 * 1024
   ? `${Math.max(1, Math.round(bytes / 1024))} KB`
   : `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 
-const relationLabel = (credential: ProfessionalCredential, professional: ProfessionalProfileContent): string => {
+/** The Profile entry a credential is linked to, or why it cannot be shown. */
+const relatedEntry = (credential: ProfessionalCredential, professional: ProfessionalProfileContent): { label: string; name: string } | { missing: string } | null => {
   if (credential.relatedType === "education") {
     const item = professional.education.find((education) => education.id === credential.relatedId);
-    return item ? `Education · ${item.institution.en}` : "Education link unavailable";
+    return item ? { label: "Education", name: item.institution.en || item.field.en || "Untitled education" } : { missing: "Education link unavailable" };
   }
   if (credential.relatedType === "language") {
     const item = professional.languages.find((language) => language.id === credential.relatedId);
-    return item ? `Language · ${item.name.en}` : "Language link unavailable";
+    return item ? { label: "Language", name: item.name.en || "Untitled language" } : { missing: "Language link unavailable" };
   }
-  return "Standalone credential";
+  return null;
 };
 
 const statusLabel = (status: ProfessionalCredential["status"]): string => status === "published" ? "Ready" : status === "draft" ? "Draft" : "Archived";
 
+const documentKindOptions = (): string => Object.entries(documentKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
+
+/**
+ * Credential card (§6.4): identity and status on the left, actions on the right with Archive in More,
+ * facts as one meta line, then Evidence. Each fact appears once; at most two levels of boxes.
+ */
 const credentialCard = (
   credential: ProfessionalCredential,
   professional: ProfessionalProfileContent,
   index: number,
   total: number,
 ): string => {
+  const id = escapeHtml(credential.id);
+  const title = credential.title.en || "Untitled credential";
+  const issuer = credential.issuer.en || "Issuer not set";
+  const archived = credential.status === "archived";
+  const related = relatedEntry(credential, professional);
+  const relatedMeta = !related
+    ? "<span>Standalone</span>"
+    : "missing" in related
+      ? `<span class="admin-credential-card__warning">${escapeHtml(related.missing)}</span>`
+      : `<button class="admin-credential-card__link" type="button" data-credential-show-related data-related-type="${credential.relatedType}" data-related-id="${escapeHtml(credential.relatedId ?? "")}" title="Open ${escapeHtml(related.label)}: ${escapeHtml(related.name)}"><span>${related.label}:</span>${renderAdminTruncatedText(related.name)}</button>`;
+  const meta = [
+    `<span>${credential.issuedOn ? `Issued ${formatAdminDate(credential.issuedOn)}` : "Issue date not set"}</span>`,
+    `<span>${credential.doesNotExpire ? "No expiry" : credential.expiresOn ? `Expires ${formatAdminDate(credential.expiresOn)}` : "Expiry not set"}</span>`,
+    relatedMeta,
+  ].join("");
+  const fileCount = `${credential.assets.length} private file${credential.assets.length === 1 ? "" : "s"}`;
   const assets = credential.assets.map((asset) => `<li>
     <span class="admin-credential-file__icon" aria-hidden="true">${asset.mimeType === "application/pdf" ? "PDF" : "IMG"}</span>
-    <span><strong>${escapeHtml(asset.name)}</strong><small>${escapeHtml(documentKindLabels[asset.documentKind])} · ${formatFileSize(asset.fileSize)} · Private</small></span>
-    <button class="button button--secondary" type="button" data-credential-asset-open="${escapeHtml(asset.id)}" data-credential-id="${escapeHtml(credential.id)}">Open</button>
-    ${credential.status === "archived" ? "" : `<button class="button button--secondary admin-button--danger" type="button" data-credential-asset-delete="${escapeHtml(asset.id)}" data-credential-id="${escapeHtml(credential.id)}">Delete</button>`}
+    <span class="admin-credential-file__identity">${renderAdminTruncatedText(asset.name, "admin-credential-file__name")}<small>${escapeHtml(documentKindLabels[asset.documentKind])} · ${formatFileSize(asset.fileSize)}</small></span>
+    <button class="button button--secondary" type="button" data-credential-asset-open="${escapeHtml(asset.id)}" data-credential-id="${id}">Open</button>
+    ${renderAdminMoreMenu({ label: `More actions for ${asset.name}`, items: [{ label: "Delete file", attributes: `data-credential-asset-delete="${escapeHtml(asset.id)}" data-credential-id="${id}"`, tone: "danger" }] })}
   </li>`).join("");
-  return `<article class="admin-credential-card${credential.status === "archived" ? " is-archived" : ""}" data-credential-card="${escapeHtml(credential.id)}">
+  return `<article class="admin-credential-card${archived ? " is-archived" : ""}" data-credential-card="${id}">
     <header class="admin-credential-card__heading admin-profile-entry-card__heading">
-      <div><p>${escapeHtml(credentialKindLabels[credential.kind])}</p><h4>${escapeHtml(credential.title.en || "Untitled credential")}</h4><small>${escapeHtml(credential.issuer.en || "Issuer not set")}</small></div>
+      <div>
+        <p class="admin-credential-card__eyebrow"><span>${escapeHtml(credentialKindLabels[credential.kind])}</span><span class="status status--${credential.status}">${statusLabel(credential.status)}</span></p>
+        <h4 title="${escapeHtml(title)}">${escapeHtml(title)}</h4>
+        <small title="${escapeHtml(issuer)}">${escapeHtml(issuer)}</small>
+      </div>
       <div class="admin-credential-card__actions admin-profile-entry-card__actions">
-        <span class="status status--${credential.status}">${statusLabel(credential.status)}</span>
-        <button class="button button--secondary admin-icon-button" type="button" data-credential-move="up" data-credential-id="${escapeHtml(credential.id)}" aria-label="Move ${escapeHtml(credential.title.en || "credential")} up" title="Move up"${index === 0 ? " disabled" : ""}>&#8593;</button>
-        <button class="button button--secondary admin-icon-button" type="button" data-credential-move="down" data-credential-id="${escapeHtml(credential.id)}" aria-label="Move ${escapeHtml(credential.title.en || "credential")} down" title="Move down"${index === total - 1 ? " disabled" : ""}>&#8595;</button>
-        ${credential.status === "archived"
-          ? `<button class="button button--secondary" type="button" data-credential-restore="${escapeHtml(credential.id)}">Restore as draft</button>`
-          : `<button class="button button--secondary" type="button" data-credential-edit="${escapeHtml(credential.id)}">Edit details</button><button class="button button--secondary admin-button--danger" type="button" data-credential-archive="${escapeHtml(credential.id)}">Archive</button>`}
+        <button class="button button--secondary admin-icon-button" type="button" data-credential-move="up" data-credential-id="${id}" aria-label="Move ${escapeHtml(title)} up" title="Move up"${index === 0 ? " disabled" : ""}>${adminArrowUpIcon}</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-credential-move="down" data-credential-id="${id}" aria-label="Move ${escapeHtml(title)} down" title="Move down"${index === total - 1 ? " disabled" : ""}>${adminArrowDownIcon}</button>
+        ${archived
+          ? `<button class="button button--secondary" type="button" data-credential-restore="${id}">Restore as draft</button>`
+          : `<button class="button button--secondary" type="button" data-credential-edit="${id}">Edit</button>${renderAdminMoreMenu({ label: `More actions for ${title}`, items: [{ label: "Archive credential", attributes: `data-credential-archive="${id}"`, tone: "danger" }] })}`}
       </div>
     </header>
-    <dl>
-      <div><dt>Linked to</dt><dd>${escapeHtml(relationLabel(credential, professional))}</dd></div>
-      <div><dt>Issued</dt><dd>${credential.issuedOn ? formatAdminDate(credential.issuedOn) : "Not set"}</dd></div>
-      <div><dt>Expiry</dt><dd>${credential.doesNotExpire ? "No expiry" : credential.expiresOn ? formatAdminDate(credential.expiresOn) : "Not set"}</dd></div>
-      <div><dt>Evidence</dt><dd>${credential.assets.length} private file${credential.assets.length === 1 ? "" : "s"}</dd></div>
-    </dl>
-    ${credential.description.en ? `<p class="admin-credential-card__description">${escapeHtml(credential.description.en)}</p>` : ""}
-    ${credential.status === "archived" ? "" : `<section class="admin-credential-files"><div><h5>Evidence documents</h5><p>Original files remain private and are never added automatically to public releases.</p></div>${assets ? `<ul>${assets}</ul>` : '<div class="admin-empty-state"><div><strong>No evidence files</strong><small>Add a certificate image, diploma, transcript or score report.</small></div></div>'}<div class="admin-credential-upload"><label>Document type<select data-credential-upload-kind>${Object.entries(documentKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label><button class="button button--secondary" type="button" data-credential-upload-trigger="${escapeHtml(credential.id)}">+ Add private file</button><input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-credential-upload="${escapeHtml(credential.id)}" hidden></div></section>`}
+    <p class="admin-credential-card__meta">${meta}</p>
+    ${credential.description.en ? `<p class="admin-credential-card__description" title="${escapeHtml(credential.description.en)}">${escapeHtml(credential.description.en)}</p>` : ""}
+    ${archived ? "" : `<section class="admin-credential-files" aria-labelledby="credential-files-${id}">
+      <div class="admin-credential-files__header">
+        <h5 id="credential-files-${id}">Evidence${credential.assets.length ? ` <small>· ${fileCount}</small>` : ""}</h5>
+        <button class="button button--secondary" type="button" data-credential-upload-trigger="${id}">+ Add file</button>
+        <input type="file" accept="application/pdf,image/jpeg,image/png,image/webp" data-credential-upload="${id}" hidden>
+      </div>
+      ${assets ? `<ul>${assets}</ul>` : '<p class="admin-credential-files__empty">No evidence file yet. Add a certificate image, diploma, transcript or score report.</p>'}
+      <div class="admin-credential-pending" data-credential-pending hidden>
+        <span class="admin-credential-file__icon" aria-hidden="true" data-credential-pending-icon>IMG</span>
+        <span class="admin-credential-file__identity"><span class="admin-truncate admin-credential-file__name" data-credential-pending-name></span><small data-credential-pending-meta></small></span>
+        <label class="admin-credential-pending__kind"><span>Type</span>${renderAdminSelectControl({ attributes: "data-credential-upload-kind", options: documentKindOptions() })}</label>
+        <button class="button" type="button" data-credential-pending-upload>Upload</button>
+        <button class="button button--secondary" type="button" data-credential-pending-cancel>Cancel</button>
+      </div>
+    </section>`}
   </article>`;
 };
 
@@ -102,20 +162,33 @@ const relationOptions = (professional: ProfessionalProfileContent): string => [
 
 const credentialDialog = (professional: ProfessionalProfileContent): string => `<dialog class="admin-dialog admin-credential-dialog" data-credential-dialog aria-labelledby="credential-dialog-title">
   <form data-credential-form novalidate>
-    <header class="admin-credential-dialog__header"><div><p class="section-kicker">Professional Profile</p><h2 id="credential-dialog-title" data-credential-dialog-title>Add credential</h2><p>Store verification details once and link the credential to Education or Languages when relevant.</p><section id="credential-dialog-status" class="admin-dialog-status-region" data-admin-dialog-status aria-label="Credential status" hidden></section></div><button class="admin-icon-button" type="button" data-credential-cancel aria-label="Close credential editor">×</button></header>
+    ${renderAdminDialogHeader({ eyebrow: "Professional Profile", title: "Add credential", titleId: "credential-dialog-title", titleAttributes: "data-credential-dialog-title", note: "Store verification once; link it to Education or Languages.", statusLabel: "Credential status", statusId: "credential-dialog-status", close: { label: "Close credential editor", attribute: "data-credential-cancel" } })}
     <div class="admin-credential-dialog__body">
       <input type="hidden" name="credential_id">
       <div class="admin-form-grid">
-        <label>Credential type<select name="credential_kind">${Object.entries(credentialKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("")}</select></label>
-        <label>Linked profile entry<select name="credential_relation">${relationOptions(professional)}</select></label>
+        <label>Credential type${renderAdminSelectControl({ name: "credential_kind", options: Object.entries(credentialKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("") })}</label>
+        <label>Linked profile entry${renderAdminSelectControl({ name: "credential_relation", options: relationOptions(professional) })}</label>
       </div>
       <div class="admin-site-bilingual"><label>${renderAdminFieldLabel("Title (EN)", true)}<input name="credential_title_en" maxlength="180" required></label><label>${renderAdminFieldLabel("Title (VI)")}<input name="credential_title_vi" maxlength="180"></label></div>
       <div class="admin-site-bilingual"><label>${renderAdminFieldLabel("Issuer (EN)", true)}<input name="credential_issuer_en" maxlength="180" required></label><label>${renderAdminFieldLabel("Issuer (VI)")}<input name="credential_issuer_vi" maxlength="180"></label></div>
-      <div class="admin-credential-date-grid"><label>${renderAdminFieldLabel("Issue date", true)}<input name="credential_issued_on" type="date" required></label><label><span>Expiry date<span data-credential-expiry-required hidden><span class="admin-required-mark" aria-hidden="true">*</span><span class="sr-only"> (required)</span></span></span><input name="credential_expires_on" type="date" data-credential-expiry></label><label class="admin-switch admin-credential-no-expiry"><input name="credential_no_expiry" type="checkbox" checked data-credential-no-expiry><span>This credential does not expire</span></label></div>
+      <div class="admin-form-grid admin-credential-date-grid">
+        <label>${renderAdminFieldLabel("Issue date", true)}<input name="credential_issued_on" type="date" required data-credential-date><small class="admin-field-hint" data-credential-date-hint aria-live="polite"></small></label>
+        <div class="admin-credential-expiry">
+          <div class="admin-field-label-row">
+            <label for="credential-expires-on"><span>Expiry date<span data-credential-expiry-required hidden><span class="admin-required-mark" aria-hidden="true">*</span><span class="sr-only"> (required)</span></span></span></label>
+            <label class="admin-inline-check"><input name="credential_no_expiry" type="checkbox" checked data-credential-no-expiry><span>Does not expire</span></label>
+          </div>
+          <span class="admin-field-swap" data-credential-expiry-swap>
+            <input id="credential-expires-on" name="credential_expires_on" type="date" data-credential-expiry data-credential-date>
+            <span class="admin-field-static" data-credential-expiry-static aria-hidden="true">No expiry</span>
+          </span>
+          <small class="admin-field-hint" data-credential-date-hint aria-live="polite"></small>
+        </div>
+      </div>
       <div class="admin-form-grid"><label>Credential number<input name="credential_number" maxlength="180"></label><label>Verification URL<input name="credential_url" type="url" placeholder="https://"></label></div>
       <div class="admin-site-bilingual"><label>Description (EN)<textarea name="credential_description_en" rows="2"></textarea></label><label>Description (VI)<textarea name="credential_description_vi" rows="2"></textarea></label></div>
     </div>
-    <footer class="admin-credential-dialog__footer"><label>Status<select name="credential_status"><option value="draft">Draft</option><option value="published">Ready</option></select></label><div class="admin-actions"><button class="button button--secondary" type="button" data-credential-cancel>Cancel</button><button class="button" type="submit" data-credential-save>Save credential</button></div></footer>
+    <footer class="admin-credential-dialog__footer"><label>Status${renderAdminSelectControl({ name: "credential_status", options: '<option value="draft">Draft</option><option value="published">Ready</option>' })}</label><div class="admin-actions"><button class="button button--secondary" type="button" data-credential-cancel>Cancel</button><button class="button" type="submit" data-credential-save>Save credential</button></div></footer>
   </form>
 </dialog>`;
 
@@ -135,7 +208,25 @@ export const renderLinkedCredentials = (
   relatedId: string,
 ): string => {
   const linked = credentials.filter((credential) => credential.relatedType === relatedType && credential.relatedId === relatedId && credential.status !== "archived");
-  return `<section class="admin-linked-credentials"><div><strong>Credentials & evidence</strong><small>${linked.length ? `${linked.length} linked credential${linked.length === 1 ? "" : "s"}` : "No linked credential or evidence file"}</small></div><div>${linked.map((item) => `<button class="button button--secondary" type="button" data-credential-open-linked="${escapeHtml(item.id)}">${escapeHtml(item.title.en || "Untitled credential")} · ${item.assets.length} file${item.assets.length === 1 ? "" : "s"}</button>`).join("")}<button class="button button--secondary" type="button" data-credential-add-related data-related-type="${relatedType}" data-related-id="${escapeHtml(relatedId)}">+ Add credential</button></div></section>`;
+  // Fixed labels never shrink; only the credential title truncates, one row per credential (§6.2).
+  const rows = linked.map((item) => {
+    const title = item.title.en || "Untitled credential";
+    const files = `${item.assets.length} file${item.assets.length === 1 ? "" : "s"}`;
+    return `<li><button class="admin-linked-credential" type="button" data-credential-open-linked="${escapeHtml(item.id)}" aria-label="Open ${escapeHtml(title)}, ${credentialKindShortLabels[item.kind]}, ${files}${item.status === "draft" ? ", draft" : ""}">
+      <span class="admin-linked-credential__kind">${credentialKindShortLabels[item.kind]}</span>
+      ${renderAdminTruncatedText(title, "admin-linked-credential__title")}
+      ${item.status === "draft" ? '<span class="status status--draft">Draft</span>' : ""}
+      <span class="admin-linked-credential__meta">${files}</span>
+      <span class="admin-linked-credential__chevron" aria-hidden="true">${adminChevronRightIcon}</span>
+    </button></li>`;
+  }).join("");
+  return `<section class="admin-linked-credentials" aria-label="Credentials and evidence">
+    <header class="admin-linked-credentials__header">
+      <div><strong>Credentials &amp; evidence</strong><small>${linked.length ? `${linked.length} linked` : "None linked"}</small></div>
+      <button class="button button--secondary" type="button" data-credential-add-related data-related-type="${relatedType}" data-related-id="${escapeHtml(relatedId)}">+ Add credential</button>
+    </header>
+    ${rows ? `<ul class="admin-linked-credentials__list">${rows}</ul>` : '<p class="admin-linked-credentials__empty">No credential or evidence file is linked yet.</p>'}
+  </section>`;
 };
 
 interface CredentialWorkspaceCallbacks {
@@ -144,6 +235,8 @@ interface CredentialWorkspaceCallbacks {
   setCredentials: (credentials: ProfessionalCredential[]) => void;
   beforeMutation: () => void;
   activateCredentialsTab: () => void;
+  /** Opens the Education or Languages tab at the entry a credential is linked to. */
+  showRelatedEntry: (type: CredentialRelationType, id: string) => void;
   rerender: () => void;
   notify: (message: string, kind?: "info" | "error" | "success") => void;
 }
@@ -179,15 +272,33 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
   const noExpiry = dialog?.querySelector<HTMLInputElement>("[data-credential-no-expiry]");
   const expiry = dialog?.querySelector<HTMLInputElement>("[data-credential-expiry]");
   const expiryRequired = dialog?.querySelector<HTMLElement>("[data-credential-expiry-required]");
+  const expiryStatic = dialog?.querySelector<HTMLElement>("[data-credential-expiry-static]");
+  // Native date inputs follow the browser locale (mm/dd/yyyy); the hint repeats the date in the Admin format.
+  const syncDateHints = (): void => {
+    dialog?.querySelectorAll<HTMLInputElement>("[data-credential-date]").forEach((input) => {
+      const hint = input.closest("label, .admin-credential-expiry")?.querySelector<HTMLElement>("[data-credential-date-hint]");
+      if (hint) hint.textContent = input.value && !input.disabled ? formatAdminDate(input.value) : "";
+    });
+  };
+  const expirySwap = dialog?.querySelector<HTMLElement>("[data-credential-expiry-swap]");
   const setExpiryState = (): void => {
     if (!expiry || !noExpiry) return;
     expiry.disabled = noExpiry.checked;
+    // The static box overlays the (invisible) input, so both states have exactly the input's size.
+    expirySwap?.toggleAttribute("data-static", noExpiry.checked);
+    if (expiryStatic) expiryStatic.hidden = !noExpiry.checked;
     expiry.required = !noExpiry.checked;
     expiry.setAttribute("aria-required", String(!noExpiry.checked));
     if (expiryRequired) expiryRequired.hidden = noExpiry.checked;
     if (noExpiry.checked) expiry.value = "";
+    syncDateHints();
   };
-  noExpiry?.addEventListener("change", setExpiryState);
+  noExpiry?.addEventListener("change", () => {
+    setExpiryState();
+    // Unticking means "it expires": go straight to the date that is now required.
+    if (!noExpiry.checked) expiry?.focus({ preventScroll: true });
+  });
+  dialog?.querySelectorAll<HTMLInputElement>("[data-credential-date]").forEach((input) => input.addEventListener("input", syncDateHints));
   let reorderBusy = false;
 
   const openEditor = (credential?: ProfessionalCredential, preset?: { type: CredentialRelationType; id: string }): void => {
@@ -253,7 +364,7 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
           const card = root.querySelector<HTMLElement>(`[data-credential-card="${CSS.escape(id)}"]`);
           const preferred = card?.querySelector<HTMLButtonElement>(`[data-credential-move="${direction}"]`);
           const fallback = card?.querySelector<HTMLButtonElement>("[data-credential-move]:not(:disabled), [data-credential-edit], [data-credential-restore]");
-          card?.scrollIntoView({ block: "nearest" });
+          if (card) revealAdminElement(card);
           (preferred && !preferred.disabled ? preferred : fallback)?.focus({ preventScroll: true });
         });
         callbacks.notify(`Credential moved ${direction}.`, "success");
@@ -352,20 +463,52 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
   root.querySelectorAll<HTMLButtonElement>("[data-credential-upload-trigger]").forEach((button) => button.addEventListener("click", () => {
     root.querySelector<HTMLInputElement>(`[data-credential-upload="${CSS.escape(button.dataset.credentialUploadTrigger ?? "")}"]`)?.click();
   }));
-  root.querySelectorAll<HTMLInputElement>("[data-credential-upload]").forEach((input) => input.addEventListener("change", () => {
-    const file = input.files?.[0];
-    const credentialId = input.dataset.credentialUpload;
+  // Choosing a file shows a pending row; the type is picked there and nothing uploads until "Upload" (like pending media).
+  root.querySelectorAll<HTMLInputElement>("[data-credential-upload]").forEach((input) => {
     const card = input.closest<HTMLElement>("[data-credential-card]");
-    const kind = card?.querySelector<HTMLSelectElement>("[data-credential-upload-kind]")?.value as CredentialDocumentKind | undefined;
-    if (!file || !credentialId || !kind) return;
-    callbacks.beforeMutation();
-    void uploadCredentialAsset(credentialId, file, kind)
-      .then((asset) => {
-        callbacks.setCredentials(callbacks.getCredentials().map((credential) => credential.id === credentialId ? { ...credential, assets: [...credential.assets, asset] } : credential));
-        callbacks.rerender();
-        callbacks.notify("Private credential document uploaded.", "success");
-      })
-      .catch((error: Error) => callbacks.notify(error.message, "error"));
+    const pending = card?.querySelector<HTMLElement>("[data-credential-pending]");
+    const trigger = card?.querySelector<HTMLButtonElement>("[data-credential-upload-trigger]");
+    const uploadButton = pending?.querySelector<HTMLButtonElement>("[data-credential-pending-upload]");
+    const resetPending = (): void => {
+      input.value = "";
+      if (pending) pending.hidden = true;
+    };
+    input.addEventListener("change", () => {
+      const file = input.files?.[0];
+      if (!file || !pending) return;
+      pending.querySelector<HTMLElement>("[data-credential-pending-icon]")!.textContent = file.type === "application/pdf" ? "PDF" : "IMG";
+      const name = pending.querySelector<HTMLElement>("[data-credential-pending-name]")!;
+      name.textContent = file.name;
+      name.title = file.name;
+      pending.querySelector<HTMLElement>("[data-credential-pending-meta]")!.textContent = `${formatFileSize(file.size)} · not uploaded yet`;
+      pending.hidden = false;
+      pending.querySelector<HTMLSelectElement>("[data-credential-upload-kind]")?.focus({ preventScroll: true });
+    });
+    pending?.querySelector<HTMLButtonElement>("[data-credential-pending-cancel]")?.addEventListener("click", () => {
+      resetPending();
+      trigger?.focus({ preventScroll: true });
+    });
+    uploadButton?.addEventListener("click", () => {
+      const file = input.files?.[0];
+      const credentialId = input.dataset.credentialUpload;
+      const kind = pending?.querySelector<HTMLSelectElement>("[data-credential-upload-kind]")?.value as CredentialDocumentKind | undefined;
+      if (!file || !credentialId || !kind) return;
+      callbacks.beforeMutation();
+      setButtonBusy(uploadButton, true, "Uploading…");
+      void uploadCredentialAsset(credentialId, file, kind)
+        .then((asset) => {
+          callbacks.setCredentials(callbacks.getCredentials().map((credential) => credential.id === credentialId ? { ...credential, assets: [...credential.assets, asset] } : credential));
+          callbacks.rerender();
+          callbacks.notify("Private credential document uploaded.", "success");
+        })
+        .catch((error: Error) => callbacks.notify(error.message, "error"))
+        .finally(() => { if (uploadButton.isConnected) setButtonBusy(uploadButton, false); });
+    });
+  });
+  root.querySelectorAll<HTMLButtonElement>("[data-credential-show-related]").forEach((button) => button.addEventListener("click", () => {
+    const type = button.dataset.relatedType as CredentialRelationType | undefined;
+    const id = button.dataset.relatedId;
+    if (type && id) callbacks.showRelatedEntry(type, id);
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-credential-asset-open]").forEach((button) => button.addEventListener("click", () => {
     const credential = callbacks.getCredentials().find((item) => item.id === button.dataset.credentialId);

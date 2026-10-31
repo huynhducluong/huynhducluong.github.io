@@ -42,14 +42,21 @@ import {
   formatAdminDateTime,
   renderAdminDocumentHeader,
   renderAdminFieldLabel,
+  renderAdminMoreMenu,
+  revealAdminElement,
   renderAdminPreviewLanguageToggle,
   renderAdminPreviewOptions,
   renderAdminPreviewSelect,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
+  renderAdminSelectionHeading,
+  bindAdminSelectionCounts,
   renderAdminYearSelect,
   renderAdminWorkspaceState,
   setButtonBusy,
+  adminArrowDownIcon,
+  adminArrowUpIcon,
+  adminChevronIcon,
 } from "./ui";
 import {
   normalizeWebsitePreviewPage,
@@ -185,7 +192,7 @@ const profilePhotoControl = (professional: ProfessionalProfileContent, photos: P
         <span class="admin-profile-photo-identity">
           <strong data-profile-photo-name>${escapeHtml(selectedName)}</strong>
         </span>
-        <span class="admin-profile-photo-chevron" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span>
+        <span class="admin-profile-photo-chevron" aria-hidden="true">${adminChevronIcon}</span>
       </button>
       <div class="admin-profile-photo-options" id="profile-photo-options" role="listbox" data-profile-photo-options hidden>
         <button class="admin-profile-photo-option" type="button" role="option" aria-selected="${path ? "false" : "true"}" data-profile-photo-option data-photo-value="" data-photo-name="No photo">
@@ -205,8 +212,13 @@ const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
   const cards = photos.map((photo) => `<article class="admin-photo-library-card" data-photo-library-card="${escapeHtml(photo.id)}">
       <div class="admin-photo-library-card__image"><img src="${escapeHtml(photo.publicUrl)}" alt="${escapeHtml(photo.name)}" loading="lazy" decoding="async" width="${photo.width}" height="${photo.height}"></div>
       <div class="admin-photo-library-card__body">
-        <h4 data-profile-photo-library-name>${escapeHtml(photo.name)}</h4>
-        <div class="admin-photo-library-card__actions"><button class="button button--secondary" type="button" data-profile-photo-rename data-photo-id="${escapeHtml(photo.id)}" data-photo-name="${escapeHtml(photo.name)}">Rename</button><button class="button button--secondary admin-button--danger" type="button" data-profile-photo-delete data-photo-id="${escapeHtml(photo.id)}" data-photo-value="${escapeHtml(photo.publicUrl)}" data-photo-name="${escapeHtml(photo.name)}">Delete</button></div>
+        <div class="admin-photo-library-card__title">
+          <h4 data-profile-photo-library-name>${escapeHtml(photo.name)}</h4>
+          ${renderAdminMoreMenu({ label: `More actions for ${photo.name}`, items: [
+            { label: "Rename photo", attributes: `data-profile-photo-rename data-photo-id="${escapeHtml(photo.id)}" data-photo-name="${escapeHtml(photo.name)}"` },
+            { label: "Delete photo", attributes: `data-profile-photo-delete data-photo-id="${escapeHtml(photo.id)}" data-photo-value="${escapeHtml(photo.publicUrl)}" data-photo-name="${escapeHtml(photo.name)}"`, tone: "danger" },
+          ] })}
+        </div>
         <p>${photo.width} × ${photo.height}px · ${formatPhotoFileSize(photo.fileSize)}</p>
         <small>Saved ${formatAdminDate(photo.createdAt)}</small>
       </div>
@@ -214,7 +226,7 @@ const profilePhotos = (photos: ProfilePhotoAsset[]): string => {
   return renderAdminSectionCard({
     title: "Profile photo library",
     note: "Reusable square photos. Set the active one in Identity.",
-    headerActions: '<button class="button admin-action-new" type="button" data-profile-photo-upload-trigger>+ Add photo</button><input class="admin-photo-upload-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-profile-photo-upload>',
+    headerActions: '<button class="button admin-action-new" type="button" data-profile-photo-upload-trigger>+ Add photo</button><input class="admin-photo-upload-input" type="file" accept="image/jpeg,image/png,image/webp,image/avif" data-profile-photo-upload hidden>',
     content: cards
       ? `<div class="admin-photo-library">${cards}</div>`
       : '<div class="admin-empty-state"><div><strong>No saved profile photos</strong><small>Add a photo, crop it once and reuse it across the CV and Portfolio.</small></div></div>',
@@ -308,7 +320,7 @@ const sectionGroup = (
   fields: string,
 ): string => `<article class="admin-site-section-group">
   <header class="admin-site-section-group__header">
-    <div class="admin-site-section-group__identity"><span>${order}</span><h4>${escapeHtml(title)}</h4></div>
+    <div class="admin-site-section-group__identity"><span>${order}</span><h4 title="${escapeHtml(title)}">${escapeHtml(title)}</h4></div>
     <label class="admin-site-section-visibility">
       <span class="admin-site-section-status admin-site-section-status--shown">Shown</span>
       <span class="admin-site-section-status admin-site-section-status--hidden">Hidden</span>
@@ -333,36 +345,40 @@ const websiteSections = (content: WebsiteContent): string => renderAdminSectionC
   </div>`,
 });
 
-const websiteFeatured = (runtime: WebsiteRuntimeData): string => renderAdminSectionCard({
+const websiteFeatured = (runtime: WebsiteRuntimeData): string => {
+  const readyProjects = runtime.projects.filter((item) => item.status === "published");
+  const readyTools = runtime.tools.filter((item) => item.status === "published");
+  return renderAdminSectionCard({
   title: "Website content selection",
   note: "Choose Website content and Homepage highlights.",
   content: `<div class="admin-site-content-selection">
-    <section><h4>Projects</h4><div class="admin-site-content-selection__list">
+    <section data-selection-group data-selection-mode="shown">${renderAdminSelectionHeading({ title: "Projects", mode: "shown", selected: readyProjects.filter((item) => item.websiteVisible !== false).length, total: readyProjects.length, extra: { label: "on Homepage", count: readyProjects.filter((item) => item.featured).length } })}<div class="admin-site-content-selection__list">
       ${runtime.projects.map((item) => {
         const ready = item.status === "published";
         return `<article class="admin-selection-card admin-selection-card--dual">
           <span class="admin-site-content-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
           <div class="admin-site-content-selection__checks">
-            <label class="admin-site-content-selection__toggle admin-selection-card__control"><input type="checkbox" name="website_project" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
-            <label class="admin-site-content-selection__toggle admin-selection-card__control admin-selection-card__control--secondary"><input type="checkbox" name="featured_project" value="${escapeHtml(item.id)}" data-selection-secondary${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
+            <label class="admin-site-content-selection__toggle admin-selection-card__control"><input type="checkbox" name="website_project" value="${escapeHtml(item.id)}"${ready ? " data-selection-count-item" : ""} data-selection-primary${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
+            <label class="admin-site-content-selection__toggle admin-selection-card__control admin-selection-card__control--secondary"><input type="checkbox" name="featured_project" value="${escapeHtml(item.id)}"${ready ? " data-selection-extra-item" : ""} data-selection-secondary${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
           </div>
         </article>`;
       }).join("")}
     </div></section>
-    <section><h4>Automation tools</h4><div class="admin-site-content-selection__list">
+    <section data-selection-group data-selection-mode="shown">${renderAdminSelectionHeading({ title: "Automation tools", mode: "shown", selected: readyTools.filter((item) => item.websiteVisible !== false).length, total: readyTools.length, extra: { label: "on Homepage", count: readyTools.filter((item) => item.featured).length } })}<div class="admin-site-content-selection__list">
       ${runtime.tools.map((item) => {
         const ready = item.status === "published";
         return `<article class="admin-selection-card admin-selection-card--dual">
           <span class="admin-site-content-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
           <div class="admin-site-content-selection__checks">
-            <label class="admin-site-content-selection__toggle admin-selection-card__control"><input type="checkbox" name="website_tool" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
-            <label class="admin-site-content-selection__toggle admin-selection-card__control admin-selection-card__control--secondary"><input type="checkbox" name="featured_tool" value="${escapeHtml(item.id)}" data-selection-secondary${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
+            <label class="admin-site-content-selection__toggle admin-selection-card__control"><input type="checkbox" name="website_tool" value="${escapeHtml(item.id)}"${ready ? " data-selection-count-item" : ""} data-selection-primary${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
+            <label class="admin-site-content-selection__toggle admin-selection-card__control admin-selection-card__control--secondary"><input type="checkbox" name="featured_tool" value="${escapeHtml(item.id)}"${ready ? " data-selection-extra-item" : ""} data-selection-secondary${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
           </div>
         </article>`;
       }).join("")}
     </div></section>
   </div>`,
-});
+  });
+};
 
 const readWebsiteForm = (formElement: HTMLFormElement): WebsiteRuntimeData => {
   const current = state.runtime!;
@@ -484,7 +500,7 @@ const experienceLocationCombobox = (item: Experience): string => {
     <div class="admin-location-combobox" data-location-combobox>
       <input id="${escapeHtml(inputId)}" name="${escapeHtml(experienceFieldName(item.id, "location_label"))}" value="${escapeHtml(displayValue)}" type="text" autocomplete="off" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="${escapeHtml(listId)}" aria-required="true" placeholder="Search country or region" data-location-input>
       <input name="${escapeHtml(experienceFieldName(item.id, "location_code"))}" value="${escapeHtml(selectedCode ?? "__legacy__")}" type="hidden" data-location-code>
-      <button class="admin-location-combobox__toggle" type="button" aria-label="Show country or region options" aria-expanded="false" tabindex="-1" data-location-toggle><svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg></button>
+      <button class="admin-location-combobox__toggle" type="button" aria-label="Show country or region options" aria-expanded="false" tabindex="-1" data-location-toggle>${adminChevronIcon}</button>
       <div class="admin-location-combobox__list" id="${escapeHtml(listId)}" role="listbox" data-location-list hidden>
         ${experienceLocationOptions.map((option) => `<button class="admin-location-combobox__option" type="button" role="option" aria-selected="${option.code === selectedCode ? "true" : "false"}" data-location-option data-location-code="${escapeHtml(option.code)}" data-location-label="${escapeHtml(option.label)}">${escapeHtml(option.label)}</button>`).join("")}
         <p class="admin-location-combobox__empty" data-location-empty hidden>No matching country or region.</p>
@@ -497,11 +513,11 @@ const experienceCard = (item: Experience, index: number, total: number): string 
   <article class="admin-experience-card admin-profile-entry-card" data-profile-experience="${escapeHtml(item.id)}">
     <input type="hidden" name="profile_experience_order" value="${escapeHtml(item.id)}">
     <header class="admin-experience-card__heading admin-profile-entry-card__heading">
-      <div><small>Experience ${index + 1}</small><h4>${escapeHtml(item.company || "New company")}</h4></div>
+      <div><small>Experience ${index + 1}</small><h4 title="${escapeHtml(item.company || "New company")}">${escapeHtml(item.company || "New company")}</h4></div>
       <div class="admin-experience-card__actions admin-profile-entry-card__actions">
-        <button class="button button--secondary admin-icon-button" type="button" data-profile-experience-move="up" data-experience-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.company || "new company")} up"${index === 0 ? " disabled" : ""}>&#8593;</button>
-        <button class="button button--secondary admin-icon-button" type="button" data-profile-experience-move="down" data-experience-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.company || "new company")} down"${index === total - 1 ? " disabled" : ""}>&#8595;</button>
-        <button class="button button--secondary admin-button--danger" type="button" data-profile-experience-delete data-experience-id="${escapeHtml(item.id)}">Delete</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-profile-experience-move="up" data-experience-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.company || "new company")} up" title="Move up"${index === 0 ? " disabled" : ""}>${adminArrowUpIcon}</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-profile-experience-move="down" data-experience-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.company || "new company")} down" title="Move down"${index === total - 1 ? " disabled" : ""}>${adminArrowDownIcon}</button>
+        ${renderAdminMoreMenu({ label: `More actions for ${item.company || "new company"}`, items: [{ label: "Delete experience", attributes: `data-profile-experience-delete data-experience-id="${escapeHtml(item.id)}"`, tone: "danger" }] })}
       </div>
     </header>
     <div class="admin-experience-card__fields admin-profile-entry-card__fields">
@@ -549,11 +565,11 @@ const educationCard = (item: Education, index: number, total: number, credential
   <article class="admin-education-card admin-profile-entry-card" data-profile-education="${escapeHtml(item.id)}">
     <input type="hidden" name="profile_education_order" value="${escapeHtml(item.id)}">
     <header class="admin-profile-entry-card__heading">
-      <div><small>Education ${index + 1}</small><h4>${escapeHtml(item.institution.en || "New education")}</h4></div>
+      <div><small>Education ${index + 1}</small><h4 title="${escapeHtml(item.institution.en || "New education")}">${escapeHtml(item.institution.en || "New education")}</h4></div>
       <div class="admin-profile-entry-card__actions">
-        <button class="button button--secondary admin-icon-button" type="button" data-profile-education-move="up" data-education-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.institution.en || "new education")} up"${index === 0 ? " disabled" : ""}>&#8593;</button>
-        <button class="button button--secondary admin-icon-button" type="button" data-profile-education-move="down" data-education-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.institution.en || "new education")} down"${index === total - 1 ? " disabled" : ""}>&#8595;</button>
-        <button class="button button--secondary admin-button--danger" type="button" data-profile-education-delete data-education-id="${escapeHtml(item.id)}">Delete</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-profile-education-move="up" data-education-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.institution.en || "new education")} up" title="Move up"${index === 0 ? " disabled" : ""}>${adminArrowUpIcon}</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-profile-education-move="down" data-education-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.institution.en || "new education")} down" title="Move down"${index === total - 1 ? " disabled" : ""}>${adminArrowDownIcon}</button>
+        ${renderAdminMoreMenu({ label: `More actions for ${item.institution.en || "new education"}`, items: [{ label: "Delete education", attributes: `data-profile-education-delete data-education-id="${escapeHtml(item.id)}"`, tone: "danger" }] })}
       </div>
     </header>
     <div class="admin-profile-entry-card__fields">
@@ -605,11 +621,11 @@ const languageCard = (item: LanguageSkill, index: number, total: number, credent
   <article class="admin-language-card admin-profile-entry-card" data-profile-language="${escapeHtml(item.id)}">
     <input type="hidden" name="profile_language_order" value="${escapeHtml(item.id)}">
     <header class="admin-profile-entry-card__heading">
-      <div><small>Language ${index + 1}</small><h4>${escapeHtml(item.name.en || "New language")}</h4></div>
+      <div><small>Language ${index + 1}</small><h4 title="${escapeHtml(item.name.en || "New language")}">${escapeHtml(item.name.en || "New language")}</h4></div>
       <div class="admin-profile-entry-card__actions">
-        <button class="button button--secondary admin-icon-button" type="button" data-profile-language-move="up" data-language-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name.en || "new language")} up"${index === 0 ? " disabled" : ""}>&#8593;</button>
-        <button class="button button--secondary admin-icon-button" type="button" data-profile-language-move="down" data-language-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name.en || "new language")} down"${index === total - 1 ? " disabled" : ""}>&#8595;</button>
-        <button class="button button--secondary admin-button--danger" type="button" data-profile-language-delete data-language-id="${escapeHtml(item.id)}">Delete</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-profile-language-move="up" data-language-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name.en || "new language")} up" title="Move up"${index === 0 ? " disabled" : ""}>${adminArrowUpIcon}</button>
+        <button class="button button--secondary admin-icon-button" type="button" data-profile-language-move="down" data-language-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name.en || "new language")} down" title="Move down"${index === total - 1 ? " disabled" : ""}>${adminArrowDownIcon}</button>
+        ${renderAdminMoreMenu({ label: `More actions for ${item.name.en || "new language"}`, items: [{ label: "Delete language", attributes: `data-profile-language-delete data-language-id="${escapeHtml(item.id)}"`, tone: "danger" }] })}
       </div>
     </header>
     <div class="admin-profile-entry-card__fields">
@@ -892,6 +908,7 @@ export const markSiteWorkspaceStale = (): void => {
 };
 
 export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, callbacks: WorkspaceCallbacks): void => {
+  bindAdminSelectionCounts(root);
   root.querySelector<HTMLButtonElement>("[data-site-retry]")?.addEventListener("click", () => {
     state.stale = true;
     const reload = ensureSiteWorkspace();
@@ -1309,6 +1326,16 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   bindExperienceActions();
   bindEducationActions();
   bindLanguageActions();
+  const activateProfileTab = (tab: ProfileTab): void => {
+    state.profileTab = tab;
+    updateAdminRoute({ view: "profile", item: null, tab });
+    root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]").forEach((item) => {
+      const selected = item.dataset.profileTab === tab;
+      item.classList.toggle("is-active", selected);
+      item.setAttribute("aria-selected", String(selected));
+    });
+    root.querySelectorAll<HTMLElement>("[data-profile-panel]").forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== tab; });
+  };
   bindProfessionalCredentials(root, {
     getCredentials: () => state.credentials,
     getProfessional: () => state.runtime!.professional,
@@ -1317,15 +1344,16 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       callbacks.onProfessionalCredentialsChanged();
     },
     beforeMutation: () => { commitProfileDraft(); },
-    activateCredentialsTab: () => {
-      state.profileTab = "credentials";
-      updateAdminRoute({ view: "profile", item: null, tab: "credentials" });
-      root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]").forEach((item) => {
-        const selected = item.dataset.profileTab === "credentials";
-        item.classList.toggle("is-active", selected);
-        item.setAttribute("aria-selected", String(selected));
+    activateCredentialsTab: () => activateProfileTab("credentials"),
+    showRelatedEntry: (type, id) => {
+      activateProfileTab(type === "education" ? "education" : "languages");
+      const card = root.querySelector<HTMLElement>(type === "education" ? `[data-profile-education="${CSS.escape(id)}"]` : `[data-profile-language="${CSS.escape(id)}"]`);
+      if (!card) return;
+      // Wait one frame so the newly shown panel has layout, then scroll only the editor column.
+      requestAnimationFrame(() => {
+        revealAdminElement(card, { align: "start" });
+        card.querySelector<HTMLElement>("input:not([type='hidden']), select, textarea")?.focus({ preventScroll: true });
       });
-      root.querySelectorAll<HTMLElement>("[data-profile-panel]").forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== "credentials"; });
     },
     rerender: callbacks.rerender,
     notify: callbacks.notify,
@@ -1569,14 +1597,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     root.querySelectorAll<HTMLElement>("[data-website-panel]").forEach((panel) => { panel.hidden = panel.dataset.websitePanel !== state.websiteTab; });
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]").forEach((button) => button.addEventListener("click", () => {
-    state.profileTab = button.dataset.profileTab as ProfileTab;
-    updateAdminRoute({ view: "profile", item: null, tab: state.profileTab });
-    root.querySelectorAll<HTMLButtonElement>("[data-profile-tab]").forEach((item) => {
-      const selected = item === button;
-      item.classList.toggle("is-active", selected);
-      item.setAttribute("aria-selected", String(selected));
-    });
-    root.querySelectorAll<HTMLElement>("[data-profile-panel]").forEach((panel) => { panel.hidden = panel.dataset.profilePanel !== state.profileTab; });
+    activateProfileTab(button.dataset.profileTab as ProfileTab);
   }));
   root.querySelector<HTMLSelectElement>("[data-website-viewport]")?.addEventListener("change", (event) => {
     state.viewport = (event.currentTarget as HTMLSelectElement).value as WebsiteViewport;

@@ -12,16 +12,23 @@ import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import {
+  adminArrowDownIcon,
+  adminArrowUpIcon,
+  bindAdminFilePickers,
   bindAdminTablists,
+  installAdminMoreMenus,
+  revealAdminElement,
   bindAdminYearPickers,
   formatAdminDateTime,
   renderAdminEditorHeader,
   renderAdminFieldLabel,
+  renderAdminFilePicker,
   renderAdminSectionCard,
   renderAdminWorkspaceState,
 } from "./ui";
 import { clearAdminToasts, showAdminToast } from "./toast";
 import { confirmAdmin } from "./confirmDialog";
+import { renderPendingMediaRow, renderSavedMediaRow } from "./mediaRows";
 import { readAdminRoute, updateAdminRoute } from "./adminRoute";
 import {
   applyAdminHeaderDensity,
@@ -294,17 +301,7 @@ const ensureCollectionItemVisible = (
   scroller: HTMLElement,
   row: HTMLElement,
   align: CollectionRevealIntent["align"],
-): void => {
-  const viewport = scroller.getBoundingClientRect();
-  const bounds = row.getBoundingClientRect();
-  if (align === "center") {
-    scroller.scrollTop += bounds.top - viewport.top - ((scroller.clientHeight - bounds.height) / 2);
-    return;
-  }
-  const inset = 8;
-  if (bounds.top < viewport.top + inset) scroller.scrollTop += bounds.top - viewport.top - inset;
-  else if (bounds.bottom > viewport.bottom - inset) scroller.scrollTop += bounds.bottom - viewport.bottom + inset;
-};
+): void => revealAdminElement(row, { align, scroller });
 
 const restoreCollectionScroll = (renderId: number): void => {
   const view = activeView as CollectionView;
@@ -333,6 +330,7 @@ const restoreCollectionScroll = (renderId: number): void => {
 };
 
 bindAdminBeforeUnload();
+installAdminMoreMenus();
 
 const dirtyScopeForView = (view: AdminView): AdminDirtyScope | null => {
   if (view === "projects" || view === "tools") return "content";
@@ -681,7 +679,7 @@ const contentList = (): string => {
     const position = itemOrderPosition(item);
     return `
     <li class="admin-content-item${activeView === "trash" ? " admin-content-item--trash" : ""} ${isSelectedItem(item) ? "is-selected" : ""}" data-content-item="${escapeHtml(item.id)}">
-      ${activeView !== "trash" && !item.deletedAt ? `<div class="admin-content-item__reorder" aria-label="Reorder ${escapeHtml(item.name)}"><span class="admin-content-item__drag" draggable="true" data-reorder-drag data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span><button type="button" data-reorder-direction="up" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} earlier" title="Move earlier"${position.first ? " disabled" : ""}>↑</button><button type="button" data-reorder-direction="down" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} later" title="Move later"${position.last ? " disabled" : ""}>↓</button><button type="button" data-reorder-menu-trigger data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="More reorder actions for ${escapeHtml(item.name)}" aria-haspopup="menu" aria-expanded="false" title="More reorder actions"${position.only ? " disabled" : ""}>⋯</button></div>` : ""}
+      ${activeView !== "trash" && !item.deletedAt ? `<div class="admin-content-item__reorder" aria-label="Reorder ${escapeHtml(item.name)}"><span class="admin-content-item__drag" draggable="true" data-reorder-drag data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span><button type="button" data-reorder-direction="up" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} earlier" title="Move earlier"${position.first ? " disabled" : ""}>${adminArrowUpIcon}</button><button type="button" data-reorder-direction="down" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} later" title="Move later"${position.last ? " disabled" : ""}>${adminArrowDownIcon}</button><button type="button" data-reorder-menu-trigger data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="More reorder actions for ${escapeHtml(item.name)}" aria-haspopup="menu" aria-expanded="false" title="More reorder actions"${position.only ? " disabled" : ""}>⋯</button></div>` : ""}
       <button class="admin-content-item__select" type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${item.type}" aria-pressed="${isSelectedItem(item)}">
         ${activeView === "trash" ? `<span class="admin-content-item__type">${item.type}</span>` : ""}
         <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
@@ -713,48 +711,43 @@ const orderedProjectMedia = (media: AdminMediaRow[]): AdminMediaRow[] => [...med
   return left.display_order - right.display_order;
 });
 
-const downloadIcon = `<svg aria-hidden="true" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="m7 10 5 5 5-5"></path><path d="M5 21h14"></path></svg>`;
-
 const mediaLibrary = (mediaRows: AdminMediaRow[]): string => {
   const media = orderedProjectMedia(mediaRows);
   if (!media.length) return '<p class="admin-empty">No saved images yet.</p>';
   const firstGalleryIndex = media[0]?.kind === "cover" ? 1 : 0;
-  return `<div class="admin-media-list">${media.map((item, index) => {
-    const customCropCount = [...(item.project_media_crops ?? []), ...(item.tool_media_crops ?? [])].length;
-    return `
-    <article class="admin-media-row" data-media-id="${escapeHtml(item.id)}">
-      <div class="admin-media-row__preview"><img src="${escapeHtml(publicMediaUrl(item.storage_path))}" alt="${escapeHtml(item.alt.en)}" loading="lazy" decoding="async"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
-      <div class="admin-media-row__details"><strong>Image ${String(index + 1).padStart(2, "0")}</strong><small>${formatMediaType(item.mime_type)} · ${formatMediaSize(item.file_size)}</small></div>
-      <div class="admin-media-row__fields">
-        <label><span>${renderAdminFieldLabel("Alt text (EN)", item.kind === "cover")}</span><input value="${escapeHtml(item.alt.en)}"${item.kind === "cover" ? ' aria-required="true"' : ""} data-media-alt-en></label>
-        <label><span>Alt text (VI)</span><input value="${escapeHtml(item.alt.vi)}" data-media-alt-vi></label>
-        <label><span>Caption (EN)</span><input value="${escapeHtml(item.caption?.en ?? "")}" data-media-caption-en></label>
-        <label><span>Caption (VI)</span><input value="${escapeHtml(item.caption?.vi ?? "")}" data-media-caption-vi></label>
-      </div>
-      <div class="admin-media-row__actions">
-        <button type="button" class="admin-media-action--icon" data-media-download aria-label="Download original image" title="Download original">${downloadIcon}</button>
-        <button type="button" data-media-crops>Adjust crops <small>${customCropCount ? `${customCropCount} custom` : "Auto"}</small></button>
-        ${item.kind === "cover" ? "" : `<button type="button" data-media-cover>Set cover</button>
-        <button type="button" class="admin-media-action--icon" data-media-move="up" ${index === firstGalleryIndex ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button>
-        <button type="button" class="admin-media-action--icon" data-media-move="down" ${index === media.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button>`}
-        <button type="button" data-media-save>Save</button>
-        <button type="button" class="admin-danger" data-media-delete>Delete</button>
-      </div>
-    </article>`;
-  }).join("")}</div>`;
+  return `<div class="admin-media-list">${media.map((item, index) => renderSavedMediaRow({
+    id: item.id,
+    previewUrl: publicMediaUrl(item.storage_path),
+    kind: item.kind,
+    alt: item.alt,
+    caption: item.caption ?? null,
+    typeLabel: formatMediaType(item.mime_type),
+    sizeLabel: formatMediaSize(item.file_size),
+    index,
+    firstGalleryIndex,
+    total: media.length,
+    customCropCount: [...(item.project_media_crops ?? []), ...(item.tool_media_crops ?? [])].length,
+    dirty: dirtyMediaIds.has(item.id),
+  })).join("")}</div>`;
 };
 
 const mediaPanel = (type: AdminItemType, media: AdminMediaRow[]): string => {
   const isProject = type === "project";
   const uploadTitle = isProject ? "Project media" : "Tool media";
-  const uploadNote = isProject
-    ? "Cover and gallery images. JPEG, PNG, WebP, AVIF ≤ 5 MB."
-    : "Cover and workflow images. JPEG, PNG, WebP, AVIF ≤ 5 MB.";
+  const uploadNote = isProject ? "Cover and gallery images for this project." : "Cover and workflow images for this tool.";
   const libraryNote = isProject
     ? "Choose the cover image, alt text and gallery order."
     : "Choose the cover, alt text and screenshot order.";
   return `<div class="admin-media-panel" data-editor-panel="media" data-media-owner="${type}" ${panelState("media")}>
-    <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p><span class="admin-media-section-heading__count" data-upload-count>0 selected</span></div><label>Choose images<input name="images" type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple></label><div data-upload-queue><p class="admin-empty">Selected images will appear here before upload.</p></div><button class="button button--secondary admin-media-upload-action" type="submit" data-upload-submit disabled>Upload</button></form>
+    <form class="admin-upload admin-form-section" data-upload-form data-media-owner="${type}"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">${uploadTitle}</h3><p class="admin-form-section__note" title="${uploadNote}">${uploadNote}</p></div>
+      ${renderAdminFilePicker({ name: "images", accept: "image/jpeg,image/png,image/webp,image/avif", multiple: true, title: "Choose images", hint: "JPEG, PNG, WebP or AVIF · up to 5 MB each" })}
+      <div data-upload-queue></div>
+      <div class="admin-media-upload-footer" data-upload-footer hidden>
+        <span data-upload-summary aria-live="polite"></span>
+        <button class="button button--secondary" type="button" data-upload-clear>Clear</button>
+        <button class="button" type="submit" data-upload-submit disabled>Upload</button>
+      </div>
+    </form>
     <section class="admin-upload admin-form-section admin-media-library"><div class="admin-section-heading admin-media-section-heading"><h3 class="admin-form-section__title">Saved media</h3><p class="admin-form-section__note" title="${libraryNote}">${libraryNote}</p><span class="admin-media-section-heading__count">${media.length} ${media.length === 1 ? "image" : "images"}</span></div>${mediaLibrary(media)}</section>
   </div>`;
 };
@@ -1285,28 +1278,49 @@ const clearPendingMedia = (): void => {
   syncContentDirtyState();
 };
 
+/** A pending cover needs English alt text before it can be uploaded (the field already shows it as required). */
+const pendingCoverMissingAlt = (): PendingMedia | undefined => pendingMedia.find((item) => item.kind === "cover" && !item.altEn.trim());
+
+/** Footer summary and the Upload button state; updated on every keystroke without re-rendering the rows. */
+const syncUploadReadiness = (): void => {
+  const footer = app.querySelector<HTMLElement>("[data-upload-footer]");
+  const submit = app.querySelector<HTMLButtonElement>("[data-upload-submit]");
+  const summary = app.querySelector<HTMLElement>("[data-upload-summary]");
+  const count = pendingMedia.length;
+  const missing = pendingCoverMissingAlt();
+  if (footer) footer.hidden = !count;
+  if (submit) {
+    submit.disabled = !count || Boolean(missing);
+    submit.textContent = `Upload ${count} ${count === 1 ? "image" : "images"}`;
+  }
+  if (summary) {
+    summary.textContent = missing ? "Add English alt text to the cover image." : `${count} ${count === 1 ? "image" : "images"} ready`;
+    summary.dataset.kind = missing ? "warning" : "";
+  }
+  app.querySelectorAll<HTMLElement>("[data-pending-id]").forEach((card) => {
+    const altEn = card.querySelector<HTMLInputElement>("[data-pending-alt-en]");
+    if (!altEn) return;
+    if (missing?.id === card.dataset.pendingId) altEn.setAttribute("aria-invalid", "true");
+    else altEn.removeAttribute("aria-invalid");
+  });
+};
+
 const renderUploadQueue = (): void => {
   const root = app.querySelector<HTMLElement>("[data-upload-queue]");
-  const submit = app.querySelector<HTMLButtonElement>("[data-upload-submit]");
-  const count = app.querySelector<HTMLElement>("[data-upload-count]");
-  if (!root || !submit) return;
-  submit.disabled = !pendingMedia.length;
-  submit.textContent = "Upload";
-  if (count) count.textContent = `${pendingMedia.length} selected`;
-  root.innerHTML = pendingMedia.length ? `<div class="admin-media-list">${pendingMedia.map((item, index) => `
-    <article class="admin-media-row admin-media-row--pending" data-pending-id="${item.id}">
-      <div class="admin-media-row__preview"><img src="${item.previewUrl}" alt="" loading="lazy" decoding="async"><span class="admin-media-badge admin-media-badge--${item.kind}">${item.kind}</span></div>
-      <div class="admin-media-row__details"><strong title="${escapeHtml(item.file.name)}">${escapeHtml(item.file.name)}</strong><small>${formatMediaType(item.file.type)} · ${formatMediaSize(item.file.size)}</small></div>
-      <div class="admin-media-row__fields admin-media-row__fields--pending">
-        <label><span>Use as</span><select data-pending-kind><option value="cover" ${item.kind === "cover" ? "selected" : ""}>Cover</option><option value="gallery" ${item.kind === "gallery" ? "selected" : ""}>Gallery</option></select></label>
-        <label><span>${renderAdminFieldLabel("Alt text (EN)", item.kind === "cover")}</span><input value="${escapeHtml(item.altEn)}"${item.kind === "cover" ? ' aria-required="true"' : ""} data-pending-alt-en></label>
-        <label><span>Alt text (VI)</span><input value="${escapeHtml(item.altVi)}" data-pending-alt-vi></label>
-        <label><span>Caption (EN)</span><input value="${escapeHtml(item.captionEn)}" data-pending-caption-en></label>
-        <label><span>Caption (VI)</span><input value="${escapeHtml(item.captionVi)}" data-pending-caption-vi></label>
-      </div>
-      <div class="admin-media-row__actions"><button type="button" class="admin-media-action--icon" data-pending-move="up" ${index === 0 ? "disabled" : ""} aria-label="Move image earlier" title="Move earlier">&uarr;</button><button type="button" class="admin-media-action--icon" data-pending-move="down" ${index === pendingMedia.length - 1 ? "disabled" : ""} aria-label="Move image later" title="Move later">&darr;</button><button type="button" class="admin-danger" data-pending-remove>Remove</button></div>
-    </article>`).join("")}</div>` : '<p class="admin-empty">Selected images will appear here before upload.</p>';
+  if (!root) return;
+  root.innerHTML = pendingMedia.length ? `<div class="admin-media-list">${pendingMedia.map((item, index) => renderPendingMediaRow({
+    id: item.id,
+    previewUrl: item.previewUrl,
+    fileName: item.file.name,
+    typeLabel: formatMediaType(item.file.type),
+    sizeLabel: formatMediaSize(item.file.size),
+    kind: item.kind,
+    values: { altEn: item.altEn, altVi: item.altVi, captionEn: item.captionEn, captionVi: item.captionVi },
+    index,
+    total: pendingMedia.length,
+  })).join("")}</div>` : "";
   bindPendingMedia();
+  syncUploadReadiness();
 };
 
 const moveItem = <T,>(items: T[], index: number, direction: "up" | "down"): T[] => {
@@ -1419,14 +1433,18 @@ const bindPendingMedia = (): void => {
   app.querySelectorAll<HTMLElement>("[data-pending-id]").forEach((card) => {
     const id = card.dataset.pendingId;
     if (!id) return;
-    card.querySelector<HTMLSelectElement>("[data-pending-kind]")?.addEventListener("change", (event) => {
-      const kind = (event.currentTarget as HTMLSelectElement).value as "cover" | "gallery";
+    card.querySelectorAll<HTMLInputElement>("[data-pending-kind]").forEach((radio) => radio.addEventListener("change", () => {
+      if (!radio.checked) return;
+      const kind = radio.value as "cover" | "gallery";
+      // Only one cover: choosing Cover here turns any other pending cover back into Gallery.
       pendingMedia = pendingMedia.map((item) => ({ ...item, kind: item.id === id ? kind : kind === "cover" ? "gallery" : item.kind }));
       renderUploadQueue();
-    });
+      app.querySelector<HTMLInputElement>(`[data-pending-id="${CSS.escape(id)}"] [data-pending-kind][value="${kind}"]`)?.focus({ preventScroll: true });
+    }));
     card.querySelector<HTMLInputElement>("[data-pending-alt-en]")?.addEventListener("input", (event) => {
       const item = pendingMedia.find((entry) => entry.id === id);
       if (item) item.altEn = (event.currentTarget as HTMLInputElement).value;
+      syncUploadReadiness();
     });
     card.querySelector<HTMLInputElement>("[data-pending-alt-vi]")?.addEventListener("input", (event) => {
       const item = pendingMedia.find((entry) => entry.id === id);
@@ -1609,6 +1627,8 @@ const saveMediaAlt = async (type: AdminItemType, card: HTMLElement): Promise<voi
     current.caption = caption;
   }
   dirtyMediaIds.delete(card.dataset.mediaId);
+  card.querySelectorAll<HTMLElement>("[data-media-unsaved], [data-media-save]").forEach((element) => { element.hidden = true; });
+  card.querySelector<HTMLElement>("[data-media-alt-en]")?.focus({ preventScroll: true });
   syncContentDirtyState();
   message("Image alt text and caption saved.", "success");
 };
@@ -1878,6 +1898,13 @@ const bindDashboard = (): void => {
     form.addEventListener("input", markDirty);
     form.addEventListener("change", markDirty);
   });
+  bindAdminFilePickers(app);
+  app.querySelector<HTMLButtonElement>("[data-upload-clear]")?.addEventListener("click", () => {
+    clearPendingMedia();
+    app.querySelector<HTMLFormElement>("[data-upload-form]")?.reset();
+    renderUploadQueue();
+    app.querySelector<HTMLInputElement>('input[name="images"]')?.focus({ preventScroll: true });
+  });
   app.querySelector<HTMLInputElement>('input[name="images"]')?.addEventListener("change", (event) => {
     const input = event.currentTarget as HTMLInputElement;
     const files = input.files;
@@ -1891,6 +1918,8 @@ const bindDashboard = (): void => {
     if (!mediaId || !type) return;
     card.querySelectorAll<HTMLInputElement>("[data-media-alt-en], [data-media-alt-vi], [data-media-caption-en], [data-media-caption-vi]").forEach((input) => input.addEventListener("input", () => {
       dirtyMediaIds.add(mediaId);
+      // Save appears only once this row has unsaved edits (§6.5).
+      card.querySelectorAll<HTMLElement>("[data-media-unsaved], [data-media-save]").forEach((element) => { element.hidden = false; });
       syncContentDirtyState();
     }));
     card.querySelector<HTMLButtonElement>("[data-media-download]")?.addEventListener("click", (event) => {

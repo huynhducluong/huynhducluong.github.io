@@ -117,17 +117,52 @@ const inspect = async (page, label) => {
         if (style.whiteSpace !== "nowrap" && style.textOverflow !== "ellipsis") return false;
         return element.textContent.trim() && element.scrollWidth > element.clientWidth + 1;
       })
-      .map((element) => `${describe(element)} "${element.textContent.trim().replace(/\s+/g, " ").slice(0, 70)}"`);
+      .map((element) => {
+        const text = element.textContent.trim().replace(/\s+/g, " ");
+        // Clipped user data is fine with a full-value tooltip (docs/admin-ui-guidelines.md §6.2); anything else must be fixed.
+        const tooltip = (element.closest("[title]")?.getAttribute("title") ?? "").replace(/\s+/g, " ").trim();
+        const label = tooltip && tooltip.startsWith(text.replace(/…$/, "").slice(0, 24)) ? "with tooltip" : "NO TOOLTIP";
+        return `${label} ${describe(element)} "${text.slice(0, 70)}"`;
+      });
+    // Uneven rows: fields that share a grid row must start their control at the same height (docs §6.3).
+    const controlOf = (cell) => cell.querySelector("input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea, .admin-field-static:not([hidden]), .admin-year-picker__control");
+    const misaligned = [...document.querySelectorAll(".admin-shell :is(.admin-form-grid, .admin-site-bilingual)")]
+      .filter(visible)
+      .flatMap((grid) => {
+        const rows = new Map();
+        [...grid.children].filter(visible).forEach((cell) => {
+          const control = controlOf(cell);
+          if (!control) return;
+          const rowTop = Math.round(cell.getBoundingClientRect().top);
+          rows.set(rowTop, [...(rows.get(rowTop) ?? []), control.getBoundingClientRect().top]);
+        });
+        return [...rows.values()]
+          .filter((tops) => tops.length > 1 && Math.max(...tops) - Math.min(...tops) > 1)
+          .map((tops) => `${describe(grid)} (${Math.round(Math.max(...tops) - Math.min(...tops))}px)`);
+      });
+    // A checkbox option must stay on one line with its text, never stacked above it.
+    const stackedOptions = [...document.querySelectorAll(".admin-shell .admin-inline-check")]
+      .filter(visible)
+      .filter((option) => {
+        const box = option.querySelector("input")?.getBoundingClientRect();
+        const text = option.querySelector("span")?.getBoundingClientRect();
+        return box && text && Math.abs((box.top + box.height / 2) - (text.top + text.height / 2)) > 2;
+      })
+      .map(describe);
     return {
       horizontal: document.documentElement.scrollWidth > width,
       pastEdge,
       truncated: [...new Set(truncated)],
+      misaligned: [...new Set(misaligned)],
+      stackedOptions,
     };
   });
   const report = (message) => issues.set(message, [...(issues.get(message) ?? []), label]);
   if (found.horizontal) report("page scrolls horizontally");
   if (found.pastEdge.length) report(`past right edge → ${found.pastEdge.join(", ")}`);
   for (const text of found.truncated) report(`truncated ${text}`);
+  for (const grid of found.misaligned) report(`uneven field row → ${grid}`);
+  for (const option of found.stackedOptions) report(`checkbox stacked above its text → ${option}`);
 };
 
 rmSync(outDir, { recursive: true, force: true });

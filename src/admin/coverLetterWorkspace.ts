@@ -24,8 +24,12 @@ import {
   renderAdminFieldLabel,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
+  renderAdminSelectionHeading,
   renderAdminWorkspaceState,
   setButtonBusy,
+  bindAdminSelectionCounts,
+  adminChevronIcon,
+  adminCloseIcon,
 } from "./ui";
 import { confirmAdmin } from "./confirmDialog";
 import { readAdminRoute, updateAdminRoute } from "./adminRoute";
@@ -226,13 +230,13 @@ const panelState = (tab: CoverLetterEditorTab): string => editorTab === tab ? ""
 const evidenceChecks = (items: CoverLetterEvidenceOption[], name: "projectIds" | "toolIds"): string => {
   if (!items.length) return '<p class="admin-empty">No records available.</p>';
   return items
-    .map((item) => `<label class="evidence-option admin-selection-card admin-selection-card--single"><input type="checkbox" name="${name}" value="${escapeHtml(item.id)}" data-selection-primary ${letter[name].includes(item.id) ? "checked" : ""}${disabled()}><span data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(item.status)}</small></span></label>`)
+    .map((item) => `<label class="evidence-option admin-selection-card admin-selection-card--single"><input type="checkbox" name="${name}" value="${escapeHtml(item.id)}" data-selection-count-item data-selection-primary ${letter[name].includes(item.id) ? "checked" : ""}${disabled()}><span data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(item.status)}</small></span></label>`)
     .join("");
 };
 
 const collectionView = (): string => `
   <aside id="cover-letter-library" class="admin-cl-collection"${editorOpen ? ' data-cl-library-drawer role="dialog" aria-label="Cover letter library" aria-hidden="true" inert' : ""}>
-    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${records.length}</span></h2></div><div class="admin-collection__heading-actions">${records.length ? '<button class="button admin-action-new" type="button" data-cl-new>+ New</button>' : ""}${editorOpen ? '<button class="admin-drawer-close" type="button" data-cl-library-close aria-label="Close cover letter library">×</button>' : ""}</div></div>
+    <div class="admin-collection__heading"><div><small>Applications</small><h2>Cover letters <span>${records.length}</span></h2></div><div class="admin-collection__heading-actions">${records.length ? '<button class="button admin-action-new" type="button" data-cl-new>+ New</button>' : ""}${editorOpen ? `<button class="admin-drawer-close" type="button" data-cl-library-close aria-label="Close cover letter library" title="Close">${adminCloseIcon}</button>` : ""}</div></div>
     <div class="admin-list-controls">
       <label class="admin-search"><span class="sr-only">Search cover letters</span><input type="search" placeholder="Search company, role or title..." value="${escapeHtml(search)}" data-cl-search></label>
       <div class="admin-filter-row" aria-label="Cover letter status">${(["all", "draft", "final", "archived"] as CoverLetterFilter[]).map((item) => `<button type="button" data-cl-filter="${item}" class="${filter === item ? "is-active" : ""}" aria-pressed="${filter === item}">${item}</button>`).join("")}</div>
@@ -283,7 +287,7 @@ const editorView = (): string => {
       ${renderAdminDocumentHeader({
         eyebrow: "Applications",
         title: letter.internalTitle || "Untitled cover letter",
-        titleContent: `<button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button>`,
+        titleContent: `<button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true">${adminChevronIcon}</span></button>`,
         meta: `<span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${formatAdminDate(record.updatedAt)}` : "New application"}</span>`,
         saveState: `<span data-cl-dirty-state data-dirty="${dirty}" aria-live="polite">${dirty ? "Unsaved changes" : isLocked ? "Locked" : "Saved"}</span>`,
         moreActions: record ? `<details class="admin-document-more"><summary>More</summary><div><button type="button" data-cl-print>Print / PDF</button><button type="button" data-cl-rename>Rename</button>${record.status === "draft" ? '<button class="admin-danger" type="button" data-cl-delete>Delete draft</button>' : record.status === "final" ? '<button type="button" data-cl-archive>Archive</button>' : ""}</div></details>` : "",
@@ -318,10 +322,8 @@ const editorView = (): string => {
                 note: "Private references; order follows the source libraries.",
                 className: "admin-cl-evidence-card",
                 content: `<div class="admin-cl-evidence">
-                  <div class="admin-cl-evidence-heading"><h4>Projects</h4><small data-evidence-count="projectIds">${letter.projectIds.length} selected</small></div>
-                  <div class="evidence-grid">${evidenceChecks(projects, "projectIds")}</div>
-                  <div class="admin-cl-evidence-heading"><h4>Automation tools</h4><small data-evidence-count="toolIds">${letter.toolIds.length} selected</small></div>
-                  <div class="evidence-grid">${evidenceChecks(tools, "toolIds")}</div>
+                  <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Projects", mode: "selected", selected: projects.filter((item) => letter.projectIds.includes(item.id)).length, total: projects.length })}<div class="evidence-grid">${evidenceChecks(projects, "projectIds")}</div></section>
+                  <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Automation tools", mode: "selected", selected: tools.filter((item) => letter.toolIds.includes(item.id)).length, total: tools.length })}<div class="evidence-grid">${evidenceChecks(tools, "toolIds")}</div></section>
                 </div>`,
               })}
             </section>
@@ -544,6 +546,7 @@ const bindRecordButtons = (root: ParentNode, callbacks: WorkspaceCallbacks): voi
 };
 
 export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: WorkspaceCallbacks): void => {
+  bindAdminSelectionCounts(root);
   previewZoomController?.disconnect();
   previewZoomController = undefined;
   const libraryShell = root.querySelector<HTMLElement>(".admin-cl-shell.is-editing");
@@ -659,16 +662,7 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   });
 
   const form = root.querySelector<HTMLFormElement>("[data-cl-form]");
-  const syncEvidenceCount = (name: "projectIds" | "toolIds"): void => {
-    if (!form) return;
-    const count = root.querySelector<HTMLElement>(`[data-evidence-count="${name}"]`);
-    if (count) count.textContent = `${form.querySelectorAll<HTMLInputElement>(`input[name="${name}"]:checked`).length} selected`;
-  };
-  form?.addEventListener("input", (event) => {
-    const target = event.target;
-    if (target instanceof HTMLInputElement && (target.name === "projectIds" || target.name === "toolIds")) {
-      syncEvidenceCount(target.name);
-    }
+  form?.addEventListener("input", () => {
     markDirty(root, callbacks);
     updatePreview(root);
   });

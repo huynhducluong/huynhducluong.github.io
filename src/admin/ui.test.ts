@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminDocumentMetaText, renderAdminDocumentHeader, renderAdminFieldLabel, renderAdminPreviewOptions } from "./ui";
+import { adminDocumentMetaText, adminSelectionCountText, renderAdminDocumentHeader, renderAdminFieldLabel, renderAdminPreviewOptions, renderAdminSelectionHeading } from "./ui";
 
 describe("Admin field labels", () => {
   it("renders a styled visual marker with accessible required text", () => {
@@ -45,5 +45,27 @@ describe("Admin document header meta", () => {
     });
 
     expect(markup).toContain('<p class="admin-document-meta" title="draft · Not published yet">');
+  });
+});
+
+describe("Selection counts (§6.6)", () => {
+  it("says shown for visibility toggles and selected for library picks", () => {
+    expect(adminSelectionCountText("shown", 4, 4)).toBe("4 of 4 shown");
+    expect(adminSelectionCountText("selected", 3, 7)).toBe("3 of 7 selected");
+    expect(adminSelectionCountText("shown", 5, 6, "2 on Homepage")).toBe("5 of 6 shown · 2 on Homepage");
+  });
+
+  it("names the empty states instead of printing a bare zero", () => {
+    expect(adminSelectionCountText("shown", 0, 4)).toBe("Hidden");
+    expect(adminSelectionCountText("selected", 0, 4)).toBe("None selected");
+    expect(adminSelectionCountText("selected", 0, 0)).toBe("None available");
+  });
+
+  it("renders the heading with a live, non-wrapping count chip", () => {
+    const markup = renderAdminSelectionHeading({ title: "Projects", required: true, mode: "selected", selected: 4, total: 7 });
+
+    expect(markup).toContain('<header class="admin-selection-heading"><h4>');
+    expect(markup).toContain("admin-required-mark");
+    expect(markup).toContain('<span class="admin-selection-count" data-selection-count data-empty="false" aria-live="polite">4 of 7 selected</span>');
   });
 });

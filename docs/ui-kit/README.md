@@ -18,6 +18,16 @@ Contents:
 6. **Accessible by default.** Visible focus, accessible names on icon buttons, keyboard-complete tabs and dialogs, ≤150–180 ms motion that turns off under reduced motion.
 7. **Print is a contract.** Fixed-size `mm` pages, `@page { margin: 0 }`, overflow detection, and export through the browser print engine.
 8. **Light theme only.** All surfaces set `color-scheme: light`.
+9. **A preview is the output.** Any preview of a generated artifact (crop, PDF page, export) is computed from the same state and the same pure function as the saved file, never from a separate widget. See `docs/admin-ui-guidelines.md` §7.1.
+10. **One glyph, one place.** Each recurring icon (dropdown chevron, close, zoom − / +) is one shared SVG constant with one size and position token set. Never use a typed character or a copied SVG (§6.1, §8.1).
+11. **One dialog anatomy.** Header (eyebrow, title, note, close), body, footer (tools left; Cancel then primary at far right), with one gutter token across all bands (§8.1).
+12. **User data gives way, interface copy never does.** Fixed labels and actions never shrink or wrap. Only user data truncates, always with a full-value tooltip, and it is never concatenated with meta in one label. Lists of user items are vertical rows. Layout reacts to its container, not the viewport (§6.2).
+13. **Forms keep one grid, and state you can see.** Every field row follows the form grid. An option that changes one field sits in that field label row. A disabled or not-applicable field looks disabled (§6.3).
+14. **One card anatomy.** Identity and status on the left; move, the one frequent action and a More menu on the right. Destructive actions always sit in More. Facts form one meta line, each fact appears once, and there are at most two levels of boxes (§6.4).
+15. **Only panes scroll.** Layout frames use `overflow: clip`, and code reveals elements by scrolling the nearest real scroll pane (`revealAdminElement`), never with `scrollIntoView`, which also scrolls clipped frames and shifts the whole app (§12).
+16. **Rows never jump.** Fields sharing a row align on their control, and label rows keep the height of one label line. Components look the same wherever they are rendered: container rules style only text fields (`:where(:not(...))` for toggles), shared field components outrank them, and dialogs are their own container. A field swapped for a stand-in keeps its size. Verify in the real container and in every toggle state (§6.3 "Rows must not jump").
+17. **Uploads look like their saved result.** A pending upload and a saved item share one row component; only the status line and actions differ. Bilingual fields stay in EN | VI pairs. The browser file input is never visible; use a drop zone or a button. Save appears only when something changed. The `hidden` attribute always wins over component CSS (§6.5).
+18. **Counts say what the checkbox does.** "N of M shown" when a toggle controls visibility of an entry the source already owns; "N of M selected" when items are picked from a library. The total counts only items that can be chosen. Empty states are words ("Hidden", "None selected"). One function writes the wording (§6.6).
 
 ## 2. Component inventory
 
@@ -34,7 +44,9 @@ All paths are relative to this repository. "Deps" lists what the file imports; t
 
 | File | Provides | Deps |
 |---|---|---|
-| `src/admin/ui.ts` | Document/editor headers, section cards, field labels with required marker, preview toolbar, select controls, year picker, workspace states, accessible tablists, `setButtonBusy` | `shared/format` (`escapeHtml`) |
+| `src/admin/ui.ts` | Document/editor headers, dialog header with close button, section cards, field labels with required marker, preview toolbar, select controls, truncated text with tooltip, card More menu and shared icons (chevron, close, zoom, arrows, more), crop zoom controls, year picker, workspace states, accessible tablists, `setButtonBusy` | `shared/format` (`escapeHtml`) |
+| `src/admin/cropGeometry.ts` | Pure crop math: automatic crop, export rectangle, preview style, coverage constraint, zoom. Standalone and unit-tested | standalone |
+| `src/admin/cropStage.ts` | Binds a cropperjs v2 image and selection to `cropGeometry`, reporting one crop state | `cropperjs`, `cropGeometry` |
 | `src/admin/toast.ts` | `showAdminToast(text, "info" \| "success" \| "error")` with pause-on-hover and dialog scoping | standalone |
 | `src/admin/confirmDialog.ts` | `confirmAdmin({ title, message, tone: "warning" \| "danger" \| "primary" })` → `Promise<boolean>`, focus return | standalone |
 | `src/admin/textInputDialog.ts` | `requestAdminText(...)` → `Promise<string \| null>` | standalone |

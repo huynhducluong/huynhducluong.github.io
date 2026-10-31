@@ -78,10 +78,15 @@ import {
   renderAdminPreviewToolbar,
   renderAdminPreviewLanguageToggle,
   renderAdminSelectControl,
+  renderAdminSelectionHeading,
   renderAdminSectionCard,
   renderAdminYearSelect,
   renderAdminWorkspaceState,
   setButtonBusy,
+  adminChevronIcon,
+  adminCloseIcon,
+  adminSelectionCountText,
+  bindAdminSelectionCounts,
 } from "./ui";
 
 export type { ProfileDocumentKind } from "../types/profileDocument";
@@ -625,10 +630,6 @@ const backgroundNewNotice = (count: number, documentName: string): string => cou
 const credentialBackgroundMeta = (item: CredentialSnapshot): string =>
   [item.issuer.en, item.issuedOn?.slice(0, 4), item.credentialNumber].filter(Boolean).join(" · ");
 
-const backgroundCount = (selected: number, total: number): string => {
-  if (!total) return "0";
-  return selected ? `${selected} of ${total} shown` : "Hidden";
-};
 
 const backgroundGroup = ({ group, title, note, rows, selected, total, empty }: {
   group: CvBackgroundGroup;
@@ -639,7 +640,7 @@ const backgroundGroup = ({ group, title, note, rows, selected, total, empty }: {
   total: number;
   empty: string;
 }): string => `<section data-cv-background-group="${group}">
-  <header><div><h4>${title}</h4><p>${note}</p></div><span class="admin-cv-background__count" data-cv-background-count data-empty="${selected === 0}">${backgroundCount(selected, total)}</span></header>
+  <header><div><h4>${title}</h4><p>${note}</p></div><span class="admin-selection-count" data-cv-background-count data-empty="${selected === 0}">${adminSelectionCountText("shown", selected, total)}</span></header>
   <div class="admin-cv-background__list">${rows || `<p class="admin-empty">${empty}</p>`}</div>
 </section>`;
 
@@ -721,11 +722,14 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
   const selectedTools = new Map(runtime.tools.map((item) => [item.id, item]));
   const projects = runtime.availableProjects ?? [...runtime.detailedProjects, ...runtime.compactProjects];
   const tools = runtime.availableTools ?? runtime.tools;
+  const isReady = (status?: string): boolean => status === undefined || status === "published";
+  const readyProjects = projects.filter((item) => isReady(item.status));
+  const readyTools = tools.filter((item) => isReady(item.status));
   return renderAdminSectionCard({
     title: "CV content selection",
     note: "Projects, presentation, responsibilities and tools.",
     content: `<div class="admin-cv-selection">
-      <section><h4>${renderAdminFieldLabel("Projects", true)}</h4><div class="admin-cv-selection__list">
+      <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Projects", required: true, mode: "selected", selected: readyProjects.filter((item) => (selectedProjects.get(item.id)?.cvDisplay ?? "excluded") !== "excluded").length, total: readyProjects.length })}<div class="admin-cv-selection__list">
         ${projects.map((item) => {
           const selection = selectedProjects.get(item.id);
           const display = selection?.cvDisplay ?? "excluded";
@@ -736,7 +740,7 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
             <div class="admin-cv-selection__identity"><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.location.en || "Location not set")}">${escapeHtml(item.location.en || "Location not set")}</small></div>
             <label><span>Display</span>${renderAdminSelectControl({
               name: `cv_project_display_${item.id}`,
-              attributes: `data-cv-project-display${ready ? "" : " disabled"}`,
+              attributes: `data-cv-project-display${ready ? ' data-selection-count-item data-selection-off="excluded"' : " disabled"}`,
               options: `<option value="excluded"${display === "excluded" ? " selected" : ""}>Not included</option><option value="detailed"${display === "detailed" ? " selected" : ""}>Detailed</option><option value="compact"${display === "compact" ? " selected" : ""}>Compact</option>`,
             })}</label>
             <label class="admin-switch"><input type="checkbox" name="cv_project_summary_${escapeHtml(item.id)}"${selection?.cvShowSummary ? " checked" : ""}${ready ? "" : " disabled"}><span>Show summary</span></label>
@@ -745,13 +749,13 @@ const cvSelectionPanel = (runtime: CvRuntimeData): string => {
           </article>`;
         }).join("")}
       </div></section>
-      <section><h4>Automation tools</h4><div class="admin-cv-selection__list admin-cv-selection__list--tools">
+      <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Automation tools", mode: "selected", selected: readyTools.filter((item) => selectedTools.has(item.id)).length, total: readyTools.length })}<div class="admin-cv-selection__list admin-cv-selection__list--tools">
         ${tools.map((item) => {
           const selection = selectedTools.get(item.id);
           const ready = item.status === undefined || item.status === "published";
           const displayStatus = ready ? "published" : item.status ?? "draft";
           return `<article class="admin-cv-selection__tool admin-selection-card admin-selection-card--single">
-            <label class="admin-switch"><input type="checkbox" name="cv_tool" value="${escapeHtml(item.id)}" data-selection-primary${selection ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-cv-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong></span></label>
+            <label class="admin-switch"><input type="checkbox" name="cv_tool" value="${escapeHtml(item.id)}" data-selection-primary${selection ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span class="admin-cv-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong></span></label>
             <span class="status status--${displayStatus}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span>
           </article>`;
         }).join("")}
@@ -869,16 +873,18 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
   title: "Portfolio content selection",
   note: "Order follows source libraries; layouts live in Appearance.",
   content: `<div class="admin-document-selection">
-    <h4>${renderAdminFieldLabel("Projects", true)}</h4>
+    <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Projects", required: true, mode: "selected", selected: runtime.projects.filter((item) => item.status === "published" && item.includeInPortfolio).length, total: runtime.projects.filter((item) => item.status === "published").length })}
     ${runtime.projects.map((item) => {
       const ready = item.status === "published";
-      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
-    <h4>Automation tools</h4>
+    </section>
+    <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Automation tools", mode: "selected", selected: runtime.tools.filter((item) => item.status === "published" && item.includeInPortfolio).length, total: runtime.tools.filter((item) => item.status === "published").length })}
     ${runtime.tools.map((item) => {
       const ready = item.status === "published";
-      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? "" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
+      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
     }).join("")}
+    </section>
   </div>`,
 });
 
@@ -1048,7 +1054,7 @@ const documentCollectionView = (kind: ProfileDocumentKind): string => {
   const isDrawer = Boolean(state.selectedId[kind]);
   return `
     <aside id="${kind}-document-library" class="admin-document-library__collection"${isDrawer ? ' data-document-library-drawer role="dialog" aria-label="Document library" aria-hidden="true" inert' : ""}>
-      <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>${state.documents[kind].length}</span></h2></div><div class="admin-collection__heading-actions"><button class="button admin-action-new" type="button" data-profile-document-new>+ New</button>${isDrawer ? '<button class="admin-drawer-close" type="button" data-profile-document-library-close aria-label="Close document library">×</button>' : ""}</div></div>
+      <div class="admin-collection__heading"><div><small>Profile & documents</small><h2>${documentPlural(kind)} <span>${state.documents[kind].length}</span></h2></div><div class="admin-collection__heading-actions"><button class="button admin-action-new" type="button" data-profile-document-new>+ New</button>${isDrawer ? `<button class="admin-drawer-close" type="button" data-profile-document-library-close aria-label="Close document library" title="Close">${adminCloseIcon}</button>` : ""}</div></div>
       <div class="admin-list-controls">
         <label class="admin-search"><span class="sr-only">Search ${documentPlural(kind)}</span><input type="search" placeholder="Search title or version..." value="${escapeHtml(state.search[kind])}" data-profile-document-search></label>
         <div class="admin-filter-row" aria-label="${documentLabel(kind)} status">${(["all", "draft", "published", "archived"] as DocumentFilter[]).map((filter) => `<button type="button" data-profile-document-filter="${filter}" class="${state.filter[kind] === filter ? "is-active" : ""}" aria-pressed="${state.filter[kind] === filter}">${filter}</button>`).join("")}</div>
@@ -1118,7 +1124,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
       ${renderAdminDocumentHeader({
         eyebrow: `${documentLabel(kind)} document`,
         title: selected.internalTitle,
-        titleContent: `<button class="admin-document-title-switcher" type="button" data-profile-document-library-open aria-haspopup="dialog" aria-controls="${kind}-document-library" aria-expanded="false" aria-label="Switch ${documentLabel(kind)}. Current document: ${escapeHtml(selected.internalTitle)}"><span class="admin-document-title-switcher__label">${escapeHtml(selected.internalTitle)}</span><span class="admin-document-title-switcher__icon" aria-hidden="true"><svg viewBox="0 0 16 16" focusable="false"><path d="m4 6 4 4 4-4"/></svg></span></button>`,
+        titleContent: `<button class="admin-document-title-switcher" type="button" data-profile-document-library-open aria-haspopup="dialog" aria-controls="${kind}-document-library" aria-expanded="false" aria-label="Switch ${documentLabel(kind)}. Current document: ${escapeHtml(selected.internalTitle)}"><span class="admin-document-title-switcher__label">${escapeHtml(selected.internalTitle)}</span><span class="admin-document-title-switcher__icon" aria-hidden="true">${adminChevronIcon}</span></button>`,
         meta: `<span class="status status--${selected.status}">${selected.status}</span>${selected.isActive ? '<span class="admin-document-meta__active">Live</span>' : ""}${latestReleaseMeta(kind)}`,
         saveState: '<span data-document-save-state data-dirty="false" aria-live="polite">Saved</span>',
         utilityActions: `<button class="button button--secondary admin-action-utility" type="button" data-document-history-open aria-haspopup="dialog" aria-controls="${kind}-release-history-dialog">History (${state.releases[kind].length})</button>`,
@@ -1212,6 +1218,7 @@ export const markProfileDocumentWorkspaceStale = (): void => {
 
 export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocumentKind, callbacks: WorkspaceCallbacks): void => {
   let layoutIssues: string[] = [];
+  bindAdminSelectionCounts(root);
   root.querySelector<HTMLButtonElement>("[data-profile-document-retry]")?.addEventListener("click", () => {
     state.phase[kind] = "idle";
     delete state.errors[kind];
@@ -1646,7 +1653,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       const count = group?.querySelector<HTMLElement>("[data-cv-background-count]");
       event.target.closest<HTMLElement>(".admin-cv-background__item")?.classList.toggle("is-selected", event.target.checked);
       if (count) {
-        count.textContent = backgroundCount(checked, total);
+        count.textContent = adminSelectionCountText("shown", checked, total);
         count.dataset.empty = String(checked === 0);
       }
     }

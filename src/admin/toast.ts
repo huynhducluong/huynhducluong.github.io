@@ -77,7 +77,7 @@ const ensureDialogStatusRegion = (dialog: HTMLDialogElement): HTMLElement => {
     region.setAttribute("aria-label", "Dialog status");
     region.hidden = true;
     const heading = dialog.querySelector<HTMLElement>(
-      ".admin-credential-dialog__header > div, .admin-photo-crop-dialog__heading > div, .admin-confirm-dialog__heading, .admin-text-input-dialog__form > div:first-child, form > div:first-child",
+      ".admin-dialog__header, .admin-confirm-dialog__heading, .admin-text-input-dialog__form > div:first-child, form > div:first-child",
     );
     (heading ?? dialog).append(region);
   }

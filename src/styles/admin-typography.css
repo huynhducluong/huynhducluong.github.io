@@ -149,8 +149,7 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
 
 /* Collection and content editors */
 .admin-collection__heading small,
-.admin-content-item__type,
-.admin-media-badge {
+.admin-content-item__type {
   font-size: var(--admin-text-2xs);
   font-weight: var(--admin-weight-bold);
 }
@@ -256,14 +255,12 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-size: var(--admin-text-sm);
 }
 
-.admin-cover-letter-form .evidence-option strong,
-.admin-cl-evidence-heading h4 {
+.admin-cover-letter-form .evidence-option strong {
   font-size: var(--admin-text-sm);
   font-weight: var(--admin-weight-semibold);
 }
 
-.admin-cover-letter-form .evidence-option small,
-.admin-cl-evidence-heading small {
+.admin-cover-letter-form .evidence-option small {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-regular);
 }
@@ -284,12 +281,12 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-weight: var(--admin-weight-semibold);
 }
 
-.admin-document-editor label {
+.admin-document-editor label:where(:not(.admin-inline-check)) {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-semibold);
 }
 
-.admin-document-editor input,
+.admin-document-editor input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])),
 .admin-document-editor textarea,
 .admin-document-editor select {
   font-size: var(--admin-text-sm);

@@ -101,10 +101,8 @@
 .admin-cl-evidence-card { gap: .75rem; }
 .admin-cl-evidence-card .admin-form-section__body { width: 100%; gap: 0; }
 .admin-cl-evidence { display: grid; width: 100%; min-width: 0; gap: .45rem; }
-.admin-cl-evidence-heading { display: flex; min-width: 0; align-items: center; justify-content: space-between; gap: 1rem; }
-.admin-cl-evidence-heading:not(:first-child) { margin-top: 1rem; }
-.admin-cl-evidence-heading h4 { font-size: var(--admin-text-sm); }
-.admin-cl-evidence-heading small { flex: 0 0 auto; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
+.admin-cl-evidence > section { display: grid; min-width: 0; gap: .45rem; }
+.admin-cl-evidence > section + section { margin-top: 1rem; }
 .admin-cover-letter-form .evidence-grid { min-width: 0; grid-template-columns: minmax(0, 1fr); gap: .45rem; }
 .admin-cover-letter-form .evidence-option { grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: .5rem; padding: .55rem .65rem; border-radius: .45rem; background: var(--admin-color-surface); cursor: pointer; }
 .admin-cover-letter-form .evidence-option input { margin-top: 0; }

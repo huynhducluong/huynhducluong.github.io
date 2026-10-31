@@ -1,3 +1,5 @@
+import { adminZoomInIcon, adminZoomOutIcon } from "./ui";
+
 export interface PreviewZoomState {
   mode: "fit" | "manual";
   scale: number;
@@ -38,10 +40,10 @@ export const renderPreviewZoomControls = (state: PreviewZoomState): string => `
   <div class="admin-preview-toolbar__group admin-preview-toolbar__zoom" role="group" aria-label="Preview zoom">
     <button type="button" data-admin-preview-zoom="fit" class="${state.mode === "fit" ? "is-active" : ""}" aria-pressed="${state.mode === "fit"}" title="Fit preview to width">Fit</button>
     <button type="button" class="admin-preview-toolbar__zoom-action" data-admin-preview-zoom="out" aria-label="Zoom out" title="Zoom out">
-      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M3.5 8h9"/></svg>
+      ${adminZoomOutIcon}
     </button>
     <button type="button" class="admin-preview-toolbar__zoom-action" data-admin-preview-zoom="in" aria-label="Zoom in" title="Zoom in">
-      <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false"><path d="M8 3.5v9M3.5 8h9"/></svg>
+      ${adminZoomInIcon}
     </button>
     <span class="sr-only" data-admin-preview-zoom-status aria-live="polite"></span>
   </div>`;

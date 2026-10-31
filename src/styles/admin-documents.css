@@ -264,7 +264,11 @@
   display: none;
 }
 
-.admin-document-editor label {
+/*
+ * Container rules style field labels and text fields only (§6.3). :where() keeps their specificity unchanged,
+ * and the exclusions stop toggles and inline options from inheriting a stacked label or a full-width text box.
+ */
+.admin-document-editor label:where(:not(.admin-inline-check)) {
   display: grid;
   gap: .35rem;
   color: var(--admin-color-text-muted);
@@ -272,7 +276,7 @@
   font-weight: 800;
 }
 
-.admin-document-editor input,
+.admin-document-editor input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])),
 .admin-document-editor textarea,
 .admin-document-editor select {
   width: 100%;
@@ -290,7 +294,7 @@
   line-height: 1.5;
 }
 
-.admin-document-editor input:focus,
+.admin-document-editor input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"])):focus,
 .admin-document-editor textarea:focus,
 .admin-document-editor select:focus {
   border-color: var(--color-primary);
@@ -329,13 +333,6 @@
   min-width: 0;
 }
 
-.admin-select-control {
-  --admin-select-chevron-bg: var(--admin-color-surface);
-  position: relative;
-  display: block;
-  min-width: 0;
-}
-
 .admin-year-field {
   display: grid;
   min-width: 0;
@@ -365,9 +362,8 @@
   height: var(--admin-control-height);
   min-height: var(--admin-control-height);
   min-width: 0;
-  grid-template-columns: minmax(0, 1fr) 2rem;
   align-items: center;
-  padding: .6rem 3rem .6rem .75rem;
+  padding: .6rem var(--admin-chevron-reserve) .6rem .75rem;
   border: 1px solid var(--admin-color-border);
   border-radius: var(--admin-control-radius);
   background: var(--admin-color-surface);
@@ -390,10 +386,6 @@
   border-color: var(--admin-color-focus);
   outline: 0;
   box-shadow: 0 0 0 3px var(--admin-color-focus-ring);
-}
-
-.admin-year-picker.is-open .admin-select-chevron svg {
-  transform: rotate(180deg);
 }
 
 .admin-year-picker__list {
@@ -448,49 +440,6 @@
   background: var(--admin-color-selected);
   color: var(--color-primary-dark);
   font-weight: var(--admin-weight-semibold);
-}
-
-.admin-select-control select {
-  width: 100%;
-  min-width: 0;
-  padding-right: 3rem !important;
-  overflow: hidden;
-  appearance: none !important;
-  background-image: none !important;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  -webkit-appearance: none;
-}
-
-.admin-select-chevron {
-  position: absolute;
-  z-index: 1;
-  top: 50%;
-  right: 1px;
-  display: grid;
-  width: 2.5rem;
-  height: calc(100% - 2px);
-  transform: translateY(-50%);
-  place-items: center;
-  border-radius: 0 calc(var(--admin-control-radius) - 1px) calc(var(--admin-control-radius) - 1px) 0;
-  background: linear-gradient(90deg, transparent, var(--admin-select-chevron-bg) 32%);
-  color: var(--admin-color-text-muted);
-  pointer-events: none;
-}
-
-.admin-select-chevron svg {
-  width: 1rem;
-  height: 1rem;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.75;
-}
-
-.admin-select-control:has(select:disabled) .admin-select-chevron {
-  --admin-select-chevron-bg: var(--admin-color-surface-muted);
-  opacity: .5;
 }
 
 .admin-document-theme input[type="color"] {
@@ -774,7 +723,12 @@
   gap: .45rem;
 }
 
-.admin-document-selection h4:not(:first-child) {
+.admin-document-selection > section {
+  display: grid;
+  gap: .45rem;
+}
+
+.admin-document-selection > section + section {
   margin-top: 1rem;
 }
 
@@ -1033,20 +987,6 @@
   font-size: var(--admin-text-xs);
 }
 
-.admin-cv-background__count {
-  flex: 0 0 auto;
-  width: max-content;
-  padding: .25rem .55rem;
-  border-radius: 999px;
-  background: var(--admin-color-surface-muted);
-  color: var(--color-primary-dark);
-  font-size: var(--admin-text-2xs);
-  font-weight: var(--admin-weight-bold);
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
-.admin-cv-background__count[data-empty="true"] { color: var(--admin-color-text-muted); }
 
 .admin-cv-background__item.admin-switch {
   display: grid;

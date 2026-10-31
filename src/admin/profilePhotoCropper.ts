@@ -1,45 +1,49 @@
 import Cropper from "cropperjs";
 import type { ProfilePhotoAsset } from "../types/profilePhoto";
 import { createProfilePhoto } from "../services/profilePhotoRepository";
-import { renderAdminFieldLabel, setButtonBusy } from "./ui";
+import { automaticCrop, cropPreviewStyle, cropSourceRect, type CropState } from "./cropGeometry";
+import { bindCropStage, waitForCropImage, type CropStage } from "./cropStage";
+import { renderAdminCropZoomControls, renderAdminDialogHeader, renderAdminFieldLabel, setAdminCropZoomValue, setButtonBusy } from "./ui";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 const maxSourceBytes = 20 * 1024 * 1024;
 const maxSourcePixels = 80_000_000;
 const outputSize = 1024;
+const maxZoom = 3;
 
 const cropperTemplate = `
   <cropper-canvas background scale-step="0.05">
     <cropper-image initial-center-size="cover" translatable scalable></cropper-image>
     <cropper-shade></cropper-shade>
     <cropper-handle action="move" plain></cropper-handle>
-    <cropper-selection id="profile-photo-crop-selection" initial-aspect-ratio="1" aspect-ratio="1" initial-coverage="0.78" outlined>
+    <cropper-selection initial-aspect-ratio="1" aspect-ratio="1" initial-coverage="0.78" outlined>
       <cropper-grid role="grid" bordered covered></cropper-grid>
       <cropper-crosshair centered></cropper-crosshair>
+      <!-- Last, so a drag anywhere inside the selection moves the image. -->
+      <cropper-handle action="move" plain></cropper-handle>
     </cropper-selection>
   </cropper-canvas>`;
 
 export const renderProfilePhotoCropDialog = (): string => `
   <dialog class="admin-dialog admin-photo-crop-dialog" data-profile-photo-crop-dialog aria-labelledby="profile-photo-crop-title">
-    <div class="admin-photo-crop-dialog__heading">
-      <div><p class="section-kicker">Profile photo</p><h2 id="profile-photo-crop-title">Crop photo</h2><p>Drag the image and adjust zoom inside the fixed square.</p><section class="admin-dialog-status-region" data-admin-dialog-status aria-label="Photo crop status" hidden></section></div>
-      <button class="admin-dialog-close" type="button" aria-label="Close crop photo dialog" data-profile-photo-crop-cancel>&times;</button>
-    </div>
+    ${renderAdminDialogHeader({
+      eyebrow: "Profile photo",
+      title: "Crop photo",
+      titleId: "profile-photo-crop-title",
+      note: "Drag the image and adjust zoom inside the fixed square.",
+      statusLabel: "Photo crop status",
+      close: { label: "Close crop photo dialog", attribute: "data-profile-photo-crop-cancel" },
+    })}
     <div class="admin-photo-crop-dialog__layout">
       <section class="admin-photo-crop-editor" aria-label="Photo crop editor">
         <div class="admin-photo-crop-stage" data-profile-photo-crop-stage></div>
-        <div class="admin-photo-crop-controls">
-          <button class="button button--secondary admin-icon-button" type="button" aria-label="Zoom out" data-profile-photo-zoom-out>&minus;</button>
-          <label><span>Zoom</span><input type="range" min="1" max="3" step="0.05" value="1" data-profile-photo-zoom></label>
-          <button class="button button--secondary admin-icon-button" type="button" aria-label="Zoom in" data-profile-photo-zoom-in>&plus;</button>
-          <button class="button button--secondary" type="button" data-profile-photo-reset>Reset</button>
-        </div>
+        ${renderAdminCropZoomControls({ prefix: "profile-photo", maxZoom, resetLabel: "Reset to auto", resetTitle: "Reset to the automatic centered crop" })}
       </section>
       <aside class="admin-photo-crop-preview">
         <p class="section-kicker">Preview</p>
         <div class="admin-photo-crop-preview__images">
-          <div><cropper-viewer selection="#profile-photo-crop-selection" resize="both"></cropper-viewer><span>Square</span></div>
-          <div><cropper-viewer class="is-round" selection="#profile-photo-crop-selection" resize="both"></cropper-viewer><span>CV / Portfolio</span></div>
+          <div><span class="admin-crop-preview-frame" data-profile-photo-crop-preview></span><span>Square</span></div>
+          <div><span class="admin-crop-preview-frame is-round" data-profile-photo-crop-preview></span><span>CV / Portfolio</span></div>
         </div>
         <label>${renderAdminFieldLabel("Photo name", true)}<input type="text" maxlength="120" aria-required="true" data-profile-photo-crop-name></label>
         <p data-profile-photo-crop-meta></p>
@@ -83,18 +87,43 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
   const nameInput = dialog?.querySelector<HTMLInputElement>("[data-profile-photo-crop-name]");
   const meta = dialog?.querySelector<HTMLElement>("[data-profile-photo-crop-meta]");
   const zoom = dialog?.querySelector<HTMLInputElement>("[data-profile-photo-zoom]");
+  const zoomValue = dialog?.querySelector<HTMLOutputElement>("[data-profile-photo-zoom-value]") ?? null;
+  const previews = dialog ? [...dialog.querySelectorAll<HTMLElement>("[data-profile-photo-crop-preview]")] : [];
   const save = dialog?.querySelector<HTMLButtonElement>("[data-profile-photo-crop-save]");
   if (!input || !dialog || !stage || !nameInput || !meta || !zoom || !save) return;
 
   let sourceUrl: string | undefined;
+  let sourceImage: HTMLImageElement | undefined;
   let cropper: Cropper | undefined;
-  let zoomLevel = 1;
+  let cropStage: CropStage | undefined;
+  let cropState: CropState | undefined;
+
+  /** Both previews and the exported file read the same CropState (docs/admin-ui-guidelines.md §7.1). */
+  const renderPreviews = (): void => {
+    if (!cropState || !sourceUrl) return;
+    const style = cropPreviewStyle(cropState);
+    previews.forEach((frame) => {
+      let image = frame.querySelector("img");
+      if (!image) {
+        image = document.createElement("img");
+        image.alt = "";
+        image.src = sourceUrl as string;
+        frame.append(image);
+      }
+      image.style.cssText = style;
+    });
+  };
 
   const cleanup = (): void => {
+    cropStage?.dispose();
+    cropper?.destroy();
     stage.replaceChildren();
+    previews.forEach((frame) => frame.replaceChildren());
     cropper = undefined;
-    zoomLevel = 1;
-    zoom.value = "1";
+    cropStage = undefined;
+    cropState = undefined;
+    sourceImage = undefined;
+    setAdminCropZoomValue(zoom, zoomValue, 1);
     input.value = "";
     if (sourceUrl) URL.revokeObjectURL(sourceUrl);
     sourceUrl = undefined;
@@ -102,15 +131,6 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
   const close = (): void => {
     if (dialog.open) dialog.close();
     cleanup();
-  };
-  const cropperImage = () => cropper?.getCropperImage();
-  const applyZoom = (next: number): void => {
-    const bounded = Math.min(3, Math.max(1, next));
-    const image = cropperImage();
-    if (!image || bounded === zoomLevel) return;
-    image.$zoom((bounded / zoomLevel) - 1);
-    zoomLevel = bounded;
-    zoom.value = String(bounded);
   };
 
   dialog.querySelectorAll<HTMLButtonElement>("[data-profile-photo-crop-cancel]").forEach((button) => button.addEventListener("click", close));
@@ -121,16 +141,11 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
   dialog.addEventListener("click", (event) => {
     if (event.target === dialog) close();
   });
-  dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-out]")?.addEventListener("click", () => applyZoom(zoomLevel - 0.1));
-  dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-in]")?.addEventListener("click", () => applyZoom(zoomLevel + 0.1));
-  zoom.addEventListener("input", () => applyZoom(Number(zoom.value)));
+  dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-out]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() - 0.1));
+  dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-in]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() + 0.1));
+  zoom.addEventListener("input", () => cropStage?.setZoom(Number(zoom.value)));
   dialog.querySelector<HTMLButtonElement>("[data-profile-photo-reset]")?.addEventListener("click", () => {
-    const image = cropperImage();
-    if (!image) return;
-    image.$resetTransform();
-    image.$center("cover");
-    zoomLevel = 1;
-    zoom.value = "1";
+    if (sourceImage) cropStage?.setCrop(automaticCrop(sourceImage.naturalWidth, sourceImage.naturalHeight, 1));
   });
 
   input.addEventListener("change", async () => {
@@ -149,6 +164,7 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
     try {
       sourceUrl = URL.createObjectURL(file);
       const image = await loadImage(sourceUrl);
+      sourceImage = image;
       if (image.naturalWidth * image.naturalHeight > maxSourcePixels) throw new Error("Source image is too large to crop safely (maximum 80 megapixels).");
       nameInput.value = defaultPhotoName(file.name);
       meta.textContent = `${image.naturalWidth} × ${image.naturalHeight}px source · output 1024 × 1024px WebP`;
@@ -156,25 +172,18 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
       cropper = new Cropper(image, { container: stage, template: cropperTemplate });
       const cropImage = cropper.getCropperImage();
-      const cropCanvas = cropper.getCropperCanvas();
       const selection = cropper.getCropperSelection();
-      await cropImage?.$ready();
-      cropImage?.$center("cover");
-      cropImage?.addEventListener("transform", (event) => {
-        if (!cropCanvas || !selection) return;
-        const transformEvent = event as CustomEvent<{ matrix: number[] }>;
-        const clone = cropImage.cloneNode() as HTMLElement;
-        clone.style.transform = `matrix(${transformEvent.detail.matrix.join(",")})`;
-        clone.style.opacity = "0";
-        cropCanvas.append(clone);
-        const imageBounds = clone.getBoundingClientRect();
-        const selectionBounds = selection.getBoundingClientRect();
-        clone.remove();
-        if (imageBounds.top > selectionBounds.top
-          || imageBounds.right < selectionBounds.right
-          || imageBounds.bottom < selectionBounds.bottom
-          || imageBounds.left > selectionBounds.left) event.preventDefault();
+      if (!cropImage || !selection) throw new Error("The crop editor could not start.");
+      await waitForCropImage(cropImage);
+      cropStage = bindCropStage(cropImage, selection, {
+        maxZoom,
+        onChange: (state, change) => {
+          cropState = state;
+          setAdminCropZoomValue(zoom, zoomValue, change.zoom);
+          renderPreviews();
+        },
       });
+      cropStage.setCrop(automaticCrop(image.naturalWidth, image.naturalHeight, 1));
       requestAnimationFrame(() => nameInput.focus({ preventScroll: true }));
     } catch (error) {
       cleanup();
@@ -189,11 +198,20 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
       nameInput.focus();
       return;
     }
-    const selection = cropper?.getCropperSelection();
-    if (!selection) return callbacks.notify("The crop area is not ready yet.", "error");
+    const source = sourceImage;
+    const state = cropState;
+    if (!source || !state) return callbacks.notify("The crop area is not ready yet.", "error");
     setButtonBusy(save, true, "Saving…");
     void (async () => {
-      const canvas = await selection.$toCanvas({ width: outputSize, height: outputSize });
+      const canvas = document.createElement("canvas");
+      canvas.width = outputSize;
+      canvas.height = outputSize;
+      const context = canvas.getContext("2d");
+      if (!context) throw new Error("The browser could not prepare the crop canvas.");
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = "high";
+      const { sx, sy, sw, sh } = cropSourceRect(state, source.naturalWidth, source.naturalHeight);
+      context.drawImage(source, sx, sy, sw, sh, 0, 0, outputSize, outputSize);
       const blob = await canvasToWebp(canvas);
       const photo = await createProfilePhoto(name, blob);
       close();
