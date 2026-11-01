@@ -813,15 +813,162 @@
   font-size: var(--admin-text-sm);
 }
 
-.admin-cv-selection article {
+.admin-cv-selection__list--tools article {
   display: grid;
-  grid-template-columns: minmax(12rem, 1fr) 7.5rem auto 4.8rem;
+  grid-template-columns: minmax(12rem, 1fr) auto;
   align-items: center;
   gap: .65rem;
   padding: .7rem;
-  border: 1px solid #e1e8eb;
-  border-radius: .55rem;
-  background: #fff;
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-radius-md);
+  background: var(--admin-color-surface);
+}
+
+/* CV project rows (docs/admin-ui-guidelines.md §6.7): one line per project, Detailed options disclosed. */
+.admin-cv-project {
+  border: 1px solid var(--admin-color-border);
+  border-radius: var(--admin-radius-md);
+  background: var(--admin-color-surface);
+}
+
+.admin-cv-project[data-display="excluded"] {
+  background: var(--admin-color-surface-subtle);
+}
+
+.admin-cv-project.is-unavailable {
+  border-style: dashed;
+  background: var(--admin-color-surface-muted);
+}
+
+.admin-cv-project__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto var(--admin-control-height);
+  align-items: center;
+  gap: .65rem;
+  padding: .6rem .7rem;
+}
+
+.admin-cv-project__identity,
+.admin-cv-project__identity small {
+  display: grid;
+  min-width: 0;
+}
+
+.admin-cv-project__title {
+  display: flex;
+  align-items: center;
+  gap: .45rem;
+  min-width: 0;
+}
+
+.admin-cv-project__title strong,
+.admin-cv-project__identity small > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-cv-project__title strong {
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-sm);
+}
+
+.admin-cv-project[data-display="excluded"] .admin-cv-project__title strong {
+  color: var(--admin-color-text-muted);
+  font-weight: var(--admin-weight-semibold);
+}
+
+.admin-cv-project__identity small {
+  grid-auto-flow: column;
+  justify-content: start;
+  margin-top: .15rem;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+}
+
+.admin-cv-project__identity small > span + span::before {
+  content: "·";
+  padding: 0 .35rem;
+}
+
+.admin-cv-project .is-warning {
+  color: var(--admin-color-warning);
+  font-weight: var(--admin-weight-semibold);
+}
+
+/* Same height with or without the disclosure button, so switching Detailed ↔ Compact never moves the row. */
+.admin-cv-project__row > .admin-segmented {
+  min-height: var(--admin-control-height);
+}
+
+.admin-cv-project__toggle {
+  grid-column: 3;
+  padding: 0;
+}
+
+.admin-cv-project__toggle svg {
+  transition: transform 150ms ease;
+}
+
+.admin-cv-project__toggle[aria-expanded="true"] svg {
+  transform: rotate(180deg);
+}
+
+.admin-cv-project__options {
+  display: grid;
+  gap: .6rem;
+  padding: .7rem;
+  border-top: 1px solid var(--admin-color-border);
+}
+
+.admin-cv-project__responsibilities {
+  display: grid;
+  gap: .4rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.admin-cv-project__responsibilities legend {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .3rem;
+  padding: 0;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-bold);
+}
+
+.admin-cv-project__count {
+  font-weight: var(--admin-weight-regular);
+}
+
+.admin-cv-project__count::before {
+  content: "·";
+  padding-right: .4rem;
+}
+
+.admin-cv-project__responsibilities label {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: .5rem;
+  color: var(--admin-color-text);
+  font-size: var(--admin-text-xs);
+  font-weight: var(--admin-weight-regular);
+  line-height: 1.4;
+}
+
+.admin-cv-project__responsibilities input {
+  width: auto;
+  margin-top: .1rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-cv-project__toggle svg { transition: none; }
 }
 
 .admin-cv-selection__identity,
@@ -849,20 +996,6 @@
   font-size: var(--admin-text-xs);
 }
 
-.admin-cv-selection article > label:not(.admin-switch) {
-  display: grid;
-  gap: .2rem;
-  color: var(--color-text-muted);
-  font-size: var(--admin-text-2xs);
-  font-weight: 800;
-}
-
-.admin-cv-selection article > label:not(.admin-switch) input,
-.admin-cv-selection article > label:not(.admin-switch) select {
-  min-width: 0;
-  padding: .45rem;
-}
-
 .admin-cv-selection .admin-switch {
   display: flex;
   grid-template-columns: none;
@@ -876,46 +1009,8 @@
   min-width: 0;
 }
 
-.admin-cv-selection .admin-switch input,
-.admin-cv-selection__responsibilities input {
+.admin-cv-selection .admin-switch input {
   width: auto;
-}
-
-.admin-cv-selection__responsibilities {
-  display: grid;
-  grid-column: 1 / -1;
-  gap: .4rem;
-  margin: 0;
-  padding: .7rem;
-  border: 1px solid #e5ebee;
-  border-radius: .45rem;
-  background: #f8fafb;
-}
-
-.admin-cv-selection__responsibilities[hidden] {
-  display: none;
-}
-
-.admin-cv-selection__responsibilities legend {
-  padding: 0 .25rem;
-  color: var(--color-text-muted);
-  font-size: var(--admin-text-2xs);
-  font-weight: 800;
-}
-
-.admin-cv-selection__responsibilities label {
-  display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: start;
-  gap: .5rem;
-  color: var(--color-text);
-  font-size: var(--admin-text-xs);
-  font-weight: var(--admin-weight-regular);
-  line-height: 1.4;
-}
-
-.admin-cv-selection__list--tools article {
-  grid-template-columns: minmax(12rem, 1fr) auto;
 }
 
 .admin-cv-selection input:disabled,
@@ -926,23 +1021,22 @@
   opacity: .55;
 }
 
+.admin-cv-project .admin-segmented__options input:disabled + span {
+  cursor: not-allowed;
+}
+
 @container cv-selection (max-width: 44rem) {
-  .admin-cv-selection__project {
-    grid-template-columns: minmax(0, 1fr) auto !important;
+  .admin-cv-project__row {
+    grid-template-columns: minmax(0, 1fr) var(--admin-control-height);
+    row-gap: .5rem;
   }
 
-  .admin-cv-selection__responsibilities {
+  .admin-cv-project__identity {
     grid-column: 1 / -1;
   }
 
-  .admin-cv-selection__project > label:not(.admin-switch),
-  .admin-cv-selection__project > .admin-switch {
-    grid-column: 1;
-  }
-
-  .admin-cv-selection__project > .status {
+  .admin-cv-project__toggle {
     grid-column: 2;
-    grid-row: 1;
   }
 
   .admin-cv-selection__list--tools article {
@@ -966,26 +1060,7 @@
   background: var(--admin-color-surface-subtle);
 }
 
-.admin-cv-background__groups > section > header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
-}
-
-.admin-cv-background__groups h4,
 .admin-cv-background__groups p { margin: 0; }
-
-.admin-cv-background__groups h4 {
-  color: var(--color-primary-dark);
-  font-size: var(--admin-text-sm);
-}
-
-.admin-cv-background__groups header p {
-  margin-top: .15rem;
-  color: var(--admin-color-text-muted);
-  font-size: var(--admin-text-xs);
-}
 
 
 .admin-cv-background__item.admin-switch {
@@ -1107,33 +1182,32 @@
 .admin-disclosure-group { overflow: hidden; border: 1px solid var(--admin-color-border); border-radius: .55rem; }
 .admin-disclosure-group > summary { display: flex; align-items: center; justify-content: space-between; padding: .7rem; color: var(--color-primary-dark); cursor: pointer; font-size: var(--admin-text-sm); font-weight: 800; }
 .admin-disclosure-group > summary span { padding: .18rem .4rem; border-radius: 999px; background: var(--admin-color-surface-muted); color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); }
-.admin-disclosure-group > div { display: grid; gap: .45rem; padding: .6rem; border-top: 1px solid var(--admin-color-border); background: var(--admin-color-surface-subtle); }
-.admin-layout-override-group label { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem); align-items: center; gap: .75rem; padding: .65rem; border: 1px solid var(--admin-color-border); border-radius: .5rem; background: var(--admin-color-surface); }
+/* Rows inside a disclosure group are separated by dividers, not boxed again: card, then rows (§6.4, §6.8). */
+.admin-disclosure-group > div { display: grid; border-top: 1px solid var(--admin-color-border); background: var(--admin-color-surface); }
+.admin-disclosure-group > div > :not([hidden]) ~ :not([hidden]) { border-top: 1px solid var(--admin-color-border); }
+.admin-layout-override-group label { display: grid; grid-template-columns: minmax(0, 1fr) minmax(9rem, 12rem); align-items: center; gap: .75rem; padding: .7rem; }
 .admin-layout-override-group label > span { display: grid; min-width: 0; gap: .12rem; }
 .admin-layout-override-group label strong { overflow: hidden; color: var(--admin-color-text); font-size: var(--admin-text-xs); text-overflow: ellipsis; white-space: nowrap; }
 .admin-layout-override-group label small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-weight: var(--admin-weight-regular); }
 .admin-portfolio-media-assignments { display: grid; gap: .85rem; }
-.admin-portfolio-media-item { display: grid; gap: .65rem; padding: .7rem; border: 1px solid var(--admin-color-border); border-radius: .55rem; background: var(--admin-color-surface-subtle); }
-.admin-portfolio-media-item[hidden],
+/* Portfolio media rows (§6.8) reuse .admin-media-row (§6.5); only the flat group context and the meta line are local. */
+.admin-portfolio-media-row { border: 0; border-radius: 0; background: transparent; }
+[data-portfolio-media-item][hidden],
 [data-portfolio-media-empty][hidden] { display: none; }
-.admin-portfolio-media-item > header { display: grid; min-width: 0; grid-template-columns: 3.5rem minmax(0, 1fr); align-items: center; gap: .65rem; }
-.admin-portfolio-media-item > header img,
-.admin-portfolio-media-item__placeholder { width: 3.5rem; height: 2.65rem; border: 1px solid var(--admin-color-border); border-radius: .35rem; background: var(--admin-color-surface-muted); object-fit: cover; }
-.admin-portfolio-media-item__placeholder { display: grid; place-items: center; color: var(--admin-color-text-muted); font-size: .55rem; text-align: center; }
-.admin-portfolio-media-item > header > span { display: grid; min-width: 0; gap: .12rem; }
-.admin-portfolio-media-item > header strong { overflow: hidden; font-size: var(--admin-text-xs); text-overflow: ellipsis; white-space: nowrap; }
-.admin-portfolio-media-item > header small { color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: 700; }
-.admin-portfolio-media-item__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
-.admin-portfolio-media-item__fields label { display: grid; min-width: 0; gap: .3rem; color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-weight: 700; }
-.admin-portfolio-media-item__fields label > span { display: flex; justify-content: space-between; gap: .4rem; }
-.admin-portfolio-media-item__fields label small { color: var(--admin-color-text-muted); font-size: .625rem; font-weight: 500; white-space: nowrap; }
-.admin-portfolio-media-item__fields .admin-select-control { width: 100%; }
+.admin-media-row__preview:has(> .admin-portfolio-media-row__empty:not([hidden])) { display: grid; place-items: center; }
+.admin-portfolio-media-row__empty { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-weight: var(--admin-weight-semibold); }
+.admin-portfolio-media-row__meta { display: flex; min-width: 0; flex-wrap: wrap; column-gap: .35rem; }
+.admin-portfolio-media-row__meta > :not([hidden]) ~ :not([hidden])::before { content: "·"; padding-right: .35rem; }
+.admin-portfolio-media-row__meta .is-warning { color: var(--admin-color-warning); font-weight: var(--admin-weight-semibold); }
+.admin-portfolio-media-row .admin-select-control { width: 100%; }
+/* Two short selects fit side by side far narrower than the bilingual alt-text pairs of §6.5. */
+html.admin-app .admin-portfolio-media-row .admin-media-row__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@container admin-form (max-width: 22rem) {
+  html.admin-app .admin-portfolio-media-row .admin-media-row__fields { grid-template-columns: 1fr; }
+}
 @container admin-form (max-width: 34rem) {
   .admin-layout-picker__options { grid-template-columns: 1fr; }
   .admin-layout-override-group label { grid-template-columns: 1fr; }
-}
-@container admin-form (max-width: 26rem) {
-  .admin-portfolio-media-item__fields { grid-template-columns: 1fr; }
 }
 
 .admin-document-frame {
@@ -1171,9 +1245,11 @@
   text-underline-offset: .16rem;
 }
 
+/* The internally scrolling preview (Portfolio) stands on the window edge like every column (§11); embeddedPreview reads this padding. */
 .admin-document-frame[data-preview-scroll="internal"] {
   overflow-x: auto;
   overflow-y: hidden;
+  padding-bottom: 0;
 }
 
 .admin-embedded-preview-stage[data-preview-scroll="internal"] iframe {
@@ -1205,6 +1281,10 @@
   font-size: var(--admin-text-sm);
   line-height: 1.45;
 }
+
+/* In the narrow dialog the Website's two check sections stack: required fixes first, then recommendations. */
+.admin-document-check-dialog .admin-site-validation { grid-template-columns: minmax(0, 1fr); }
+.admin-document-check-dialog__content [data-document-recommendation-list] { color: var(--admin-color-text-muted); }
 
 .admin-document-check-dialog__content p {
   margin: 0;

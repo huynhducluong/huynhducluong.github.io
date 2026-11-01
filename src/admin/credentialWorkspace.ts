@@ -2,6 +2,7 @@ import {
   archiveProfessionalCredential,
   createProfessionalCredential,
   deleteCredentialAsset,
+  deleteProfessionalCredential,
   openCredentialAsset,
   reorderProfessionalCredentials,
   updateProfessionalCredential,
@@ -130,7 +131,7 @@ const credentialCard = (
         <button class="button button--secondary admin-icon-button" type="button" data-credential-move="up" data-credential-id="${id}" aria-label="Move ${escapeHtml(title)} up" title="Move up"${index === 0 ? " disabled" : ""}>${adminArrowUpIcon}</button>
         <button class="button button--secondary admin-icon-button" type="button" data-credential-move="down" data-credential-id="${id}" aria-label="Move ${escapeHtml(title)} down" title="Move down"${index === total - 1 ? " disabled" : ""}>${adminArrowDownIcon}</button>
         ${archived
-          ? `<button class="button button--secondary" type="button" data-credential-restore="${id}">Restore as draft</button>`
+          ? `<button class="button button--secondary" type="button" data-credential-restore="${id}">Restore as draft</button>${renderAdminMoreMenu({ label: `More actions for ${title}`, items: [{ label: "Delete permanently", attributes: `data-credential-delete="${id}"`, tone: "danger" }] })}`
           : `<button class="button button--secondary" type="button" data-credential-edit="${id}">Edit</button>${renderAdminMoreMenu({ label: `More actions for ${title}`, items: [{ label: "Archive credential", attributes: `data-credential-archive="${id}"`, tone: "danger" }] })}`}
       </div>
     </header>
@@ -554,6 +555,21 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
       callbacks.notify("Credential archived.", "success");
     } catch (error) {
       callbacks.notify(error instanceof Error ? error.message : "The credential could not be archived.", "error");
+    }
+  }));
+  root.querySelectorAll<HTMLButtonElement>("[data-credential-delete]").forEach((button) => button.addEventListener("click", async () => {
+    const credential = callbacks.getCredentials().find((item) => item.id === button.dataset.credentialDelete);
+    if (!credential || credential.status !== "archived") return;
+    const files = credential.assets.length ? ` and its ${credential.assets.length} private evidence file${credential.assets.length === 1 ? "" : "s"}` : "";
+    if (!(await confirmAdmin({ eyebrow: "Archived credential", title: `Delete ${credential.title.en || "this credential"} permanently?`, message: `This removes the credential${files}. It cannot be restored.`, confirmLabel: "Delete permanently", tone: "danger" }))) return;
+    callbacks.beforeMutation();
+    try {
+      await deleteProfessionalCredential(credential);
+      callbacks.setCredentials(callbacks.getCredentials().filter((item) => item.id !== credential.id));
+      callbacks.rerender();
+      callbacks.notify("Credential deleted.", "success");
+    } catch (error) {
+      callbacks.notify(error instanceof Error ? error.message : "The credential could not be deleted.", "error");
     }
   }));
   root.querySelectorAll<HTMLButtonElement>("[data-credential-restore]").forEach((button) => button.addEventListener("click", () => {

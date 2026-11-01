@@ -16,7 +16,8 @@ const totals = uniqueAssets.reduce((result, assetPath) => {
   return result;
 }, { js: 0, css: 0 });
 
-const budgets = { js: 115 * 1024, css: 26 * 1024 };
+// CSS 27 kB (was 26): the inline Cover Letter preview needs the shared document typography (font faces + tokens).
+const budgets = { js: 115 * 1024, css: 27 * 1024 };
 const format = (bytes) => `${(bytes / 1024).toFixed(1)} kB gzip`;
 
 console.log(`Admin initial JavaScript: ${format(totals.js)} / ${format(budgets.js)}`);

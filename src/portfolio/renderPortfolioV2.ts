@@ -11,7 +11,7 @@ import type {
   PortfolioTool,
   ProjectLayout,
 } from "../types/portfolio";
-import { PORTFOLIO_CREDENTIALS_PER_PAGE, portfolioCredentialPages, portfolioPageCount, resolveAutomationLayout, resolveProjectLayout } from "./layouts";
+import { PORTFOLIO_CREDENTIALS_PER_PAGE, PORTFOLIO_PROFILE_CARD_GROUPS, PORTFOLIO_PROFILE_CARD_ITEMS, portfolioContributionLimit, portfolioCredentialPages, type PortfolioCredentialPage, portfolioPageCount, resolveAutomationLayout, resolveProjectLayout } from "./layouts";
 import { resolvePortfolioMedia } from "./mediaSlots";
 
 // Every visible string lives here so the Vietnamese PDF never falls back to English chrome.
@@ -19,7 +19,6 @@ const copy = {
   en: {
     profile: "Professional profile", selectedWork: "Selected work", projectIndex: "Project index", projectsUnit: "projects",
     noProjects: "No published projects have been selected for the Portfolio PDF.", imagePlaceholder: "Project image placeholder",
-    projectFallback: "Project details will be updated after verification.", locationFallback: "Selected infrastructure",
     selectedAutomation: "Selected BIM automation", toolsTitle: "Tools built around real delivery constraints.", automation: "Automation",
     problem: "The challenge", solution: "The approach", outcome: "Outcome", contribution: "Selected contribution", myContribution: "My contribution",
     credentials: "Education & credentials", credentialsSubtitle: "Selected supporting documents", documentPlaceholder: "Document preview placeholder",
@@ -30,8 +29,6 @@ const copy = {
     captionClosing: "Selected infrastructure BIM model",
     coverAsideKicker: "Infrastructure BIM", coverAsideLines: ["Model coordination.", "Quality control.", "Practical automation."],
     builtWith: "Built with", geometrySubtitle: "From engineering inputs to a repeatable BIM output.", workflow: "Workflow",
-    stepInput: "Input", stepInputValue: "Project information", stepParameters: "Parameters", stepParametersFallback: "Parameters to be defined",
-    stepGeneration: "Generation", stepGenerationValue: "Automated model generation",
     credentialKinds: {
       professional_certification: "Professional certification", academic_degree: "Academic degree", language_exam: "Language exam",
       license: "License", course: "Course", award: "Award", membership: "Membership", other: "Credential",
@@ -40,7 +37,6 @@ const copy = {
   vi: {
     profile: "Hồ sơ chuyên môn", selectedWork: "Dự án tiêu biểu", projectIndex: "Danh mục dự án", projectsUnit: "dự án",
     noProjects: "Chưa có dự án đã xuất bản nào được chọn cho Portfolio PDF.", imagePlaceholder: "Vị trí hình ảnh dự án",
-    projectFallback: "Thông tin dự án sẽ được cập nhật sau khi xác minh.", locationFallback: "Hạ tầng tiêu biểu",
     selectedAutomation: "Tự động hóa BIM tiêu biểu", toolsTitle: "Các công cụ được xây dựng từ yêu cầu triển khai thực tế.", automation: "Tự động hóa",
     problem: "Thách thức", solution: "Giải pháp", outcome: "Kết quả", contribution: "Đóng góp tiêu biểu", myContribution: "Đóng góp của tôi",
     credentials: "Học vấn & chứng chỉ", credentialsSubtitle: "Tài liệu minh chứng đã chọn", documentPlaceholder: "Vị trí tài liệu minh chứng",
@@ -51,8 +47,6 @@ const copy = {
     captionClosing: "Mô hình BIM hạ tầng tiêu biểu",
     coverAsideKicker: "BIM hạ tầng", coverAsideLines: ["Điều phối mô hình.", "Kiểm soát chất lượng.", "Tự động hóa thực tiễn."],
     builtWith: "Công nghệ sử dụng", geometrySubtitle: "Từ dữ liệu kỹ thuật đến kết quả BIM có thể lặp lại.", workflow: "Quy trình",
-    stepInput: "Đầu vào", stepInputValue: "Thông tin dự án", stepParameters: "Tham số", stepParametersFallback: "Tham số sẽ được bổ sung",
-    stepGeneration: "Tạo mô hình", stepGenerationValue: "Tự động tạo mô hình",
     credentialKinds: {
       professional_certification: "Chứng chỉ chuyên môn", academic_degree: "Bằng cấp", language_exam: "Chứng chỉ ngoại ngữ",
       license: "Giấy phép", course: "Khóa học", award: "Giải thưởng", membership: "Hội viên", other: "Chứng chỉ",
@@ -83,7 +77,8 @@ const imageMarkup = (
 ): string => {
   const source = mediaSource(media, profile);
   if (!source) return `<div class="portfolio-image-placeholder ${className}"><span>${copy[language].imagePlaceholder}</span></div>`;
-  return `<img class="${className}" src="${escapeHtml(source)}" alt="${escapeHtml(localized(media?.alt ?? fallbackAlt, language))}">`;
+  // The frame carries the layout's sizing class and the Primary overlay (::after), so every layout is tinted alike.
+  return `<span class="portfolio-media ${className}"><img src="${escapeHtml(source)}" alt="${escapeHtml(localized(media?.alt ?? fallbackAlt, language))}"></span>`;
 };
 const mediaCaption = (media: PortfolioMedia | undefined, language: Language, fallback: string): string =>
   escapeHtml(media?.caption ? localized(media.caption, language) || fallback : fallback);
@@ -105,12 +100,15 @@ const page = (content: string, className: string, layoutId: string, chrome: Page
   return `<section class="portfolio-page ${className}" data-portfolio-layout="${escapeHtml(layoutId)}">${header}${content}${footer}</section>`;
 };
 const projectMeta = (project: PortfolioProject, language: Language): string => [localized(project.location, language), project.role ? localized(project.role, language) : ""].filter(Boolean).join(" · ");
-const contributionItems = (project: PortfolioProject): Array<{ text: LocalizedText }> => {
-  const items = project.responsibilities.slice(0, 3);
-  return items.length ? items : [{ text: { en: copy.en.projectFallback, vi: copy.vi.projectFallback } }];
+// Unknown content is omitted (§8.4): a project without responsibilities prints no contribution block at all.
+const contributionItems = (project: PortfolioProject, layout: ProjectLayout) => project.responsibilities
+  .filter((point) => localized(point.text, "en").trim())
+  .slice(0, portfolioContributionLimit(layout));
+/** One kicker for the whole group, then numbered cards: the label is never repeated per card. */
+const projectContributions = (project: PortfolioProject, layout: ProjectLayout, language: Language, attributes = ""): string => {
+  const items = contributionItems(project, layout);
+  return items.length ? `<p class="portfolio-kicker">${copy[language].myContribution}</p><div class="portfolio-contributions"${attributes ? ` ${attributes}` : ""}>${items.map((point, index) => `<article><span>${twoDigits(index + 1)}</span><p>${escapeHtml(localized(point.text, language))}</p></article>`).join("")}</div>` : "";
 };
-const projectContributionCards = (project: PortfolioProject, language: Language): string => contributionItems(project)
-  .map((point, index) => `<article><span>${twoDigits(index + 1)}</span><div><strong>${copy[language].contribution}</strong><p>${escapeHtml(localized(point.text, language))}</p></div></article>`).join("");
 
 const renderCover = (data: PortfolioRuntimeData, language: Language, selectedProjects: PortfolioProject[]): string => {
   const { content } = data;
@@ -129,11 +127,11 @@ const renderProfile = (data: PortfolioRuntimeData, language: Language, selectedP
   const { content } = data;
   const { profile, skillGroups } = content;
   const displayName = profileName(profile.name, language);
-  const cardGroups = skillGroups.slice(0, 3);
-  const capabilityCards = cardGroups.map((group, index) => `<article><span>${twoDigits(index + 1)}</span><strong>${escapeHtml(localized(group.title, language))}</strong><p>${group.items.slice(0, 4).map((item) => escapeHtml(localized(item.label, language))).join(" · ")}</p></article>`).join("");
-  if (content.layouts.profile === "profile.portrait") return `<div class="portfolio-profile portfolio-profile--portrait"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><strong>${escapeHtml(localized(profile.professionalTitle, language))}</strong></aside><main><p class="portfolio-kicker">${copy[language].profile}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-profile__stats"><div><strong>${selectedProjects.length}</strong><span>${copy[language].selectedProjects}</span></div><div><strong>${skillGroups.length}</strong><span>${copy[language].capabilities}</span></div></div><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)} · ${escapeHtml(localized(profile.location, language))}</span></address><div class="portfolio-profile__cards" ${columnsStyle(cardGroups.length, 3)}>${capabilityCards}</div></main></div>`;
+  const cardGroups = skillGroups.slice(0, PORTFOLIO_PROFILE_CARD_GROUPS);
+  const capabilityCards = cardGroups.map((group, index) => `<article><span>${twoDigits(index + 1)}</span><strong>${escapeHtml(localized(group.title, language))}</strong><p>${group.items.slice(0, PORTFOLIO_PROFILE_CARD_ITEMS).map((item) => escapeHtml(localized(item.label, language))).join(" · ")}</p></article>`).join("");
+  if (content.layouts.profile === "profile.portrait") return `<div class="portfolio-profile portfolio-profile--portrait"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><strong>${escapeHtml(localized(profile.professionalTitle, language))}</strong></aside><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-profile__stats"><div><strong>${selectedProjects.length}</strong><span>${copy[language].selectedProjects}</span></div><div><strong>${skillGroups.length}</strong><span>${copy[language].capabilities}</span></div></div><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)} · ${escapeHtml(localized(profile.location, language))}</span></address><div class="portfolio-profile__cards" ${columnsStyle(cardGroups.length, 3)}>${capabilityCards}</div></main></div>`;
   if (content.layouts.profile === "profile.capability") return `<div class="portfolio-profile portfolio-profile--capability"><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-profile__capabilities">${capabilityCards}</div></main><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><strong>${escapeHtml(profile.phone)}</strong><span>${escapeHtml(localized(profile.location, language))}</span></address></aside></div>`;
-  return `<div class="portfolio-profile portfolio-profile--classic"><aside>${profilePhoto(data, displayName)}<p class="portfolio-kicker">${copy[language].profile}</p><h2>${escapeHtml(displayName)}</h2><p>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${escapeHtml(localized(profile.location, language))}</span></address></aside><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-skill-grid">${skillGroups.map((group) => `<section><h3>${escapeHtml(localized(group.title, language))}</h3>${tagList(group.items.map((item) => localized(item.label, language)))}</section>`).join("")}</div></main></div>`;
+  return `<div class="portfolio-profile portfolio-profile--classic"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${escapeHtml(localized(profile.location, language))}</span></address></aside><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-skill-grid">${skillGroups.map((group) => `<section><h3>${escapeHtml(localized(group.title, language))}</h3>${tagList(group.items.map((item) => localized(item.label, language)))}</section>`).join("")}</div></main></div>`;
 };
 
 const renderIndex = (data: PortfolioRuntimeData, language: Language, projects: PortfolioProject[]): string => {
@@ -147,58 +145,57 @@ const renderIndex = (data: PortfolioRuntimeData, language: Language, projects: P
   return `<div class="portfolio-page__inner portfolio-index-page">${title}<ol class="portfolio-index">${projects.map((project, index) => `<li><span>${twoDigits(index + 1)}</span><div><strong>${escapeHtml(localized(project.name, language))}</strong><small>${escapeHtml(projectMeta(project, language))}</small></div></li>`).join("")}</ol></div>`;
 };
 
-const projectHeading = (project: PortfolioProject, language: Language, index: number): string => `<div class="portfolio-project-heading"><p class="portfolio-kicker">${twoDigits(index + 1)} / ${escapeHtml(localized(project.location, language) || copy[language].locationFallback)}</p><h2>${escapeHtml(localized(project.name, language))}</h2>${project.role ? `<strong>${escapeHtml(localized(project.role, language))}</strong>` : ""}</div>`;
+const projectHeading = (project: PortfolioProject, language: Language, index: number): string => `<div class="portfolio-project-heading"><p class="portfolio-kicker">${[twoDigits(index + 1), escapeHtml(localized(project.location, language))].filter(Boolean).join(" / ")}</p><h2>${escapeHtml(localized(project.name, language))}</h2>${project.role ? `<strong>${escapeHtml(localized(project.role, language))}</strong>` : ""}</div>`;
 const renderProject = (data: PortfolioRuntimeData, project: PortfolioProject, language: Language, index: number): { html: string; layout: ProjectLayout } => {
   const layout = resolveProjectLayout(data, project.id, project.portfolioLayout);
   const text = copy[language];
-  const summary = escapeHtml(project.summary ? localized(project.summary, language) : text.projectFallback);
+  const summary = escapeHtml(project.summary ? localized(project.summary, language) : "");
+  const summaryBlock = (className = ""): string => summary ? `<p${className ? ` class="${className}"` : ""}>${summary}</p>` : "";
   const media = resolvePortfolioMedia(project.images, data.content.mediaAssignments.projects[project.id]);
   // Unknown facts are omitted rather than printed as a dash.
   const factItems = [
     project.year ? `<div><strong>${escapeHtml(String(project.year))}</strong><span>${text.year}</span></div>` : "",
     project.technologies.length ? `<div><strong>${project.technologies.length}</strong><span>${text.tools}</span></div>` : "",
   ].filter(Boolean).join("");
-  const facts = (withSummary: boolean): string => factItems || withSummary ? `<div class="portfolio-project-facts">${factItems}${withSummary ? `<p>${summary}</p>` : ""}</div>` : "";
+  const facts = (withSummary: boolean): string => factItems || (withSummary && summary) ? `<div class="portfolio-project-facts">${factItems}${withSummary ? summaryBlock() : ""}</div>` : "";
   const projectTags = tagList(project.technologies);
   const caption = (slot: PortfolioMedia | undefined, position: number, label: string): string => mediaCaption(slot, language, numberedCaption(position, label));
-  if (layout === "project.balanced") return { layout, html: `<div class="portfolio-project portfolio-project--balanced">${projectHeading(project, language, index)}<div class="portfolio-project__balanced-grid"><div><figure>${imageMarkup(media.primary, project.name, language, "wide")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure>${facts(true)}</div><aside><p class="portfolio-kicker">${text.myContribution}</p><div class="portfolio-contributions">${projectContributionCards(project, language)}</div>${projectTags}</aside></div></div>` };
-  if (layout === "project.editorial") return { layout, html: `<div class="portfolio-project portfolio-project--editorial"><section>${projectHeading(project, language, index)}<figure>${imageMarkup(media.primary, project.name, language, "landscape")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure></section><aside><p class="portfolio-project__summary">${summary}</p>${facts(false)}<div class="portfolio-project__editorial-note"><p class="portfolio-kicker">${text.contribution}</p><p>${escapeHtml(localized(project.responsibilities[0]?.text, language) || text.projectFallback)}</p></div><figure>${imageMarkup(media.supporting, project.name, language, "wide")}<figcaption>${caption(media.supporting, 2, text.captionSupporting)}</figcaption></figure>${projectTags}</aside></div>` };
-  if (layout === "project.technical") return { layout, html: `<div class="portfolio-project portfolio-project--technical"><aside>${projectHeading(project, language, index)}${facts(false)}<p>${summary}</p></aside><main><figure>${imageMarkup(media.primary, project.name, language, "wide")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure><div class="portfolio-project__technical-detail"><figure>${imageMarkup(media.supporting, project.name, language, "wide")}<figcaption>${caption(media.supporting, 2, text.captionSupporting)}</figcaption></figure><div class="portfolio-contributions">${projectContributionCards(project, language)}</div></div>${projectTags}</main></div>` };
-  if (layout === "project.portrait") return { layout, html: `<div class="portfolio-project portfolio-project--portrait"><figure>${imageMarkup(media.primary, project.name, language, "portrait")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure><main>${projectHeading(project, language, index)}<p class="portfolio-project__summary">${summary}</p><div class="portfolio-contributions">${projectContributionCards(project, language)}</div>${projectTags}</main></div>` };
-  if (layout === "project.evidence") return { layout, html: `<div class="portfolio-project portfolio-project--evidence">${projectHeading(project, language, index)}<div class="portfolio-project__evidence-images"><figure>${imageMarkup(media.primary, project.name, language, "wide")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure><figure>${imageMarkup(media.supporting, project.name, language, "landscape")}<figcaption>${caption(media.supporting, 2, text.captionEvidence)}</figcaption></figure></div><div class="portfolio-contributions" ${columnsStyle(contributionItems(project).length, 3)}>${projectContributionCards(project, language)}</div></div>` };
-  return { layout, html: `<div class="portfolio-project portfolio-project--classic"><div class="portfolio-project__visual" data-pf-bleed>${imageMarkup(media.primary, project.name, language, "portrait")}</div><div class="portfolio-project__content">${projectHeading(project, language, index)}<p class="portfolio-project__summary">${summary}</p>${project.responsibilities.length ? `<ul class="portfolio-responsibilities">${project.responsibilities.slice(0, 5).map((point) => `<li>${escapeHtml(localized(point.text, language))}</li>`).join("")}</ul>` : ""}${projectTags}</div></div>` };
+  if (layout === "project.balanced") return { layout, html: `<div class="portfolio-project portfolio-project--balanced">${projectHeading(project, language, index)}<div class="portfolio-project__balanced-grid"><div><figure>${imageMarkup(media.primary, project.name, language, "wide")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure>${facts(true)}</div><aside>${projectContributions(project, layout, language)}${projectTags}</aside></div></div>` };
+  if (layout === "project.editorial") return { layout, html: `<div class="portfolio-project portfolio-project--editorial"><section>${projectHeading(project, language, index)}<figure>${imageMarkup(media.primary, project.name, language, "landscape")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure></section><aside>${summaryBlock("portfolio-project__summary")}${facts(false)}${contributionItems(project, layout).map((point) => `<div class="portfolio-project__editorial-note"><p class="portfolio-kicker">${text.contribution}</p><p>${escapeHtml(localized(point.text, language))}</p></div>`).join("")}<figure>${imageMarkup(media.supporting, project.name, language, "wide")}<figcaption>${caption(media.supporting, 2, text.captionSupporting)}</figcaption></figure>${projectTags}</aside></div>` };
+  if (layout === "project.technical") return { layout, html: `<div class="portfolio-project portfolio-project--technical"><aside>${projectHeading(project, language, index)}${facts(false)}${summaryBlock()}</aside><main><figure>${imageMarkup(media.primary, project.name, language, "wide")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure><div class="portfolio-project__technical-detail"><figure>${imageMarkup(media.supporting, project.name, language, "wide")}<figcaption>${caption(media.supporting, 2, text.captionSupporting)}</figcaption></figure><div>${projectContributions(project, layout, language)}</div></div>${projectTags}</main></div>` };
+  if (layout === "project.portrait") return { layout, html: `<div class="portfolio-project portfolio-project--portrait"><figure>${imageMarkup(media.primary, project.name, language, "portrait")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure><main>${projectHeading(project, language, index)}${summaryBlock("portfolio-project__summary")}${projectContributions(project, layout, language)}${projectTags}</main></div>` };
+  if (layout === "project.evidence") return { layout, html: `<div class="portfolio-project portfolio-project--evidence">${projectHeading(project, language, index)}<div class="portfolio-project__evidence-images"><figure>${imageMarkup(media.primary, project.name, language, "wide")}<figcaption>${caption(media.primary, 1, text.captionOverview)}</figcaption></figure><figure>${imageMarkup(media.supporting, project.name, language, "landscape")}<figcaption>${caption(media.supporting, 2, text.captionEvidence)}</figcaption></figure></div>${projectContributions(project, layout, language, columnsStyle(contributionItems(project, layout).length, 3))}</div>` };
+  return { layout, html: `<div class="portfolio-project portfolio-project--classic"><div class="portfolio-project__visual" data-pf-bleed>${imageMarkup(media.primary, project.name, language, "portrait")}</div><div class="portfolio-project__content">${projectHeading(project, language, index)}${summaryBlock("portfolio-project__summary")}${contributionItems(project, layout).length ? `<ul class="portfolio-responsibilities">${contributionItems(project, layout).map((point) => `<li>${escapeHtml(localized(point.text, language))}</li>`).join("")}</ul>` : ""}${projectTags}</div></div>` };
 };
 
 const renderClassicAutomation = (tools: PortfolioTool[], language: Language): string => `<div class="portfolio-page__inner portfolio-automation portfolio-automation--classic"><p class="portfolio-kicker">${copy[language].selectedAutomation}</p><h2 class="portfolio-title">${copy[language].toolsTitle}</h2><div class="portfolio-tools${tools.length === 1 ? " is-single" : ""}" ${columnsStyle(tools.length, 3)}>${tools.map((tool, index) => `<article><span>${copy[language].automation} ${twoDigits(index + 1)}</span><h3>${escapeHtml(tool.name)}</h3><p><strong>${copy[language].problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${copy[language].solution}</strong>${escapeHtml(localized(tool.solution, language))}</p>${tagList(tool.technologies)}</article>`).join("")}</div></div>`;
 const renderAutomation = (data: PortfolioRuntimeData, tool: PortfolioTool, layout: AutomationLayout, language: Language, index: number): string => {
   const text = copy[language];
-  const benefit = tool.benefit ? localized(tool.benefit, language) : text.projectFallback;
+  const benefit = tool.benefit ? localized(tool.benefit, language) : "";
   const media = resolvePortfolioMedia(tool.images, data.content.mediaAssignments.tools[tool.id]);
   const toolName: LocalizedText = { en: tool.name, vi: tool.name };
   const heading = (subtitle: string): string => `<p class="portfolio-kicker">${text.selectedAutomation} / ${twoDigits(index + 1)}</p><h2>${escapeHtml(tool.name)}</h2><p class="portfolio-automation__subtitle">${subtitle}</p>`;
   if (layout === "automation.input-geometry") {
     return `<div class="portfolio-automation portfolio-automation--geometry">${heading(text.geometrySubtitle)}<div class="portfolio-automation__geometry-grid"><section><p class="portfolio-kicker">${text.builtWith}</p>${tagList(tool.technologies)}<div class="portfolio-automation__brief"><p><strong>${text.problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${text.solution}</strong>${escapeHtml(localized(tool.solution, language))}</p></div></section><div class="portfolio-automation__media-pair"><figure>${imageMarkup(media.primary, toolName, language, "landscape", "portfolio-automation__image")}<figcaption>${mediaCaption(media.primary, language, numberedCaption(1, text.captionToolInput))}</figcaption></figure><figure>${imageMarkup(media.supporting, toolName, language, "wide", "portfolio-automation__image")}<figcaption>${mediaCaption(media.supporting, language, numberedCaption(2, text.captionToolGenerated))}</figcaption></figure></div></div></div>`;
   }
-  const steps = [
-    [text.stepInput, text.stepInputValue],
-    [text.stepParameters, tool.technologies.slice(0, 2).join(" + ") || text.stepParametersFallback],
-    [text.stepGeneration, text.stepGenerationValue],
-    [text.outcome, benefit],
-  ];
-  return `<div class="portfolio-automation portfolio-automation--workflow">${heading(text.toolsTitle)}<div class="portfolio-automation__workflow-grid"><aside><section><p class="portfolio-kicker">${text.problem}</p><p>${escapeHtml(localized(tool.problem, language))}</p></section><section><p class="portfolio-kicker">${text.solution}</p><p>${escapeHtml(localized(tool.solution, language))}</p></section>${tagList(tool.technologies)}</aside><main><figure class="portfolio-automation__visual">${imageMarkup(media.primary, toolName, language, "wide", "portfolio-automation__image")}<figcaption>${mediaCaption(media.primary, language, text.captionToolOutput)}</figcaption></figure><p class="portfolio-kicker">${text.workflow}</p><ol class="portfolio-workflow-steps">${steps.map(([label, value], stepIndex) => `<li><span>${twoDigits(stepIndex + 1)} / ${label}</span><strong>${escapeHtml(value)}</strong></li>`).join("")}</ol></main></div></div>`;
+  // Only real content: the outcome is the tool's benefit. Invented steps ("Automated model generation") are never printed.
+  const steps = [[text.outcome, benefit]].filter(([, value]) => value);
+  const numbered = steps.length > 1;
+  const workflow = steps.length ? `${numbered ? `<p class="portfolio-kicker">${text.workflow}</p>` : ""}<ol class="portfolio-workflow-steps">${steps.map(([label, value], stepIndex) => `<li><span>${numbered ? `${twoDigits(stepIndex + 1)} / ` : ""}${label}</span><strong>${escapeHtml(value)}</strong></li>`).join("")}</ol>` : "";
+  return `<div class="portfolio-automation portfolio-automation--workflow">${heading(text.toolsTitle)}<div class="portfolio-automation__workflow-grid"><aside><section><p class="portfolio-kicker">${text.problem}</p><p>${escapeHtml(localized(tool.problem, language))}</p></section><section><p class="portfolio-kicker">${text.solution}</p><p>${escapeHtml(localized(tool.solution, language))}</p></section>${tagList(tool.technologies)}</aside><main><figure class="portfolio-automation__visual">${imageMarkup(media.primary, toolName, language, "wide", "portfolio-automation__image")}<figcaption>${mediaCaption(media.primary, language, text.captionToolOutput)}</figcaption></figure>${workflow}</main></div></div>`;
 };
 
 const credentialTitle = (credential: PortfolioCredential | undefined, language: Language): string => credential ? localized(credential.title, language) : copy[language].documentPlaceholder;
 const credentialMeta = (credential: PortfolioCredential | undefined, language: Language): string => credential ? [localized(credential.issuer, language), credential.issuedOn?.slice(0, 4)].filter(Boolean).join(" · ") : copy[language].contentPending;
 const credentialKind = (kind: CredentialKind, language: Language): string => copy[language].credentialKinds[kind] ?? copy[language].credentialKinds.other;
-const renderCredentials = (data: PortfolioRuntimeData, language: Language, pageCredentials: PortfolioCredential[], pageIndex: number, pageTotal: number): string => {
-  // Placeholders only stand in for an empty selection; a short last page keeps its real items.
-  const credentials: Array<PortfolioCredential | undefined> = pageCredentials.length ? pageCredentials : Array<undefined>(PORTFOLIO_CREDENTIALS_PER_PAGE).fill(undefined);
-  const firstNumber = pageIndex * PORTFOLIO_CREDENTIALS_PER_PAGE + 1;
+const renderCredentials = (language: Language, credentialPage: PortfolioCredentialPage, pageIndex: number, pageTotal: number): string => {
+  // Placeholders only stand in for an empty selection; a short page keeps its real items.
+  const credentials: Array<PortfolioCredential | undefined> = credentialPage.credentials.length ? credentialPage.credentials : Array<undefined>(PORTFOLIO_CREDENTIALS_PER_PAGE).fill(undefined);
+  const firstNumber = credentialPage.firstIndex + 1;
   const kicker = `${copy[language].credentialsSubtitle}${pageTotal > 1 ? ` · ${pageIndex + 1} / ${pageTotal}` : ""}`;
   const title = (credential: PortfolioCredential | undefined): string => `<h3 class="portfolio-credential__title">${escapeHtml(credentialTitle(credential, language))}</h3>`;
   const placeholder = `<div class="portfolio-document-placeholder"><span>${copy[language].documentPlaceholder}</span></div>`;
-  if (data.content.layouts.credentials === "credentials.dual") return `<div class="portfolio-credentials portfolio-credentials--dual"><p class="portfolio-kicker">${kicker}</p><h2>${copy[language].credentials}</h2><div>${credentials.map((credential, index) => `<article><header><span>${twoDigits(firstNumber + index)}</span>${title(credential)}</header>${placeholder}<p>${escapeHtml(credentialMeta(credential, language))}</p></article>`).join("")}</div></div>`;
+  if (credentialPage.layout === "credentials.dual") return `<div class="portfolio-credentials portfolio-credentials--dual"><p class="portfolio-kicker">${kicker}</p><h2>${copy[language].credentials}</h2><div>${credentials.map((credential, index) => `<article><header><span>${twoDigits(firstNumber + index)}</span>${title(credential)}</header>${placeholder}<p>${escapeHtml(credentialMeta(credential, language))}</p></article>`).join("")}</div></div>`;
   return `<div class="portfolio-credentials portfolio-credentials--bands"><p class="portfolio-kicker">${kicker}</p><h2>${copy[language].credentials}</h2><div>${credentials.map((credential, index) => `<article>${placeholder}<section><p class="portfolio-kicker">${twoDigits(firstNumber + index)}${credential ? ` / ${escapeHtml(credentialKind(credential.kind, language))}` : ""}</p>${title(credential)}<p>${escapeHtml(credentialMeta(credential, language))}</p>${credential?.description && localized(credential.description, language) ? `<small>${escapeHtml(localized(credential.description, language))}</small>` : ""}</section></article>`).join("")}</div></div>`;
 };
 
@@ -213,7 +210,7 @@ const renderClosing = (data: PortfolioRuntimeData, language: Language, projects:
   if (content.layouts.closing === "closing.white") {
     const hero = projects[0];
     const media = hero ? resolvePortfolioMedia(hero.images, content.mediaAssignments.projects[hero.id]).primary : undefined;
-    return `<div class="portfolio-closing portfolio-closing--white"><main><h2>${thankYou}</h2><strong>${escapeHtml(localized(content.closingHeading, language))}</strong><h3>${escapeHtml(displayName)}</h3><p>${escapeHtml(localized(profile.professionalTitle, language))}</p></main><aside><p class="portfolio-kicker">${text.connect}</p><span>${text.email}</span><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${text.phone}</span><strong>${escapeHtml(profile.phone)}</strong><span>${text.location}</span><strong>${escapeHtml(localized(profile.location, language))}</strong></aside><figure>${imageMarkup(media, hero?.name, language, "wide", "portfolio-closing__image")}<figcaption>${text.captionClosing}</figcaption></figure></div>`;
+    return `<div class="portfolio-closing portfolio-closing--white"><main><h2>${thankYou}</h2><strong>${escapeHtml(localized(content.closingHeading, language))}</strong><h3>${escapeHtml(displayName)}</h3><p>${escapeHtml(localized(profile.professionalTitle, language))}</p></main><aside><p class="portfolio-kicker">${text.connect}</p><span>${text.email}</span><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${text.phone}</span><strong>${escapeHtml(profile.phone)}</strong><span>${text.location}</span><strong>${escapeHtml(localized(profile.location, language))}</strong></aside><figure>${imageMarkup(media, hero?.name, language, "wide", "portfolio-closing__image")}<figcaption>${mediaCaption(media, language, text.captionClosing)}</figcaption></figure></div>`;
   }
   return `<div class="portfolio-closing portfolio-closing--classic"><p class="portfolio-kicker">${thankYou}</p><h2>${escapeHtml(localized(content.closingHeading, language))}</h2><p>${escapeHtml(localized(content.closingText, language))}</p><div><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span></div></div>`;
 };
@@ -247,8 +244,8 @@ export const renderPortfolio = (data: PortfolioRuntimeData, language: Language =
     pages.push(numbered(renderAutomation(data, tool, layout, language, index), "automation", layout, text.selectedAutomation));
   });
   const credentialPages = portfolioCredentialPages(data);
-  credentialPages.forEach((pageCredentials, pageIndex) => {
-    pages.push(numbered(renderCredentials(data, language, pageCredentials, pageIndex, credentialPages.length), "credentials", layouts.credentials, text.credentials));
+  credentialPages.forEach((credentialPage, pageIndex) => {
+    pages.push(numbered(renderCredentials(language, credentialPage, pageIndex, credentialPages.length), "credentials", credentialPage.layout, text.credentials));
   });
   pages.push(numbered(renderClosing(data, language, selectedProjects), "closing", layouts.closing, layouts.closing === "closing.white" ? text.connect : undefined));
   return pages.join("");

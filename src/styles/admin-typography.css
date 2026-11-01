@@ -68,10 +68,16 @@ html.admin-app :where(.admin-login, .admin-shell) :where(h1, h2, h3, h4) {
   font-weight: var(--admin-weight-bold);
 }
 
-.admin-brand small,
 .admin-rail__footer button {
   font-size: var(--admin-text-xs);
   font-weight: var(--admin-weight-medium);
+}
+
+/* The owner name is quiet secondary text: smallest size, regular weight, slight tracking for an all-caps name. */
+.admin-brand small {
+  font-size: var(--admin-text-2xs);
+  font-weight: var(--admin-weight-regular);
+  letter-spacing: .02em;
 }
 
 .admin-nav p {

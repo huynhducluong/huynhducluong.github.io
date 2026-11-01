@@ -83,8 +83,8 @@ export const adminSelectionCountText = (mode: AdminSelectionCountMode, selected:
 
 /**
  * Group heading with its live count chip. The group element carries `data-selection-group` and
- * `data-selection-mode`; each eligible item carries `data-selection-count-item` (a checkbox, or a select whose
- * `data-selection-off` value means "not included"); optional `data-selection-extra-item` checkboxes add
+ * `data-selection-mode`; each eligible item carries `data-selection-count-item` (a checkbox, or a select or
+ * radiogroup whose `data-selection-off` value means "not included"); optional `data-selection-extra-item` checkboxes add
  * "· N {extraLabel}". Draft items are not eligible, so the total counts only what can be chosen.
  */
 export const renderAdminSelectionHeading = ({
@@ -107,8 +107,13 @@ export const renderAdminSelectionHeading = ({
 export const syncAdminSelectionCount = (group: HTMLElement): void => {
   const count = group.querySelector<HTMLElement>("[data-selection-count]");
   if (!count) return;
-  const items = [...group.querySelectorAll<HTMLInputElement | HTMLSelectElement>("[data-selection-count-item]")];
-  const selected = items.filter((item) => item instanceof HTMLSelectElement ? item.value !== (item.dataset.selectionOff ?? "") : item.checked).length;
+  const items = [...group.querySelectorAll<HTMLElement>("[data-selection-count-item]")];
+  const isSelected = (item: HTMLElement): boolean => {
+    if (item instanceof HTMLInputElement) return item.checked;
+    const value = item instanceof HTMLSelectElement ? item.value : item.querySelector<HTMLInputElement>("input:checked")?.value ?? "";
+    return value !== (item.dataset.selectionOff ?? "");
+  };
+  const selected = items.filter(isSelected).length;
   const extraLabel = count.dataset.selectionExtraLabel;
   const extraCount = extraLabel ? group.querySelectorAll<HTMLInputElement>("[data-selection-extra-item]:checked").length : 0;
   count.textContent = adminSelectionCountText(group.dataset.selectionMode as AdminSelectionCountMode, selected, items.length, extraCount ? `${extraCount} ${extraLabel}` : "");
@@ -176,21 +181,29 @@ export const bindAdminFilePickers = (root: ParentNode): void => {
   });
 };
 
-/** Two or three mutually exclusive choices as one segmented control (native radios, so arrow keys work). */
+/**
+ * Two or three mutually exclusive choices as one segmented control (native radios, so arrow keys work).
+ * `attributes` go on every radio; `groupAttributes` on the radiogroup (e.g. `data-selection-count-item`).
+ * `hideLegend` keeps the legend for screen readers when every row in a list would repeat it.
+ */
 export const renderAdminSegmented = ({
   legend,
   name,
   value,
   options,
   attributes = "",
+  groupAttributes = "",
+  hideLegend = false,
 }: {
   legend: string;
   name: string;
   value: string;
   options: Array<{ value: string; label: string }>;
   attributes?: string;
-}): string => `<div class="admin-segmented" role="radiogroup" aria-labelledby="${escapeHtml(name)}-label">
-    <span class="admin-segmented__label" id="${escapeHtml(name)}-label">${escapeHtml(legend)}</span>
+  groupAttributes?: string;
+  hideLegend?: boolean;
+}): string => `<div class="admin-segmented" role="radiogroup" aria-labelledby="${escapeHtml(name)}-label"${groupAttributes ? ` ${groupAttributes}` : ""}>
+    <span class="admin-segmented__label${hideLegend ? " sr-only" : ""}" id="${escapeHtml(name)}-label">${escapeHtml(legend)}</span>
     <span class="admin-segmented__options">${options.map((option) => `<label><input type="radio" name="${escapeHtml(name)}" value="${escapeHtml(option.value)}"${option.value === value ? " checked" : ""}${attributes ? ` ${attributes}` : ""}><span>${escapeHtml(option.label)}</span></label>`).join("")}</span>
   </div>`;
 

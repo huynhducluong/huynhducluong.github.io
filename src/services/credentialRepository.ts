@@ -162,6 +162,19 @@ export const archiveProfessionalCredential = async (id: string): Promise<void> =
   credentialCache.invalidate();
 };
 
+/** Removes the private evidence files first, then the row (credential_assets rows cascade). */
+export const deleteProfessionalCredential = async (credential: ProfessionalCredential): Promise<void> => {
+  if (credential.assets.length) {
+    const { error: storageError } = await supabase.storage
+      .from(supabaseConfig.privateDocumentBucket)
+      .remove(credential.assets.map((asset) => asset.storagePath));
+    if (storageError) throw storageError;
+  }
+  const { error } = await supabase.from("professional_credentials").delete().eq("id", credential.id);
+  if (error) throw error;
+  credentialCache.invalidate();
+};
+
 const extensions: Record<CredentialAsset["mimeType"], string> = {
   "application/pdf": "pdf",
   "image/jpeg": "jpg",

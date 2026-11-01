@@ -19,6 +19,8 @@ html.admin-app {
   --admin-color-danger: #a02626;
   --admin-color-danger-border: #d59a9a;
   --admin-color-danger-surface: #fff0f0;
+  /* One height for the whole top bar (rail brand + workspace header) on every screen (§11). */
+  --admin-topbar-height: 4rem;
   --admin-control-height: 2.5rem;
   --admin-control-height-sm: 2rem;
   --admin-control-height-lg: 2.75rem;
@@ -629,7 +631,7 @@ html.admin-app button.is-busy::before {
 .admin-toast-region {
   position: fixed;
   z-index: 70;
-  top: 5.25rem;
+  top: calc(var(--admin-topbar-height) + .75rem);
   right: 1rem;
   display: grid;
   width: min(25rem, calc(100vw - 2rem));
@@ -1889,9 +1891,8 @@ html.admin-app .admin-segmented__options input:focus-visible + span {
   }
 }
 
+/* Short screens tighten the navigation only; the top bar and the rail footer never change with height (§11). */
 @media (min-width: 901px) and (max-height: 760px) {
-  .admin-brand { min-height: 3.75rem; padding: .65rem .85rem; }
-  .admin-brand > span { width: 2.15rem; height: 2.15rem; }
   .admin-nav { padding: .45rem .6rem .65rem; }
   .admin-nav p { margin: .55rem .55rem .2rem; }
   .admin-nav p:first-child { margin-top: .2rem; }
@@ -1903,18 +1904,9 @@ html.admin-app .admin-segmented__options input:focus-visible + span {
     padding: .25rem .55rem;
   }
   .admin-nav__icon-shell { width: 1.5rem; height: 1.5rem; }
-  .admin-rail__footer {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: .25rem;
-    padding: .45rem .55rem;
-  }
-  .admin-rail__footer button { padding: .35rem .45rem; }
 }
 
 @media (min-width: 901px) and (max-height: 620px) {
-  .admin-brand { min-height: 3.25rem; padding-block: .5rem; }
-  .admin-brand > span { width: 2rem; height: 2rem; }
-  .admin-brand small { display: none; }
   .admin-nav { padding-block: .3rem .4rem; }
   .admin-nav p { margin-block: .3rem .1rem; }
   .admin-nav p:first-child { margin-top: .1rem; }
@@ -1928,6 +1920,10 @@ html.admin-app .admin-segmented__options input:focus-visible + span {
     grid-template-columns: 12rem minmax(0, 1fr);
   }
 
+  /* The 12rem rail: a slightly smaller avatar and title keep "Career Hub Admin" on one line. */
+  .admin-brand > span { width: 2.15rem; height: 2.15rem; }
+  .admin-brand strong { font-size: var(--admin-text-xs); }
+
   .admin-layout.has-collection { grid-template-columns: 18rem minmax(0, 1fr); }
 
 }
@@ -1936,18 +1932,17 @@ html.admin-app .admin-segmented__options input:focus-visible + span {
   .admin-shell {
     height: 100dvh;
     grid-template-columns: 1fr;
-    grid-template-rows: 4rem minmax(0, 1fr);
+    grid-template-rows: var(--admin-topbar-height) minmax(0, 1fr);
   }
 
   .admin-rail {
     position: relative;
     z-index: 40;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    grid-template-rows: 4rem;
+    grid-template-rows: var(--admin-topbar-height);
   }
 
   .admin-brand {
-    min-height: 4rem;
     padding: .6rem .75rem;
     border-right: 1px solid rgb(255 255 255 / 10%);
     border-bottom: 0;
@@ -1983,11 +1978,9 @@ html.admin-app .admin-segmented__options input:focus-visible + span {
     border-left: 1px solid rgb(255 255 255 / 10%);
   }
 
-  .admin-rail__footer button { white-space: nowrap; }
 
-  .admin-main { grid-template-rows: 4rem minmax(0, 1fr); }
-  .admin-header { height: 4rem; min-height: 4rem; }
-  .admin-toast-region { top: 8.75rem; }
+  /* The rail row and the header row stack, so toasts start below both. */
+  .admin-toast-region { top: calc(var(--admin-topbar-height) * 2 + .75rem); }
 }
 
 @media (max-width: 720px) {
@@ -2314,4 +2307,32 @@ label.admin-selection-card--single,
     border-top: 0;
   }
 
+}
+
+/*
+ * Shell frame (§11): every column reaches the window bottom. A workspace that hosts a fixed frame (editor,
+ * document, profile, site, cover letter) keeps its top and side gutters but has no bottom gutter; the frame
+ * stands on the window edge and the breathing room after the last item lives inside each scroll area.
+ */
+html.admin-app .admin-workspace:is(
+  :has(> .admin-editor-shell),
+  :has(> .admin-document-library),
+  :has(> .admin-cl-shell),
+  :has(> .admin-document-workspace),
+  :has(> .admin-site-workspace),
+  :has(> .admin-profile-workspace)
+) {
+  padding-bottom: 0;
+}
+
+/* A frame that stands on the window edge has no bottom border or bottom corners. */
+html.admin-app .admin-workspace:has(> .admin-editor-shell) > .admin-editor-shell {
+  border-bottom-width: 0;
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+
+/* Breathing room after the last item belongs to the scroll area, the same in every column. */
+html.admin-app .admin-collection__scroll {
+  padding-bottom: var(--admin-workspace-gutter);
 }

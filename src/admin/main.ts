@@ -8,6 +8,7 @@ import "../styles/admin-documents.css";
 import "../styles/admin-site.css";
 import "../styles/admin-typography.css";
 import "../styles/admin-ui.css";
+import "../styles/document-typography.css";
 import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
@@ -256,6 +257,27 @@ const identityInitials = (profile: Profile | null): string => (profile ? profile
   .join("")
   .toUpperCase() || "HDL";
 
+/** The rail subtitle is the owner's English (ASCII) name, live while the Profile is edited; the workspace label until it loads. */
+const adminIdentityLabel = (profile: Profile | null): string => (profile ? profileName(profile.name, "en").trim() : "") || adminBrand.workspace;
+
+/**
+ * Keeps the rail name on one line (§11): if it does not fit at its CSS size, drop the tracking and shrink it
+ * proportionally, never below ADMIN_IDENTITY_MIN_SIZE; only a name that still overflows is ellipsized (with tooltip).
+ */
+const ADMIN_IDENTITY_MIN_SIZE = 10;
+const fitAdminIdentityLabel = (label: HTMLElement | null = app.querySelector<HTMLElement>("[data-admin-brand-identity]")): void => {
+  if (!label) return;
+  label.style.removeProperty("font-size");
+  label.style.removeProperty("letter-spacing");
+  if (!label.clientWidth || label.scrollWidth <= label.clientWidth) return;
+  label.style.letterSpacing = "0";
+  const size = Number.parseFloat(getComputedStyle(label).fontSize);
+  const fitted = Math.floor((size * label.clientWidth / label.scrollWidth) * 10) / 10;
+  label.style.fontSize = `${Math.max(ADMIN_IDENTITY_MIN_SIZE, fitted)}px`;
+};
+window.addEventListener("resize", () => fitAdminIdentityLabel());
+void document.fonts?.ready.then(() => fitAdminIdentityLabel());
+
 const adminAvatarContent = (profile: Profile | null): string => {
   const photoPath = profile?.photoPath.trim() ?? "";
   return `<span aria-hidden="true">${escapeHtml(identityInitials(profile))}</span>${photoPath ? `<img src="${escapeHtml(assetUrl(photoPath))}" alt="">` : ""}`;
@@ -279,6 +301,12 @@ const updateAdminIdentity = (profile: Profile, persist = false): void => {
   avatar.classList.remove("has-image");
   avatar.innerHTML = adminAvatarContent(profile);
   bindAdminAvatarImage(avatar);
+  const label = app.querySelector<HTMLElement>("[data-admin-brand-identity]");
+  if (label) {
+    label.textContent = adminIdentityLabel(profile);
+    label.title = label.textContent;
+    fitAdminIdentityLabel(label);
+  }
 };
 let pendingCollectionReveal: CollectionRevealIntent | null = null;
 const collectionScrollPositions: Record<CollectionView, number> = { projects: 0, tools: 0, trash: 0 };
@@ -966,7 +994,7 @@ const dashboardView = (): void => {
     <a class="admin-skip-link" href="#admin-workspace">Skip to workspace</a>
     <main class="admin-shell">
       <aside class="admin-rail">
-        <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span class="admin-brand__avatar" data-admin-brand-avatar>${adminAvatarContent(adminIdentity)}</span><div><strong>${adminBrand.name}</strong><small>${adminBrand.workspace}</small></div></a>
+        <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span class="admin-brand__avatar" data-admin-brand-avatar>${adminAvatarContent(adminIdentity)}</span><div><strong>${adminBrand.name}</strong><small data-admin-brand-identity title="${escapeHtml(adminIdentityLabel(adminIdentity))}">${escapeHtml(adminIdentityLabel(adminIdentity))}</small></div></a>
         <nav class="admin-nav" aria-label="Admin sections">
           <p>Overview</p>${navButton("overview", "Dashboard")}
           <p>Website</p>${navButton("homepage", "Homepage")}${navButton("projects", "Projects")}${navButton("tools", "Automation tools")}
@@ -1007,6 +1035,7 @@ const dashboardView = (): void => {
       <button type="button" role="menuitem" data-reorder-edge="last"><span aria-hidden="true">⇊</span>Move to last</button>
     </div>`;
   bindAdminAvatarImage(app.querySelector<HTMLElement>("[data-admin-brand-avatar]"));
+  fitAdminIdentityLabel();
   bindDashboard();
   bindAdminTablists(app);
   bindAdminYearPickers(app);

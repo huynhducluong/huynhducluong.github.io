@@ -44,6 +44,52 @@ describe("Admin stylesheet contract", () => {
     expect(adminSiteSource).not.toContain("contain-intrinsic-size");
   });
 
+  it("gives the shell one top-bar height and a height-independent rail footer (§11)", () => {
+    const styles = import.meta.glob<string>(["../styles/admin.css", "../styles/admin-ui.css"], { query: "?raw", import: "default", eager: true });
+    const admin = styles["../styles/admin.css"];
+    const adminUi = styles["../styles/admin-ui.css"];
+    expect(adminUi).toMatch(/--admin-topbar-height: 4rem;/);
+    expect(admin).toMatch(/\.admin-brand \{[^}]*height: var\(--admin-topbar-height\);/);
+    expect(admin).toMatch(/\.admin-header \{[^}]*height: var\(--admin-topbar-height\);/);
+    expect(admin).toMatch(/\.admin-main \{[^}]*grid-template-rows: var\(--admin-topbar-height\) minmax\(0, 1fr\);/);
+    expect(admin).toMatch(/\.admin-rail__footer \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\);/);
+    // Height media queries may tighten the navigation, never the top bar or the footer.
+    const heightRules = [...adminUi.matchAll(/@media[^{]*max-height[^{]*\{([\s\S]*?)\n\}/g)].map((match) => match[1]).join("\n");
+    expect(heightRules).not.toMatch(/\.admin-(brand|header|main|rail__footer)\b/);
+    expect(`${admin}\n${adminUi}`).not.toMatch(/(?:min-)?height: 4\.5rem|grid-template-rows: 4rem/);
+  });
+
+  it("lets every shell column reach the window bottom (§11)", () => {
+    const adminUi = Object.values(import.meta.glob<string>("../styles/admin-ui.css", { query: "?raw", import: "default", eager: true }))[0];
+    // The last rules of the final layer: framed workspaces drop the bottom gutter, frames lose bottom border and corners.
+    const frameRule = adminUi.slice(adminUi.lastIndexOf("html.admin-app .admin-workspace:is("));
+    ["admin-editor-shell", "admin-document-library", "admin-cl-shell", "admin-document-workspace", "admin-site-workspace", "admin-profile-workspace"]
+      .forEach((frame) => expect(frameRule.slice(0, frameRule.indexOf("{"))).toContain(`:has(> .${frame})`));
+    expect(frameRule).toMatch(/^[^{]*\{\s*padding-bottom: 0;/);
+    expect(adminUi).toMatch(/\.admin-editor-shell \{\s*border-bottom-width: 0;\s*border-end-start-radius: 0;\s*border-end-end-radius: 0;/);
+    expect(adminUi).toMatch(/html\.admin-app \.admin-collection__scroll \{\s*padding-bottom: var\(--admin-workspace-gutter\);/);
+    // The internally scrolling Portfolio preview stands on the edge too; its end gap is sized for the current zoom.
+    const documents = Object.values(import.meta.glob<string>("../styles/admin-documents.css", { query: "?raw", import: "default", eager: true }))[0];
+    const portfolio = Object.values(import.meta.glob<string>("../styles/portfolio-screen.css", { query: "?raw", import: "default", eager: true }))[0];
+    expect(documents).toMatch(/\.admin-document-frame\[data-preview-scroll="internal"\] \{[^}]*padding-bottom: 0;/);
+    expect(portfolio).toMatch(/\.document-preview-scroll \.portfolio-preview-shell \{[^}]*padding-bottom: calc\(1\.25rem \/ var\(--embedded-preview-scale, 1\)\);/);
+  });
+
+  it("names the owner in the rail and never lets a long name widen it (§11)", () => {
+    const admin = Object.values(import.meta.glob<string>("../styles/admin.css", { query: "?raw", import: "default", eager: true }))[0];
+    const main = Object.values(import.meta.glob<string>("./main.ts", { query: "?raw", import: "default", eager: true }))[0];
+    expect(main).toContain("<small data-admin-brand-identity");
+    expect(main).toMatch(/profileName\(profile\.name, "en"\)\.trim\(\) : ""\) \|\| adminBrand\.workspace/);
+    expect(admin).toMatch(/\.admin-rail \{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
+    expect(admin).toMatch(/\.admin-brand small \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/);
+    // Both brand lines stay on one line: the name is fitted (10 px floor) before it is ever ellipsized.
+    expect(admin).toMatch(/\.admin-brand strong \{[^}]*white-space: nowrap;/);
+    expect(admin).toMatch(/\.admin-brand > div \{ flex: 1 1 auto; \}/);
+    expect(main).toContain("const ADMIN_IDENTITY_MIN_SIZE = 10;");
+    // Re-fitted on window resize, font load, every identity update (typing) and every shell render.
+    expect(main.match(/fitAdminIdentityLabel\(/g)?.length).toBeGreaterThanOrEqual(4);
+  });
+
   it("keeps notifications inside the active dialog top layer", () => {
     expect(toastSource).toContain("activeAdminDialog");
     expect(toastSource).toContain("ensureDialogStatusRegion");
@@ -120,8 +166,10 @@ describe("Admin stylesheet contract", () => {
   });
 
   it("gives every selection list the shared heading count (§6.6)", () => {
-    // CV (Projects, Tools), Portfolio (Projects, Tools), Website (Projects, Tools), Cover letter evidence (Projects, Tools).
-    expect(profileDocumentWorkspaceSource.match(/renderAdminSelectionHeading\(\{/g)).toHaveLength(4);
+    // CV (Projects, Tools), Portfolio (Projects, Tools), CV/Portfolio Background groups (one shared backgroundGroup),
+    // Website (Projects, Tools), Cover letter evidence (Projects, Tools).
+    expect(profileDocumentWorkspaceSource.match(/renderAdminSelectionHeading\(\{/g)).toHaveLength(5);
+    expect(profileDocumentWorkspaceSource).not.toMatch(/backgroundGroup\(\{[^}]*note:/);
     expect(siteWorkspaceSource.match(/renderAdminSelectionHeading\(\{ title: "(?:Projects|Automation tools)", mode: "shown"/g)).toHaveLength(2);
     expect(coverLetterWorkspaceSource.match(/renderAdminSelectionHeading\(\{ title: "(?:Projects|Automation tools)", mode: "selected"/g)).toHaveLength(2);
     // Counts are worded in one place only.
@@ -192,12 +240,11 @@ describe("Admin stylesheet contract", () => {
     expect(overridesPosition).toBeGreaterThanOrEqual(0);
     expect(mediaPosition).toBeGreaterThan(overridesPosition);
     expect(profileDocumentWorkspaceSource).toContain("data-portfolio-media-group");
-    expect(profileDocumentWorkspaceSource).toContain("renderAdminSelectControl({ name: `project_primary_media_");
-    expect(profileDocumentWorkspaceSource).not.toContain("image.alt.en ?");
+    // Rows come from portfolioMediaSelection.ts (§6.8, tested there); the workspace never hand-writes them again.
+    expect(profileDocumentWorkspaceSource.match(/renderPortfolioMediaRow\(\{ kind: "(?:project|tool)"/g)).toHaveLength(2);
+    expect(profileDocumentWorkspaceSource).not.toContain("admin-portfolio-media-item");
+    expect(profileDocumentWorkspaceSource).not.toContain("Not used by layout");
     expect(profileDocumentWorkspaceSource).not.toContain("Required by layout");
-    expect(profileDocumentWorkspaceSource).toContain('aria-required="true"');
-    expect(profileDocumentWorkspaceSource).toContain("data-portfolio-primary-required");
-    expect(profileDocumentWorkspaceSource).toContain("data-portfolio-supporting-required");
   });
 
   it("uses one styled required marker and keeps generated slugs optional to enter", () => {

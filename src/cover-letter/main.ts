@@ -1,6 +1,7 @@
 import "../styles/reset.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
+import "../styles/document-typography.css";
 import "../styles/document-print-preview.css";
 import "../styles/cover-letter-screen.css";
 import "../styles/cover-letter-view.css";

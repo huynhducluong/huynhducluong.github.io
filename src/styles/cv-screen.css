@@ -7,7 +7,7 @@ body {
   min-width: 0;
   background: #dfe8ec;
   color: var(--color-text);
-  font-family: Aptos, "Segoe UI", Arial, sans-serif;
+  font-family: var(--document-font);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -266,15 +266,15 @@ body.document-embedded .cv-preview-shell {
   --cv-date-column-width: 17mm;
   --cv-experience-column-gap: 2.5mm;
   --cv-timeline-axis-offset: -2.5mm;
-  --cv-font-body: 9pt;
-  --cv-font-summary: 9.5pt;
-  --cv-font-role: 10.5pt;
-  --cv-font-project: 9.25pt;
-  --cv-font-project-summary: 8.25pt;
-  --cv-font-meta: 8pt;
-  --cv-font-sidebar-primary: 8.75pt;
-  --cv-font-sidebar-secondary: 8pt;
-  --cv-font-sidebar-list: 8.25pt;
+  --cv-font-body: var(--document-type-base);
+  --cv-font-summary: var(--document-type-base);
+  --cv-font-role: var(--document-type-lg);
+  --cv-font-project: var(--document-type-base);
+  --cv-font-project-summary: var(--document-type-xs);
+  --cv-font-meta: var(--document-type-xs);
+  --cv-font-sidebar-primary: var(--document-type-sm);
+  --cv-font-sidebar-secondary: var(--document-type-xs);
+  --cv-font-sidebar-list: var(--document-type-xs);
   --document-primary: #0772a4;
   --document-primary-strong: #055276;
   --document-accent: #14a8d6;
@@ -294,6 +294,7 @@ body.document-embedded .cv-preview-shell {
 
 .cv-page {
   position: relative;
+  font-family: var(--document-font);
   width: 210mm;
   height: 297mm;
   overflow: hidden;
@@ -301,7 +302,7 @@ body.document-embedded .cv-preview-shell {
   color: var(--document-text);
   box-shadow: 0 22px 70px rgb(16 45 59 / 20%);
   font-size: var(--cv-font-body);
-  line-height: 1.36;
+  line-height: var(--document-leading-body);
 }
 
 .cv-page *,
@@ -370,9 +371,9 @@ body.document-embedded .cv-preview-shell {
   place-items: center;
   background: var(--document-primary-strong);
   color: var(--document-on-primary);
-  font-size: 18pt;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-size: var(--document-type-3xl);
+  font-weight: var(--document-weight-black);
+  letter-spacing: var(--document-tracking-caps);
 }
 
 .cv-photo__image {
@@ -391,10 +392,10 @@ body.document-embedded .cv-preview-shell {
 .cv-section-heading {
   margin-bottom: 2.5mm !important;
   color: var(--document-text);
-  font-size: 14pt;
-  font-weight: 700;
-  letter-spacing: 0.015em;
-  line-height: 1.1;
+  font-size: var(--document-type-2xl);
+  font-weight: var(--document-weight-bold);
+  letter-spacing: var(--document-tracking-wide);
+  line-height: var(--document-leading-tight);
 }
 
 .cv-sidebar .cv-section-heading {
@@ -404,7 +405,7 @@ body.document-embedded .cv-preview-shell {
   padding: 2.2mm 7.5mm;
   background: var(--document-accent);
   color: var(--document-on-accent);
-  font-size: 12.5pt;
+  font-size: var(--document-type-2xl);
 }
 
 .cv-sidebar .cv-section-heading::after {
@@ -446,8 +447,8 @@ body.document-embedded .cv-preview-shell {
 .cv-sidebar-entry h3,
 .cv-employment strong {
   font-size: var(--cv-font-sidebar-primary);
-  font-weight: 700;
-  line-height: 1.2;
+  font-weight: var(--document-weight-bold);
+  line-height: var(--document-leading-tight);
 }
 
 .cv-contact a,
@@ -455,7 +456,7 @@ body.document-embedded .cv-preview-shell {
 .cv-sidebar-entry p,
 .cv-employment span {
   font-size: var(--cv-font-sidebar-secondary);
-  line-height: 1.3;
+  line-height: var(--document-leading-body);
 }
 
 .cv-sidebar-entry {
@@ -472,8 +473,8 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-sidebar-entry__meta {
-  font-size: 7.75pt !important;
-  font-weight: 500;
+  font-size: var(--document-type-xs) !important;
+  font-weight: var(--document-weight-regular);
 }
 
 .cv-sidebar-list {
@@ -481,7 +482,7 @@ body.document-embedded .cv-preview-shell {
   gap: 1.15mm;
   padding-left: 11mm !important;
   font-size: var(--cv-font-sidebar-list);
-  line-height: 1.3;
+  line-height: var(--document-leading-body);
 }
 
 .cv-sidebar-list--compact {
@@ -518,17 +519,17 @@ body.document-embedded .cv-preview-shell {
 
 .cv-identity__name {
   max-width: 95mm;
-  font-size: 30pt;
-  font-weight: 800;
-  letter-spacing: 0.005em;
-  line-height: 1;
+  font-size: var(--document-type-6xl);
+  font-weight: var(--document-weight-black);
+  letter-spacing: var(--document-tracking-wide);
+  line-height: var(--document-leading-none);
 }
 
 .cv-identity h1 {
   margin-top: 4mm;
-  font-size: 13.5pt;
-  font-weight: 650;
-  letter-spacing: 0.025em;
+  font-size: var(--document-type-2xl);
+  font-weight: var(--document-weight-bold);
+  letter-spacing: var(--document-tracking-wide);
 }
 
 .cv-main-section {
@@ -542,7 +543,7 @@ body.document-embedded .cv-preview-shell {
 .cv-summary p {
   color: color-mix(in srgb, var(--document-text) 84%, var(--document-text-muted));
   font-size: var(--cv-font-summary);
-  line-height: 1.42;
+  line-height: var(--document-leading-relaxed);
 }
 
 .cv-experience-list {
@@ -566,10 +567,10 @@ body.document-embedded .cv-preview-shell {
   gap: 0.8mm;
   padding-top: 0.5mm;
   font-size: var(--cv-font-meta);
-  font-weight: 600;
+  font-weight: var(--document-weight-semibold);
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
-  line-height: 1.1;
+  line-height: var(--document-leading-tight);
   text-align: center;
 }
 
@@ -604,8 +605,8 @@ body.document-embedded .cv-preview-shell {
 .cv-experience-item__content h3 {
   position: relative;
   font-size: var(--cv-font-role);
-  font-weight: 700;
-  line-height: 1.18;
+  font-weight: var(--document-weight-bold);
+  line-height: var(--document-leading-tight);
 }
 
 .cv-experience-item__content h3::before {
@@ -623,8 +624,8 @@ body.document-embedded .cv-preview-shell {
 .cv-experience-item__project {
   margin-top: 1.2mm !important;
   font-size: var(--cv-font-project);
-  font-weight: 650;
-  line-height: 1.25;
+  font-weight: var(--document-weight-semibold);
+  line-height: var(--document-leading-tight);
 }
 
 .cv-experience-item__summary {
@@ -632,8 +633,8 @@ body.document-embedded .cv-preview-shell {
   color: color-mix(in srgb, var(--document-text) 82%, var(--document-text-muted));
   font-size: var(--cv-font-project-summary);
   font-style: italic;
-  font-weight: 400;
-  line-height: 1.35;
+  font-weight: var(--document-weight-regular);
+  line-height: var(--document-leading-body);
 }
 
 .cv-bullet-list {
@@ -641,9 +642,9 @@ body.document-embedded .cv-preview-shell {
   gap: 0.55mm;
   margin-top: 1.2mm !important;
   padding-left: 4mm !important;
-  font-size: 8.5pt;
-  font-weight: 500;
-  line-height: 1.34;
+  font-size: var(--document-type-sm);
+  font-weight: var(--document-weight-regular);
+  line-height: var(--document-leading-body);
 }
 
 .cv-page-accent {
@@ -686,15 +687,15 @@ body.document-embedded .cv-preview-shell {
 
 .cv-page-two-header__identity p {
   max-width: 55mm;
-  font-size: 18pt;
-  font-weight: 750;
-  line-height: 1;
+  font-size: var(--document-type-3xl);
+  font-weight: var(--document-weight-bold);
+  line-height: var(--document-leading-none);
 }
 
 .cv-page-two-header__identity span {
   margin-top: 2mm;
-  font-size: 8.5pt;
-  font-weight: 600;
+  font-size: var(--document-type-sm);
+  font-weight: var(--document-weight-semibold);
 }
 
 .cv-page-two-header__title {
@@ -706,17 +707,17 @@ body.document-embedded .cv-preview-shell {
 
 .cv-page-two-header__title span {
   color: var(--document-primary);
-  font-size: 7.25pt;
-  font-weight: 800;
-  line-height: 1;
-  letter-spacing: 0.12em;
+  font-size: var(--document-type-2xs);
+  font-weight: var(--document-weight-black);
+  line-height: var(--document-leading-none);
+  letter-spacing: var(--document-tracking-caps);
   text-transform: uppercase;
 }
 
 .cv-page-two-header__title strong {
-  font-size: 16pt;
-  font-weight: 700;
-  line-height: 1.1;
+  font-size: var(--document-type-3xl);
+  font-weight: var(--document-weight-bold);
+  line-height: var(--document-leading-tight);
 }
 
 .cv-page-two-main {
@@ -758,16 +759,16 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-selected-projects span {
-  font-size: 8.25pt;
-  font-weight: 650;
-  line-height: 1.3;
+  font-size: var(--document-type-xs);
+  font-weight: var(--document-weight-semibold);
+  line-height: var(--document-leading-body);
 }
 
 .cv-selected-projects small {
   margin-top: 0.5mm;
   color: var(--document-text-muted);
-  font-size: 7.75pt;
-  line-height: 1.3;
+  font-size: var(--document-type-xs);
+  line-height: var(--document-leading-body);
 }
 
 .cv-contact a,
@@ -800,15 +801,15 @@ body.document-embedded .cv-preview-shell {
 }
 
 .cv-tool h3 {
-  font-size: 9.25pt;
-  font-weight: 700;
+  font-size: var(--document-type-base);
+  font-weight: var(--document-weight-bold);
 }
 
 .cv-tool p {
   margin-top: 1.5mm !important;
   color: var(--document-text-muted);
-  font-size: 8.25pt;
-  line-height: 1.4;
+  font-size: var(--document-type-xs);
+  line-height: var(--document-leading-body);
 }
 
 .cv-tool__technologies {
@@ -824,8 +825,8 @@ body.document-embedded .cv-preview-shell {
   border: 0.25mm solid var(--document-border);
   border-radius: 2mm;
   background: var(--document-surface);
-  font-size: 7.5pt;
-  font-weight: 650;
+  font-size: var(--document-type-2xs);
+  font-weight: var(--document-weight-semibold);
 }
 
 @media (max-width: 760px) {

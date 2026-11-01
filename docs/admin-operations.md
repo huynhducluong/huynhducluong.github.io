@@ -67,7 +67,7 @@ npm run verify:admin
 
 It performs TypeScript checking, the Vitest regression suite, the production Vite build and the Admin initial-bundle budget check. A failure in any step returns a non-zero exit code and prevents GitHub Pages deployment.
 
-The current initial budgets are 115 kB gzip for JavaScript and 26 kB gzip for CSS. Admin workspace CSS is loaded eagerly in a deterministic order so the final UI normalization layer cannot be reversed by route loading. Run only the bundle check after an existing production build with:
+The current initial budgets are 115 kB gzip for JavaScript and 27 kB gzip for CSS. CSS was raised from 26 kB on 2026-11-01 because the Cover Letter preview renders inline in the Admin and therefore needs `document-typography.css` (Be Vietnam Pro font faces and the document type tokens, about 0.6 kB gzip); a dead-CSS scan found nothing to remove first. Admin workspace CSS is loaded eagerly in a deterministic order so the final UI normalization layer cannot be reversed by route loading. Run only the bundle check after an existing production build with:
 
 ```powershell
 npm run check:admin-bundle

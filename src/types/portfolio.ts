@@ -32,6 +32,7 @@ export interface PortfolioLayoutPreferences {
   automationDefault: AutomationLayout;
   automationOverrides: Record<string, AutomationLayout>;
   credentials: CredentialsLayout;
+  credentialOverrides: Record<string, CredentialsLayout>;
   includeCredentials: boolean;
   closing: ClosingLayout;
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { cvRuntimeSeed } from "../data/cvSeed";
 import { portfolioContentSeed, portfolioProjectSeed } from "../data/portfolioSeed";
 import type { PortfolioRuntimeData } from "../types/portfolio";
-import { validateProfileDocument } from "./profileDocumentValidation";
+import { profileDocumentRecommendations, validateProfileDocument } from "./profileDocumentValidation";
 
 const portfolioRuntime = (): PortfolioRuntimeData => ({
   content: structuredClone(portfolioContentSeed),
@@ -83,5 +83,26 @@ describe("validateProfileDocument", () => {
     expect(validateProfileDocument("portfolio", runtime)).not.toContain(
       `Add a different Supporting visual for "${project.name.en}" because its layout uses two images.`,
     );
+  });
+});
+
+describe("profileDocumentRecommendations (Portfolio)", () => {
+  it("names every slice and every omitted block, without blocking publish", () => {
+    const data = portfolioRuntime();
+    const project = data.projects[0];
+    project.summary = undefined;
+    project.location = { en: "", vi: "" };
+    project.responsibilities = Array.from({ length: 5 }, (_, index) => ({ id: `r${index}`, text: { en: `Responsibility ${index + 1}`, vi: "" } }));
+    data.content.layouts.projectDefault = "project.balanced";
+    data.content.layouts.profile = "profile.capability";
+    data.content.skillGroups = Array.from({ length: 4 }, (_, index) => ({ id: `g${index}`, title: { en: `Group ${index + 1}`, vi: "" }, items: Array.from({ length: 6 }, (_, item) => ({ id: `i${item}`, label: { en: `Item ${item}`, vi: "" } })) })) as typeof data.content.skillGroups;
+    const notes = profileDocumentRecommendations("portfolio", data);
+
+    expect(notes).toContain("Profile (Capability Profile) prints the first 3 of 4 skill groups.");
+    expect(notes).toContain('Profile (Capability Profile) prints the first 4 of 6 items in "Group 1".');
+    expect(notes).toContain(`"${project.name.en}" is missing its summary and location, so they are left out.`);
+    expect(notes).toContain(`"${project.name.en}" (Balanced) prints the first 3 of 5 responsibilities.`);
+    expect(validateProfileDocument("portfolio", data).some((issue) => /summary|location|responsibilit/i.test(issue))).toBe(false);
+    expect(profileDocumentRecommendations("cv", null)).toEqual([]);
   });
 });

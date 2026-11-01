@@ -1,5 +1,6 @@
 import "../styles/reset.css";
 import "../styles/tokens.css";
+import "../styles/document-typography.css";
 import "../styles/cv-screen.css";
 import "../styles/portfolio-screen.css";
 import "../styles/portfolio-print.css";

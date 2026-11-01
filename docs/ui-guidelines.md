@@ -93,8 +93,51 @@ Website: `900px`, `760px`, `700px`, `650px`. Document screens: `760px`, and `720
 
 ## 8. Document typography and layouts
 
-- Body face: Aptos → Segoe UI → Arial. Display names and headings: Arial Narrow / Roboto Condensed.
-- Typical sizes: CV body via `--cv-font-body`; Cover Letter body 10.5 pt, name 26 pt. Portfolio sizes are tokens (§8.1).
+### 8.0 Document typography (CV, Portfolio, Cover Letter)
+
+One system for the three printed documents, on their own pages, in the Admin previews and in the PDF. It lives in `src/styles/document-typography.css`, which every document entry and the Admin (inline Cover Letter preview) import. Document CSS uses its tokens only; `documentTypography.test.ts` fails on any literal font size, weight, line height, letter spacing or face in `cv-screen.css`, `portfolio-screen.css` and `cover-letter-screen.css` (screen-only toolbars sized in `rem` are exempt).
+
+**Face.** `--document-font`: **Be Vietnam Pro** (OFL-1.1, bundled from `@fontsource/be-vietnam-pro`), then Segoe UI, Arial. It is designed for Vietnamese diacritics and is the same on every machine, so a fixed-size page never reflows because a system font differs (the old stack named Aptos, which Chrome could not use, and silently printed Segoe UI). Only the Latin and Vietnamese subsets of 400, 600, 700, 900 and 400 italic are declared, as woff2 with the fontsource `unicode-range`, and `font-display: block` so no page is measured for overflow or printed in the fallback face. The Admin and the public website keep their own faces (§1).
+
+**Scale (pt).** Each step is a role. Never add an in-between size; pick the role.
+
+| Token | pt | Role |
+|---|---|---|
+| `--document-type-2xs` | 7 | Captions, tags, Portfolio header/footer, technology chips |
+| `--document-type-xs` | 8 | Meta and dates, kickers, CV secondary sidebar text, project summaries |
+| `--document-type-sm` | 8.5 | CV bullets and sidebar entries |
+| `--document-type-base` | 9 | CV body, summary and project names |
+| `--document-type-md` | 10 | Portfolio body, **Cover Letter body** |
+| `--document-type-lg` | 10.5 | CV role (job title per entry) |
+| `--document-type-xl` | 11 | Leads, short statements, cover identity |
+| `--document-type-2xl` | 13 | Section headings, professional title |
+| `--document-type-3xl` | 16 | Card titles, large numbers, credential titles, CV page-two header |
+| `--document-type-4xl` | 20 | Rail and aside titles, project facts |
+| `--document-type-5xl` | 24 | Statements, rail page titles, Cover Letter name |
+| `--document-type-6xl` | 30 | CV name, Portfolio page titles |
+| `--document-type-display` | 48 | Closing and index display lines, split cover title |
+| `--document-type-hero` | 68 | Cover and blue-closing hero |
+
+The CV keeps its own role tokens (`--cv-font-body`, `--cv-font-role`, …) but each one points at a scale step; the Portfolio `--pf-*-size` tokens do the same (§8.1).
+
+**Weights.** `--document-weight-regular` 400 (running text, bullets), `-semibold` 600 (meta that needs weight, dates), `-bold` 700 (headings, labels, names in lists), `-black` 900 (names, hero titles, kickers, big numbers). These are the weights the face ships; a value in between would be rounded by the browser and print differently from the CSS.
+
+**Leading.** `display` .88 (≥ 48 pt), `none` 1 (single-line boxes: numbers, badges, dates), `title` 1.05 (titles ≥ 16 pt), `tight` 1.15 (headings, labels, short meta), `body` 1.35 (body and lists), `relaxed` 1.45 (paragraphs: summaries, letters).
+
+**Tracking.** `caps` .12em for every uppercase kicker and label, `wide` .03em for names and all-caps words in running text, `title` -.025em for page titles, `display` -.05em for hero and display lines.
+
+**Shared roles.** The same element looks the same in all three documents; only the size step differs where the page does.
+
+| Role | Treatment |
+|---|---|
+| Person's name | Black weight, `wide` tracking; dark text or primary-strong on white, `--document-on-primary` on color. CV 30 pt (stacked), Cover Letter 24 pt (one line: the contact column is `auto`, the name takes the rest), Portfolio cover 16 pt in the identity block |
+| Professional title | Bold, one line under the name. CV 13 pt, Cover Letter 10.5 pt (primary), Portfolio cover 11 pt |
+| Kicker | 8 pt, black, `caps`, uppercase, primary |
+| Body | CV 9 pt (dense two-page layout), Portfolio and Cover Letter 10 pt |
+| Meta, dates | 8 pt, semibold or regular, muted |
+| Caption, tag | 7 pt |
+
+**Changing typography.** Snap to the nearest step (a tie goes to the smaller step), then check every page of the three documents in EN and VI: the CV stays two pages, each Cover Letter one page, and the Portfolio print status and Admin "issues" report no layout issue.
 
 ### 8.1 Portfolio page grid
 
@@ -109,12 +152,12 @@ Every Portfolio layout aligns to the `--pf-*` tokens on `.portfolio-document` (`
 | `--pf-top` | 23 mm | First line on full-bleed layouts (= header + content-top), so kickers never jump between pages |
 | `--pf-bottom` | 18 mm | Lowest content edge on full-bleed layouts (footer + 6 mm) |
 | `--pf-kicker-gap` | 5 mm | Kicker → title spacing |
-| `--pf-title-size` | 30 pt | Page title (index, project, automation, credentials) |
-| `--pf-title-rail-size` | 26 pt | Title inside a colored rail or narrow column |
-| `--pf-statement-size` | 27 pt | Profile statement heading |
-| `--pf-caption-size` | 7 pt | Figure captions |
+| `--pf-title-size` | 30 pt (`6xl`) | Page title (index, project, automation, credentials) |
+| `--pf-title-rail-size` | 24 pt (`5xl`) | Title inside a colored rail or narrow column |
+| `--pf-statement-size` | 24 pt (`5xl`) | Profile statement heading |
+| `--pf-caption-size` | 7 pt (`2xs`) | Figure captions |
 
-- Kicker: 8 pt, weight 900, letter-spacing 0.18em, uppercase, `--document-primary`. Body: 10 pt.
+- Kicker: `--document-type-xs` (8 pt), black, `--document-tracking-caps`, uppercase, `--document-primary`. Body: `--document-type-md` (10 pt).
 - Every page with chrome is a block with `padding: var(--pf-header) var(--pf-margin-x) var(--pf-footer)`, and its content starts with `padding-top: var(--pf-content-top)`.
 - **Full-bleed layouts** (a colored rail or an edge-to-edge image: Profile Classic and Capability, Index Editorial, Project Classic, Editorial and Technical) cancel the frame with negative margins and `height: 210mm`. Each of their columns uses `padding: var(--pf-top) var(--pf-margin-x) var(--pf-bottom)`. These rules carry a `.portfolio-page` prefix because the generic family heights and the list reset would otherwise override them.
 
@@ -137,12 +180,20 @@ Every Portfolio layout aligns to the `--pf-*` tokens on `.portfolio-document` (`
 - **Bilingual.** Every visible string comes from the `copy` object in `renderPortfolioV2.ts` or from localized content. That includes captions, labels, step names, credential kinds and contact labels. The test "prints no English chrome in the Vietnamese PDF" lists known English strings; extend it when you add copy.
 - **No duplicate information on a page.** Do not print the same number twice (an index badge next to a "01 / …" kicker), the same headline twice (a kicker and a title both saying "Thank you"), or the same paragraph twice (the solution in the aside and again as a workflow step).
 - **Unknown values are omitted.** Facts without a value (year, tool count) are left out instead of printing "—". Placeholders appear only where the whole slot is empty (no image, no selected credential).
+- **Nothing is invented.** The renderer never prints a sentence the editor did not write: no "Project details will be updated…", no stand-in location, no generic workflow steps ("Project information", "Automated model generation"). A missing summary, location, responsibility list or tool benefit removes its block; `layouts.test.ts` fails if an invented string returns.
+- **Every omission and slice is reported.** `profileDocumentRecommendations` lists, per project or tool, what is missing and what a layout cuts (`PORTFOLIO_PROFILE_CARD_GROUPS` 3, `PORTFOLIO_PROFILE_CARD_ITEMS` 4, `portfolioContributionLimit`: Editorial 1, Classic 5, others 3). The renderer slices with the same constants, so the report can never drift from the print. Recommendations never block publishing.
+- **Group labels print once.** Contribution cards share one "My contribution" kicker above the group; a card shows its number and text only.
+- **Profile kickers.** Every Profile layout uses the editable About kicker in the body; none repeats the header's section label ("Professional profile").
+- **Captions come from the image.** Every figure, including the White closing image, prints the media caption and falls back to its localized slot label.
+- **Crops print at their ratio.** The Workflow visual is `aspect-ratio: 21 / 9` (its Wide crop); without a workflow block it is centred against the full-height aside rather than stretched or cropped.
 - **Sparse content stretches.** Grids whose item count varies (automation tools, evidence contributions, profile capability cards) set `--pf-columns` through `columnsStyle(count, max)` instead of leaving half a page empty.
 - **Equal rows line up.** Cards in one row reserve the same title height (two lines in the visual index; `min-height` on the Dual credential header) so the meta lines and frames start at the same height.
 - **One tag component.** All technology and skill lists use `<ul class="portfolio-tags">` via `tagList()`. Do not restyle `li` inside other containers; scope list styles to their own class (for example `.portfolio-workflow-steps`).
 - **Credential titles** use `.portfolio-credential__title` (15 pt) in every credentials layout. Credential kinds are printed through `copy.credentialKinds`, never as database values.
-- A page family that can outgrow one page paginates instead of truncating. Credentials show `PORTFOLIO_CREDENTIALS_PER_PAGE` (2) per page in every credentials layout. `portfolioCredentialPages` drives both the renderer and `portfolioPageCount`. Numbering continues across pages, the kicker adds `· n / total` when there is more than one page, and placeholders appear only when nothing is selected. Never `slice` a selection without telling the editor.
+- A page family that can outgrow one page paginates instead of truncating. Credentials show `PORTFOLIO_CREDENTIALS_PER_PAGE` (2) per page in every credentials layout. Each credential resolves its layout with `resolveCredentialLayout` (its override, else the Credentials default); neighbours in Profile order that share a layout fill a page together, and a different layout starts a new page. `portfolioCredentialPages` returns `{ layout, credentials, firstIndex }` and drives both the renderer and `portfolioPageCount`. Numbering continues across pages (also across layouts), the kicker adds `· n / total` when there is more than one page, and placeholders appear only when nothing is selected. Never `slice` a selection without telling the editor.
 - Page numbers, kickers and rules use `--document-primary` / `--document-text-muted`; do not introduce extra accent colors.
+- **Every Portfolio image goes through `imageMarkup`.** It renders `<span class="portfolio-media {sizing class}"><img></span>`; layouts size the frame (`figure > .portfolio-media`, `.portfolio-cover__image`, …), never a bare `img`, and a rule that styles a layout's own `span` excludes `.portfolio-media`.
+- **One image overlay for all layouts.** "Image treatment" (Admin › Appearance) tints every project, tool, cover, index and closing image with `--document-primary` at `--portfolio-image-overlay-opacity`, through the single `.portfolio-media::after` rule. The tint covers the image only: never a caption, a placeholder, the page chrome or the profile photo (a person's portrait is never tinted, so it is not rendered through `imageMarkup`). `DEFAULT_IMAGE_OVERLAY_OPACITY` (10 %) is the seed value, the CSS fallback and the Admin "Reset to" value. `layouts.test.ts` fails if any layout renders an unframed image or the overlay rule disappears.
 
 ## 9. Checklist before finishing a website or document change
 
@@ -154,3 +205,5 @@ Every Portfolio layout aligns to the `--pf-*` tokens on `.portfolio-document` (`
 6. Admin embedded preview of the changed page still syncs and Fit zoom still works.
 7. Portfolio: every layout of the changed family checked in EN and VI with realistic long content. The print status and the Admin "issues" count report no layout issue, and nothing touches the header or footer.
 8. Portfolio: kickers and titles start at the same height as on neighbouring pages, and the header/footer start on white on rail layouts.
+9. Portfolio: with the overlay on, every image in the changed layout is tinted and no caption, placeholder or profile photo is; image positions are unchanged with the overlay off.
+10. Documents: typography uses only `document-typography.css` tokens (§8.0); CV two pages, Cover Letter one page, no Portfolio layout issue, in EN and VI.

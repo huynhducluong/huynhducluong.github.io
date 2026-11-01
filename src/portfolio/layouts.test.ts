@@ -1,13 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { portfolioContentSeed, portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
+import { DEFAULT_IMAGE_OVERLAY_OPACITY, portfolioContentSeed, portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
 import { normalizePortfolioRuntimeData } from "../services/documentRepository";
-import type { PortfolioCredential, PortfolioRuntimeData } from "../types/portfolio";
+import type { PortfolioCredential, PortfolioMedia, PortfolioRuntimeData } from "../types/portfolio";
 import {
   automationLayoutOptions,
   closingLayoutOptions,
   coverLayoutOptions,
   credentialsLayoutOptions,
   indexLayoutOptions,
+  modernPortfolioLayouts,
+  normalizePortfolioLayouts,
   portfolioCredentialPages,
   portfolioPageCount,
   profileLayoutOptions,
@@ -88,6 +90,47 @@ describe("Portfolio layout system", () => {
   });
 });
 
+describe("Portfolio image overlay (docs/ui-guidelines.md §8.4)", () => {
+  const screenCss = Object.values(import.meta.glob<string>("../styles/portfolio-screen.css", { query: "?raw", import: "default", eager: true }))[0];
+  const unframedImages = (markup: string): string[] => (markup.match(/(?:<[^<]*)?<img [^>]*>/g) ?? [])
+    .filter((tag) => !tag.includes("data-portfolio-profile-photo") && !/<span class="portfolio-media [^"]*"><img /.test(tag));
+
+  // Layouts designed without an image slot; every other layout must render its images through the frame.
+  const textOnlyLayouts = ["cover.classic", "index.classic", "index.editorial", "automation.classic", "closing.classic", "closing.blue"];
+  const media = (id: string, kind: PortfolioMedia["kind"], displayOrder: number): PortfolioMedia => ({
+    id, kind, displayOrder, storagePath: `https://example.com/${id}.jpg`, alt: { en: id, vi: id },
+  });
+
+  it("frames every project, tool, cover and closing image, in every layout, but never the profile photo", () => {
+    const data = runtime();
+    const project = data.projects[0];
+    project.images = [media("project-cover", "cover", 1), media("project-gallery", "gallery", 2)];
+    data.tools[0].images = [media("tool-cover", "cover", 1), media("tool-gallery", "gallery", 2)];
+    const families: Array<[readonly { id: string }[], (id: string) => void]> = [
+      [coverLayoutOptions, (id) => { data.content.layouts.cover = id as typeof data.content.layouts.cover; }],
+      [indexLayoutOptions, (id) => { data.content.layouts.index = id as typeof data.content.layouts.index; }],
+      [projectLayoutOptions, (id) => { data.content.layouts.projectOverrides[project.id] = id as typeof data.content.layouts.projectOverrides[string]; }],
+      [automationLayoutOptions, (id) => { data.content.layouts.automationDefault = id as typeof data.content.layouts.automationDefault; }],
+      [closingLayoutOptions, (id) => { data.content.layouts.closing = id as typeof data.content.layouts.closing; }],
+    ];
+    families.forEach(([options, apply]) => options.forEach((option) => {
+      apply(option.id);
+      const markup = renderPortfolio(data);
+      const page = markup.slice(markup.indexOf(`data-portfolio-layout="${option.id}"`)).split('<section class="portfolio-page ')[0];
+      if (!textOnlyLayouts.includes(option.id)) expect(page, option.id).toContain('<span class="portfolio-media ');
+      expect(unframedImages(markup), option.id).toEqual([]);
+      expect(markup).not.toMatch(/<span class="portfolio-media[^"]*"[^>]*>(?!<img )/);
+    }));
+    expect(renderPortfolio(data)).toContain("data-portfolio-profile-photo");
+  });
+
+  it("tints the frame only, with the theme Primary at the document opacity", () => {
+    expect(screenCss).toMatch(/\.portfolio-document\[data-image-overlay="on"\] \.portfolio-media::after \{[^}]*background: var\(--document-primary\);[^}]*opacity: var\(--portfolio-image-overlay-opacity\);/);
+    expect(screenCss).not.toMatch(/figure::after|figcaption::after|portfolio-image-placeholder::after|portfolio-about__photo::after/);
+    expect(screenCss).toContain(`--portfolio-image-overlay-opacity: ${String(DEFAULT_IMAGE_OVERLAY_OPACITY).replace(/^0/, "")};`);
+  });
+});
+
 const credential = (order: number, includeInPortfolio = true): PortfolioCredential => ({
   id: `credential-${order}`,
   kind: "language_exam",
@@ -141,6 +184,35 @@ describe("Portfolio credential pages", () => {
       expect(markup).toMatch(/>03(<| \/)/);
       expect(markup).not.toContain("Content to be supplied");
     });
+  });
+
+  it("gives an overridden credential its own layout; same-layout neighbours keep sharing a page", () => {
+    const data = runtime();
+    data.content.layouts.includeCredentials = true;
+    data.content.layouts.credentials = "credentials.dual";
+    data.credentials = [credential(1), credential(2), credential(3), credential(4)];
+    data.content.layouts.credentialOverrides = { "credential-3": "credentials.bands" };
+
+    expect(portfolioCredentialPages(data).map((page) => [page.layout, page.credentials.map((item) => item.id), page.firstIndex])).toEqual([
+      ["credentials.dual", ["credential-1", "credential-2"], 0],
+      ["credentials.bands", ["credential-3"], 2],
+      ["credentials.dual", ["credential-4"], 3],
+    ]);
+    const markup = renderPortfolio(data);
+    expect(credentialPageCount(markup)).toBe(3);
+    expect(portfolioPageCount(data)).toBe(markup.split('class="portfolio-page ').length - 1);
+    expect(markup.match(/data-portfolio-layout="credentials\.[a-z]+"/g)).toEqual([
+      'data-portfolio-layout="credentials.dual"', 'data-portfolio-layout="credentials.bands"', 'data-portfolio-layout="credentials.dual"',
+    ]);
+    // Numbering continues across pages of different layouts, in Profile order.
+    expect(markup).toMatch(/portfolio-credentials--bands[\s\S]*>03 \/ /);
+    expect(markup).toContain("Selected supporting documents · 3 / 3");
+  });
+
+  it("drops overrides that name an unknown credentials layout", () => {
+    const layouts = normalizePortfolioLayouts({ ...modernPortfolioLayouts, credentialOverrides: { a: "credentials.bands", b: "credentials.unknown" as never } });
+    expect(layouts.credentialOverrides).toEqual({ a: "credentials.bands" });
+    expect(normalizePortfolioLayouts({}).credentialOverrides).toEqual({});
   });
 
   it("keeps a single placeholder page when nothing is selected", () => {
@@ -217,6 +289,49 @@ describe("Portfolio page chrome and language", () => {
       "THANK YOU", ">Phone<", ">Location<", ">Workflow<", "BIM COORDINATOR", "PROJECT<br>INDEX", "Selected infrastructure",
       " projects<", "Content to be supplied", "From engineering inputs",
     ].forEach((english) => expect(markup, english).not.toContain(english));
+  });
+
+  it("never prints invented content: empty summary, location, responsibilities and benefit are omitted", () => {
+    const data = runtime();
+    data.projects[0] = { ...data.projects[0], summary: undefined, location: { en: "", vi: "" }, responsibilities: [] };
+    data.tools[0] = { ...data.tools[0], benefit: undefined };
+    const pages = [...projectLayoutOptions.map((option) => {
+      data.content.layouts.projectDefault = option.id;
+      return renderPortfolio(data);
+    }), ...automationLayoutOptions.map((option) => {
+      data.content.layouts.automationDefault = option.id;
+      return renderPortfolio(data);
+    })].join("");
+    [
+      "Project details will be updated", "Selected infrastructure", "Project information", "Automated model generation",
+      "Parameters to be defined", "My contribution", "Selected contribution", ">Outcome<",
+    ].forEach((invented) => expect(pages, invented).not.toContain(invented));
+    expect(pages).not.toMatch(/<p( class="portfolio-project__summary")?><\/p>/);
+    expect(pages).toMatch(/<p class="portfolio-kicker">01<\/p>/);
+  });
+
+  it("labels a project's contributions once per page, never on every card", () => {
+    projectLayoutOptions.filter((option) => option.id !== "project.editorial" && option.id !== "project.classic").forEach((option) => {
+      const data = runtime();
+      data.content.layouts.projectDefault = option.id;
+      const page = renderPortfolio(data).split('<section class="portfolio-page ').find((part) => part.includes(`data-portfolio-layout="${option.id}"`)) ?? "";
+      expect(page.split("My contribution").length - 1, option.id).toBe(1);
+      expect(page, option.id).not.toMatch(/<article><span>\d\d<\/span><div><strong>/);
+    });
+  });
+
+  it("uses the closing image's own caption and the editable About kicker on every Profile layout", () => {
+    const data = runtime();
+    data.projects[0].images = [{ id: "hero", kind: "cover", displayOrder: 1, storagePath: "https://example.com/hero.jpg", alt: { en: "Hero", vi: "Hero" }, caption: { en: "Bridge deck model", vi: "Mô hình mặt cầu" } }];
+    data.content.layouts.closing = "closing.white";
+    expect(renderPortfolio(data)).toContain("<figcaption>Bridge deck model</figcaption>");
+    data.content.aboutKicker = { en: "About Luong", vi: "Về Lương" };
+    profileLayoutOptions.forEach((option) => {
+      data.content.layouts.profile = option.id;
+      const page = renderPortfolio(data).split('<section class="portfolio-page ').find((part) => part.includes(`data-portfolio-layout="${option.id}"`)) ?? "";
+      expect(page, option.id).toContain('<p class="portfolio-kicker">About Luong</p>');
+      expect(page.replace(/<header class="portfolio-page-header">.*?<\/header>/, ""), option.id).not.toContain("Professional profile");
+    });
   });
 
   it("omits unknown project facts instead of printing a dash", () => {

@@ -7,6 +7,9 @@ import { skillGroups } from "./skills";
 import type { PortfolioContent } from "../types/portfolio";
 import { modernPortfolioLayouts } from "../portfolio/layouts";
 
+/** Default Primary tint over Portfolio images; also the value "Reset" restores in Admin. */
+export const DEFAULT_IMAGE_OVERLAY_OPACITY = 0.1;
+
 export const portfolioContentSeed: PortfolioContent = {
   version: "2026-09",
   title: "PORTFOLIO",
@@ -27,7 +30,7 @@ export const portfolioContentSeed: PortfolioContent = {
     vi: "Điều phối BIM hạ tầng · Chất lượng mô hình · Tự động hóa",
   },
   theme: { presetId: "personal-blue" },
-  imageOverlay: { enabled: true, opacity: 0.28 },
+  imageOverlay: { enabled: true, opacity: DEFAULT_IMAGE_OVERLAY_OPACITY },
   layouts: structuredClone(modernPortfolioLayouts),
   mediaAssignments: { projects: {}, tools: {} },
   profile,

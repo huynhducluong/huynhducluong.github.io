@@ -143,12 +143,19 @@ describe("Credential card layout (§6.4)", () => {
     expect(html.indexOf("data-credential-upload-kind")).toBeGreaterThan(html.indexOf("data-credential-pending"));
   });
 
-  it("offers Restore instead of Edit and More on an archived credential", () => {
+  it("offers Restore instead of Edit, and Delete permanently in More, on an archived credential", () => {
     const html = cardHtml({ ...withEvidence(), status: "archived" });
+    const header = html.slice(0, html.indexOf("</header>"));
 
-    expect(html).toContain("data-credential-restore");
-    expect(html).not.toContain("admin-more-menu__trigger\" aria-label=\"More actions for Engineer");
+    expect(header).toContain("data-credential-restore");
+    expect(header).not.toContain("data-credential-edit");
+    expect(header).not.toContain("data-credential-archive");
+    expect(header).toMatch(/<details class="admin-document-more admin-more-menu">[\s\S]*data-credential-delete="credential-degree"[\s\S]*<\/details>/);
     expect(html).not.toContain("admin-credential-files");
+  });
+
+  it("only offers permanent delete once a credential is archived", () => {
+    expect(cardHtml(withEvidence())).not.toContain("data-credential-delete");
   });
 });
 

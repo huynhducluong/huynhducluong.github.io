@@ -85,6 +85,8 @@ export const bindEmbeddedPreview = (
       const viewportHeight = Math.max(1, frame.clientHeight - paddingBlock);
       const iframeHeight = Math.max(1, viewportHeight / scale);
       iframe.style.height = `${iframeHeight}px`;
+      // Lets the previewed document size on-screen spacing (the end-of-scroll gap) independently of zoom.
+      iframe.contentDocument.documentElement.style.setProperty("--embedded-preview-scale", String(scale));
       stage.style.width = `${Math.ceil(width * scale)}px`;
       stage.style.height = `${Math.ceil(viewportHeight)}px`;
       revealIfReady();

@@ -22,6 +22,8 @@ Admin has one visual system. A workspace composes shared renderers from `src/adm
 | Scroll an element into view | `revealAdminElement` (see §12) |
 | Media row (pending and saved), file picker, segmented choice | `renderPendingMediaRow`, `renderSavedMediaRow` (`mediaRows.ts`), `renderAdminFilePicker` + `bindAdminFilePickers`, `renderAdminSegmented` (see §6.5) |
 | Selection group heading and count | `renderAdminSelectionHeading`, `bindAdminSelectionCounts`, `adminSelectionCountText` (see §6.6) |
+| Selection row with print options (CV projects) | `renderCvProjectRow`, `bindCvProjectRows`, `cvProjectStateText` (`cvProjectSelection.ts`, see §6.7) |
+| Portfolio media row, layout override group | `renderPortfolioMediaRow`, `syncPortfolioMediaRow`, `portfolioMediaRowState` (`portfolioMediaSelection.ts`, see §6.8); `layoutOverrideGroup` (see §6.6) |
 | Field label row, inline checkbox, static field, hint | `.admin-field-label-row`, `.admin-inline-check`, `.admin-field-static`, `.admin-field-hint` (see §6.3) |
 | Image cropper | `cropGeometry.ts` (pure math), `bindCropStage` / `waitForCropImage` (`cropStage.ts`), `renderAdminCropZoomControls` (see §7.1) |
 | Loading, empty and error states | `renderAdminWorkspaceState` |
@@ -142,12 +144,12 @@ Profile cards (Experience, Education, Language, Credential, photo) and the rows 
 | Part | Rules |
 |---|---|
 | **Identity (left)** | Eyebrow (type) with the status chip beside it, then the title, then a muted subtitle. Status belongs to the identity, never between action buttons. Clipped values carry a `title` (§6.2). |
-| **Actions (right)** | In this order: move up/down → the one frequent action ("Edit", "Open") → More (⋯, `renderAdminMoreMenu`) with the rare or destructive actions (Delete, Archive, Rename), marked `tone: "danger"` when they destroy. A card never shows a loose destructive button. An archived item shows "Restore as draft" instead of Edit and More. |
+| **Actions (right)** | In this order: move up/down → the one frequent action ("Edit", "Open") → More (⋯, `renderAdminMoreMenu`) with the rare or destructive actions (Delete, Archive, Rename), marked `tone: "danger"` when they destroy. A card never shows a loose destructive button. An archived item shows "Restore as draft" instead of Edit; its More holds only "Delete permanently" where the item supports hard delete (Credential: removes the row and its private evidence files). Permanent delete is never offered on an active item — archive first. |
 | **Facts** | One meta line separated by `·` (`.admin-credential-card__meta`), not boxed tiles. In narrow cards the facts stack one per line without separators. A fact that points to another entry is a link that opens it (`showRelatedEntry`). |
 | **Description** | At most two lines (`line-clamp`), with the full text as a `title`. |
 | **Child list** | A header row (name, count, "+ Add …"), then one row per child. Hide a zero count when an empty-state line already says so. Uploads stage in a pending row (file, type, Upload, Cancel), like pending project media; nothing uploads on file selection alone. |
 
-- **At most two levels of boxes:** the card, and the rows inside it. Sections inside a card are separated by a divider, not by another bordered box.
+- **At most two levels of boxes:** the card, and the rows inside it. Sections inside a card are separated by a divider, not by another bordered box. A disclosure group (`.admin-disclosure-group`: layout overrides, Portfolio media) is the card: its rows sit on the surface color and are separated by dividers, never boxed again.
 - **Each fact appears once per card.** Counts, privacy notes and status are not repeated in tiles, headings and rows at the same time.
 - **Archived items read as muted through color and a dashed border,** never through `opacity`.
 - **More menus share one behavior** (`installAdminMoreMenus`, installed once in `main.ts`): only one menu is open at a time, it closes on an outside click, on Escape and after an action is chosen, and focus returns to the ⋯ trigger, so a confirmation dialog restores focus to something visible. An ancestor of a card with a More menu must not use `overflow: hidden`, or the menu is clipped (the photo card rounds its image instead).
@@ -178,12 +180,58 @@ Every list where you include or exclude items has a heading with a count chip, r
 | Word | When | Where |
 |---|---|---|
 | **N of M shown** | The toggle controls whether an entry that already belongs to the source appears in the output. | CV Background (Experience, Education, Credentials, Skills, Languages); Website content ("On website", plus "· K on Homepage") |
-| **N of M selected** | You pick items from a library to include in a document or letter. | CV content (Projects: Display is not "Not included"; Tools), Portfolio content (Projects, Tools), Cover letter evidence (Projects, Tools) |
+| **N of M selected** | You pick items from a library to include in a document or letter. | CV content (Projects: display is not "Off"; Tools), Portfolio content (Projects, Tools), Cover letter evidence (Projects, Tools) |
 
 - **M counts only eligible items.** Draft or archived items cannot be chosen, so they are not part of the total and carry no `data-selection-count-item`. A finalized letter disables its inputs but keeps them eligible.
 - **Empty states are words, not zero.** "Hidden" (shown lists), "None selected" (selected lists), "None available" when the source is empty. The chip uses the muted color via `data-empty`.
 - **One wording function.** `adminSelectionCountText` is the only place that writes these strings; workspaces never format their own "… selected" text. `adminStyles.test.ts` checks that every selection list uses the shared heading.
+- **Pre-publish checks have two sections.** CV and Portfolio use the Website's structure (`.admin-site-validation`): *Required fixes* (block publishing) and *Recommendations* (never block). In the dialog they stack in one column; recommendations use the muted text color, not warning. The preview chip reads "N issues", "Ready · N recommendations" or "Ready". Each recommendation is one line per item, naming everything it is missing.
 - Disclosure summaries over an already-selected subset (Portfolio media, layout overrides) show a plain number, because they list only the chosen items.
+- **Item layout overrides** (Portfolio › Appearance) are one group per item family, all rendered by `layoutOverrideGroup`: Project, Automation and Credentials overrides. A group lists only the items selected for the Portfolio (Credentials also need the Credentials page switched on), its first option is "Use … default", and unselected rows stay hidden in the form so a saved override survives deselecting an item. Add a new family through the same helper, never as a fourth hand-written copy.
+- **A group heading is the title and its count, nothing else.** No per-group note under the heading: the section card's note explains the whole list ("Choose what appears. Order follows Professional Profile."). A fact about how the output paginates belongs with the layout it describes (Appearance › Credentials: "· 2 per page", from `PORTFOLIO_CREDENTIALS_PER_PAGE`). CV and Portfolio Background groups use the same `renderAdminSelectionHeading` as every other list.
+- A count item is a checkbox, or a `<select>` or radiogroup (`renderAdminSegmented({ groupAttributes })`) whose `data-selection-off` value means "not included".
+
+### 6.7 Selection rows with options (CV projects)
+
+When an output picks an item **and** sets how it prints (CV projects: Off, Compact or Detailed, plus summary and responsibilities), each item is one row, implemented in `cvProjectSelection.ts`:
+
+```
+Duong giao thong ra dao Hon Khoai                [Off | Compact | Detailed] [⌄]
+Ca Mau · Summary · 3 of 4 responsibilities
+─────────────────────────────────────────────────────────────── (open only)
+☑ Show summary
+Responsibilities * · 3 of 4
+☑ …
+```
+
+- **The choice is a segmented control, never a select** (`renderAdminSegmented`, legend kept for screen readers with `hideLegend`). With three or fewer options every state is visible and one click away. "Off" is the first option and the default.
+- **The row says what will print.** The muted line is the location, then the state: "Not in this CV", "Name and year only" (Compact) or "Summary · N of M responsibilities" (Detailed). It is derived from the inputs by `cvProjectStateText` and updates live; workspaces do not write their own state text.
+- **Options appear only where they apply.** Compact prints only name and year, so only Detailed rows get the disclosure button (`aria-expanded`, `aria-controls`, `adminChevronIcon` rotating within 150 ms). Options are collapsed by default, open when the user chooses Detailed, and close when the row leaves Detailed. Hidden inputs still submit, so collapsing never changes the payload.
+- **Problems are never collapsed away.** A Detailed row without a responsibility renders open and reopens on every change while the problem remains. Its count reads "0 of M" and its state line "Choose at least one responsibility", both in `--admin-color-warning`, so closing the options by hand still leaves the warning visible.
+- **The row never jumps.** The segmented control reserves the disclosure button's height, so switching Detailed ↔ Compact ↔ Off keeps every control at the same y (§6.3).
+- **Chips only for exceptions.** Ready is the normal state and shows no chip. Draft or archived projects show their chip beside the name, use the dashed muted card of §6.4, keep their row, are disabled and are not counted (§6.6). An Off row uses the subtle surface and a muted title; nothing is faded with `opacity`.
+- **One box level.** The options sit under a divider inside the row, not in a nested bordered box (§6.4).
+- **Order follows the source library.** No reordering here: Projects owns the order (§5).
+- Below the `cv-selection` 44rem container width, the segmented control moves to its own line under the identity; the disclosure stays at the top right.
+
+### 6.8 Portfolio media rows
+
+Portfolio › Appearance › Portfolio media assigns the primary and supporting visual of every selected project and tool. Each item is one row from `renderPortfolioMediaRow` (`portfolioMediaSelection.ts`), which reuses the media-row anatomy of §6.5 so it reads like the media list in Projects:
+
+```
+[preview 4:3]  Duong Vanh Dai 3                        (clipped, title)
+               Technical · 2 images · Wide + Wide · Only 1 image in Media
+Primary visual *                 Supporting visual *
+[Cover · Image 01          ⌄]   [Gallery · Image 02          ⌄]
+```
+
+- **Rows, not boxes.** Rows are grouped in the Projects and Automation tools disclosure groups (count = selected items) and separated by dividers (§6.4).
+- **The preview is the chosen primary visual** and follows the select live (`syncPortfolioMediaPreview`); an item without images shows "No image", never a broken image.
+- **The meta line says why the fields look the way they do:** layout name (from the override or the default), what it needs (`mediaRequirementLabel`) and, in `--admin-color-warning`, "Only N images in Media" when the item has fewer images than the layout requires. `portfolioMediaRowState` is the only place that writes it.
+- **Labels use the shared field label.** The required mark follows the text directly (`renderAdminFieldLabel` anatomy) and is toggled, never moved; no status text sits in the label row, so labels stay on one line and both controls start at the same y (§6.3).
+- **A visual the layout does not use is replaced, not disabled in place.** The select stays in an `.admin-field-swap` (disabled, invisible) and an `.admin-field-static` "Not used by this layout" covers it at the same size, so both columns keep equal height and width. A disabled field must never show a stale value.
+- Two selects share a row down to a 22rem `admin-form` container, then stack; the bilingual 32rem rule of §6.5 does not apply to them.
+- Changing a layout default or override calls `syncPortfolioMediaRow` for every row; choosing the same image twice clears the supporting visual.
 
 ## 7. Preview
 
@@ -255,17 +303,30 @@ Existing breakpoints: `1280px`, `1180px`, `900px` (rail/mobile switch; `901px` f
 
 Below the container breakpoint, the header identity stacks above the actions and the actions wrap; action order never changes.
 
+### Shell frame
+
+- **One top-bar height.** `--admin-topbar-height` (4rem) sizes the rail brand, the workspace header and the first row of `.admin-main`, on every screen and in both header densities, so the brand's bottom border and the header's bottom border are one line. Below 900px the rail row and the header row both use it. Toasts are positioned from it. Never give one of them its own height.
+- **The frame never changes with screen height.** A browser bookmark bar, the taskbar or a short window only change the viewport height; that must not move a border or reflow a control. `max-height` rules may only tighten the navigation list (item height, group spacing, icon size); they never touch `.admin-brand`, `.admin-header`, `.admin-main` or `.admin-rail__footer`.
+- **Rail footer: one row.** Security and Sign out always share one row as two equal columns (≥ 2rem tall, no wrapping), on desktop and in the mobile rail.
+- **Every column reaches the window bottom.** Rail, collection list, workspace frame and preview all end on the same line. A workspace that hosts a frame (editor shell, document library, cover letter shell, document, site or profile workspace) keeps its top and side `--admin-workspace-gutter` but has **no bottom gutter**; the frame stands on the window edge with no bottom border and square bottom corners. The rule lives once, at the end of `admin-ui.css`; a workspace never sets its own bottom padding again.
+- **Breathing room lives inside the scroll area.** Each scroll area ends with about one gutter (20 px) of space after its last item: panels through their own padding, the collection list through `padding-bottom: var(--admin-workspace-gutter)`. Outer-scrolling previews (CV, Homepage, cover letter) keep their own padding so Fit zoom is unchanged. The internally scrolling Portfolio preview has no bottom frame padding (`embeddedPreview` reads it) and ends with `calc(1.25rem / var(--embedded-preview-scale))` inside the document, so the gap after the last page is 20 px on screen at any zoom. Inner cards inside a column (for example Profile usage) keep their margins; only columns touch the edge.
+- **Rail identity.** The brand shows the product name and, under it, the owner's English (ASCII) name derived from Professional Profile › Full name. It follows the field live while editing (the same `updateAdminIdentity` call that updates the avatar), returns to the saved name when edits are discarded, and falls back to "Career workspace" until the profile loads. It is quiet secondary text: `--admin-text-2xs`, regular weight, `.02em` tracking (the name is usually all caps), in the rail muted color, so it never competes with the product name above it.
+- **Brand lines never wrap.** The text block takes all the room beside the avatar. A name that does not fit drops its tracking and shrinks proportionally (`fitAdminIdentityLabel`, re-run on edit, resize and font load) down to 10 px; only a name that still overflows is ellipsized, with the full name as tooltip. At the 1440/1920/2560 target screens four-word names (about 23 characters) fit in full. On the 12rem rail (≤ 1180px) the avatar is 2.15rem and the product name uses `--admin-text-xs` so "Career Hub Admin" stays on one line. The rail column is `minmax(0, 1fr)` so a long name ellipsizes with a tooltip instead of widening the rail; the avatar never shrinks.
+- `adminStyles.test.ts` locks these rules.
+
 ### Target screens
 
 The owner works on these three screens. Every Admin layout change must look right at all three CSS viewports (resolution ÷ Windows scale, minus taskbar and browser chrome). Heights are approximate for a maximized Chrome window; confirm with `innerWidth`/`innerHeight` when it matters.
 
 | Screen | Physical | Scale | CSS viewport | Band |
 |---|---|---|---|---|
-| Laptop | 2880×1800 | 200% (DPR 2) | 1440 × 731 (measured) | 1281–1480 wide; height in the 621–760 band (compact rail) |
+| Laptop | 2880×1800 | 200% (DPR 2) | 1440 × 731 with the bookmark bar, ≈ 763 without (measured) | 1281–1480 wide; height in the 621–760 band (tighter navigation only) |
 | Monitor 1 | 2560×1440 | 100% | 2560 × ≈1300 | wide desktop (no rule above 1480) |
 | Monitor 2 | 1920×1080 | 100% | 1920 × ≈940 | wide desktop (no rule above 1480) |
 
 Mobile breakpoints (`900px` and below) stay supported but are not the daily target.
+
+A shell change is checked at all three screens and at the laptop with and without the bookmark bar (1440 × 731 and 1440 × 763): the brand and header bottoms match to the pixel, the rail footer is one row and the navigation does not scroll. `npm run shots` covers the three screens; the bookmark-bar case is the 731 height it already uses.
 
 ### Visual check
 
@@ -289,7 +350,7 @@ Collection lists beside an editor (Content, CV/Portfolio library, Cover letters)
 - Stylesheet load order is locked by `adminStyles.test.ts`; `admin-ui.css` is the final normalization layer and holds shared chrome.
 - Workspace-specific styles go in that workspace's stylesheet; shared patterns go in `admin-ui.css`.
 - **Scrolling and layout frames.** The shell, workspace and two-column layout frames use `overflow: clip`, not `hidden`. A `hidden` frame can still be scrolled by script, so `element.scrollIntoView()` (or `focus()` on a far-away field) could scroll the whole workspace up and leave an empty band below (the "Language: English" link bug). Only the editor, preview and list panes scroll (`overflow-y: auto`). To bring something into view, call `revealAdminElement(element, { align })`. It scrolls only the nearest real scroll container. After switching tab or panel, wait one animation frame before revealing, and focus with `{ preventScroll: true }`. Never call `scrollIntoView` in Admin; `adminStyles.test.ts` enforces this.
-- `npm run check:admin-bundle` enforces the initial Admin budget (JS 115 kB, CSS 26 kB gzip). Remove dead CSS before raising a budget, and explain any increase in the commit message.
+- `npm run check:admin-bundle` enforces the initial Admin budget (JS 115 kB, CSS 27 kB gzip). Remove dead CSS before raising a budget, and explain any increase in the commit message.
 
 ## 13. Persisted UI preferences
 
@@ -311,3 +372,5 @@ Per-viewer conveniences (header density, last opened document) use `localStorage
 12. Every form row you touched was checked in its real container and in each toggle state: the controls in a row start at the same height, labels stay on one line, and no checkbox stacks above its text (§6.3 "Rows must not jump"). `npm run shots` shows no *uneven field row* lines.
 13. Lists of uploaded or pending items follow §6.5: one row anatomy, EN | VI pairs on the same row, actions in More, no visible native file input, and Save only while a row has edits. Anything you hide with the `hidden` attribute is actually invisible.
 14. Every list that includes or excludes items has a `renderAdminSelectionHeading` count with the right word: *shown* for visibility toggles, *selected* for library picks (§6.6). The total counts only eligible items.
+15. A choice between three or fewer options that is repeated on every row is a segmented control, not a select; options that apply to only one choice are disclosed for that choice alone, and a row with a problem stays open (§6.7).
+16. Rows inside a disclosure group are divided, not boxed. A field that does not apply is swapped for a same-size `.admin-field-static` with the reason, and required marks sit right after the label text (§6.4, §6.8).

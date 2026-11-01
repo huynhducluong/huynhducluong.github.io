@@ -1,7 +1,16 @@
 import type { CvRuntimeData } from "../types/cvContent";
 import type { PortfolioRuntimeData } from "../types/portfolio";
 import type { ProfileDocumentKind } from "../types/profileDocument";
-import { resolveAutomationLayout, resolveProjectLayout } from "../portfolio/layouts";
+import {
+  PORTFOLIO_PROFILE_CARD_GROUPS,
+  PORTFOLIO_PROFILE_CARD_ITEMS,
+  automationLayoutOptions,
+  portfolioContributionLimit,
+  profileLayoutOptions,
+  projectLayoutOptions,
+  resolveAutomationLayout,
+  resolveProjectLayout,
+} from "../portfolio/layouts";
 import {
   automationMediaRequirement,
   projectMediaRequirement,
@@ -93,4 +102,49 @@ export const validateProfileDocument = (
   });
 
   return issues;
+};
+
+const layoutLabel = (options: readonly { id: string; label: string }[], id: string): string => options.find((option) => option.id === id)?.label ?? id;
+
+/**
+ * Recommendations never block publishing. They name everything the Portfolio leaves out, so the editor always
+ * knows: lists a layout slices (docs/ui-guidelines.md §8.4) and blocks omitted because their content is empty.
+ * The CV has none yet; the Pre-publish dialog shows the section for both documents.
+ */
+export const profileDocumentRecommendations = (
+  kind: ProfileDocumentKind,
+  runtime?: CvRuntimeData | PortfolioRuntimeData | null,
+): string[] => {
+  if (kind !== "portfolio" || !runtime) return [];
+  const data = runtime as PortfolioRuntimeData;
+  const notes: string[] = [];
+  const profileLayout = data.content.layouts.profile;
+  if (profileLayout !== "profile.classic") {
+    const label = layoutLabel(profileLayoutOptions, profileLayout);
+    const groups = data.content.skillGroups ?? [];
+    if (groups.length > PORTFOLIO_PROFILE_CARD_GROUPS) notes.push(`Profile (${label}) prints the first ${PORTFOLIO_PROFILE_CARD_GROUPS} of ${groups.length} skill groups.`);
+    groups.slice(0, PORTFOLIO_PROFILE_CARD_GROUPS).forEach((group) => {
+      if (group.items.length > PORTFOLIO_PROFILE_CARD_ITEMS) notes.push(`Profile (${label}) prints the first ${PORTFOLIO_PROFILE_CARD_ITEMS} of ${group.items.length} items in "${group.title.en}".`);
+    });
+  }
+  data.projects.filter((item) => item.includeInPortfolio).forEach((project, index) => {
+    const name = project.name.en.trim() || `Portfolio project ${index + 1}`;
+    const layout = resolveProjectLayout(data, project.id, project.portfolioLayout);
+    const responsibilities = project.responsibilities.filter((point) => hasText(point.text.en));
+    const limit = portfolioContributionLimit(layout);
+    // One line per project: everything it is missing, then what that leaves out.
+    const missing = [
+      !hasText(project.summary?.en) && "summary",
+      !hasText(project.location.en) && "location",
+      !responsibilities.length && "responsibilities",
+    ].filter((item): item is string => Boolean(item));
+    if (missing.length) notes.push(`"${name}" is missing its ${missing.length > 1 ? `${missing.slice(0, -1).join(", ")} and ${missing[missing.length - 1]}` : missing[0]}, so ${missing.length > 1 ? "they are" : "it is"} left out.`);
+    if (responsibilities.length > limit) notes.push(`"${name}" (${layoutLabel(projectLayoutOptions, layout)}) prints the first ${limit} of ${responsibilities.length} responsibilities.`);
+  });
+  data.tools.filter((item) => item.includeInPortfolio).forEach((tool, index) => {
+    const name = tool.name.trim() || `Portfolio tool ${index + 1}`;
+    const layout = resolveAutomationLayout(data, tool.id);
+    if (layout === "automation.workflow" && !hasText(tool.benefit?.en)) notes.push(`"${name}" has no benefit, so ${layoutLabel(automationLayoutOptions, layout)} prints no outcome.`);
+  });
+  return notes;
 };

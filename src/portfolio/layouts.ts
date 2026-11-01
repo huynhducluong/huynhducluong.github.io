@@ -72,6 +72,7 @@ export const modernPortfolioLayouts: PortfolioLayoutPreferences = {
   automationDefault: "automation.workflow",
   automationOverrides: {},
   credentials: "credentials.bands",
+  credentialOverrides: {},
   includeCredentials: false,
   closing: "closing.blue",
 };
@@ -105,6 +106,7 @@ export const normalizePortfolioLayouts = (
   automationDefault: isOption(value?.automationDefault, automationLayoutOptions) ? value.automationDefault : fallback.automationDefault,
   automationOverrides: Object.fromEntries(Object.entries(value?.automationOverrides ?? {}).filter((entry): entry is [string, AutomationLayout] => isOption(entry[1], automationLayoutOptions))),
   credentials: isOption(value?.credentials, credentialsLayoutOptions) ? value.credentials : fallback.credentials,
+  credentialOverrides: Object.fromEntries(Object.entries(value?.credentialOverrides ?? {}).filter((entry): entry is [string, CredentialsLayout] => isOption(entry[1], credentialsLayoutOptions))),
   includeCredentials: value?.includeCredentials ?? fallback.includeCredentials,
   closing: isOption(value?.closing, closingLayoutOptions) ? value.closing : fallback.closing,
 });
@@ -115,20 +117,46 @@ export const resolveProjectLayout = (data: PortfolioRuntimeData, projectId: stri
 export const resolveAutomationLayout = (data: PortfolioRuntimeData, toolId: string): AutomationLayout =>
   data.content.layouts.automationOverrides[toolId] ?? data.content.layouts.automationDefault;
 
+export const resolveCredentialLayout = (data: PortfolioRuntimeData, credentialId: string): CredentialsLayout =>
+  data.content.layouts.credentialOverrides[credentialId] ?? data.content.layouts.credentials;
+
 export const PORTFOLIO_CREDENTIALS_PER_PAGE = 2;
+
+/**
+ * What a layout prints of a list it cannot paginate. The renderer slices with these numbers and the Pre-publish
+ * check reports every slice as a recommendation, so content is never dropped without the editor knowing (§8.4).
+ */
+export const PORTFOLIO_PROFILE_CARD_GROUPS = 3;
+export const PORTFOLIO_PROFILE_CARD_ITEMS = 4;
+export const portfolioContributionLimit = (layout: ProjectLayout): number =>
+  layout === "project.editorial" ? 1 : layout === "project.classic" || layout === "feature" || layout === "standard" || layout === "compact" ? 5 : 3;
+
+export interface PortfolioCredentialPage {
+  layout: CredentialsLayout;
+  credentials: PortfolioCredential[];
+  /** Position of the page's first credential in the selection, so numbering continues across pages. */
+  firstIndex: number;
+}
 
 export const selectedPortfolioCredentials = (data: PortfolioRuntimeData): PortfolioCredential[] =>
   (data.credentials ?? []).filter((item) => item.includeInPortfolio).sort((a, b) => a.portfolioOrder - b.portfolioOrder);
 
-/** An empty selection still yields one page so the layout keeps its placeholders. */
-export const portfolioCredentialPages = (data: PortfolioRuntimeData): PortfolioCredential[][] => {
+/**
+ * Credentials in Profile order, PORTFOLIO_CREDENTIALS_PER_PAGE per page. Neighbours that share a layout fill a page
+ * together; an item with a different layout (an override) starts a new page. An empty selection still yields one
+ * page in the default layout so it keeps its placeholders.
+ */
+export const portfolioCredentialPages = (data: PortfolioRuntimeData): PortfolioCredentialPage[] => {
   if (!data.content.layouts.includeCredentials) return [];
   const selected = selectedPortfolioCredentials(data);
-  if (!selected.length) return [[]];
-  return Array.from(
-    { length: Math.ceil(selected.length / PORTFOLIO_CREDENTIALS_PER_PAGE) },
-    (_, page) => selected.slice(page * PORTFOLIO_CREDENTIALS_PER_PAGE, (page + 1) * PORTFOLIO_CREDENTIALS_PER_PAGE),
-  );
+  if (!selected.length) return [{ layout: data.content.layouts.credentials, credentials: [], firstIndex: 0 }];
+  return selected.reduce<PortfolioCredentialPage[]>((pages, credential, index) => {
+    const layout = resolveCredentialLayout(data, credential.id);
+    const last = pages[pages.length - 1];
+    if (last && last.layout === layout && last.credentials.length < PORTFOLIO_CREDENTIALS_PER_PAGE) last.credentials.push(credential);
+    else pages.push({ layout, credentials: [credential], firstIndex: index });
+    return pages;
+  }, []);
 };
 
 export const portfolioPageCount = (data: PortfolioRuntimeData): number => {
