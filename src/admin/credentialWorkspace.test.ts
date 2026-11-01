@@ -106,6 +106,10 @@ describe("Credential card layout (§6.4)", () => {
       fileSize: 266 * 1024,
       displayOrder: 1,
       createdAt: "2026-01-01T00:00:00.000Z",
+      showInPortfolio: false,
+      previewRotation: 0,
+      previewProfile: "landscape",
+      crops: [],
     }],
   });
   const cardHtml = (item: ProfessionalCredential): string => {
@@ -141,6 +145,29 @@ describe("Credential card layout (§6.4)", () => {
     expect(row).toMatch(/<details class="admin-document-more admin-more-menu">[\s\S]*data-credential-asset-delete="asset-one"/);
     expect(html).toMatch(/<div class="admin-credential-pending" data-credential-pending hidden>[\s\S]*data-credential-upload-kind/);
     expect(html.indexOf("data-credential-upload-kind")).toBeGreaterThan(html.indexOf("data-credential-pending"));
+  });
+
+  it("offers Adjust crops on image evidence only, and shows the crop thumbnail and Portfolio state once shown", () => {
+    const base = withEvidence();
+    const image = base.assets[0];
+    const pdf = { ...image, id: "asset-pdf", name: "Transcript", mimeType: "application/pdf" as const, storagePath: "private/asset-pdf.pdf" };
+    const shown = {
+      ...image,
+      showInPortfolio: true,
+      previewProfile: "portrait" as const,
+      crops: [{ id: "crop-1", profile: "portrait" as const, storagePath: "portfolio-media-crops/credentials/x/portrait/y.webp", publicUrl: "https://example.com/y.webp", cropX: 0, cropY: 0, cropWidth: 1, cropHeight: 1, width: 1350, height: 1800 }],
+    };
+    const html = cardHtml({ ...base, assets: [shown, pdf] });
+    const [imageRow, pdfRow] = html.split("<li>").slice(1);
+
+    expect(imageRow).toContain('data-credential-asset-crop="asset-one"');
+    expect(imageRow).toContain('<img src="https://example.com/y.webp" alt="" loading="lazy">');
+    expect(imageRow).toContain("Certificate · 266 KB · In Portfolio");
+    expect(imageRow).toMatch(/<details class="admin-document-more admin-more-menu">[\s\S]*data-credential-asset-hide="asset-one"[\s\S]*data-credential-asset-delete="asset-one"/);
+    expect(pdfRow).not.toContain("data-credential-asset-crop");
+    expect(pdfRow).not.toContain("data-credential-asset-hide");
+    expect(pdfRow).toContain("Not printed in Portfolio");
+    expect(pdfRow).toContain(">PDF</span>");
   });
 
   it("offers Restore instead of Edit, and Delete permanently in More, on an archived credential", () => {

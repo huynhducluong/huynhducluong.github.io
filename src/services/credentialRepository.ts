@@ -1,5 +1,7 @@
 import { supabaseConfig } from "../config/supabase";
 import type {
+  CredentialPreview,
+  CredentialPreviewProfile,
   CredentialAsset,
   CredentialDocumentKind,
   ProfessionalCredential,
@@ -9,6 +11,17 @@ import type {
 import { supabase } from "./supabaseClient";
 import { validateCredentialFile } from "../shared/credentialValidation";
 import { MemoryRequestCache } from "./memoryRequestCache";
+import { removeUnreferencedStoragePaths } from "./adminSystemRepository";
+
+const removePreviewCrops = async (assets: CredentialAsset[]): Promise<void> => {
+  const paths = assets.flatMap((asset) => asset.crops.map((crop) => crop.storagePath));
+  if (!paths.length) return;
+  try {
+    await removeUnreferencedStoragePaths(paths);
+  } catch {
+    // The rows are gone; orphaned preview files are removed by a later cleanup pass.
+  }
+};
 
 interface CredentialAssetRow {
   id: string;
@@ -21,6 +34,11 @@ interface CredentialAssetRow {
   file_size: number;
   display_order: number;
   created_at: string;
+  /** 202611010002; absent until that migration is applied. */
+  show_in_portfolio?: boolean;
+  preview_rotation?: number;
+  preview_profile?: CredentialPreviewProfile;
+  credential_media_crops?: Array<{ id: string; profile: CredentialPreviewProfile; storage_path: string; crop_x: number; crop_y: number; crop_width: number; crop_height: number; width: number; height: number }>;
 }
 
 interface CredentialRow {
@@ -54,7 +72,29 @@ const assetFromRow = (row: CredentialAssetRow): CredentialAsset => ({
   fileSize: Number(row.file_size),
   displayOrder: row.display_order,
   createdAt: row.created_at,
+  showInPortfolio: row.show_in_portfolio === true && row.mime_type !== "application/pdf",
+  previewRotation: ([0, 1, 2, 3].includes(Number(row.preview_rotation)) ? Number(row.preview_rotation) : 0) as CredentialAsset["previewRotation"],
+  previewProfile: row.preview_profile === "portrait" ? "portrait" : "landscape",
+  crops: (row.credential_media_crops ?? []).map((crop) => ({
+    id: crop.id,
+    profile: crop.profile,
+    storagePath: crop.storage_path,
+    publicUrl: supabase.storage.from(supabaseConfig.storageBucket).getPublicUrl(crop.storage_path).data.publicUrl,
+    cropX: Number(crop.crop_x),
+    cropY: Number(crop.crop_y),
+    cropWidth: Number(crop.crop_width),
+    cropHeight: Number(crop.crop_height),
+    width: crop.width,
+    height: crop.height,
+  })),
 });
+
+/** The preview a credential prints: its shown image evidence, in the chosen orientation, once that crop is saved. */
+export const credentialPreview = (credential: ProfessionalCredential): CredentialPreview | undefined => {
+  const asset = credential.assets.find((item) => item.showInPortfolio);
+  const crop = asset?.crops.find((item) => item.profile === asset.previewProfile);
+  return crop ? { profile: crop.profile, storagePath: crop.storagePath, publicUrl: crop.publicUrl, width: crop.width, height: crop.height } : undefined;
+};
 
 const credentialFromRow = (row: CredentialRow): ProfessionalCredential => ({
   id: row.id,
@@ -91,6 +131,7 @@ export const credentialSnapshot = (credential: ProfessionalCredential): Credenti
   verificationUrl: credential.verificationUrl,
   status: credential.status,
   displayOrder: credential.displayOrder,
+  ...(credentialPreview(credential) ? { preview: credentialPreview(credential) } : {}),
 });
 
 const toRow = (input: ProfessionalCredentialInput) => ({
@@ -110,17 +151,21 @@ const toRow = (input: ProfessionalCredentialInput) => ({
 });
 
 const selection = "*, credential_assets(*)";
+// Preview crops join in once 202611010002 is applied; until then the library loads without them.
+const selectionWithPreviews = "*, credential_assets(*, credential_media_crops(*))";
+let previewsAvailable = true;
 
 const credentialCache = new MemoryRequestCache<ProfessionalCredential[]>(30_000);
 
 const fetchProfessionalCredentials = async (): Promise<ProfessionalCredential[]> => {
-  const { data, error } = await supabase
-    .from("professional_credentials")
-    .select(selection)
-    .order("display_order")
-    .order("created_at");
+  const query = (columns: string) => supabase.from("professional_credentials").select(columns).order("display_order").order("created_at");
+  let { data, error } = await query(previewsAvailable ? selectionWithPreviews : selection);
+  if (error && previewsAvailable && /credential_media_crops|relationship/i.test(error.message)) {
+    previewsAvailable = false;
+    ({ data, error } = await query(selection));
+  }
   if (error) throw error;
-  return (data as CredentialRow[]).map(credentialFromRow);
+  return (data as unknown as CredentialRow[]).map(credentialFromRow);
 };
 
 export const listProfessionalCredentials = async (force = false): Promise<ProfessionalCredential[]> =>
@@ -172,6 +217,7 @@ export const deleteProfessionalCredential = async (credential: ProfessionalCrede
   }
   const { error } = await supabase.from("professional_credentials").delete().eq("id", credential.id);
   if (error) throw error;
+  await removePreviewCrops(credential.assets);
   credentialCache.invalidate();
 };
 
@@ -231,5 +277,38 @@ export const deleteCredentialAsset = async (asset: CredentialAsset): Promise<voi
   if (storageError) throw storageError;
   const { error } = await supabase.from("credential_assets").delete().eq("id", asset.id);
   if (error) throw error;
+  await removePreviewCrops([asset]);
+  credentialCache.invalidate();
+};
+
+/** The private evidence file, for the preview cropper only (never re-uploaded or modified). */
+export const downloadCredentialAsset = async (asset: CredentialAsset): Promise<Blob> => {
+  const { data, error } = await supabase.storage.from(supabaseConfig.privateDocumentBucket).download(asset.storagePath);
+  if (error) throw error;
+  return data;
+};
+
+/**
+ * Saves how an evidence image is previewed: shown in the Portfolio or not (one file per credential), the orientation
+ * printed, and the quarter turns applied before cropping. Turning one file on turns the other files of that credential off.
+ */
+export const saveCredentialPreviewSettings = async (
+  asset: CredentialAsset,
+  settings: { showInPortfolio: boolean; previewProfile: CredentialPreviewProfile; previewRotation: CredentialAsset["previewRotation"] },
+): Promise<void> => {
+  if (settings.showInPortfolio && asset.mimeType === "application/pdf") throw new Error("Only image evidence can be shown in the Portfolio.");
+  if (settings.showInPortfolio) {
+    const { error } = await supabase.from("credential_assets").update({ show_in_portfolio: false }).eq("credential_id", asset.credentialId).neq("id", asset.id);
+    if (error) throw error;
+  }
+  const { error } = await supabase.from("credential_assets").update({
+    show_in_portfolio: settings.showInPortfolio,
+    preview_profile: settings.previewProfile,
+    preview_rotation: settings.previewRotation,
+  }).eq("id", asset.id);
+  if (error) {
+    if (/show_in_portfolio|preview_rotation|preview_profile/.test(error.message)) throw new Error("Apply the latest database migration before saving credential previews.");
+    throw error;
+  }
   credentialCache.invalidate();
 };

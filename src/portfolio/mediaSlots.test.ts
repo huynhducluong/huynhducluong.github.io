@@ -43,7 +43,7 @@ describe("Portfolio media slots", () => {
     });
     expect(automationMediaRequirement("automation.input-geometry")).toEqual({
       primary: "landscape",
-      supporting: "wide",
+      supporting: "landscape",
       supportingRequired: true,
     });
     expect(automationMediaRequirement("automation.classic")).toEqual({});

@@ -45,6 +45,29 @@ export interface PortfolioMediaAssignment {
 export interface PortfolioMediaAssignments {
   projects: Record<string, PortfolioMediaAssignment>;
   tools: Record<string, PortfolioMediaAssignment>;
+  /** Cover (Split, Horizontal) and White closing image; empty uses the first selected project's primary visual. */
+  feature?: PortfolioFeatureImage;
+}
+
+export interface PortfolioFeatureImage {
+  projectId?: string;
+  mediaId?: string;
+}
+
+export type PortfolioProjectText = "summary" | "story";
+
+/** Figures printed on the Portrait profile; each counts selected Portfolio content. */
+export type PortfolioProfileStat = "projects" | "tools" | "capabilities" | "credentials";
+
+export interface PortfolioProfilePage {
+  /** Skill groups shown as capability cards, in Professional Profile order; null = the first groups. */
+  skillGroupIds: string[] | null;
+  stats: [PortfolioProfileStat, PortfolioProfileStat];
+}
+
+export interface PortfolioCoverHighlight {
+  kicker: LocalizedText;
+  lines: LocalizedText[];
 }
 
 export interface PortfolioImageOverlay {
@@ -62,6 +85,19 @@ export interface PortfolioContent {
   closingKicker: LocalizedText;
   closingHeading: LocalizedText;
   closingText: LocalizedText;
+  /** Statement on the Split and Horizontal covers. */
+  coverStatement: LocalizedText;
+  /** Aside beside the image on the Horizontal cover. */
+  coverHighlight: PortfolioCoverHighlight;
+  /** Text in the footer of every page with chrome. */
+  footerText: LocalizedText;
+  /** One line for every Automation layout: Classic page title, Workflow and Input → Geometry subtitle. */
+  automationStatement: LocalizedText;
+  profilePage: PortfolioProfilePage;
+  /** Responsibilities printed per project (Projects & tools); a project without an entry prints its first ones. */
+  projectResponsibilities: Record<string, string[]>;
+  /** What Technical and Editorial project pages print: the summary, or Challenge → Approach → Outcome. */
+  projectText: PortfolioProjectText;
   theme: StoredDocumentTheme;
   imageOverlay: PortfolioImageOverlay;
   layouts: PortfolioLayoutPreferences;
@@ -114,6 +150,20 @@ export interface PortfolioMediaCrop {
   fileSize: number;
 }
 
+/** A Portfolio project fact (Project › Key facts), e.g. "18 km" · "Bridge length". */
+export interface PortfolioKeyFact {
+  id: string;
+  value: LocalizedText;
+  label: LocalizedText;
+}
+
+/** A Workflow step of an automation tool (Tool › Workflow steps), printed before its Outcome. */
+export interface PortfolioWorkflowStep {
+  id: string;
+  label: LocalizedText;
+  text: LocalizedText;
+}
+
 export interface PortfolioProject {
   id: string;
   slug: string;
@@ -130,6 +180,7 @@ export interface PortfolioProject {
   isCurrent: boolean;
   year?: number;
   responsibilities: ContentPoint[];
+  keyFacts?: PortfolioKeyFact[];
   technologies: string[];
   images: PortfolioMedia[];
   featured: boolean;
@@ -155,6 +206,7 @@ export interface PortfolioTool {
   problem: LocalizedText;
   solution: LocalizedText;
   benefit?: LocalizedText;
+  workflowSteps?: PortfolioWorkflowStep[];
   technologies: string[];
   images: PortfolioMedia[];
   featured: boolean;

@@ -3,8 +3,10 @@ import {
   createProfessionalCredential,
   deleteCredentialAsset,
   deleteProfessionalCredential,
+  listProfessionalCredentials,
   openCredentialAsset,
   reorderProfessionalCredentials,
+  saveCredentialPreviewSettings,
   updateProfessionalCredential,
   uploadCredentialAsset,
 } from "../services/credentialRepository";
@@ -12,6 +14,7 @@ import { escapeHtml } from "../shared/format";
 import { validateCredentialInput } from "../shared/credentialValidation";
 import type { ProfessionalProfileContent } from "../types/website";
 import type {
+  CredentialAsset,
   CredentialDocumentKind,
   CredentialKind,
   CredentialRelationType,
@@ -89,6 +92,32 @@ const statusLabel = (status: ProfessionalCredential["status"]): string => status
 const documentKindOptions = (): string => Object.entries(documentKindLabels).map(([value, label]) => `<option value="${value}">${label}</option>`).join("");
 
 /**
+ * One evidence file (§6.4 media row): thumbnail of its public crop when one exists, otherwise the file badge.
+ * Only images can be cropped and shown in the Portfolio; PDFs say so instead of offering the action.
+ */
+const renderEvidenceRow = (asset: CredentialAsset, credentialId: string): string => {
+  const image = asset.mimeType !== "application/pdf";
+  const crop = asset.crops.find((item) => item.profile === asset.previewProfile) ?? asset.crops[0];
+  const assetId = escapeHtml(asset.id);
+  const portfolio = !image ? "Not printed in Portfolio" : asset.showInPortfolio ? "In Portfolio" : "";
+  const more = [
+    ...(asset.showInPortfolio ? [{ label: "Hide from Portfolio", attributes: `data-credential-asset-hide="${assetId}" data-credential-id="${credentialId}"` }] : []),
+    { label: "Delete file", attributes: `data-credential-asset-delete="${assetId}" data-credential-id="${credentialId}"`, tone: "danger" as const },
+  ];
+  return `<li>
+    ${crop
+      ? `<span class="admin-credential-file__icon admin-credential-file__thumb" aria-hidden="true"><img src="${escapeHtml(crop.publicUrl)}" alt="" loading="lazy"></span>`
+      : `<span class="admin-credential-file__icon" aria-hidden="true">${image ? "IMG" : "PDF"}</span>`}
+    <span class="admin-credential-file__identity">${renderAdminTruncatedText(asset.name, "admin-credential-file__name")}<small>${[documentKindLabels[asset.documentKind], formatFileSize(asset.fileSize), portfolio].filter(Boolean).map(escapeHtml).join(" · ")}</small></span>
+    <span class="admin-credential-file__actions">
+      <button class="button button--secondary" type="button" data-credential-asset-open="${assetId}" data-credential-id="${credentialId}">Open</button>
+      ${image ? `<button class="button button--secondary" type="button" data-credential-asset-crop="${assetId}" data-credential-id="${credentialId}">Adjust crops</button>` : ""}
+      ${renderAdminMoreMenu({ label: `More actions for ${asset.name}`, items: more })}
+    </span>
+  </li>`;
+};
+
+/**
  * Credential card (§6.4): identity and status on the left, actions on the right with Archive in More,
  * facts as one meta line, then Evidence. Each fact appears once; at most two levels of boxes.
  */
@@ -114,12 +143,7 @@ const credentialCard = (
     relatedMeta,
   ].join("");
   const fileCount = `${credential.assets.length} private file${credential.assets.length === 1 ? "" : "s"}`;
-  const assets = credential.assets.map((asset) => `<li>
-    <span class="admin-credential-file__icon" aria-hidden="true">${asset.mimeType === "application/pdf" ? "PDF" : "IMG"}</span>
-    <span class="admin-credential-file__identity">${renderAdminTruncatedText(asset.name, "admin-credential-file__name")}<small>${escapeHtml(documentKindLabels[asset.documentKind])} · ${formatFileSize(asset.fileSize)}</small></span>
-    <button class="button button--secondary" type="button" data-credential-asset-open="${escapeHtml(asset.id)}" data-credential-id="${id}">Open</button>
-    ${renderAdminMoreMenu({ label: `More actions for ${asset.name}`, items: [{ label: "Delete file", attributes: `data-credential-asset-delete="${escapeHtml(asset.id)}" data-credential-id="${id}"`, tone: "danger" }] })}
-  </li>`).join("");
+  const assets = credential.assets.map((asset) => renderEvidenceRow(asset, id)).join("");
   return `<article class="admin-credential-card${archived ? " is-archived" : ""}" data-credential-card="${id}">
     <header class="admin-credential-card__heading admin-profile-entry-card__heading">
       <div>
@@ -525,6 +549,61 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
       })
       .catch((error: Error) => callbacks.notify(error.message, "error"));
   }));
+  // The shared Portfolio media crop dialog (§7.1), loaded on first use and mounted beside the Credentials panel.
+  let evidenceCropper: { host: HTMLElement; open: (target: import("./projectCoverCropper").PortfolioMediaCropTarget) => Promise<void> } | undefined;
+  const refreshCredentials = async (): Promise<void> => {
+    callbacks.setCredentials(await listProfessionalCredentials(true));
+    callbacks.rerender();
+  };
+  root.querySelectorAll<HTMLButtonElement>("[data-credential-asset-crop]").forEach((button) => button.addEventListener("click", () => {
+    const credential = callbacks.getCredentials().find((item) => item.id === button.dataset.credentialId);
+    const asset = credential?.assets.find((item) => item.id === button.dataset.credentialAssetCrop);
+    if (!credential || !asset) return;
+    setButtonBusy(button, true, "Opening…");
+    void (async () => {
+      callbacks.beforeMutation();
+      const module = await import("./projectCoverCropper");
+      if (!evidenceCropper?.host.isConnected) {
+        const host = document.createElement("div");
+        host.innerHTML = module.renderPortfolioMediaCropDialog();
+        (button.closest<HTMLElement>("[data-profile-panel]") ?? document.body).append(host);
+        evidenceCropper = { host, ...module.bindPortfolioMediaCropper(host, { notify: callbacks.notify, onSaved: refreshCredentials }) };
+      }
+      await evidenceCropper.open({
+        ownerType: "credential",
+        ownerId: credential.id,
+        imageId: asset.id,
+        storagePath: asset.storagePath,
+        preferredProfile: asset.previewProfile,
+        crops: asset.crops.map((crop) => ({
+          id: crop.id,
+          profile: crop.profile,
+          storage_path: crop.storagePath,
+          crop_x: crop.cropX,
+          crop_y: crop.cropY,
+          crop_width: crop.cropWidth,
+          crop_height: crop.cropHeight,
+          width: crop.width,
+          height: crop.height,
+          mime_type: "image/webp",
+          file_size: 0,
+        })),
+        evidence: asset,
+      });
+    })()
+      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .finally(() => { if (button.isConnected) setButtonBusy(button, false); });
+  }));
+  root.querySelectorAll<HTMLButtonElement>("[data-credential-asset-hide]").forEach((button) => button.addEventListener("click", () => {
+    const credential = callbacks.getCredentials().find((item) => item.id === button.dataset.credentialId);
+    const asset = credential?.assets.find((item) => item.id === button.dataset.credentialAssetHide);
+    if (!asset) return;
+    callbacks.beforeMutation();
+    void saveCredentialPreviewSettings(asset, { showInPortfolio: false, previewProfile: asset.previewProfile, previewRotation: asset.previewRotation })
+      .then(refreshCredentials)
+      .then(() => callbacks.notify("Evidence hidden from the Portfolio. Republish the Portfolio to update the public release.", "success"))
+      .catch((error: Error) => callbacks.notify(error.message, "error"));
+  }));
   root.querySelectorAll<HTMLButtonElement>("[data-credential-asset-delete]").forEach((button) => button.addEventListener("click", async () => {
     const credential = callbacks.getCredentials().find((item) => item.id === button.dataset.credentialId);
     const asset = credential?.assets.find((item) => item.id === button.dataset.credentialAssetDelete);
@@ -533,7 +612,9 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
       callbacks.notify("Add a verification URL or return this credential to Draft before deleting its last evidence file.", "error");
       return;
     }
-    if (!(await confirmAdmin({ eyebrow: "Private credential file", title: `Delete ${asset.name}?`, message: "This permanently removes the private file. Published outputs are unaffected because private evidence is never included in a release.", confirmLabel: "Delete file", tone: "danger" }))) return;
+    if (!(await confirmAdmin({ eyebrow: "Private credential file", title: `Delete ${asset.name}?`, message: asset.showInPortfolio
+      ? "This permanently removes the private file and its Portfolio preview. A published Portfolio keeps its copy until you republish."
+      : "This permanently removes the private file. Published outputs are unaffected because private evidence is never included in a release.", confirmLabel: "Delete file", tone: "danger" }))) return;
     callbacks.beforeMutation();
     try {
       await deleteCredentialAsset(asset);

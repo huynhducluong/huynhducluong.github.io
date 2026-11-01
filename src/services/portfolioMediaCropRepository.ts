@@ -6,7 +6,8 @@ import { supabase } from "./supabaseClient";
 
 export { downloadStoredMedia };
 
-export type PortfolioMediaOwnerType = "project" | "tool";
+/** "credential" crops are public previews of private evidence images (credential_media_crops). */
+export type PortfolioMediaOwnerType = "project" | "tool" | "credential";
 
 export interface PortfolioMediaCropRow {
   id: string;
@@ -35,7 +36,9 @@ export interface PortfolioMediaCropOutput {
 
 const cropStorage = (ownerType: PortfolioMediaOwnerType) => ownerType === "project"
   ? { table: "project_media_crops", foreignKey: "project_image_id", folder: "projects" }
-  : { table: "tool_media_crops", foreignKey: "tool_image_id", folder: "tools" };
+  : ownerType === "tool"
+    ? { table: "tool_media_crops", foreignKey: "tool_image_id", folder: "tools" }
+    : { table: "credential_media_crops", foreignKey: "credential_asset_id", folder: "credentials" };
 
 export const savePortfolioMediaCrops = async (
   ownerType: PortfolioMediaOwnerType,
@@ -108,5 +111,42 @@ export const savePortfolioMediaCrops = async (
   } catch (error) {
     if (uploadedPaths.length) await supabase.storage.from(supabaseConfig.storageBucket).remove(uploadedPaths);
     throw error;
+  }
+};
+
+// Only Project and Tool originals are rotated in place; credential evidence is never rewritten (preview_rotation instead).
+const mediaTable = (ownerType: PortfolioMediaOwnerType): "project_images" | "tool_images" => {
+  if (ownerType === "credential") throw new Error("Credential evidence is never rewritten; store its preview rotation instead.");
+  return ownerType === "project" ? "project_images" : "tool_images";
+};
+const extensionFor = (mimeType: string): string => mimeType === "image/png" ? "png" : mimeType === "image/webp" ? "webp" : "jpg";
+
+/**
+ * Step 1 of a rotation: uploads the rotated original beside the current one. Nothing references it yet, so a failure
+ * later in the save leaves the image exactly as it was (call discardRotatedOriginal).
+ */
+export const uploadRotatedOriginal = async (currentPath: string, blob: Blob): Promise<string> => {
+  const folder = currentPath.includes("/") ? currentPath.slice(0, currentPath.lastIndexOf("/")) : "media";
+  const storagePath = `${folder}/${crypto.randomUUID()}.${extensionFor(blob.type)}`;
+  const { error } = await supabase.storage.from(supabaseConfig.storageBucket).upload(storagePath, blob, { contentType: blob.type, upsert: false });
+  if (error) throw error;
+  return storagePath;
+};
+
+export const discardRotatedOriginal = async (storagePath: string): Promise<void> => {
+  await supabase.storage.from(supabaseConfig.storageBucket).remove([storagePath]);
+};
+
+/**
+ * Step 2, after the crops of the rotated image are saved: points the image row at the rotated original, then removes
+ * the old file unless a published release still references it (release_references_storage_path).
+ */
+export const commitRotatedOriginal = async (ownerType: PortfolioMediaOwnerType, imageId: string, previousPath: string, storagePath: string, blob: Blob): Promise<void> => {
+  const { error } = await supabase.from(mediaTable(ownerType)).update({ storage_path: storagePath, mime_type: blob.type, file_size: blob.size }).eq("id", imageId);
+  if (error) throw error;
+  try {
+    await removeUnreferencedStoragePaths([previousPath]);
+  } catch {
+    // The row already points at the rotated file; an orphaned original is removed by a later cleanup pass.
   }
 };

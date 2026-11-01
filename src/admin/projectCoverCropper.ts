@@ -1,15 +1,21 @@
 import Cropper from "cropperjs";
 import {
+  commitRotatedOriginal,
+  discardRotatedOriginal,
   downloadStoredMedia,
   savePortfolioMediaCrops,
+  uploadRotatedOriginal,
   type PortfolioMediaCropRow,
   type PortfolioMediaOwnerType,
 } from "../services/portfolioMediaCropRepository";
+import { downloadCredentialAsset, saveCredentialPreviewSettings } from "../services/credentialRepository";
+import type { CredentialAsset, CredentialPreviewProfile } from "../types/credential";
 import type { MediaCropProfile } from "../types/portfolio";
 import { confirmAdmin } from "./confirmDialog";
 import { automaticCrop, clampCrop, cropPreviewStyle, cropSourceRect, type CropState } from "./cropGeometry";
 import { bindCropStage, waitForCropImage, type CropStage } from "./cropStage";
-import { renderAdminCropZoomControls, renderAdminDialogHeader, setAdminCropZoomValue, setButtonBusy } from "./ui";
+import { canvasToBlob, drawRotated, normalizeTurns, rotatedOriginalType, rotationLabel, type QuarterTurns } from "./imageRotation";
+import { renderAdminCropZoomControls, renderAdminDialogHeader, renderAdminSegmented, setAdminCropZoomValue, setButtonBusy } from "./ui";
 
 interface CropLayoutConfig {
   id: MediaCropProfile;
@@ -27,6 +33,12 @@ export interface PortfolioMediaCropTarget {
   storagePath: string;
   preferredProfile: MediaCropProfile;
   crops: PortfolioMediaCropRow[];
+  /**
+   * Credential evidence (ownerType "credential"): the private original is never rewritten. Its quarter turns are
+   * stored as preview_rotation, only the formats the Credentials layouts print are offered, and the dialog also
+   * sets the printed orientation and the explicit "Show in Portfolio" opt-in (§7.1).
+   */
+  evidence?: CredentialAsset;
 }
 
 interface PortfolioMediaCropperCallbacks {
@@ -39,6 +51,14 @@ const layouts: CropLayoutConfig[] = [
   { id: "landscape", label: "Landscape", frameWidth: 4, frameHeight: 3, outputWidth: 1600, outputHeight: 1200 },
   { id: "portrait", label: "Portrait", frameWidth: 3, frameHeight: 4, outputWidth: 1350, outputHeight: 1800 },
 ];
+
+// Credentials layouts frame evidence as landscape or portrait only; Wide is never printed for them.
+const evidenceProfiles: CredentialPreviewProfile[] = ["landscape", "portrait"];
+
+const dialogCopy = {
+  media: { eyebrow: "Portfolio media", title: "Adjust image crops", note: "Position the original once for reusable Portfolio formats." },
+  evidence: { eyebrow: "Credential evidence", title: "Adjust evidence crops", note: "Crop a public preview; the original file stays private." },
+};
 
 const maxSourcePixels = 80_000_000;
 const maxZoom = 4;
@@ -91,10 +111,15 @@ export const renderPortfolioMediaCropDialog = (): string => `
           <strong data-project-cover-crop-layout-name></strong>
           <p data-project-cover-crop-meta></p>
         </div>
+        <div class="admin-crop-evidence-settings" data-project-cover-crop-evidence hidden>
+          ${renderAdminSegmented({ legend: "Print as", name: "project-cover-print-profile", value: "landscape", options: [{ value: "landscape", label: "Landscape" }, { value: "portrait", label: "Portrait" }], attributes: "data-project-cover-print-profile" })}
+          <label class="admin-inline-check"><input type="checkbox" data-project-cover-show-in-portfolio><span>Show in Portfolio</span></label>
+          <p class="admin-field-hint">Visible to anyone with the Portfolio link.</p>
+        </div>
       </aside>
     </div>
     <div class="admin-project-cover-crop-footer">
-      ${renderAdminCropZoomControls({ prefix: "project-cover", maxZoom, resetLabel: "Reset to auto", resetTitle: "Reset this format to the automatic crop" })}
+      ${renderAdminCropZoomControls({ prefix: "project-cover", maxZoom, resetLabel: "Reset to auto", resetTitle: "Reset this format to the automatic crop", rotate: true })}
       <div class="admin-actions admin-photo-crop-dialog__actions">
         <button class="button button--secondary" type="button" data-project-cover-crop-cancel>Cancel</button>
         <button class="button" type="button" data-project-cover-crop-save>Save changes</button>
@@ -139,10 +164,26 @@ export const bindPortfolioMediaCropper = (
   const zoom = dialog?.querySelector<HTMLInputElement>("[data-project-cover-zoom]");
   const zoomValue = dialog?.querySelector<HTMLOutputElement>("[data-project-cover-zoom-value]") ?? null;
   const save = dialog?.querySelector<HTMLButtonElement>("[data-project-cover-crop-save]");
+  const evidenceSettings = dialog?.querySelector<HTMLElement>("[data-project-cover-crop-evidence]");
+  const printInputs = [...(dialog?.querySelectorAll<HTMLInputElement>("[data-project-cover-print-profile]") ?? [])];
+  const showInput = dialog?.querySelector<HTMLInputElement>("[data-project-cover-show-in-portfolio]");
 
   let target: PortfolioMediaCropTarget | undefined;
+  // Formats this target offers: all three for Project and Tool media, landscape and portrait for evidence.
+  let profiles: CropLayoutConfig[] = layouts;
+  // Turns the saved crops were made at: 0 for media (rotation rewrites the original), preview_rotation for evidence.
+  let baselineTurns: QuarterTurns = 0;
+  let printProfile: CredentialPreviewProfile = "landscape";
+  let showInPortfolio = false;
   let sourceUrl: string | undefined;
   let sourceImage: HTMLImageElement | undefined;
+  // Rotation always starts from the untouched original, so turning never re-encodes the picture twice.
+  let originalImage: HTMLImageElement | undefined;
+  let originalUrl: string | undefined;
+  let originalType = "image/jpeg";
+  let turns: QuarterTurns = 0;
+  let rotatedCanvas: HTMLCanvasElement | undefined;
+  let rotating = false;
   let cropper: Cropper | undefined;
   let cropStage: CropStage | undefined;
   let activeLayout: MediaCropProfile = "wide";
@@ -153,10 +194,15 @@ export const bindPortfolioMediaCropper = (
   const automatic = new Set<MediaCropProfile>();
 
   const isEdited = (id: MediaCropProfile): boolean => adjusted.has(id) || (automatic.has(id) && persisted.has(id));
-  const isDirty = (): boolean => layouts.some((layout) => isEdited(layout.id));
+  const settingsChanged = (): boolean => Boolean(target?.evidence && (
+    turns !== target.evidence.previewRotation
+    || printProfile !== target.evidence.previewProfile
+    || showInPortfolio !== target.evidence.showInPortfolio
+  ));
+  const isDirty = (): boolean => turns !== baselineTurns || settingsChanged() || profiles.some((layout) => isEdited(layout.id));
 
   const refreshStatus = (): void => {
-    layouts.forEach((layout) => {
+    profiles.forEach((layout) => {
       const status = dialog?.querySelector<HTMLElement>(`[data-project-cover-crop-status="${layout.id}"]`);
       if (!status) return;
       // Saved custom crops need no label; only automatic and unsaved states are worth reading.
@@ -166,6 +212,7 @@ export const bindPortfolioMediaCropper = (
       status.hidden = !label;
     });
     dialog?.querySelectorAll<HTMLButtonElement>("[data-project-cover-crop-tab]").forEach((button) => {
+      button.hidden = !profiles.some((layout) => layout.id === button.dataset.projectCoverCropTab);
       const selected = button.dataset.projectCoverCropTab === activeLayout;
       button.classList.toggle("is-active", selected);
       button.setAttribute("aria-selected", String(selected));
@@ -180,9 +227,9 @@ export const bindPortfolioMediaCropper = (
     if (!image) {
       image = document.createElement("img");
       image.alt = "";
-      image.src = sourceUrl;
       frame.append(image);
     }
+    if (image.getAttribute("src") !== sourceUrl) image.src = sourceUrl;
     return image;
   };
 
@@ -218,8 +265,17 @@ export const bindPortfolioMediaCropper = (
     adjusted.clear();
     automatic.clear();
     if (zoom) setAdminCropZoomValue(zoom, zoomValue, 1);
-    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+    if (sourceUrl && sourceUrl !== originalUrl) URL.revokeObjectURL(sourceUrl);
+    if (originalUrl) URL.revokeObjectURL(originalUrl);
     sourceUrl = undefined;
+    originalUrl = undefined;
+    originalImage = undefined;
+    rotatedCanvas = undefined;
+    turns = 0;
+    baselineTurns = 0;
+    profiles = layouts;
+    showInPortfolio = false;
+    printProfile = "landscape";
   };
 
   const close = (): void => {
@@ -229,9 +285,9 @@ export const bindPortfolioMediaCropper = (
 
   const requestClose = async (): Promise<void> => {
     if (isDirty() && !(await confirmAdmin({
-      eyebrow: "Portfolio media",
+      eyebrow: target?.evidence ? dialogCopy.evidence.eyebrow : dialogCopy.media.eyebrow,
       title: "Discard crop changes?",
-      message: "Edited formats will keep their last saved crop.",
+      message: target?.evidence ? "Edited formats and Portfolio settings will keep their last saved values." : "Edited formats will keep their last saved crop.",
       confirmLabel: "Discard changes",
       cancelLabel: "Keep editing",
       tone: "danger",
@@ -247,7 +303,7 @@ export const bindPortfolioMediaCropper = (
     refreshStatus();
     const layout = layoutById(layoutId);
     if (layoutName) layoutName.textContent = `${layout.label} · ${frameLabel(layout)}`;
-    if (meta) meta.textContent = `${sourceImage.naturalWidth} × ${sourceImage.naturalHeight}px original · saved as ${layout.outputWidth} × ${layout.outputHeight}px WebP`;
+    if (meta) meta.textContent = [`${sourceImage.naturalWidth} × ${sourceImage.naturalHeight}px original`, rotationLabel(turns) && `${rotationLabel(turns)} · all formats re-cropped`, `saved as ${layout.outputWidth} × ${layout.outputHeight}px WebP`].filter(Boolean).join(" · ");
     preview.style.setProperty("--admin-crop-ratio", String(ratio(layout)));
     preview.replaceChildren();
     renderPreview(layoutId);
@@ -302,33 +358,119 @@ export const bindPortfolioMediaCropper = (
       void initializeLayout(next).catch((error: Error) => callbacks.notify(error.message, "error"));
     });
     button.addEventListener("keydown", (event) => {
-      const current = layouts.findIndex((item) => item.id === activeLayout);
+      const current = profiles.findIndex((item) => item.id === activeLayout);
       const nextIndex = event.key === "ArrowRight" ? current + 1
         : event.key === "ArrowLeft" ? current - 1
           : event.key === "Home" ? 0
-            : event.key === "End" ? layouts.length - 1
+            : event.key === "End" ? profiles.length - 1
               : undefined;
       if (nextIndex === undefined) return;
       event.preventDefault();
-      const next = layouts[(nextIndex + layouts.length) % layouts.length];
+      const next = profiles[(nextIndex + profiles.length) % profiles.length];
       const nextButton = dialog.querySelector<HTMLButtonElement>(`[data-project-cover-crop-tab="${next.id}"]`);
       nextButton?.click();
       nextButton?.focus();
     });
   });
 
+  /** Saved crops belong to the turns they were made at: back at that turn they return, any other turn re-crops every format. */
+  const resetStatesForSource = (): void => {
+    if (!sourceImage || !target) return;
+    states.clear();
+    adjusted.clear();
+    automatic.clear();
+    if (turns === baselineTurns) target.crops.forEach((crop) => states.set(crop.profile, rowState(crop)));
+    profiles.forEach((layout) => {
+      if (!states.has(layout.id)) states.set(layout.id, automaticCrop(sourceImage!.naturalWidth, sourceImage!.naturalHeight, ratio(layout)));
+      if (turns !== baselineTurns) adjusted.add(layout.id);
+      renderPreview(layout.id);
+    });
+  };
+
+  /** Points the working source at the original turned `next` quarter turns, always drawn from the untouched original. */
+  const applyTurns = async (next: QuarterTurns): Promise<void> => {
+    if (!originalImage) return;
+    turns = next;
+    if (sourceUrl && sourceUrl !== originalUrl) URL.revokeObjectURL(sourceUrl);
+    if (turns === 0) {
+      rotatedCanvas = undefined;
+      sourceUrl = originalUrl;
+      sourceImage = originalImage;
+    } else {
+      rotatedCanvas = drawRotated(originalImage, turns);
+      sourceUrl = URL.createObjectURL(await canvasToBlob(rotatedCanvas, "image/webp", 0.95));
+      sourceImage = await loadImage(sourceUrl);
+    }
+  };
+
+  const rotate = async (delta: number): Promise<void> => {
+    if (!originalImage || rotating) return;
+    rotating = true;
+    // The buttons stay enabled (a disabled button drops focus out of the dialog, which breaks [ and ]); `rotating` guards.
+    try {
+      await applyTurns(normalizeTurns(turns + delta));
+      resetStatesForSource();
+      refreshStatus();
+      await initializeLayout(activeLayout);
+    } finally {
+      rotating = false;
+    }
+  };
+  dialog.querySelector<HTMLButtonElement>("[data-project-cover-rotate-left]")?.addEventListener("click", () => void rotate(-1).catch((error: Error) => callbacks.notify(error.message, "error")));
+  dialog.querySelector<HTMLButtonElement>("[data-project-cover-rotate-right]")?.addEventListener("click", () => void rotate(1).catch((error: Error) => callbacks.notify(error.message, "error")));
+  // Choosing the printed orientation also opens that format, so what prints is what is being positioned.
+  printInputs.forEach((input) => input.addEventListener("change", () => {
+    if (!input.checked) return;
+    printProfile = input.value as CredentialPreviewProfile;
+    if (printProfile !== activeLayout) void initializeLayout(printProfile).catch((error: Error) => callbacks.notify(error.message, "error"));
+  }));
+  showInput?.addEventListener("change", () => {
+    void (async () => {
+      if (showInput.checked && !target?.evidence?.showInPortfolio && !(await confirmAdmin({
+        eyebrow: dialogCopy.evidence.eyebrow,
+        title: "Show this evidence in the Portfolio?",
+        message: "The saved crop becomes visible to anyone with the Portfolio link. The original file stays private. Any other file of this credential is hidden from the Portfolio.",
+        confirmLabel: "Show in Portfolio",
+        cancelLabel: "Keep private",
+      }))) {
+        showInput.checked = false;
+        return;
+      }
+      showInPortfolio = showInput.checked;
+    })();
+  });
+
+  dialog.addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    if (event.key === "[" || event.key === "]") {
+      event.preventDefault();
+      void rotate(event.key === "]" ? 1 : -1).catch((error: Error) => callbacks.notify(error.message, "error"));
+    }
+  });
+
   save.addEventListener("click", () => {
     if (!sourceImage || !target) return;
-    const changedProfiles = layouts.filter((layout) => adjusted.has(layout.id));
-    const removedProfiles = [...automatic].filter((profile) => persisted.has(profile));
-    if (!changedProfiles.length && !removedProfiles.length) {
+    const evidence = target.evidence;
+    // A shown evidence file always keeps a saved crop in the printed orientation, so "Reset to auto" saves the
+    // automatic crop instead of deleting the one the Portfolio prints.
+    const printed = (profile: MediaCropProfile): boolean => Boolean(evidence && showInPortfolio && profile === printProfile);
+    const changedProfiles = profiles.filter((layout) => adjusted.has(layout.id) || (printed(layout.id) && (!persisted.has(layout.id) || automatic.has(layout.id))));
+    const removedProfiles = [...automatic].filter((profile) => persisted.has(profile) && !printed(profile));
+    const saveSettings = settingsChanged();
+    if (!changedProfiles.length && !removedProfiles.length && !saveSettings) {
       close();
-      callbacks.notify("No custom crop changes were needed.", "info");
+      callbacks.notify(evidence ? "No evidence preview changes were needed." : "No custom crop changes were needed.", "info");
       return;
     }
-    setButtonBusy(save, true, "Saving crops…");
+    // Evidence rotation is a stored setting; only Project and Tool media rewrite their original.
+    const rewriteOriginal = !evidence && turns !== 0;
+    setButtonBusy(save, true, rewriteOriginal ? "Saving rotation…" : "Saving crops…");
+    let rotatedPath: string | undefined;
     void (async () => {
       const source = sourceImage as HTMLImageElement;
+      const drawable: CanvasImageSource = rotatedCanvas ?? source;
+      const rotatedBlob = rewriteOriginal && rotatedCanvas ? await canvasToBlob(rotatedCanvas, rotatedOriginalType(originalType), 0.92) : undefined;
+      if (rotatedBlob && target) rotatedPath = await uploadRotatedOriginal(target.storagePath, rotatedBlob);
       const outputs = await Promise.all(changedProfiles.map(async (layout) => {
         const state = states.get(layout.id) ?? automaticCrop(source.naturalWidth, source.naturalHeight, ratio(layout));
         const canvas = document.createElement("canvas");
@@ -339,7 +481,7 @@ export const bindPortfolioMediaCropper = (
         context.imageSmoothingEnabled = true;
         context.imageSmoothingQuality = "high";
         const { sx, sy, sw, sh } = cropSourceRect(state, source.naturalWidth, source.naturalHeight);
-        context.drawImage(source, sx, sy, sw, sh, 0, 0, layout.outputWidth, layout.outputHeight);
+        context.drawImage(drawable, sx, sy, sw, sh, 0, 0, layout.outputWidth, layout.outputHeight);
         return {
           profile: layout.id,
           blob: await canvasToWebp(canvas),
@@ -351,13 +493,28 @@ export const bindPortfolioMediaCropper = (
           height: layout.outputHeight,
         };
       }));
-      await savePortfolioMediaCrops(target.ownerType, target.ownerId, target.imageId, outputs, removedProfiles);
-      const savedTarget = target;
+      const owner = target as PortfolioMediaCropTarget;
+      await savePortfolioMediaCrops(owner.ownerType, owner.ownerId, owner.imageId, outputs, removedProfiles);
+      if (evidence && saveSettings) await saveCredentialPreviewSettings(evidence, { showInPortfolio, previewProfile: printProfile, previewRotation: turns });
+      const wasRotated = Boolean(rotatedPath && rotatedBlob);
+      if (rotatedPath && rotatedBlob) await commitRotatedOriginal(owner.ownerType, owner.imageId, owner.storagePath, rotatedPath, rotatedBlob);
+      rotatedPath = undefined;
+      const shown = showInPortfolio;
       close();
-      await callbacks.onSaved(savedTarget);
-      callbacks.notify("Portfolio image crops saved. Republish the Portfolio to update the public release.", "success");
+      await callbacks.onSaved(owner);
+      callbacks.notify(evidence
+        ? shown || evidence.showInPortfolio
+          ? "Evidence preview saved. Republish the Portfolio to update the public release."
+          : "Evidence crops saved. Turn on Show in Portfolio to print this preview."
+        : wasRotated
+          ? "Image rotated and Portfolio crops saved. Republish the Website and Portfolio to update their public releases."
+          : "Portfolio image crops saved. Republish the Portfolio to update the public release.", "success");
     })()
-      .catch((error: Error) => callbacks.notify(error.message, "error"))
+      .catch(async (error: Error) => {
+        // Nothing points at an uncommitted rotated original yet; remove it so a failed save leaves no trace.
+        if (rotatedPath) await discardRotatedOriginal(rotatedPath).catch(() => undefined);
+        callbacks.notify(error.message, "error");
+      })
       .finally(() => { if (save.isConnected) setButtonBusy(save, false); });
   });
 
@@ -366,18 +523,37 @@ export const bindPortfolioMediaCropper = (
       cleanup();
       try {
         target = nextTarget;
-        activeLayout = nextTarget.preferredProfile;
+        const evidence = nextTarget.evidence;
+        profiles = evidence ? layouts.filter((layout) => (evidenceProfiles as MediaCropProfile[]).includes(layout.id)) : layouts;
+        baselineTurns = evidence ? evidence.previewRotation : 0;
+        printProfile = evidence?.previewProfile ?? "landscape";
+        showInPortfolio = evidence?.showInPortfolio ?? false;
+        activeLayout = evidence ? printProfile : nextTarget.preferredProfile;
+        const copy = evidence ? dialogCopy.evidence : dialogCopy.media;
+        const header = dialog.querySelector(".admin-dialog__header");
+        header?.querySelector(".section-kicker")?.replaceChildren(copy.eyebrow);
+        header?.querySelector("h2")?.replaceChildren(copy.title);
+        header?.querySelector(".admin-dialog__note")?.replaceChildren(copy.note);
+        if (evidenceSettings) evidenceSettings.hidden = !evidence;
+        printInputs.forEach((input) => { input.checked = input.value === printProfile; });
+        if (showInput) showInput.checked = showInPortfolio;
         nextTarget.crops.forEach((crop) => {
+          if (!profiles.some((layout) => layout.id === crop.profile)) return;
           states.set(crop.profile, rowState(crop));
           persisted.add(crop.profile);
         });
-        const blob = await downloadStoredMedia(nextTarget.storagePath);
-        sourceUrl = URL.createObjectURL(blob);
+        const blob = evidence ? await downloadCredentialAsset(evidence) : await downloadStoredMedia(nextTarget.storagePath);
+        originalType = blob.type || "image/jpeg";
+        originalUrl = URL.createObjectURL(blob);
+        sourceUrl = originalUrl;
         sourceImage = await loadImage(sourceUrl);
+        originalImage = sourceImage;
         if (sourceImage.naturalWidth * sourceImage.naturalHeight > maxSourcePixels) {
           throw new Error("Source image is too large to crop safely (maximum 80 megapixels).");
         }
-        layouts.forEach((layout) => {
+        // Evidence opens at its stored turns, where its saved crops were made.
+        if (baselineTurns) await applyTurns(baselineTurns);
+        profiles.forEach((layout) => {
           if (!states.has(layout.id)) states.set(layout.id, automaticCrop(sourceImage!.naturalWidth, sourceImage!.naturalHeight, ratio(layout)));
           renderPreview(layout.id);
         });

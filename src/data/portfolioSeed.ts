@@ -29,6 +29,23 @@ export const portfolioContentSeed: PortfolioContent = {
     en: "Infrastructure BIM coordination · Model quality · Automation",
     vi: "Điều phối BIM hạ tầng · Chất lượng mô hình · Tự động hóa",
   },
+  coverStatement: {
+    en: "Coordination built on clear information and practical automation.",
+    vi: "Điều phối được xây dựng trên thông tin rõ ràng và tự động hóa thực tiễn.",
+  },
+  coverHighlight: {
+    kicker: { en: "Infrastructure BIM", vi: "BIM hạ tầng" },
+    lines: [
+      { en: "Model coordination.", vi: "Điều phối mô hình." },
+      { en: "Quality control.", vi: "Kiểm soát chất lượng." },
+      { en: "Practical automation.", vi: "Tự động hóa thực tiễn." },
+    ],
+  },
+  footerText: { en: "BIM · Infrastructure · Automation", vi: "BIM · Hạ tầng · Tự động hóa" },
+  automationStatement: { en: "Tools built around real delivery constraints.", vi: "Các công cụ được xây dựng từ yêu cầu triển khai thực tế." },
+  profilePage: { skillGroupIds: null, stats: ["projects", "capabilities"] },
+  projectResponsibilities: {},
+  projectText: "summary",
   theme: { presetId: "personal-blue" },
   imageOverlay: { enabled: true, opacity: DEFAULT_IMAGE_OVERLAY_OPACITY },
   layouts: structuredClone(modernPortfolioLayouts),

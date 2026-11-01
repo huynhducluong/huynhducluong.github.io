@@ -717,8 +717,9 @@
   }
 }
 
+/* Portfolio project rows reuse the CV project-row anatomy (§6.7), so this list also answers its container queries. */
 .admin-document-selection {
-  container: document-selection / inline-size;
+  container: document-selection cv-selection / inline-size;
   display: grid;
   gap: .45rem;
 }
@@ -1096,6 +1097,9 @@
 .admin-cv-background__item > input { width: auto; margin: 0; accent-color: var(--color-primary); }
 .admin-cv-background__item:has(input:not(:checked)) .admin-cv-background__identity { opacity: .62; }
 .admin-cv-background__item:has(input:disabled) { cursor: default; }
+/* A choice that is not available yet (for example a fourth capability card) reads muted through color, never opacity. */
+.admin-cv-background__item:has(input:disabled):not(.is-selected) { background: var(--admin-color-surface-muted); color: var(--admin-color-text-muted); }
+.admin-cv-background__item:has(input:disabled):not(.is-selected) strong { color: var(--admin-color-text-muted); }
 
 .admin-cv-background__identity {
   display: grid;
@@ -1200,6 +1204,8 @@
 .admin-portfolio-media-row__meta > :not([hidden]) ~ :not([hidden])::before { content: "·"; padding-right: .35rem; }
 .admin-portfolio-media-row__meta .is-warning { color: var(--admin-color-warning); font-weight: var(--admin-weight-semibold); }
 .admin-portfolio-media-row .admin-select-control { width: 100%; }
+/* The Cover & closing image field: a labelled group (one select per project) that matches a field label exactly. */
+.admin-portfolio-feature-image { display: grid; gap: .35rem; color: var(--admin-color-text-muted); font-size: var(--admin-text-xs); font-weight: 800; }
 /* Two short selects fit side by side far narrower than the bilingual alt-text pairs of §6.5. */
 html.admin-app .admin-portfolio-media-row .admin-media-row__fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 @container admin-form (max-width: 22rem) {

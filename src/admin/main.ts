@@ -46,6 +46,7 @@ import {
   type AdminDirtyScope,
 } from "./dirtyState";
 import { assetUrl, escapeHtml, profileName } from "../shared/format";
+import { MAX_PROJECT_KEY_FACTS, MAX_TOOL_WORKFLOW_STEPS, normalizeKeyFacts, normalizeWorkflowSteps } from "../shared/structuredContent";
 import { sortByMasterContentOrder } from "../shared/contentOrder";
 import { normalizeYouTubeUrl } from "../shared/youtube";
 import { supabase } from "../services/supabaseClient";
@@ -93,6 +94,8 @@ interface AdminProjectRow {
   is_current: boolean;
   year: number | null;
   responsibilities: Array<{ id: string; text: { en: string; vi: string } }>;
+  /** 202611010001; absent until that migration is applied. */
+  key_facts?: unknown;
   technologies: string[];
   featured: boolean;
   status: PublicationStatus;
@@ -120,6 +123,8 @@ interface AdminToolRow {
   problem: { en: string; vi: string };
   solution: { en: string; vi: string };
   benefit: { en: string; vi: string } | null;
+  /** 202611010001; absent until that migration is applied. */
+  workflow_steps?: unknown;
   technologies: string[];
   featured: boolean;
   status: PublicationStatus;
@@ -725,6 +730,22 @@ const contentList = (): string => {
 const field = (label: string, name: string, value = "", type = "text", placeholder = "", required = false): string =>
   `<label${type === "month" ? ' class="admin-date-field"' : ""}>${renderAdminFieldLabel(label, required)}<input name="${name}" type="${type}" value="${escapeHtml(value)}"${placeholder ? ` placeholder="${escapeHtml(placeholder)}"` : ""}${required ? ' aria-required="true"' : ""}></label>`;
 
+type LocalizedSlot = Record<string, { en: string; vi: string }>;
+
+/**
+ * Fixed slots for a short structured list (Project › Key facts, Tool › Workflow steps). Each slot is one labelled group of
+ * EN | VI pairs on the shared form grid (§6.3); slots are separated by dividers inside the card, and empty ones are not saved.
+ */
+const structuredSlots = <T extends object>(prefix: string, legend: string, max: number, items: T[], fields: Array<[key: keyof T & string, label: string]>): string =>
+  Array.from({ length: max }, (_, index) => {
+    const item = (items[index] ?? {}) as Partial<Record<string, { en: string; vi: string }>>;
+    const titleId = `${prefix}-${index + 1}-title`;
+    return `<div class="admin-structured-slot" role="group" aria-labelledby="${titleId}"><p class="admin-structured-slot__title" id="${titleId}">${legend} ${index + 1}</p>${fields.map(([key, label]) => `<div class="admin-form-grid">${field(`${label} (EN)`, `${prefix}_${index}_${key}_en`, item[key]?.en ?? "")}${field(`${label} (VI)`, `${prefix}_${index}_${key}_vi`, item[key]?.vi ?? "")}</div>`).join("")}</div>`;
+  }).join("");
+
+const readStructuredSlots = (form: FormData, prefix: string, max: number, keys: string[]): LocalizedSlot[] =>
+  Array.from({ length: max }, (_, index) => Object.fromEntries(keys.map((key) => [key, { en: formText(form, `${prefix}_${index}_${key}_en`), vi: formText(form, `${prefix}_${index}_${key}_vi`) }])));
+
 const contentStatusLabel = (status: PublicationStatus): string =>
   status === "published" ? "Ready" : status.charAt(0).toUpperCase() + status.slice(1);
 
@@ -849,6 +870,11 @@ const editor = (project: AdminProjectRow): string => `
             <div class="admin-form-grid"><label>${renderAdminFieldLabel("Responsibilities (EN, one item per line)", true)}<textarea name="responsibilities_en" rows="9" aria-required="true">${escapeHtml(project.responsibilities.map((item) => item.text.en).join("\n"))}</textarea></label><label>${renderAdminFieldLabel("Responsibilities (VI, one item per line)")}<textarea name="responsibilities_vi" rows="9">${escapeHtml(project.responsibilities.map((item) => item.text.vi).join("\n"))}</textarea></label></div>
             <label>${renderAdminFieldLabel("Technologies (comma separated)", true)}<input name="technologies" value="${escapeHtml(project.technologies.join(", "))}" aria-required="true"></label>`,
         })}
+        ${renderAdminSectionCard({
+          title: "Key facts",
+          note: `Optional, up to ${MAX_PROJECT_KEY_FACTS}. Printed as the Portfolio project facts.`,
+          content: structuredSlots("key_fact", "Fact", MAX_PROJECT_KEY_FACTS, normalizeKeyFacts(project.key_facts), [["value", "Value"], ["label", "Label"]]),
+        })}
       </section>
     </form>
     ${mediaPanel("project", project.project_images)}
@@ -873,6 +899,11 @@ const toolEditor = (tool: AdminToolRow): string => `
       </section>
       <section class="admin-editor-panel" data-editor-panel="content" ${panelState("content")}>
         ${renderAdminSectionCard({ title: "Tool content", note: "Edit paired EN and VI problem, solution and benefit.", content: `<div class="admin-form-grid"><label>${renderAdminFieldLabel("Problem (EN)", true)}<textarea name="problem_en" rows="6" aria-required="true">${escapeHtml(tool.problem.en)}</textarea></label><label>${renderAdminFieldLabel("Problem (VI)")}<textarea name="problem_vi" rows="6">${escapeHtml(tool.problem.vi)}</textarea></label><label>${renderAdminFieldLabel("Solution (EN)", true)}<textarea name="solution_en" rows="6" aria-required="true">${escapeHtml(tool.solution.en)}</textarea></label><label>${renderAdminFieldLabel("Solution (VI)")}<textarea name="solution_vi" rows="6">${escapeHtml(tool.solution.vi)}</textarea></label><label>${renderAdminFieldLabel("Benefit (EN)", true)}<textarea name="benefit_en" rows="5" aria-required="true">${escapeHtml(tool.benefit?.en ?? "")}</textarea></label><label>${renderAdminFieldLabel("Benefit (VI)")}<textarea name="benefit_vi" rows="5">${escapeHtml(tool.benefit?.vi ?? "")}</textarea></label></div>` })}
+        ${renderAdminSectionCard({
+          title: "Workflow steps",
+          note: `Optional, up to ${MAX_TOOL_WORKFLOW_STEPS}. Printed before the Outcome on the Workflow layout.`,
+          content: structuredSlots("workflow_step", "Step", MAX_TOOL_WORKFLOW_STEPS, normalizeWorkflowSteps(tool.workflow_steps), [["label", "Label"], ["text", "Text"]]),
+        })}
       </section>
     </form>
     ${mediaPanel("tool", tool.tool_images)}
@@ -1118,6 +1149,8 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     end_date: isCurrent ? null : endDate,
     is_current: isCurrent,
     responsibilities,
+    key_facts: normalizeKeyFacts(readStructuredSlots(form, "key_fact", MAX_PROJECT_KEY_FACTS, ["value", "label"])
+      .map((fact, index) => ({ id: normalizeKeyFacts(current.key_facts)[index]?.id ?? `${slug}-fact-${index + 1}`, ...fact }))),
     technologies: String(form.get("technologies") ?? "").split(",").map((item) => item.trim()).filter(Boolean),
   };
   const readiness = readinessFor("project", payload);
@@ -1140,11 +1173,10 @@ const saveForm = async (formElement: HTMLFormElement): Promise<void> => {
     technologies: payload.technologies,
     status: nextStatus,
   };
-  let { error } = await supabase.from("projects").upsert({ ...projectPayload, youtube_url: payload.youtube_url });
-  if (missingYouTubeColumn(error, "projects")) {
-    if (payload.youtube_url) throw new Error("Apply the latest database migration before saving a YouTube URL.");
-    ({ error } = await supabase.from("projects").upsert(projectPayload));
-  }
+  const error = await upsertWithOptionalColumns("projects", projectPayload, {
+    youtube_url: { value: payload.youtube_url, used: Boolean(payload.youtube_url), label: "a YouTube URL" },
+    key_facts: { value: payload.key_facts, used: normalizeKeyFacts(payload.key_facts).length > 0, label: "key facts" },
+  });
   if (error) throw error;
   contentEditorDirty = false;
   syncContentDirtyState();
@@ -1173,6 +1205,8 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     problem: { en: formText(form, "problem_en"), vi: formText(form, "problem_vi") },
     solution: { en: formText(form, "solution_en"), vi: formText(form, "solution_vi") },
     benefit: benefitEn || benefitVi ? { en: benefitEn, vi: benefitVi } : null,
+    workflow_steps: normalizeWorkflowSteps(readStructuredSlots(form, "workflow_step", MAX_TOOL_WORKFLOW_STEPS, ["label", "text"])
+      .map((step, index) => ({ id: normalizeWorkflowSteps(current.workflow_steps)[index]?.id ?? `${slug}-step-${index + 1}`, ...step }))),
     technologies: commaList(formText(form, "technologies")),
   };
   const readiness = readinessFor("tool", payload);
@@ -1187,11 +1221,10 @@ const saveToolForm = async (formElement: HTMLFormElement): Promise<void> => {
     technologies: payload.technologies,
     status: nextStatus,
   };
-  let { error } = await supabase.from("automation_tools").upsert({ ...toolPayload, youtube_url: payload.youtube_url });
-  if (missingYouTubeColumn(error, "automation_tools")) {
-    if (payload.youtube_url) throw new Error("Apply the latest database migration before saving a YouTube URL.");
-    ({ error } = await supabase.from("automation_tools").upsert(toolPayload));
-  }
+  const error = await upsertWithOptionalColumns("automation_tools", toolPayload, {
+    youtube_url: { value: payload.youtube_url, used: Boolean(payload.youtube_url), label: "a YouTube URL" },
+    workflow_steps: { value: payload.workflow_steps, used: normalizeWorkflowSteps(payload.workflow_steps).length > 0, label: "workflow steps" },
+  });
   if (error) throw error;
   contentEditorDirty = false;
   syncContentDirtyState();
@@ -1705,8 +1738,27 @@ const deleteSavedMedia = async (type: AdminItemType, mediaId: string): Promise<v
 
 const formText = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
 const commaList = (value: string): string[] => value.split(",").map((item) => item.trim()).filter(Boolean);
-const missingYouTubeColumn = (error: { message: string } | null, table: "projects" | "automation_tools"): boolean =>
-  Boolean(error?.message.includes("'youtube_url'") && error.message.includes(`'${table}'`) && error.message.includes("schema cache"));
+const missingColumn = (error: { message: string } | null, table: "projects" | "automation_tools", column: string): boolean =>
+  Boolean(error?.message.includes(`'${column}'`) && error.message.includes(`'${table}'`) && error.message.includes("schema cache"));
+
+/**
+ * Upserts with columns added by later migrations. If Supabase does not know a column yet, the save retries without
+ * it, unless the editor filled it in: then it stops and asks for the migration instead of dropping their content.
+ */
+const upsertWithOptionalColumns = async (
+  table: "projects" | "automation_tools",
+  base: Record<string, unknown>,
+  optional: Record<string, { value: unknown; used: boolean; label: string }>,
+): Promise<{ message: string } | null> => {
+  const payload: Record<string, unknown> = { ...base, ...Object.fromEntries(Object.entries(optional).map(([column, item]) => [column, item.value])) };
+  for (;;) {
+    const { error } = await supabase.from(table).upsert(payload);
+    const missing = Object.keys(optional).find((column) => column in payload && missingColumn(error, table, column));
+    if (!missing) return error;
+    if (optional[missing].used) throw new Error(`Apply the latest database migration before saving ${optional[missing].label}.`);
+    delete payload[missing];
+  }
+};
 
 const bindContentItemActions = (root: ParentNode = app): void => {
   root.querySelectorAll<HTMLElement>("[data-select-item]").forEach((button) => button.addEventListener("click", async () => {
@@ -1841,7 +1893,8 @@ const bindDashboard = (): void => {
   const coverCropper = projectCoverCropperModule?.bindPortfolioMediaCropper(app, {
     notify: message,
     onSaved: async (target) => {
-      await refreshSelectedMediaOwner(target.ownerType, target.ownerId);
+      // Credential evidence crops are opened from the Profile workspace, which refreshes them itself.
+      if (target.ownerType !== "credential") await refreshSelectedMediaOwner(target.ownerType, target.ownerId);
     },
   });
   app.querySelectorAll<HTMLButtonElement>("[data-admin-view]").forEach((button) => button.addEventListener("click", async () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { PortfolioMedia } from "../types/portfolio";
-import { portfolioMediaRowState, renderPortfolioMediaRow } from "./portfolioMediaSelection";
+import { portfolioMediaRowState, renderPortfolioFeatureRow, renderPortfolioMediaRow } from "./portfolioMediaSelection";
 
 const media = (id: string, kind: PortfolioMedia["kind"], displayOrder: number): PortfolioMedia => ({
   id, kind, displayOrder, storagePath: `https://example.com/${id}.jpg`, alt: { en: id, vi: id },
@@ -57,5 +57,28 @@ describe("Portfolio media rows (§6.8)", () => {
     const html = row("project.balanced", "project", []);
     expect(html).not.toContain("<img");
     expect(html).toContain('<span class="admin-portfolio-media-row__empty">No image</span>');
+  });
+});
+
+describe("Cover & closing image row (§6.8)", () => {
+  const projects = [
+    { id: "p1", name: "First", images, selected: true },
+    { id: "p2", name: "Second", images: [media("other", "cover", 1)], selected: true },
+    { id: "p3", name: "Not selected", images: [], selected: false },
+  ];
+
+  it("offers selected projects only and submits exactly one image select", () => {
+    const html = renderPortfolioFeatureRow({ projects, assignments: {}, choice: { projectId: "p2", mediaId: "other" } });
+    expect(html).toMatch(/<option value="p3" hidden disabled>/);
+    expect(html.match(/name="portfolio_feature_media"/g)).toHaveLength(3);
+    expect(html.match(/data-portfolio-feature-media="p\d" aria-label="[^"]+"(?! disabled)>/g)).toEqual(['data-portfolio-feature-media="p2" aria-label="Image from Second">']);
+    expect(html).toContain('<option value="other" data-preview-url="https://example.com/other.jpg" selected>');
+    expect(html).toContain("https://example.com/other.jpg");
+  });
+
+  it("labels the image field as a group, never a <label> wrapping several selects", () => {
+    const html = renderPortfolioFeatureRow({ projects, assignments: {}, choice: undefined });
+    expect(html).toContain('<div class="admin-portfolio-feature-image" role="group" aria-labelledby="portfolio-feature-image-label">');
+    expect(html).toMatch(/<option value="" selected>First selected project<\/option>/);
   });
 });

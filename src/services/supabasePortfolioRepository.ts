@@ -1,4 +1,5 @@
 import { supabaseConfig } from "../config/supabase";
+import { normalizeKeyFacts, normalizeWorkflowSteps } from "../shared/structuredContent";
 import type { LocalizedText, ContentPoint } from "../types/career";
 import type {
   LegacyPortfolioLayout,
@@ -70,6 +71,8 @@ export interface ProjectRow {
   is_current: boolean;
   year: number | null;
   responsibilities: ContentPoint[];
+  /** Added by 202611010001; absent until that migration is applied. */
+  key_facts?: unknown;
   technologies: string[];
   featured: boolean;
   status: PublicationStatus;
@@ -96,6 +99,8 @@ export interface ToolRow {
   problem: LocalizedText;
   solution: LocalizedText;
   benefit: LocalizedText | null;
+  /** Added by 202611010001; absent until that migration is applied. */
+  workflow_steps?: unknown;
   technologies: string[];
   featured: boolean;
   status: PublicationStatus;
@@ -175,6 +180,7 @@ export const projectFromRow = (row: ProjectRow): PortfolioProject => ({
   isCurrent: row.is_current ?? false,
   year: row.year ?? undefined,
   responsibilities: row.responsibilities ?? [],
+  keyFacts: normalizeKeyFacts(row.key_facts),
   technologies: row.technologies ?? [],
   images: (row.project_images ?? []).sort((a, b) => a.display_order - b.display_order).map(toMedia),
   featured: row.featured,
@@ -200,6 +206,7 @@ export const toolFromRow = (row: ToolRow): PortfolioTool => ({
   problem: row.problem,
   solution: row.solution,
   benefit: row.benefit ?? undefined,
+  workflowSteps: normalizeWorkflowSteps(row.workflow_steps),
   technologies: row.technologies ?? [],
   images: (row.tool_images ?? []).sort((a, b) => a.display_order - b.display_order).map(toMedia),
   featured: row.featured,

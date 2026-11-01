@@ -16,6 +16,7 @@ import {
   projectLayoutOptions,
   resolveProjectLayout,
 } from "./layouts";
+import { automationMediaRequirement, projectMediaRequirement } from "./mediaSlots";
 import { renderPortfolio } from "./renderPortfolioV2";
 
 const runtime = (): PortfolioRuntimeData => ({
@@ -93,7 +94,7 @@ describe("Portfolio layout system", () => {
 describe("Portfolio image overlay (docs/ui-guidelines.md §8.4)", () => {
   const screenCss = Object.values(import.meta.glob<string>("../styles/portfolio-screen.css", { query: "?raw", import: "default", eager: true }))[0];
   const unframedImages = (markup: string): string[] => (markup.match(/(?:<[^<]*)?<img [^>]*>/g) ?? [])
-    .filter((tag) => !tag.includes("data-portfolio-profile-photo") && !/<span class="portfolio-media [^"]*"><img /.test(tag));
+    .filter((tag) => !tag.includes("data-portfolio-profile-photo") && !tag.includes("data-portfolio-credential-preview") && !/<span class="portfolio-media [^"]*"[^>]*><img /.test(tag));
 
   // Layouts designed without an image slot; every other layout must render its images through the frame.
   const textOnlyLayouts = ["cover.classic", "index.classic", "index.editorial", "automation.classic", "closing.classic", "closing.blue"];
@@ -128,6 +129,49 @@ describe("Portfolio image overlay (docs/ui-guidelines.md §8.4)", () => {
     expect(screenCss).toMatch(/\.portfolio-document\[data-image-overlay="on"\] \.portfolio-media::after \{[^}]*background: var\(--document-primary\);[^}]*opacity: var\(--portfolio-image-overlay-opacity\);/);
     expect(screenCss).not.toMatch(/figure::after|figcaption::after|portfolio-image-placeholder::after|portfolio-about__photo::after/);
     expect(screenCss).toContain(`--portfolio-image-overlay-opacity: ${String(DEFAULT_IMAGE_OVERLAY_OPACITY).replace(/^0/, "")};`);
+  });
+});
+
+describe("Portfolio crop ratio contract (docs/ui-guidelines.md §8.4)", () => {
+  const screenCss = Object.values(import.meta.glob<string>("../styles/portfolio-screen.css", { query: "?raw", import: "default", eager: true }))[0];
+  const media = (id: string, kind: PortfolioMedia["kind"], displayOrder: number): PortfolioMedia => ({
+    id, kind, displayOrder, storagePath: `https://example.com/${id}.jpg`, alt: { en: id, vi: id },
+  });
+  const pageOf = (markup: string, layout: string): string => markup.slice(markup.indexOf(`data-portfolio-layout="${layout}"`)).split('<section class="portfolio-page ')[0];
+  const profiles = (page: string): string[] => [...page.matchAll(/data-crop-profile="([a-z]+)"/g)].map((match) => match[1]);
+
+  it("prints every project and tool layout in the crop profiles the Admin asks the editor to adjust (mediaSlots)", () => {
+    const data = runtime();
+    data.projects[0].images = [media("cover", "cover", 1), media("gallery", "gallery", 2)];
+    data.tools[0].images = [media("tool-cover", "cover", 1), media("tool-gallery", "gallery", 2)];
+    projectLayoutOptions.forEach((option) => {
+      data.content.layouts.projectOverrides[data.projects[0].id] = option.id;
+      const requirement = projectMediaRequirement(option.id);
+      expect(profiles(pageOf(renderPortfolio(data), option.id)), option.id).toEqual([requirement.primary, requirement.supporting].filter(Boolean));
+    });
+    automationLayoutOptions.forEach((option) => {
+      data.content.layouts.automationDefault = option.id;
+      const requirement = automationMediaRequirement(option.id);
+      const page = pageOf(renderPortfolio(data), option.id);
+      expect(profiles(page), option.id).toEqual(page ? [requirement.primary, requirement.supporting].filter(Boolean) : []);
+    });
+  });
+
+  it("gives placeholders the same profile, so an empty slot has the printed shape", () => {
+    const data = runtime();
+    data.projects[0].images = [];
+    data.content.layouts.projectOverrides[data.projects[0].id] = "project.evidence";
+    expect(pageOf(renderPortfolio(data), "project.evidence")).toMatch(/<div class="portfolio-image-placeholder [^"]*" data-crop-profile="wide">/);
+  });
+
+  it("sizes frames by ratio only: one rule per profile, and no layout fixes a frame height", () => {
+    expect(screenCss).toContain('.portfolio-page [data-crop-profile="wide"] { --pf-crop-ratio: 21 / 9;');
+    expect(screenCss).toContain('.portfolio-page [data-crop-profile="landscape"] { --pf-crop-ratio: 4 / 3;');
+    expect(screenCss).toContain('.portfolio-page [data-crop-profile="portrait"] { --pf-crop-ratio: 3 / 4;');
+    expect(screenCss).toMatch(/\.portfolio-page \[data-crop-profile\] \{ height: auto; aspect-ratio: var\(--pf-crop-ratio\); \}/);
+    const frameRules = screenCss.split("}").filter((rule) => /portfolio-media|portfolio-image-placeholder|__image\b|portfolio-document-preview/.test(rule.split("{")[0] ?? ""));
+    // A frame may fill its slot (100%), never take a fixed length that ignores its crop ratio.
+    expect(frameRules.filter((rule) => /[^-]height:\s*[\d.]+(mm|px|cm|rem|em)/.test(rule)).map((rule) => rule.split("{")[0].trim())).toEqual([]);
   });
 });
 
@@ -183,6 +227,22 @@ describe("Portfolio credential pages", () => {
       expect(markup).toContain("Selected supporting documents · 2 / 2");
       expect(markup).toMatch(/>03(<| \/)/);
       expect(markup).not.toContain("Content to be supplied");
+    });
+  });
+
+  it("prints a shown evidence crop at its own ratio inside the document slot, untinted, and keeps the placeholder otherwise", () => {
+    const data = runtime();
+    data.content.layouts.includeCredentials = true;
+    data.credentials = [
+      { ...credential(1), preview: { profile: "portrait", storagePath: "portfolio-media-crops/credentials/c1/a1/portrait/x.webp", publicUrl: "https://example.com/c1.webp", width: 1350, height: 1800 } },
+      credential(2),
+    ];
+    credentialsLayoutOptions.forEach((option) => {
+      data.content.layouts.credentials = option.id;
+      const markup = renderPortfolio(data);
+      expect(markup, option.id).toContain('<div class="portfolio-document-frame portfolio-document-slot"><span class="portfolio-document-preview" data-crop-profile="portrait" data-portfolio-credential-preview><img src="https://example.com/c1.webp" alt="Credential 1"></span></div>');
+      expect(markup.match(/portfolio-document-placeholder/g), option.id).toHaveLength(1);
+      expect(markup, option.id).not.toMatch(/portfolio-media[^"]*"[^>]*><img src="https:\/\/example\.com\/c1/);
     });
   });
 
@@ -339,5 +399,143 @@ describe("Portfolio page chrome and language", () => {
     data.projects[0] = { ...data.projects[0], year: undefined, technologies: [] };
     data.content.layouts.projectDefault = "project.technical";
     expect(renderPortfolio(data)).not.toContain("<strong>—</strong>");
+  });
+});
+
+describe("Portfolio content controls (phase 2)", () => {
+  const pageOf = (markup: string, layoutId: string): string => markup.split('<section class="portfolio-page ').find((part) => part.includes(`data-portfolio-layout="${layoutId}"`)) ?? "";
+
+  it("keeps what an old draft printed: statement = About heading, footer = cover kicker, seed highlight", () => {
+    const legacy = structuredClone(portfolioContentSeed) as Partial<typeof portfolioContentSeed>;
+    delete legacy.coverStatement; delete legacy.footerText; delete legacy.coverHighlight; delete legacy.automationStatement; delete legacy.profilePage;
+    legacy.aboutHeading = { en: "My own heading", vi: "Tiêu đề của tôi" };
+    legacy.kicker = { en: "My kicker", vi: "Kicker của tôi" };
+    const data = normalizePortfolioRuntimeData({ ...runtime(), content: legacy as typeof portfolioContentSeed });
+    expect(data.content.coverStatement).toEqual(legacy.aboutHeading);
+    expect(data.content.footerText).toEqual(legacy.kicker);
+    expect(data.content.coverHighlight).toEqual(portfolioContentSeed.coverHighlight);
+    expect(data.content.profilePage).toEqual({ skillGroupIds: null, stats: ["projects", "capabilities"] });
+  });
+
+  it("prints the cover statement, highlight and footer from their own fields; an empty highlight prints no aside", () => {
+    const data = runtime();
+    data.content.layouts.cover = "cover.horizontal";
+    data.content.coverStatement = { en: "Cover statement", vi: "" };
+    data.content.footerText = { en: "Footer text", vi: "" };
+    data.content.coverHighlight = { kicker: { en: "Highlight", vi: "" }, lines: [{ en: "Line one", vi: "" }, { en: "Line two", vi: "" }] };
+    let markup = renderPortfolio(data);
+    expect(pageOf(markup, "cover.horizontal")).toContain('<p class="portfolio-cover__statement">Cover statement</p>');
+    expect(markup).toContain("<aside><span>Highlight</span><strong>Line one<br>Line two</strong></aside>");
+    expect(markup).toContain('<footer class="portfolio-page-footer"><span>Footer text</span>');
+    data.content.coverHighlight = { kicker: { en: "", vi: "" }, lines: [] };
+    markup = renderPortfolio(data);
+    expect(pageOf(markup, "cover.horizontal")).not.toContain("<aside>");
+  });
+
+  it("uses one Automation statement in every automation layout", () => {
+    const data = runtime();
+    data.content.automationStatement = { en: "One automation line.", vi: "" };
+    automationLayoutOptions.forEach((option) => {
+      data.content.layouts.automationDefault = option.id;
+      expect(pageOf(renderPortfolio(data), option.id), option.id).toContain("One automation line.");
+    });
+  });
+
+  it("puts the chosen Cover & closing image on the covers and the White closing", () => {
+    const data = runtime();
+    const [first, second] = [data.projects[0], data.projects[1]];
+    second.includeInPortfolio = true;
+    first.images = [{ id: "f1", kind: "cover", displayOrder: 1, storagePath: "https://example.com/first.jpg", alt: { en: "", vi: "" } }];
+    second.images = [{ id: "s1", kind: "cover", displayOrder: 1, storagePath: "https://example.com/second-cover.jpg", alt: { en: "", vi: "" } }, { id: "s2", kind: "gallery", displayOrder: 2, storagePath: "https://example.com/second-gallery.jpg", alt: { en: "", vi: "" } }];
+    data.content.layouts.closing = "closing.white";
+    data.content.layouts.cover = "cover.split-image";
+    expect(pageOf(renderPortfolio(data), "cover.split-image")).toContain("first.jpg");
+    data.content.mediaAssignments.feature = { projectId: second.id, mediaId: "s2" };
+    const markup = renderPortfolio(data);
+    expect(pageOf(markup, "cover.split-image")).toContain("second-gallery.jpg");
+    expect(pageOf(markup, "closing.white")).toContain("second-gallery.jpg");
+    second.includeInPortfolio = false;
+    expect(pageOf(renderPortfolio(data), "cover.split-image"), "an unselected project falls back to the first").toContain("first.jpg");
+  });
+
+  it("prints the chosen capability groups in Profile order and the chosen figures, leaving out zeros", () => {
+    const data = runtime();
+    data.content.layouts.profile = "profile.portrait";
+    const [a, b] = data.content.skillGroups;
+    data.content.profilePage = { skillGroupIds: [b.id, a.id], stats: ["tools", "credentials"] };
+    const page = pageOf(renderPortfolio(data), "profile.portrait");
+    const cards = page.slice(page.indexOf("portfolio-profile__cards"));
+    expect(cards.indexOf(`<strong>${a.title.en}</strong>`)).toBeGreaterThan(0);
+    expect(cards.indexOf(`<strong>${a.title.en}</strong>`)).toBeLessThan(cards.indexOf(`<strong>${b.title.en}</strong>`));
+    expect(page).toContain("<strong>1</strong><span>Automation tools</span>");
+    expect(page).not.toContain("Credentials</span>");
+  });
+});
+
+describe("Portfolio structured content (phase 3)", () => {
+  const pageOf = (markup: string, layoutId: string): string => markup.split('<section class="portfolio-page ').find((part) => part.includes(`data-portfolio-layout="${layoutId}"`)) ?? "";
+  const fact = (id: string, value: string, label: string) => ({ id, value: { en: value, vi: "" }, label: { en: label, vi: "" } });
+
+  it("prints a project's key facts instead of the derived year and tool count", () => {
+    const data = runtime();
+    data.content.layouts.projectDefault = "project.balanced";
+    data.projects[0].keyFacts = [fact("a", "18 km", "Bridge length"), fact("b", "37", "Bridges")];
+    const page = pageOf(renderPortfolio(data), "project.balanced");
+    expect(page).toContain("<div><strong>18 km</strong><span>Bridge length</span></div><div><strong>37</strong><span>Bridges</span></div>");
+    expect(page).not.toContain("<span>Tools</span>");
+    data.projects[0].keyFacts = [];
+    expect(pageOf(renderPortfolio(data), "project.balanced")).toContain("<span>Tools</span>");
+  });
+
+  it("tells Challenge, Approach, Outcome on Technical and Editorial in place of the summary, once the Portfolio opts in", () => {
+    const data = runtime();
+    const project = data.projects[0];
+    expect(data.content.projectText, "opt-in: old drafts keep their summaries").toBe("summary");
+    project.challenge = { en: "Challenge text", vi: "" };
+    data.content.layouts.projectDefault = "project.technical";
+    expect(renderPortfolio(data)).not.toContain("portfolio-project-story");
+    data.content.projectText = "story";
+    project.summary = { en: "Summary text", vi: "" };
+    project.challenge = { en: "Challenge text", vi: "" };
+    project.approach = { en: "", vi: "" };
+    project.outcome = { en: "Outcome text", vi: "" };
+    (["project.technical", "project.editorial"] as const).forEach((id) => {
+      data.content.layouts.projectDefault = id;
+      const page = pageOf(renderPortfolio(data), id);
+      expect(page, id).toContain('<dl class="portfolio-project-story"><div><dt>The challenge</dt><dd>Challenge text</dd></div><div><dt>Outcome</dt><dd>Outcome text</dd></div></dl>');
+      expect(page, id).not.toContain("Summary text");
+    });
+    project.challenge = undefined;
+    project.outcome = undefined;
+    data.content.layouts.projectDefault = "project.technical";
+    expect(pageOf(renderPortfolio(data), "project.technical"), "no story: the summary returns").toContain("Summary text");
+    project.challenge = { en: "Challenge text", vi: "" };
+    data.content.layouts.projectDefault = "project.balanced";
+    expect(pageOf(renderPortfolio(data), "project.balanced"), "other layouts keep the summary").not.toContain("portfolio-project-story");
+  });
+
+  it("prints the responsibilities chosen for the Portfolio, in the project order, within the layout limit", () => {
+    const data = runtime();
+    const project = data.projects[0];
+    project.responsibilities = ["one", "two", "three", "four"].map((id) => ({ id, text: { en: `Responsibility ${id}`, vi: "" } }));
+    data.content.layouts.projectDefault = "project.balanced";
+    data.content.projectResponsibilities = { [project.id]: ["four", "two"] };
+    const page = pageOf(renderPortfolio(data), "project.balanced");
+    expect(page.indexOf("Responsibility two")).toBeGreaterThan(0);
+    expect(page.indexOf("Responsibility two")).toBeLessThan(page.indexOf("Responsibility four"));
+    expect(page).not.toContain("Responsibility one");
+    data.content.projectResponsibilities = { [project.id]: [] };
+    expect(pageOf(renderPortfolio(data), "project.balanced")).not.toContain("My contribution");
+  });
+
+  it("prints a tool's own workflow steps, then its benefit as the highlighted Outcome", () => {
+    const data = runtime();
+    data.content.layouts.automationDefault = "automation.workflow";
+    data.tools[0].workflowSteps = [{ id: "s1", label: { en: "Input", vi: "" }, text: { en: "Alignment from Civil 3D", vi: "" } }];
+    data.tools[0].benefit = { en: "Hours saved per deck", vi: "" };
+    const page = pageOf(renderPortfolio(data), "automation.workflow");
+    expect(page).toContain('<p class="portfolio-kicker">Workflow</p>');
+    expect(page).toContain("<li><span>01 / Input</span><strong>Alignment from Civil 3D</strong></li>");
+    expect(page).toContain('<li class="is-outcome"><span>02 / Outcome</span><strong>Hours saved per deck</strong></li>');
   });
 });

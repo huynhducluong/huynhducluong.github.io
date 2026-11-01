@@ -27,7 +27,7 @@ const projectRequirements: Record<ProjectLayout, PortfolioMediaRequirement> = {
 const automationRequirements: Record<AutomationLayout, PortfolioMediaRequirement> = {
   "automation.classic": {},
   "automation.workflow": { primary: "wide" },
-  "automation.input-geometry": { primary: "landscape", supporting: "wide", supportingRequired: true },
+  "automation.input-geometry": { primary: "landscape", supporting: "landscape", supportingRequired: true },
 };
 
 export const projectMediaRequirement = (layout: ProjectLayout): PortfolioMediaRequirement =>

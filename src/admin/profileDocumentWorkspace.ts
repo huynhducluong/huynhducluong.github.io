@@ -27,6 +27,7 @@ import type {
   AutomationLayout,
   CredentialsLayout,
   PortfolioContent,
+  PortfolioProfileStat,
   PortfolioCredential,
   PortfolioRuntimeData,
   ProjectLayout,
@@ -41,6 +42,10 @@ import type { StoredDocumentTheme } from "../types/theme";
 import type { ProfessionalProfileContent } from "../types/website";
 import {
   PORTFOLIO_CREDENTIALS_PER_PAGE,
+  PORTFOLIO_PROFILE_CARD_GROUPS,
+  PORTFOLIO_PROFILE_CARD_ITEMS,
+  portfolioCapabilityGroups,
+  portfolioContributionLimit,
   automationLayoutOptions,
   closingLayoutOptions,
   coverLayoutOptions,
@@ -55,7 +60,8 @@ import {
 } from "../portfolio/layouts";
 import { findPortfolioLayoutIssues } from "../portfolio/safeArea";
 import { bindCvProjectRows, renderCvProjectRow } from "./cvProjectSelection";
-import { renderPortfolioMediaRow, syncPortfolioMediaPreview, syncPortfolioMediaRow } from "./portfolioMediaSelection";
+import { portfolioLayoutLabel, renderPortfolioFeatureRow, renderPortfolioMediaRow, syncPortfolioFeatureRow, syncPortfolioMediaPreview, syncPortfolioMediaRow } from "./portfolioMediaSelection";
+import { bindPortfolioProjectRows, renderPortfolioProjectRow, syncPortfolioProjectRow } from "./portfolioProjectSelection";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { confirmAdmin } from "./confirmDialog";
@@ -75,6 +81,7 @@ import {
   renderAdminFieldLabel,
   renderAdminPreviewToolbar,
   renderAdminPreviewLanguageToggle,
+  renderAdminSegmented,
   renderAdminSelectControl,
   renderAdminSelectionHeading,
   renderAdminSectionCard,
@@ -233,7 +240,7 @@ const portfolioOptionalLayoutPicker = <T extends string>(
       <span class="admin-layout-picker__optional-icon" aria-hidden="true"></span>
     </button>
   </div>
-  <div class="admin-layout-picker__options" id="portfolio-credentials-layout-options" data-layout-panel hidden>${options.map((option) => `<label class="admin-layout-option" data-layout-preview="${escapeHtml(option.preview)}"><input type="radio" name="${escapeHtml(name)}" value="${escapeHtml(option.id)}"${option.id === value ? " checked" : ""}><span class="admin-layout-option__thumbnail" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="admin-layout-option__copy"><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.description)}</small></span></label>`).join("")}<p class="admin-layout-picker__note">Safe document placeholders are used until public credential previews are prepared.</p></div>
+  <div class="admin-layout-picker__options" id="portfolio-credentials-layout-options" data-layout-panel hidden>${options.map((option) => `<label class="admin-layout-option" data-layout-preview="${escapeHtml(option.preview)}"><input type="radio" name="${escapeHtml(name)}" value="${escapeHtml(option.id)}"${option.id === value ? " checked" : ""}><span class="admin-layout-option__thumbnail" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span class="admin-layout-option__copy"><strong>${escapeHtml(option.label)}</strong><small>${escapeHtml(option.description)}</small></span></label>`).join("")}<p class="admin-layout-picker__note">Each credential prints its evidence shown in the Portfolio (Profile › Credentials › Adjust crops), exactly as cropped; the others print a placeholder.</p></div>
 </div>`;
 
 const legacyProjectLayoutLabel = (value: string): string => value === "feature" ? "Legacy Feature" : value === "compact" ? "Legacy Compact" : "Legacy Standard";
@@ -273,7 +280,13 @@ const portfolioMediaAssignmentsPanel = (runtime: PortfolioRuntimeData): string =
   const selectedToolCount = tools.filter((item) => item.includeInPortfolio).length;
   const projectRows = projects.map((item) => renderPortfolioMediaRow({ kind: "project", id: item.id, name: item.name.en, images: item.images, assignment: runtime.content.mediaAssignments.projects[item.id], layout: resolveProjectLayout(runtime, item.id, item.portfolioLayout), selected: Boolean(item.includeInPortfolio) })).join("");
   const toolRows = tools.map((item) => renderPortfolioMediaRow({ kind: "tool", id: item.id, name: item.name, images: item.images, assignment: runtime.content.mediaAssignments.tools[item.id], layout: resolveAutomationLayout(runtime, item.id), selected: Boolean(item.includeInPortfolio) })).join("");
+  const featureRow = projects.length ? renderPortfolioFeatureRow({
+    projects: projects.map((item) => ({ id: item.id, name: item.name.en, images: item.images, selected: Boolean(item.includeInPortfolio) })),
+    assignments: runtime.content.mediaAssignments.projects,
+    choice: runtime.content.mediaAssignments.feature,
+  }) : "";
   return `<div class="admin-portfolio-media-assignments" data-portfolio-media-assignments>
+    ${featureRow ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="feature"${selectedProjectCount ? "" : " hidden"}><summary>Cover &amp; closing</summary><div>${featureRow}</div></details>` : ""}
     ${projectRows ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="project"${selectedProjectCount ? "" : " hidden"}><summary>Projects <span data-portfolio-media-group-count>${selectedProjectCount}</span></summary><div>${projectRows}</div></details>` : ""}
     ${toolRows ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="tool"${selectedToolCount ? "" : " hidden"}><summary>Automation tools <span data-portfolio-media-group-count>${selectedToolCount}</span></summary><div>${toolRows}</div></details>` : ""}
     <p class="admin-empty" data-portfolio-media-empty${selectedProjectCount || selectedToolCount ? " hidden" : ""}>Select projects or tools to configure their Portfolio visuals.</p>
@@ -313,6 +326,16 @@ const portfolioAppearancePanel = (runtime: PortfolioRuntimeData): string => {
         ${portfolioOptionalLayoutPicker("Credentials", `Education and supporting documents · ${PORTFOLIO_CREDENTIALS_PER_PAGE} per page`, "layout_credentials", content.layouts.credentials, credentialsLayoutOptions, "layout_credentials_enabled", content.layouts.includeCredentials)}
         ${portfolioLayoutPicker("Thank you", "Portfolio closing", "layout_closing", content.layouts.closing, closingLayoutOptions)}
       </div>`,
+    }),
+    renderAdminSectionCard({
+      title: "Project pages",
+      note: "Text beside the visuals on Technical and Editorial pages.",
+      content: renderAdminSegmented({
+        legend: "Project text",
+        name: "portfolio_project_text",
+        value: content.projectText,
+        options: [{ value: "summary", label: "Summary" }, { value: "story", label: "Challenge · Approach · Outcome" }],
+      }),
     }),
     renderAdminSectionCard({ title: "Item layout overrides", note: "Optional. Give an item its own layout.", content: overrides }),
     renderAdminSectionCard({
@@ -826,13 +849,21 @@ const readCvRuntimeForm = (formElement: HTMLFormElement): CvRuntimeData => {
 const portfolioContentPanel = (content: PortfolioContent): string => [
   renderAdminSectionCard({
     title: "Portfolio cover",
-    note: "Control the document identity shown on the cover.",
+    note: "Cover identity, statement and the footer of every page.",
     content: `<div class="admin-form-grid">
       ${field("Portfolio version", "portfolio_version", content.version)}
       ${renderAdminYearSelect({ label: "Cover year", name: "portfolio_year", value: content.year })}
     </div>
     ${field("Document title", "portfolio_title", content.title, "text", true)}
-    ${localizedFields("Cover kicker", "portfolio_kicker", content.kicker)}`,
+    ${localizedFields("Cover kicker", "portfolio_kicker", content.kicker)}
+    ${localizedFields("Cover statement", "portfolio_cover_statement", content.coverStatement)}
+    ${localizedFields("Footer text", "portfolio_footer_text", content.footerText)}`,
+  }),
+  renderAdminSectionCard({
+    title: "Cover highlight",
+    note: "Up to 3 lines beside the Horizontal cover; empty prints none.",
+    content: `${localizedFields("Highlight kicker", "portfolio_highlight_kicker", content.coverHighlight.kicker)}
+    ${localizedAreas("Highlight lines, one per line", "portfolio_highlight_lines", { en: content.coverHighlight.lines.map((line) => line.en).join("\n"), vi: content.coverHighlight.lines.map((line) => line.vi).join("\n") }, 3)}`,
   }),
   renderAdminSectionCard({
     title: "Target profile",
@@ -843,9 +874,10 @@ const portfolioContentPanel = (content: PortfolioContent): string => [
   }),
   renderAdminSectionCard({
     title: "Portfolio narrative",
-    note: "Edit the About and closing page content.",
+    note: "About, Automation and closing page content.",
     content: `${localizedFields("About kicker", "about_kicker", content.aboutKicker)}
     ${localizedFields("About heading", "about_heading", content.aboutHeading)}
+    ${localizedFields("Automation statement", "automation_statement", content.automationStatement)}
     ${localizedFields("Closing kicker", "closing_kicker", content.closingKicker)}
     ${localizedFields("Closing heading", "closing_heading", content.closingHeading)}
     ${localizedAreas("Closing text", "closing_text", content.closingText, 3)}`,
@@ -857,10 +889,10 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
   note: "Order follows source libraries; layouts live in Appearance.",
   content: `<div class="admin-document-selection">
     <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Projects", required: true, mode: "selected", selected: runtime.projects.filter((item) => item.status === "published" && item.includeInPortfolio).length, total: runtime.projects.filter((item) => item.status === "published").length })}
-    ${runtime.projects.map((item) => {
-      const ready = item.status === "published";
-      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_project" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
-    }).join("")}
+    <div class="admin-cv-selection__list">${runtime.projects.map((item) => {
+      const layout = resolveProjectLayout(runtime, item.id, item.portfolioLayout);
+      return renderPortfolioProjectRow({ project: item, ready: item.status === "published", layoutLabel: portfolioLayoutLabel("project", layout), limit: portfolioContributionLimit(layout), chosenIds: runtime.content.projectResponsibilities[item.id] });
+    }).join("")}</div>
     </section>
     <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Automation tools", mode: "selected", selected: runtime.tools.filter((item) => item.status === "published" && item.includeInPortfolio).length, total: runtime.tools.filter((item) => item.status === "published").length })}
     ${runtime.tools.map((item) => {
@@ -891,6 +923,38 @@ const portfolioBackgroundPanel = (runtime: PortfolioRuntimeData): string => {
         ${backgroundGroup({ group: "credentials", title: "Credentials", rows, selected: credentials.filter((item) => item.includeInPortfolio).length, total: credentials.length, empty: "No Ready credentials in Professional Profile. The Credentials page keeps safe placeholders." })}
       </div>`,
     actions: '<button class="button button--secondary" type="button" data-admin-view="profile">Edit Professional Profile</button>',
+  }) + portfolioProfilePagePanel(runtime);
+};
+
+const profileStatOptions: Array<[PortfolioProfileStat, string]> = [["projects", "Selected projects"], ["tools", "Automation tools"], ["capabilities", "Capabilities"], ["credentials", "Credentials"]];
+
+/** Background › Profile page: which skill groups become capability cards, and which two figures the Portrait profile prints. */
+const portfolioProfilePagePanel = (runtime: PortfolioRuntimeData): string => {
+  const groups = runtime.content.skillGroups;
+  const chosen = new Set(portfolioCapabilityGroups(runtime).map((group) => group.id));
+  const rows = groups.map((group) => backgroundRow({
+    group: "skillGroups",
+    id: group.id,
+    title: group.title.en || "Untitled skill group",
+    meta: `${group.items.length} item${group.items.length === 1 ? "" : "s"}${group.items.length > PORTFOLIO_PROFILE_CARD_ITEMS ? ` · first ${PORTFOLIO_PROFILE_CARD_ITEMS} printed` : ""}`,
+    selected: chosen.has(group.id),
+    inputName: "portfolio_capability_group",
+  })).join("");
+  const figure = (label: string, name: string, value: PortfolioProfileStat): string => `<label>${renderAdminFieldLabel(label)}${renderAdminSelectControl({ name, options: profileStatOptions.map(([id, text]) => `<option value="${id}"${id === value ? " selected" : ""}>${text}</option>`).join("") })}</label>`;
+  return renderAdminSectionCard({
+    title: "Profile page",
+    note: `Up to ${PORTFOLIO_PROFILE_CARD_GROUPS} capability cards and two figures; zeros are hidden.`,
+    className: "admin-cv-background",
+    content: `<div class="admin-cv-background__groups">
+      <section data-cv-background-group="skillGroups" data-selection-group data-selection-mode="selected" data-capability-groups data-capability-limit="${PORTFOLIO_PROFILE_CARD_GROUPS}">
+        ${renderAdminSelectionHeading({ title: "Capability cards", mode: "selected", selected: chosen.size, total: groups.length })}
+        <div class="admin-cv-background__list">${rows || '<p class="admin-empty">No skill groups in Professional Profile.</p>'}</div>
+      </section>
+      <section>
+        <header class="admin-selection-heading"><h4>Figures</h4></header>
+        <div class="admin-form-grid">${figure("First figure", "portfolio_stat_first", runtime.content.profilePage.stats[0])}${figure("Second figure", "portfolio_stat_second", runtime.content.profilePage.stats[1])}</div>
+      </section>
+    </div>`,
   });
 };
 
@@ -949,8 +1013,41 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
       ...(supportingMediaId && supportingMediaId !== primaryMediaId ? { supportingMediaId } : {}),
     };
   });
+  const localizedValue = (name: string): LocalizedText => ({ en: text(form, `${name}_en`), vi: text(form, `${name}_vi`) });
+  const lines = (name: string): string[] => text(form, name).split("\n").map((line) => line.trim()).filter(Boolean);
+  const highlightEn = lines("portfolio_highlight_lines_en");
+  const highlightVi = lines("portfolio_highlight_lines_vi");
+  const capabilityIds = form.getAll("portfolio_capability_group").map(String);
+  const statValue = (name: string, fallback: PortfolioProfileStat): PortfolioProfileStat => {
+    const value = text(form, name);
+    return profileStatOptions.some(([id]) => id === value) ? value as PortfolioProfileStat : fallback;
+  };
+  // Responsibilities chosen per project; a project whose row was not rendered keeps its saved choice.
+  const projectResponsibilities = { ...current.content.projectResponsibilities };
+  current.projects.forEach((item) => {
+    if (form.has(`portfolio_responsibilities_${item.id}`)) projectResponsibilities[item.id] = form.getAll(`portfolio_responsibility_${item.id}`).map(String);
+  });
+  const featureProjectId = text(form, "portfolio_feature_project");
+  const featureMediaId = text(form, "portfolio_feature_media");
   const content: PortfolioContent = {
     ...current.content,
+    coverStatement: form.has("portfolio_cover_statement_en") ? localizedValue("portfolio_cover_statement") : current.content.coverStatement,
+    footerText: form.has("portfolio_footer_text_en") ? localizedValue("portfolio_footer_text") : current.content.footerText,
+    coverHighlight: form.has("portfolio_highlight_kicker_en")
+      ? {
+        kicker: localizedValue("portfolio_highlight_kicker"),
+        lines: Array.from({ length: Math.min(3, Math.max(highlightEn.length, highlightVi.length)) }, (_, index) => ({ en: highlightEn[index] ?? "", vi: highlightVi[index] ?? "" })),
+      }
+      : current.content.coverHighlight,
+    projectResponsibilities,
+    projectText: form.has("portfolio_project_text") ? (text(form, "portfolio_project_text") === "story" ? "story" : "summary") : current.content.projectText,
+    automationStatement: form.has("automation_statement_en") ? localizedValue("automation_statement") : current.content.automationStatement,
+    profilePage: form.has("portfolio_stat_first")
+      ? {
+        skillGroupIds: capabilityIds.slice(0, PORTFOLIO_PROFILE_CARD_GROUPS),
+        stats: [statValue("portfolio_stat_first", current.content.profilePage.stats[0]), statValue("portfolio_stat_second", current.content.profilePage.stats[1])],
+      }
+      : current.content.profilePage,
     version: text(form, "portfolio_version") || current.content.version,
     year: text(form, "portfolio_year"),
     title: text(form, "portfolio_title"),
@@ -984,6 +1081,9 @@ const readPortfolioForm = (formElement: HTMLFormElement): PortfolioRuntimeData =
     mediaAssignments: {
       projects: projectMediaAssignments,
       tools: toolMediaAssignments,
+      ...(form.has("portfolio_feature_project")
+        ? featureProjectId ? { feature: { projectId: featureProjectId, ...(featureMediaId ? { mediaId: featureMediaId } : {}) } } : {}
+        : current.content.mediaAssignments.feature ? { feature: current.content.mediaAssignments.feature } : {}),
     },
     profile: {
       ...current.content.profile,
@@ -1211,6 +1311,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   let layoutIssues: string[] = [];
   bindAdminSelectionCounts(root);
   bindCvProjectRows(root);
+  bindPortfolioProjectRows(root);
   root.querySelector<HTMLButtonElement>("[data-profile-document-retry]")?.addEventListener("click", () => {
     state.phase[kind] = "idle";
     delete state.errors[kind];
@@ -1562,6 +1663,27 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     if (empty) empty.hidden = selectedCount + credentialCount > 0;
     const mediaEmpty = mediaAssignments?.querySelector<HTMLElement>("[data-portfolio-media-empty]");
     if (mediaEmpty) mediaEmpty.hidden = selectedCount > 0;
+    // Cover & closing follows the selected projects: it is offered only while at least one is selected.
+    const selectedProjectIds = new Set(Array.from(form.querySelectorAll<HTMLInputElement>('input[name="portfolio_project"]:checked'), (input) => input.value));
+    const featureGroup = mediaAssignments?.querySelector<HTMLDetailsElement>('[data-portfolio-media-group="feature"]');
+    if (featureGroup) {
+      featureGroup.hidden = selectedProjectIds.size === 0;
+      if (featureGroup.hidden) featureGroup.open = false;
+    }
+    const featureRow = mediaAssignments?.querySelector<HTMLElement>("[data-portfolio-feature-row]");
+    if (featureRow) syncPortfolioFeatureRow(featureRow, selectedProjectIds);
+  };
+  /** Background › Profile page: at most PORTFOLIO_PROFILE_CARD_GROUPS capability cards; the rest wait disabled. */
+  const syncCapabilityLimit = (): void => {
+    const group = form.querySelector<HTMLElement>("[data-capability-groups]");
+    if (!group) return;
+    const limit = Number(group.dataset.capabilityLimit) || PORTFOLIO_PROFILE_CARD_GROUPS;
+    const boxes = [...group.querySelectorAll<HTMLInputElement>('input[name="portfolio_capability_group"]')];
+    const full = boxes.filter((box) => box.checked).length >= limit;
+    const archived = activeDocument?.status === "archived";
+    boxes.forEach((box) => {
+      box.disabled = archived || (full && !box.checked);
+    });
   };
   const syncPortfolioMediaRequirements = (): void => {
     if (kind !== "portfolio" || !state.portfolio) return;
@@ -1577,6 +1699,20 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       if (layout) syncPortfolioMediaRow(item, layout);
     });
   };
+  /** Project rows name their current layout and its print limit, so the state line follows Appearance changes. */
+  const syncPortfolioProjectLayouts = (): void => {
+    form.querySelectorAll<HTMLElement>("[data-portfolio-project-card]").forEach((card) => {
+      const id = card.querySelector<HTMLInputElement>("[data-portfolio-project-include]")?.value;
+      if (!id) return;
+      const defaultLayout = (form.elements.namedItem("layout_project_default") as HTMLSelectElement | null)?.value;
+      const overrideLayout = (form.elements.namedItem(`project_layout_${id}`) as HTMLSelectElement | null)?.value;
+      const layout = (overrideLayout && overrideLayout !== "default" ? overrideLayout : defaultLayout) as ProjectLayout | undefined;
+      if (!layout) return;
+      card.dataset.layoutLabel = portfolioLayoutLabel("project", layout);
+      card.dataset.limit = String(portfolioContributionLimit(layout));
+      syncPortfolioProjectRow(card);
+    });
+  };
   const keepMediaAssignmentsDistinct = (item: HTMLElement): void => {
     const primary = item.querySelector<HTMLSelectElement>("[data-portfolio-primary-select]");
     const supporting = item.querySelector<HTMLSelectElement>("[data-portfolio-supporting-select]");
@@ -1585,6 +1721,9 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   };
   syncPortfolioLayoutOverrides();
   syncPortfolioMediaRequirements();
+  syncCapabilityLimit();
+  form.querySelector<HTMLElement>("[data-portfolio-feature-row]")?.addEventListener("change", () => syncPortfolioLayoutOverrides());
+  form.querySelector<HTMLElement>("[data-capability-groups]")?.addEventListener("change", () => syncCapabilityLimit());
   form.querySelectorAll<HTMLElement>("[data-portfolio-media-item]").forEach((item) => {
     item.querySelectorAll<HTMLSelectElement>("[data-portfolio-primary-select], [data-portfolio-supporting-select]")
       .forEach((select) => select.addEventListener("change", () => keepMediaAssignmentsDistinct(item)));
@@ -1596,6 +1735,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       || target.name.startsWith("project_layout_")
       || target.name.startsWith("tool_layout_")) {
       syncPortfolioMediaRequirements();
+      syncPortfolioProjectLayouts();
     }
   });
   form.addEventListener("click", (event) => {

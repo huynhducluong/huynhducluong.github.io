@@ -3,6 +3,7 @@ import type { ProfilePhotoAsset } from "../types/profilePhoto";
 import { createProfilePhoto } from "../services/profilePhotoRepository";
 import { automaticCrop, cropPreviewStyle, cropSourceRect, type CropState } from "./cropGeometry";
 import { bindCropStage, waitForCropImage, type CropStage } from "./cropStage";
+import { canvasToBlob, drawRotated, normalizeTurns, rotationLabel, type QuarterTurns } from "./imageRotation";
 import { renderAdminCropZoomControls, renderAdminDialogHeader, renderAdminFieldLabel, setAdminCropZoomValue, setButtonBusy } from "./ui";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
@@ -37,7 +38,7 @@ export const renderProfilePhotoCropDialog = (): string => `
     <div class="admin-photo-crop-dialog__layout">
       <section class="admin-photo-crop-editor" aria-label="Photo crop editor">
         <div class="admin-photo-crop-stage" data-profile-photo-crop-stage></div>
-        ${renderAdminCropZoomControls({ prefix: "profile-photo", maxZoom, resetLabel: "Reset to auto", resetTitle: "Reset to the automatic centered crop" })}
+        ${renderAdminCropZoomControls({ prefix: "profile-photo", maxZoom, resetLabel: "Reset to auto", resetTitle: "Reset to the automatic centered crop", rotate: true })}
       </section>
       <aside class="admin-photo-crop-preview">
         <p class="section-kicker">Preview</p>
@@ -97,6 +98,12 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
   let cropper: Cropper | undefined;
   let cropStage: CropStage | undefined;
   let cropState: CropState | undefined;
+  // Rotation redraws the chosen file (never a rotated copy of a copy); export reads the full-quality canvas.
+  let originalImage: HTMLImageElement | undefined;
+  let originalUrl: string | undefined;
+  let rotatedCanvas: HTMLCanvasElement | undefined;
+  let turns: QuarterTurns = 0;
+  let rotating = false;
 
   /** Both previews and the exported file read the same CropState (docs/admin-ui-guidelines.md §7.1). */
   const renderPreviews = (): void => {
@@ -114,7 +121,7 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
     });
   };
 
-  const cleanup = (): void => {
+  const resetStage = (): void => {
     cropStage?.dispose();
     cropper?.destroy();
     stage.replaceChildren();
@@ -122,11 +129,55 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
     cropper = undefined;
     cropStage = undefined;
     cropState = undefined;
+  };
+
+  const cleanup = (): void => {
+    resetStage();
     sourceImage = undefined;
     setAdminCropZoomValue(zoom, zoomValue, 1);
     input.value = "";
-    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
+    if (sourceUrl && sourceUrl !== originalUrl) URL.revokeObjectURL(sourceUrl);
+    if (originalUrl) URL.revokeObjectURL(originalUrl);
     sourceUrl = undefined;
+    originalUrl = undefined;
+    originalImage = undefined;
+    rotatedCanvas = undefined;
+    turns = 0;
+  };
+
+  /** Starts the crop editor on the current (possibly rotated) source with an automatic centered crop. */
+  const startCropper = async (image: HTMLImageElement): Promise<void> => {
+    resetStage();
+    meta.textContent = [`${image.naturalWidth} × ${image.naturalHeight}px source`, rotationLabel(turns), "output 1024 × 1024px WebP"].filter(Boolean).join(" · ");
+    cropper = new Cropper(image, { container: stage, template: cropperTemplate });
+    const cropImage = cropper.getCropperImage();
+    const selection = cropper.getCropperSelection();
+    if (!cropImage || !selection) throw new Error("The crop editor could not start.");
+    await waitForCropImage(cropImage);
+    cropStage = bindCropStage(cropImage, selection, {
+      maxZoom,
+      onChange: (state, change) => {
+        cropState = state;
+        setAdminCropZoomValue(zoom, zoomValue, change.zoom);
+        renderPreviews();
+      },
+    });
+    cropStage.setCrop(automaticCrop(image.naturalWidth, image.naturalHeight, 1));
+  };
+
+  const rotate = async (delta: number): Promise<void> => {
+    if (!originalImage || rotating) return;
+    rotating = true;
+    try {
+      turns = normalizeTurns(turns + delta);
+      if (sourceUrl && sourceUrl !== originalUrl) URL.revokeObjectURL(sourceUrl);
+      rotatedCanvas = turns ? drawRotated(originalImage, turns) : undefined;
+      sourceUrl = rotatedCanvas ? URL.createObjectURL(await canvasToBlob(rotatedCanvas, "image/webp", 0.95)) : originalUrl;
+      sourceImage = rotatedCanvas ? await loadImage(sourceUrl as string) : originalImage;
+      await startCropper(sourceImage);
+    } finally {
+      rotating = false;
+    }
   };
   const close = (): void => {
     if (dialog.open) dialog.close();
@@ -144,6 +195,15 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
   dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-out]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() - 0.1));
   dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-in]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() + 0.1));
   zoom.addEventListener("input", () => cropStage?.setZoom(Number(zoom.value)));
+  dialog.querySelector<HTMLButtonElement>("[data-profile-photo-rotate-left]")?.addEventListener("click", () => void rotate(-1).catch((error: Error) => callbacks.notify(error.message, "error")));
+  dialog.querySelector<HTMLButtonElement>("[data-profile-photo-rotate-right]")?.addEventListener("click", () => void rotate(1).catch((error: Error) => callbacks.notify(error.message, "error")));
+  dialog.addEventListener("keydown", (event) => {
+    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement) return;
+    if (event.key === "[" || event.key === "]") {
+      event.preventDefault();
+      void rotate(event.key === "]" ? 1 : -1).catch((error: Error) => callbacks.notify(error.message, "error"));
+    }
+  });
   dialog.querySelector<HTMLButtonElement>("[data-profile-photo-reset]")?.addEventListener("click", () => {
     if (sourceImage) cropStage?.setCrop(automaticCrop(sourceImage.naturalWidth, sourceImage.naturalHeight, 1));
   });
@@ -162,28 +222,16 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
       return;
     }
     try {
-      sourceUrl = URL.createObjectURL(file);
+      originalUrl = URL.createObjectURL(file);
+      sourceUrl = originalUrl;
       const image = await loadImage(sourceUrl);
       sourceImage = image;
+      originalImage = image;
       if (image.naturalWidth * image.naturalHeight > maxSourcePixels) throw new Error("Source image is too large to crop safely (maximum 80 megapixels).");
       nameInput.value = defaultPhotoName(file.name);
-      meta.textContent = `${image.naturalWidth} × ${image.naturalHeight}px source · output 1024 × 1024px WebP`;
       dialog.showModal();
       await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-      cropper = new Cropper(image, { container: stage, template: cropperTemplate });
-      const cropImage = cropper.getCropperImage();
-      const selection = cropper.getCropperSelection();
-      if (!cropImage || !selection) throw new Error("The crop editor could not start.");
-      await waitForCropImage(cropImage);
-      cropStage = bindCropStage(cropImage, selection, {
-        maxZoom,
-        onChange: (state, change) => {
-          cropState = state;
-          setAdminCropZoomValue(zoom, zoomValue, change.zoom);
-          renderPreviews();
-        },
-      });
-      cropStage.setCrop(automaticCrop(image.naturalWidth, image.naturalHeight, 1));
+      await startCropper(image);
       requestAnimationFrame(() => nameInput.focus({ preventScroll: true }));
     } catch (error) {
       cleanup();
@@ -211,7 +259,7 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
       context.imageSmoothingEnabled = true;
       context.imageSmoothingQuality = "high";
       const { sx, sy, sw, sh } = cropSourceRect(state, source.naturalWidth, source.naturalHeight);
-      context.drawImage(source, sx, sy, sw, sh, 0, 0, outputSize, outputSize);
+      context.drawImage(rotatedCanvas ?? source, sx, sy, sw, sh, 0, 0, outputSize, outputSize);
       const blob = await canvasToWebp(canvas);
       const photo = await createProfilePhoto(name, blob);
       close();

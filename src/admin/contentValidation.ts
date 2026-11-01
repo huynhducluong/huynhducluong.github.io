@@ -41,6 +41,11 @@ export const validateProjectReadiness = (project: PortfolioProject): ContentVali
   if (!hasText(project.outcome?.en)) errors.push("Project outcome (EN) is required.");
   if (!project.responsibilities.some((item) => hasText(item.text.en))) errors.push("Add at least one English responsibility.");
   if (!project.technologies.length) errors.push("Add at least one technology.");
+  // Key facts are optional; a fact that is started must be complete in English, or the Portfolio prints half of it.
+  (project.keyFacts ?? []).forEach((fact, index) => {
+    if (!hasText(fact.value.en) || !hasText(fact.label.en)) errors.push(`Key fact ${index + 1} needs an English value and label.`);
+    else if (!hasText(fact.value.vi) || !hasText(fact.label.vi)) warnings.push(`Key fact ${index + 1} is missing Vietnamese content.`);
+  });
 
   warnings.push(...missingTranslation(project.name, "Project name"));
   warnings.push(...missingTranslation(project.location, "Project location"));
@@ -67,6 +72,10 @@ export const validateToolReadiness = (tool: PortfolioTool): ContentValidationRes
   if (!hasText(tool.solution.en)) errors.push("Tool solution (EN) is required.");
   if (!hasText(tool.benefit?.en)) errors.push("Tool benefit (EN) is required.");
   if (!tool.technologies.length) errors.push("Add at least one technology.");
+  (tool.workflowSteps ?? []).forEach((step, index) => {
+    if (!hasText(step.label.en) || !hasText(step.text.en)) errors.push(`Workflow step ${index + 1} needs an English label and text.`);
+    else if (!hasText(step.label.vi) || !hasText(step.text.vi)) warnings.push(`Workflow step ${index + 1} is missing Vietnamese content.`);
+  });
   warnings.push(...missingTranslation(tool.problem, "Tool problem"));
   warnings.push(...missingTranslation(tool.solution, "Tool solution"));
   warnings.push(...missingTranslation(tool.benefit, "Tool benefit"));

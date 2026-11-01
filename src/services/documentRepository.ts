@@ -2,9 +2,16 @@ import { portfolioContentSeed } from "../data/portfolioSeed";
 import type { LocalizedText } from "../types/career";
 import type {
   PortfolioContent,
+  PortfolioCoverHighlight,
   PortfolioImageOverlay,
+  PortfolioProfilePage,
+  PortfolioProfileStat,
   PortfolioRuntimeData,
 } from "../types/portfolio";
+
+/** Content as stored: drafts saved before a field existed simply lack it; normalizing fills it from what they printed. */
+type PortfolioContentV2Field = "coverStatement" | "coverHighlight" | "footerText" | "automationStatement" | "profilePage" | "projectResponsibilities" | "projectText";
+type StoredPortfolioContent = Omit<PortfolioContent, PortfolioContentV2Field> & Partial<Pick<PortfolioContent, PortfolioContentV2Field>>;
 import { supabase } from "./supabaseClient";
 import {
   projectFromRow,
@@ -52,8 +59,37 @@ const normalizeImageOverlay = (
   };
 };
 
-export const normalizePortfolioContent = (content: PortfolioContent): PortfolioContent => ({
+const profileStats: PortfolioProfileStat[] = ["projects", "tools", "capabilities", "credentials"];
+const isProfileStat = (value: unknown): value is PortfolioProfileStat => profileStats.includes(value as PortfolioProfileStat);
+
+/** Drafts saved before these fields existed print exactly what they printed before. */
+const normalizeProfilePage = (value: Partial<PortfolioProfilePage> | null | undefined): PortfolioProfilePage => ({
+  skillGroupIds: Array.isArray(value?.skillGroupIds) ? value.skillGroupIds.filter((id: unknown): id is string => typeof id === "string") : null,
+  stats: [
+    isProfileStat(value?.stats?.[0]) ? value.stats[0] : portfolioContentSeed.profilePage.stats[0],
+    isProfileStat(value?.stats?.[1]) ? value.stats[1] : portfolioContentSeed.profilePage.stats[1],
+  ],
+});
+
+const normalizeCoverHighlight = (value: Partial<PortfolioCoverHighlight> | null | undefined): PortfolioCoverHighlight => value
+  ? {
+    kicker: localized(value.kicker as LocalizedText | string, { en: "", vi: "" }),
+    lines: (Array.isArray(value.lines) ? value.lines : []).slice(0, 3).map((line: unknown) => localized(line as LocalizedText | string, { en: "", vi: "" })),
+  }
+  : structuredClone(portfolioContentSeed.coverHighlight);
+
+export const normalizePortfolioContent = (content: StoredPortfolioContent): PortfolioContent => ({
   ...content,
+  coverStatement: localized((content as Partial<PortfolioContent>).coverStatement as LocalizedText | undefined, localized(content.aboutHeading as LocalizedText | string, portfolioContentSeed.aboutHeading)),
+  coverHighlight: normalizeCoverHighlight((content as Partial<PortfolioContent>).coverHighlight),
+  footerText: localized((content as Partial<PortfolioContent>).footerText as LocalizedText | undefined, localized(content.kicker as LocalizedText | string, portfolioContentSeed.kicker)),
+  automationStatement: localized((content as Partial<PortfolioContent>).automationStatement as LocalizedText | undefined, portfolioContentSeed.automationStatement),
+  profilePage: normalizeProfilePage((content as Partial<PortfolioContent>).profilePage),
+  // Opt-in: drafts saved before the choice existed keep printing their summaries.
+  projectText: content.projectText === "story" ? "story" : "summary",
+  projectResponsibilities: Object.fromEntries(Object.entries(content.projectResponsibilities ?? {})
+    .filter((entry): entry is [string, string[]] => Array.isArray(entry[1]))
+    .map(([id, ids]) => [id, ids.filter((item): item is string => typeof item === "string")])),
   kicker: localized(content.kicker as LocalizedText | string, portfolioContentSeed.kicker),
   aboutKicker: localized(content.aboutKicker as LocalizedText | string, portfolioContentSeed.aboutKicker),
   aboutHeading: localized(content.aboutHeading as LocalizedText | string, portfolioContentSeed.aboutHeading),
@@ -65,6 +101,7 @@ export const normalizePortfolioContent = (content: PortfolioContent): PortfolioC
   mediaAssignments: {
     projects: content.mediaAssignments?.projects ?? {},
     tools: content.mediaAssignments?.tools ?? {},
+    ...(content.mediaAssignments?.feature?.projectId ? { feature: { projectId: content.mediaAssignments.feature.projectId, ...(content.mediaAssignments.feature.mediaId ? { mediaId: content.mediaAssignments.feature.mediaId } : {}) } } : {}),
   },
   profile: normalizeProfile(content.profile),
 });

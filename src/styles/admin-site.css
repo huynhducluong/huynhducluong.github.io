@@ -555,6 +555,9 @@ button.admin-profile-photo-control {
   gap: .5rem;
 }
 
+/* Rotate sits after zoom as its own small group: same icon buttons, a hairline between the groups. */
+.admin-crop-rotate { display: inline-flex; flex: 0 0 auto; align-items: center; gap: .5rem; margin-left: .25rem; padding-left: .75rem; border-left: 1px solid var(--admin-color-border); }
+
 .admin-photo-crop-controls label {
   display: flex;
   min-width: 8rem;
@@ -835,6 +838,18 @@ button.admin-profile-photo-control {
   font-size: var(--admin-text-2xs);
   line-height: 1.45;
 }
+
+/* Credential evidence only: printed orientation and the explicit Portfolio opt-in, under the format preview. */
+.admin-crop-evidence-settings {
+  display: grid;
+  gap: .5rem;
+  padding-top: .6rem;
+  border-top: 1px solid var(--admin-color-border);
+}
+
+.admin-crop-evidence-settings[hidden] { display: none; }
+
+.admin-crop-evidence-settings .admin-field-hint { margin: -.25rem 0 0; }
 
 .admin-project-cover-crop-footer {
   display: grid;
@@ -1381,7 +1396,7 @@ button.admin-profile-photo-control {
 .admin-credential-files__empty { margin: 0; color: var(--admin-color-text-muted); font-size: var(--admin-text-xs); }
 .admin-credential-files ul { display: grid; gap: .4rem; margin: 0; padding: 0; list-style: none; }
 .admin-credential-files li,
-.admin-credential-pending { display: grid; min-width: 0; grid-template-columns: 2.4rem minmax(0, 1fr) auto auto; align-items: center; gap: .6rem; padding: .5rem .6rem; border: 1px solid var(--admin-color-border); border-radius: var(--admin-control-radius); background: var(--admin-color-surface); }
+.admin-credential-pending { display: grid; min-width: 0; grid-template-columns: 2.4rem minmax(0, 1fr) auto; align-items: center; gap: .6rem; padding: .5rem .6rem; border: 1px solid var(--admin-color-border); border-radius: var(--admin-control-radius); background: var(--admin-color-surface); }
 .admin-credential-pending { grid-template-columns: 2.4rem minmax(0, 1fr) minmax(9rem, 12rem) auto auto; border-style: dashed; background: var(--admin-color-selected); }
 .admin-credential-pending[hidden] { display: none; }
 .admin-credential-pending__kind { display: flex; min-width: 0; align-items: center; gap: .45rem; font-size: var(--admin-text-xs); }
@@ -1390,9 +1405,14 @@ button.admin-profile-photo-control {
 .admin-credential-file__name { color: var(--admin-color-text); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-bold); }
 .admin-credential-file__identity small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); }
 .admin-credential-file__icon { display: grid; height: 2rem; place-items: center; border-radius: .35rem; background: var(--color-primary-light); color: var(--color-primary-dark); font-size: .58rem; font-weight: 900; }
+.admin-credential-file__thumb { overflow: hidden; border: 1px solid var(--admin-color-border); background: var(--admin-color-surface-subtle); }
+.admin-credential-file__thumb img { width: 100%; height: 100%; object-fit: cover; }
+.admin-credential-file__actions { display: flex; flex: 0 0 auto; align-items: center; gap: .4rem; }
 
 @container admin-form (max-width: 40rem) {
   .admin-credential-pending { grid-template-columns: 2.4rem minmax(0, 1fr); }
+  .admin-credential-files li { grid-template-columns: 2.4rem minmax(0, 1fr); }
+  .admin-credential-file__actions { grid-column: 1 / -1; justify-content: flex-end; }
   .admin-credential-pending__kind { grid-column: 1 / -1; }
   .admin-credential-pending .button { grid-column: span 1; }
 }

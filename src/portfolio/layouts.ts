@@ -128,6 +128,22 @@ export const PORTFOLIO_CREDENTIALS_PER_PAGE = 2;
  */
 export const PORTFOLIO_PROFILE_CARD_GROUPS = 3;
 export const PORTFOLIO_PROFILE_CARD_ITEMS = 4;
+/** Capability cards: the groups chosen in Background › Profile page, in Professional Profile order; none chosen = the first. */
+export const portfolioCapabilityGroups = (data: PortfolioRuntimeData): PortfolioRuntimeData["content"]["skillGroups"] => {
+  const chosen = data.content.profilePage.skillGroupIds;
+  return (chosen ? data.content.skillGroups.filter((group) => chosen.includes(group.id)) : data.content.skillGroups).slice(0, PORTFOLIO_PROFILE_CARD_GROUPS);
+};
+
+/**
+ * Responsibilities a project offers the Portfolio: the ones chosen in Projects & tools (in the project's own order),
+ * or all of them when nothing was chosen. Layouts then print the first portfolioContributionLimit of these.
+ */
+export const portfolioProjectResponsibilities = (data: PortfolioRuntimeData, project: PortfolioRuntimeData["projects"][number]) => {
+  const available = project.responsibilities.filter((point) => point.text.en.trim());
+  const chosen = data.content.projectResponsibilities?.[project.id];
+  return chosen ? available.filter((point) => chosen.includes(point.id)) : available;
+};
+
 export const portfolioContributionLimit = (layout: ProjectLayout): number =>
   layout === "project.editorial" ? 1 : layout === "project.classic" || layout === "feature" || layout === "standard" || layout === "compact" ? 5 : 3;
 

@@ -2336,3 +2336,8 @@ html.admin-app .admin-workspace:has(> .admin-editor-shell) > .admin-editor-shell
 html.admin-app .admin-collection__scroll {
   padding-bottom: var(--admin-workspace-gutter);
 }
+
+/* Structured slots (Project › Key facts, Tool › Workflow steps): rows inside one card, divided, never boxed again (§6.4). */
+html.admin-app .admin-structured-slot { display: grid; min-width: 0; gap: .75rem; }
+html.admin-app .admin-structured-slot + .admin-structured-slot { padding-top: 1rem; border-top: 1px solid var(--admin-color-border); }
+html.admin-app .admin-structured-slot__title { margin: 0; color: var(--admin-color-text); font-size: var(--admin-text-sm); font-weight: var(--admin-weight-bold); }

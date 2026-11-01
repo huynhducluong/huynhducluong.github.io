@@ -17,6 +17,8 @@ export const formatAdminDateTime = (value: string | number | Date): string =>
 export const adminChevronIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="m4 6 4 4 4-4"/></svg>';
 export const adminCloseIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="m4 4 8 8M12 4l-8 8"/></svg>';
 export const adminZoomOutIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M3.5 8h9"/></svg>';
+export const adminRotateLeftIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M3.5 6.5A5 5 0 1 1 4.6 11.4"/><path d="M3.5 2.8v3.7h3.7"/></svg>';
+export const adminRotateRightIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M12.5 6.5A5 5 0 1 0 11.4 11.4"/><path d="M12.5 2.8v3.7H8.8"/></svg>';
 export const adminZoomInIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>';
 export const adminArrowUpIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M8 12.5v-9M4.5 7 8 3.5 11.5 7"/></svg>';
 export const adminArrowDownIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M8 3.5v9M4.5 9 8 12.5 11.5 9"/></svg>';
@@ -274,15 +276,19 @@ export const renderAdminCropZoomControls = ({
   maxZoom,
   resetLabel,
   resetTitle,
+  rotate = false,
 }: {
   prefix: string;
   maxZoom: number;
   resetLabel: string;
   resetTitle: string;
+  /** Quarter-turn buttons, grouped after zoom with the same icon-button anatomy (§7.1). */
+  rotate?: boolean;
 }): string => `<div class="admin-photo-crop-controls">
     <button class="button button--secondary admin-icon-button admin-crop-zoom-button" type="button" aria-label="Zoom out" title="Zoom out" data-${prefix}-zoom-out>${adminZoomOutIcon}</button>
     <label><span>Zoom</span><input type="range" min="1" max="${maxZoom}" step="0.05" value="1" aria-valuetext="100%" data-${prefix}-zoom><output data-${prefix}-zoom-value>100%</output></label>
     <button class="button button--secondary admin-icon-button admin-crop-zoom-button" type="button" aria-label="Zoom in" title="Zoom in" data-${prefix}-zoom-in>${adminZoomInIcon}</button>
+    ${rotate ? `<span class="admin-crop-rotate" role="group" aria-label="Rotate image"><button class="button button--secondary admin-icon-button admin-crop-zoom-button" type="button" aria-label="Rotate 90° counter-clockwise" title="Rotate 90° counter-clockwise ([)" aria-keyshortcuts="[" data-${prefix}-rotate-left>${adminRotateLeftIcon}</button><button class="button button--secondary admin-icon-button admin-crop-zoom-button" type="button" aria-label="Rotate 90° clockwise" title="Rotate 90° clockwise (])" aria-keyshortcuts="]" data-${prefix}-rotate-right>${adminRotateRightIcon}</button></span>` : ""}
     <button class="button button--secondary" type="button" title="${escapeHtml(resetTitle)}" data-${prefix}-reset>${escapeHtml(resetLabel)}</button>
   </div>`;
 

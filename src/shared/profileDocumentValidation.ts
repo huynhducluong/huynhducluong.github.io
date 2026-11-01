@@ -5,7 +5,9 @@ import {
   PORTFOLIO_PROFILE_CARD_GROUPS,
   PORTFOLIO_PROFILE_CARD_ITEMS,
   automationLayoutOptions,
+  portfolioCapabilityGroups,
   portfolioContributionLimit,
+  portfolioProjectResponsibilities,
   profileLayoutOptions,
   projectLayoutOptions,
   resolveAutomationLayout,
@@ -122,15 +124,16 @@ export const profileDocumentRecommendations = (
   if (profileLayout !== "profile.classic") {
     const label = layoutLabel(profileLayoutOptions, profileLayout);
     const groups = data.content.skillGroups ?? [];
-    if (groups.length > PORTFOLIO_PROFILE_CARD_GROUPS) notes.push(`Profile (${label}) prints the first ${PORTFOLIO_PROFILE_CARD_GROUPS} of ${groups.length} skill groups.`);
-    groups.slice(0, PORTFOLIO_PROFILE_CARD_GROUPS).forEach((group) => {
+    // Only an automatic choice slices: groups the editor picked are capped at the limit in the Admin.
+    if (!data.content.profilePage.skillGroupIds && groups.length > PORTFOLIO_PROFILE_CARD_GROUPS) notes.push(`Profile (${label}) prints the first ${PORTFOLIO_PROFILE_CARD_GROUPS} of ${groups.length} skill groups; choose them in Background › Profile page.`);
+    portfolioCapabilityGroups(data).forEach((group) => {
       if (group.items.length > PORTFOLIO_PROFILE_CARD_ITEMS) notes.push(`Profile (${label}) prints the first ${PORTFOLIO_PROFILE_CARD_ITEMS} of ${group.items.length} items in "${group.title.en}".`);
     });
   }
   data.projects.filter((item) => item.includeInPortfolio).forEach((project, index) => {
     const name = project.name.en.trim() || `Portfolio project ${index + 1}`;
     const layout = resolveProjectLayout(data, project.id, project.portfolioLayout);
-    const responsibilities = project.responsibilities.filter((point) => hasText(point.text.en));
+    const responsibilities = portfolioProjectResponsibilities(data, project);
     const limit = portfolioContributionLimit(layout);
     // One line per project: everything it is missing, then what that leaves out.
     const missing = [
@@ -145,6 +148,9 @@ export const profileDocumentRecommendations = (
     const name = tool.name.trim() || `Portfolio tool ${index + 1}`;
     const layout = resolveAutomationLayout(data, tool.id);
     if (layout === "automation.workflow" && !hasText(tool.benefit?.en)) notes.push(`"${name}" has no benefit, so ${layoutLabel(automationLayoutOptions, layout)} prints no outcome.`);
+  });
+  if (data.content.layouts.includeCredentials) data.credentials?.filter((item) => item.includeInPortfolio && !item.preview).forEach((credential) => {
+    notes.push(`"${credential.title.en.trim() || "Untitled credential"}" has no evidence shown in the Portfolio, so its page prints a placeholder; use Adjust crops on an evidence image in Profile › Credentials.`);
   });
   return notes;
 };

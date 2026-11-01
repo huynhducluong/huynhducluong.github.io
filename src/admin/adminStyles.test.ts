@@ -167,8 +167,8 @@ describe("Admin stylesheet contract", () => {
 
   it("gives every selection list the shared heading count (§6.6)", () => {
     // CV (Projects, Tools), Portfolio (Projects, Tools), CV/Portfolio Background groups (one shared backgroundGroup),
-    // Website (Projects, Tools), Cover letter evidence (Projects, Tools).
-    expect(profileDocumentWorkspaceSource.match(/renderAdminSelectionHeading\(\{/g)).toHaveLength(5);
+    // Portfolio › Profile page capability cards, Website (Projects, Tools), Cover letter evidence (Projects, Tools).
+    expect(profileDocumentWorkspaceSource.match(/renderAdminSelectionHeading\(\{/g)).toHaveLength(6);
     expect(profileDocumentWorkspaceSource).not.toMatch(/backgroundGroup\(\{[^}]*note:/);
     expect(siteWorkspaceSource.match(/renderAdminSelectionHeading\(\{ title: "(?:Projects|Automation tools)", mode: "shown"/g)).toHaveLength(2);
     expect(coverLetterWorkspaceSource.match(/renderAdminSelectionHeading\(\{ title: "(?:Projects|Automation tools)", mode: "selected"/g)).toHaveLength(2);

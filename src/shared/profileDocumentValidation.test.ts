@@ -98,11 +98,31 @@ describe("profileDocumentRecommendations (Portfolio)", () => {
     data.content.skillGroups = Array.from({ length: 4 }, (_, index) => ({ id: `g${index}`, title: { en: `Group ${index + 1}`, vi: "" }, items: Array.from({ length: 6 }, (_, item) => ({ id: `i${item}`, label: { en: `Item ${item}`, vi: "" } })) })) as typeof data.content.skillGroups;
     const notes = profileDocumentRecommendations("portfolio", data);
 
-    expect(notes).toContain("Profile (Capability Profile) prints the first 3 of 4 skill groups.");
+    expect(notes).toContain("Profile (Capability Profile) prints the first 3 of 4 skill groups; choose them in Background › Profile page.");
     expect(notes).toContain('Profile (Capability Profile) prints the first 4 of 6 items in "Group 1".');
     expect(notes).toContain(`"${project.name.en}" is missing its summary and location, so they are left out.`);
     expect(notes).toContain(`"${project.name.en}" (Balanced) prints the first 3 of 5 responsibilities.`);
     expect(validateProfileDocument("portfolio", data).some((issue) => /summary|location|responsibilit/i.test(issue))).toBe(false);
     expect(profileDocumentRecommendations("cv", null)).toEqual([]);
+  });
+
+  it("names selected credentials that would print a placeholder, only when the credentials page is on", () => {
+    const data = portfolioRuntime();
+    const credential = (id: string, title: string) => ({
+      id, kind: "professional_certification" as const, relatedType: null, relatedId: null, title: { en: title, vi: "" }, issuer: { en: "Issuer", vi: "" },
+      description: { en: "", vi: "" }, issuedOn: null, expiresOn: null, doesNotExpire: true, credentialNumber: "", verificationUrl: "",
+      status: "published" as const, displayOrder: 1, includeInPortfolio: true, portfolioOrder: 1,
+    });
+    data.credentials = [
+      credential("c1", "No preview"),
+      { ...credential("c2", "Shown"), preview: { profile: "landscape", storagePath: "p.webp", publicUrl: "https://example.com/p.webp", width: 1600, height: 1200 } },
+    ];
+    const placeholder = (notes: string[]) => notes.filter((note) => note.includes("prints a placeholder"));
+
+    expect(placeholder(profileDocumentRecommendations("portfolio", data))).toEqual([]);
+    data.content.layouts.includeCredentials = true;
+    expect(placeholder(profileDocumentRecommendations("portfolio", data))).toEqual([
+      '"No preview" has no evidence shown in the Portfolio, so its page prints a placeholder; use Adjust crops on an evidence image in Profile › Credentials.',
+    ]);
   });
 });

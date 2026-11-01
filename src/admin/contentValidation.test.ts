@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { PortfolioProject } from "../types/portfolio";
-import { validateProjectReadiness } from "./contentValidation";
+import { portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
+import { validateProjectReadiness, validateToolReadiness } from "./contentValidation";
 
 const readyProject = (): PortfolioProject => ({
   id: "project-1",
@@ -47,5 +48,16 @@ describe("Admin publish readiness", () => {
     const result = validateProjectReadiness(project);
     expect(result.errors).toContain("Project summary (EN) is required.");
     expect(result.errors).toContain("Project needs a cover image.");
+  });
+});
+
+describe("Key facts and workflow steps readiness", () => {
+  it("blocks Ready on a half-filled fact or step and only recommends the Vietnamese copy", () => {
+    const project = { ...structuredClone(portfolioProjectSeed[0]), keyFacts: [{ id: "a", value: { en: "18 km", vi: "" }, label: { en: "", vi: "" } }, { id: "b", value: { en: "37", vi: "" }, label: { en: "Bridges", vi: "" } }] };
+    const projectResult = validateProjectReadiness(project);
+    expect(projectResult.errors).toContain("Key fact 1 needs an English value and label.");
+    expect(projectResult.warnings).toContain("Key fact 2 is missing Vietnamese content.");
+    const tool = { ...structuredClone(portfolioToolSeed[0]), workflowSteps: [{ id: "s", label: { en: "Input", vi: "" }, text: { en: "", vi: "" } }] };
+    expect(validateToolReadiness(tool).errors).toContain("Workflow step 1 needs an English label and text.");
   });
 });

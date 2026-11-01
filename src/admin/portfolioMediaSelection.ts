@@ -154,3 +154,79 @@ export const syncPortfolioMediaPreview = (row: HTMLElement): void => {
   const empty = preview.querySelector<HTMLElement>(".admin-portfolio-media-row__empty");
   if (empty) empty.hidden = Boolean(url);
 };
+
+/**
+ * Cover & closing image (§6.8): the one image of the Split/Horizontal cover and the White closing. The project select
+ * offers the selected projects; each project has its own image select, and only the visible one is enabled, so the
+ * form submits exactly one choice. The image field is a labelled group, not a <label>, because it holds one select per project. Empty values mean "first selected project" and "its primary visual".
+ */
+export const renderPortfolioFeatureRow = ({ projects, assignments, choice }: {
+  projects: Array<{ id: string; name: string; images: PortfolioMedia[]; selected: boolean }>;
+  assignments: Record<string, PortfolioMediaAssignment | undefined>;
+  choice: { projectId?: string; mediaId?: string } | undefined;
+}): string => {
+  const chosen = projects.find((item) => item.id === choice?.projectId && item.selected);
+  const active = chosen ?? projects.find((item) => item.selected);
+  const primaryOf = (project: typeof projects[number]): PortfolioMedia | undefined => resolvePortfolioMedia(project.images, assignments[project.id]).primary;
+  const activeMedia = active ? (chosen && active.images.find((image) => image.id === choice?.mediaId)) || primaryOf(active) : undefined;
+  const preview = mediaPreviewUrl(activeMedia);
+  const projectOptions = `<option value=""${chosen ? "" : " selected"}>First selected project</option>${projects.map((item) => `<option value="${escapeHtml(item.id)}"${item.id === chosen?.id ? " selected" : ""}${item.selected ? "" : " hidden disabled"}>${escapeHtml(item.name)}</option>`).join("")}`;
+  const imageSelects = projects.map((item) => {
+    const visible = item.id === active?.id;
+    const chosenMediaId = chosen?.id === item.id ? item.images.find((image) => image.id === choice?.mediaId)?.id : undefined;
+    const options = `<option value="" data-preview-url="${escapeHtml(mediaPreviewUrl(primaryOf(item)))}"${chosenMediaId ? "" : " selected"}>Its primary visual</option>${mediaOptions(item.images, chosenMediaId)}`;
+    return `<span data-portfolio-feature-slot="${escapeHtml(item.id)}"${visible ? "" : " hidden"}>${renderAdminSelectControl({ name: "portfolio_feature_media", attributes: `data-portfolio-feature-media="${escapeHtml(item.id)}" aria-label="Image from ${escapeHtml(item.name)}"${visible ? "" : " disabled"}`, options })}</span>`;
+  }).join("");
+  return `<article class="admin-media-row admin-portfolio-media-row" data-portfolio-feature-row>
+    <div class="admin-media-row__preview" data-portfolio-media-preview>${preview ? `<img src="${escapeHtml(preview)}" alt="" loading="lazy" decoding="async">` : ""}<span class="admin-portfolio-media-row__empty"${preview ? " hidden" : ""}>No image</span></div>
+    <div class="admin-media-row__head">
+      <div class="admin-media-row__identity">
+        ${renderAdminTruncatedText("Cover & closing image", "admin-media-row__title")}
+        <small class="admin-portfolio-media-row__meta"><span>Split and Horizontal covers</span><span>White closing</span></small>
+      </div>
+    </div>
+    <div class="admin-form-grid admin-media-row__fields">
+      <label><span class="admin-field-label">Project</span>${renderAdminSelectControl({ name: "portfolio_feature_project", attributes: "data-portfolio-feature-project", options: projectOptions })}</label>
+      <div class="admin-portfolio-feature-image" role="group" aria-labelledby="portfolio-feature-image-label"><span class="admin-field-label" id="portfolio-feature-image-label">Image</span><span class="admin-portfolio-feature-media">${imageSelects}</span></div>
+    </div>
+  </article>`;
+};
+
+/** Keeps the feature row on a selected project, shows that project's image select, and refreshes the preview. */
+export const syncPortfolioFeatureRow = (row: HTMLElement, selectedProjectIds: Set<string>): void => {
+  const project = row.querySelector<HTMLSelectElement>("[data-portfolio-feature-project]");
+  if (!project) return;
+  [...project.options].forEach((option) => {
+    if (!option.value) return;
+    const available = selectedProjectIds.has(option.value);
+    option.hidden = !available;
+    option.disabled = !available;
+  });
+  if (project.value && !selectedProjectIds.has(project.value)) project.value = "";
+  const firstSelected = [...project.options].find((option) => option.value && !option.disabled)?.value ?? "";
+  const activeId = project.value || firstSelected;
+  row.querySelectorAll<HTMLSelectElement>("[data-portfolio-feature-media]").forEach((select) => {
+    const visible = select.dataset.portfolioFeatureMedia === activeId;
+    select.disabled = !visible;
+    const slot = select.closest<HTMLElement>("[data-portfolio-feature-slot]");
+    if (slot) slot.hidden = !visible;
+    if (!visible) select.value = "";
+  });
+  const media = row.querySelector<HTMLSelectElement>("[data-portfolio-feature-media]:not([disabled])");
+  const url = media?.selectedOptions[0]?.dataset.previewUrl ?? "";
+  const preview = row.querySelector<HTMLElement>("[data-portfolio-media-preview]");
+  if (!preview) return;
+  let image = preview.querySelector("img");
+  if (url && !image) {
+    image = document.createElement("img");
+    image.alt = "";
+    image.decoding = "async";
+    preview.prepend(image);
+  }
+  if (image) {
+    if (url) image.src = url;
+    image.hidden = !url;
+  }
+  const empty = preview.querySelector<HTMLElement>(".admin-portfolio-media-row__empty");
+  if (empty) empty.hidden = Boolean(url);
+};

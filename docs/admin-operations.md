@@ -41,6 +41,18 @@ Redeploy `supabase/functions/purge-admin-trash` with the same release so schedul
 
 After applying it, refresh Admin and verify that Media for both Projects and Automation Tools shows `Adjust crops`. A crop stays `Auto` until an editor changes that profile; only modified profiles are generated and stored. Returning a profile to automatic crop removes its editable crop row without removing any file referenced by a published release.
 
+## Project key facts and Tool workflow steps
+
+Apply `supabase/migrations/202611010001_project_key_facts_tool_workflow_steps.sql` (after `202610270001`). It adds `projects.key_facts` and `automation_tools.workflow_steps` (`jsonb`, default `[]`, at most 3 items each, checked by constraints). It creates no function, so there is no EXECUTE grant to revoke. Existing rows keep printing what they printed before.
+
+Until it is applied, the Admin still saves Projects and Tools: `upsertWithOptionalColumns` retries without a column Supabase does not know yet, and stops with "Apply the latest database migration before saving key facts / workflow steps" only when the editor filled them in, so nothing typed is silently dropped. Refresh Admin once after applying it.
+
+## Credential evidence previews
+
+Apply `supabase/migrations/202611010002_credential_portfolio_previews.sql` (after `202611010001`). It adds `credential_media_crops` (public WebP crops of evidence images, admin-only RLS, `anon` revoked) and three columns on `credential_assets`: `show_in_portfolio` (default off; images only; at most one per credential), `preview_rotation` (0–3 quarter turns) and `preview_profile` (landscape or portrait). It creates no function, so there is no EXECUTE grant to revoke. Crop files go to the existing public bucket under `portfolio-media-crops/credentials/`; the evidence originals stay in the private bucket and are never modified.
+
+Until it is applied, Credentials load without previews and saving a preview stops with "Apply the latest database migration before saving credential previews." Refresh Admin once after applying it, then use **Adjust crops** on an evidence image and turn on **Show in Portfolio**. Deleting an evidence file or a credential also removes its crop files unless a published release still references them.
+
 ## RPC execute privileges
 
 Apply `supabase/migrations/202610270001_revoke_rpc_default_execute.sql` after `202610150002_professional_credential_order.sql`. Supabase grants EXECUTE on new public functions directly to `anon` and `authenticated`, so `revoke ... from public` alone does not remove them. The migration removes anon access to every Admin RPC and limits the internal cover-letter helper and the trash-purge secret/Cron checks to their trusted callers.
