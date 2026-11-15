@@ -1,6 +1,6 @@
 # GD3-09 — Bút chì "sửa ở đâu" trên preview Portfolio (nhóm N4a)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/09-but-chi-sua-tu-preview` (`git fetch; git switch -c gd3/09-but-chi-sua-tu-preview origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** ĐẠT (Claude tự gộp, 2026-11-15) · **Nhánh:** `gd3/09-but-chi-sua-tu-preview` (`git fetch; git switch -c gd3/09-but-chi-sua-tu-preview origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** tự gộp được nếu review sạch **và** test chứng minh trang công khai, bản in và PDF không đổi (bút chì chỉ có trong preview nhúng của Admin).
 
 ## 1. Mục tiêu
@@ -63,20 +63,56 @@ W-06 (Sổ #6), ADR-030: người vận hành không biết chữ trên Portfoli
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- Số đo (bút chì ở zoom Fit / 100 %, ô không bị header che ở 3 màn hình):
-- Cách kiểm trang công khai và PDF không đổi:
+- Đã xong bước: 1, 2, 3 (code + test). **Bước 4 làm dở:** `verify:admin` đạt; **kiểm thủ công ở Admin thật chưa làm được** (xem "Câu hỏi").
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: chưa ghi (không đọc được số token trong phiên)
+- Nhánh, commit cuối: `gd3/09-but-chi-sua-tu-preview`, commit cuối là `wip(GD3-09 bước 3)` (bước 4 chỉ thêm báo cáo này)
+- File đã đổi (**dùng chung** in đậm):
+  - **`src/portfolio/renderPortfolioV2.ts`** (tùy chọn `editMarkers`, hàm `mark`; hàm xuất `renderPortfolio` thêm đối số thứ ba, mặc định tắt)
+  - **`src/portfolio/main.ts`** (chỉ nhánh `embeddedPreview` bật marker; nhận tin `hdl:portfolio-edit-mode`)
+  - **`src/admin/profileDocumentWorkspace.ts`** (công tắc, gửi tin, nhận `hdl:portfolio-edit-target`, tách `selectDocumentTab` khỏi bộ nghe click tab)
+  - **`src/admin/ui.ts`** (chỉ `export` hàm `scrollParent` có sẵn để tính đúng vùng bị header dính che)
+  - **`src/styles/admin-documents.css`** (thêm `label.is-edit-target`)
+  - Mới: `src/portfolio/editMarkers.ts`, `editMarkerLayer.ts`, `src/styles/portfolio-edit-markers.css`, `src/admin/portfolioEditTarget.ts`; test: `src/portfolio/editMarkers.test.ts` (+ snapshot), `src/admin/portfolioEditTarget.test.ts`
+  - Không đổi `src/shared/previewProtocol.ts`, không migration, không dependency.
+- `verify:admin`: 258 / 258 test đạt (41 file); bundle Admin JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip (trong ngân sách). CSS bút chì chỉ vào bundle trang Portfolio, không vào CSS Admin ban đầu.
+- Số đo (bút chì ở zoom Fit / 100 %, ô không bị header che ở 3 màn hình): **chưa đo.** Phiên đăng nhập `.auth/admin.json` hết hạn (Admin trả form đăng nhập, request làm mới token lỗi 400), nên không mở được Admin thật. Đã viết sẵn kịch bản đo (1024, 1440 × 731, 1920; Fit và zoom; EN và VI; bàn phím; sống sót sau khi gõ) nhưng chưa chạy được. Cần người vận hành chạy `npm run shots:login`.
+- Cách kiểm trang công khai và PDF không đổi: test snapshot (`editMarkers.test.ts`) chụp markup `renderPortfolio` của 12 biến thể layout × EN / VI **trên code trước khi sửa**, rồi so từng byte sau khi sửa (24 snapshot). Thêm test: gỡ `data-edit-field` khỏi markup bật thì ra đúng markup tắt. Test nguồn `main.ts`: chỉ `embeddedPreview` có thể bật marker, tin nhắn kiểm origin / source / dạng dữ liệu.
 - Chỗ làm khác đề bài và lý do:
+  - Pencil nằm trong một lớp `.portfolio-edit-layer` riêng đặt cuối `.portfolio-preview-shell` (không nằm trong trang), vì nằm trong trang có thể làm `page.scrollWidth/scrollHeight` đổi và vào phép đo `findPortfolioLayoutIssues`. Vị trí tính bằng `getBoundingClientRect`, cập nhật khi font, ảnh, thay đổi kích thước.
+  - Nút làm sáng ô: giữ 1,2 giây bằng class tĩnh (không animation), nên không cần nhánh riêng cho `prefers-reduced-motion`.
+  - Ô của tài liệu `archived` bị `disabled` nên không focus được; thay vào đó focus vào `label` của ô (`tabindex=-1`). Chưa kiểm trên trình duyệt.
+  - `renderPortfolio` dùng trạng thái cấp module (đặt và luôn đặt lại bằng `try/finally`) thay vì truyền tham số qua mọi hàm con, để không đổi chữ ký của ~15 hàm dựng trang; render đồng bộ nên an toàn.
 - Câu hỏi:
+  - Phiên đăng nhập hết hạn nên chưa kiểm ở Admin thật. **Khuyến nghị:** người vận hành chạy `npm run shots:login`, rồi Claude review đo các mục "Số đo" ở trên trong worktree (Claude review vẫn phải đo ba màn hình theo mục 4). Cách còn lại là cho gộp theo test, nhưng bỏ qua kiểm giao diện; không khuyến nghị vì tiêu chí "ô không bị header che" và "≈ 22 px" chỉ đo được trên trình duyệt.
+
+**Lượt sửa theo mục 6 (Claude — cửa sổ code):**
+- Đã sửa **Phải sửa 1 và 2**: `src/portfolio/editMarkerLayer.ts`, hàm `place`. Bút chì neo ở cuối **dòng chữ đầu** của khối (`Range` của nội dung khối), cách 4 px trên màn hình; xếp từ trên xuống, bút chì nào chồng bút chì đã đặt thì dời xuống một bước 22 px + 4 px. Kích thước, khoảng cách và bước đều chia cho zoom nên không đổi trên màn hình. Đổi zoom thì `setEditMarkerScale` báo lớp đặt lại vị trí. Chặn mép phải bằng kích thước bút chì; chưa cần nhánh "sang trái" vì công cụ đo không gặp trường hợp hết chỗ.
+- Đã sửa **Nên sửa**: `twoDigits = (value` ở `renderPortfolioV2.ts`.
+- `node tools/portfolio-edit-markers-check.mjs`: **All PASS** (24 dòng ở 1024, 1440 × 731, 1920: default-off, size 22,0 px ở Fit / Zoom in / Zoom out, no-overlap và near-text EN và VI, jump 15 / 15, off-clean).
+- `verify:admin` chạy lại: 258 / 258 test đạt; Admin JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip (không đổi).
+- Dev server cổng 5199 đã tắt.
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
+- Ngày, commit đã review: 2026-11-15, `74d1316` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập). Đo trên Admin thật sau khi người vận hành đăng nhập lại.
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 41 file / 258 test đạt; Admin JS 92,8 / 115,0, CSS 26,6 / 27,0 kB gzip (không đổi). Đọc diff: chỉ nhánh `embeddedPreview` bật marker; origin / source kiểm hai chiều; lớp bút chì tách khỏi trang; `renderPortfolio` luôn reset trạng thái trong `finally`.
+  - **Đo trên Admin thật** (1024, 1440 × 731, 1920; công cụ mới `tools/portfolio-edit-markers-check.mjs`): công tắc mặc định tắt và nhớ sau khi tải lại; **bút chì đúng 22,0 px** ở Fit, Zoom in và Zoom out; **15 bút chì, bấm cả 15 đều nhảy đúng ô** (preview VI → ô `_vi`), nằm dưới thanh tab dính và trong khung nhìn; tắt công tắc thì không còn bút chì hay `data-edit-field`; bút chì còn sau khi gõ trong form; `/portfolio/` công khai và `/portfolio/?preview=1` không có bút chì hay `data-edit-field`. "1 issue" trên thanh preview có sẵn từ trước, không đổi khi bật bút chì.
 - **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+  1. **Bút chì chồng lên nhau** ở 1024 và 1440 (dữ liệu thật): "Edit highlight label" đè "Edit highlight lines", "Edit about kicker" đè "Edit about heading"; bút chì dưới bị che một phần, khó bấm đúng. (Ở 1920 không chồng chỉ vì trang rộng hơn.)
+  2. **Bút chì cách xa chữ của nó**: bút chì neo ở góc trên phải của **khối** (khối kéo hết bề ngang cột), nên kicker bìa cách cuối chữ 263 – 625 px (trên màn hình), tiêu đề tài liệu 176 – 387 px, chức danh 262 – 602 px, câu Automation 223 – 568 px: người dùng không biết bút chì nào của chữ nào, trái mục đích W-06.
+  - **Cách sửa (đã chốt theo đề bài, xem mục 3.4):** neo bút chì ở **cuối chữ của khối** (`Range` của nội dung khối, mép phải của dòng chữ, dòng đầu nếu nhiều dòng), cách nó một khoảng nhỏ; thêm một lượt tránh chồng (xếp theo từ trên xuống, bút chì nào chồng bút chì đã đặt thì dời xuống dưới một bước 22 px + 4 px, hoặc sang trái nếu hết chỗ). Vẫn `position: absolute` trong lớp riêng. Đo bằng `node tools/portfolio-edit-markers-check.mjs` phải **All PASS** (mốc hiện tại **10 FAIL**: 4 `no-overlap` ở 1024 / 1440 và 6 `near-text`; các dòng `default-off`, `size`, `jump`, `off-clean` đang PASS và phải còn PASS).
+- **Nên sửa:** `twoDigits =(value` thiếu dấu cách ở `renderPortfolioV2.ts` (làm cùng lượt sửa).
+- **Ghi nhận:** (1) chưa đo tài liệu `archived` (focus vào `label` vì ô bị disabled): không có tài liệu lưu trữ để thử trên dữ liệu thật; mã xử lý hợp lý (đặt `tabindex=-1` rồi focus). (2) Phép thử gõ vào form chỉ gõ rồi xóa, không Save; không ghi gì lên Supabase.
+- **Cần người vận hành chốt:** không.
+- Token: Claude — cửa sổ code 60 % → 66 % đã dùng (~6 %, Vừa; chưa tính lượt sửa).
+- Kết luận: **CẦN SỬA** (2 mục "Phải sửa", cùng một chỗ: vị trí bút chì). Người code sửa trên cùng nhánh rồi báo lại; Claude review lại (chủ yếu chạy lại công cụ đo) và gộp nếu sạch.
+
+### Review 2 (2026-11-15, `54059e4`, worktree sạch; đã xóa)
+
+- `verify:admin`: 41 file / 258 test đạt; Admin JS 92,8 / 115,0, CSS 26,6 / 27,0 kB gzip (không đổi). Diff lượt sửa: hàm `place` neo bút chì ở cuối dòng chữ đầu của khối, tránh chồng bằng cách dời xuống từng bước; dấu cách `twoDigits` đã sửa.
+- **`node tools/portfolio-edit-markers-check.mjs`: All PASS** (24 dòng ở 1024, 1440 × 731, 1920; mốc trước sửa: 10 FAIL). Ảnh xem tay ở 1440: mỗi bút chì nằm ngay sau chữ của nó, không chồng nhau.
+- **Phải sửa:** không. **Nên sửa:** không. **Cần người vận hành chốt:** không.
+- **Ghi nhận:** (1) nhánh "tránh chồng sang trái khi hết chỗ" chưa làm (công cụ đo không gặp); hiện chỉ dời xuống, bút chì chồng đủ nhiều ở mép dưới trang là việc nhỏ cho sau. (2) CSS `portfolio-edit-markers.css` được nạp cả ở trang Portfolio công khai nhưng không có phần tử nào dùng nên không đổi giao diện; chưa đo ảnh hưởng dung lượng (nhỏ). (3) Tài liệu `archived` chưa đo (không có dữ liệu thật để thử).
+- Token: Claude — cửa sổ code 68 % → 69 % đã dùng cho lượt sửa (~1 %); cả đề bài 60 % → 69 % (~9 %, Vừa).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 (chỉ preview nhúng và Admin, không migration; markup khi tắt giống hệt từng byte theo snapshot; `/portfolio/` và `?preview=1` không có bút chì): Claude gộp và push.
