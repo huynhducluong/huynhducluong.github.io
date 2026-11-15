@@ -121,6 +121,26 @@ const page = (content: string, className: string, layoutId: string, chrome: Page
     : `<footer class="portfolio-page-footer"><span${mark("portfolio_footer_text", true)}>${escapeHtml(chrome.footerText)}</span><strong>${pageLabel}</strong></footer>`;
   return `<section class="portfolio-page ${className}" data-portfolio-layout="${escapeHtml(layoutId)}">${header}${content}${footer}</section>`;
 };
+export interface FactValuePart { text: string; kind: "num" | "unit" }
+/**
+ * Splits a key-fact value on whitespace: a token with a digit is the number, any other token is a unit.
+ * A value that is empty, a single token, or has no digit stays plain (null) and prints as before.
+ * Each token keeps its original characters (≈ . , +).
+ */
+export const factValueParts = (value: string): FactValuePart[] | null => {
+  const tokens = value.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length < 2 || !tokens.some((token) => /\d/.test(token))) return null;
+  return tokens.map((text) => ({ text, kind: /\d/.test(text) ? "num" : "unit" }));
+};
+/** A long value takes the whole row of the facts grid so it never wraps (14+ characters or 3+ tokens). */
+const isWideFact = (value: string, parts: FactValuePart[]): boolean => value.trim().replace(/\s+/g, " ").length >= 14 || parts.length >= 3;
+const keyFactMarkup = (value: string, label: string): string => {
+  const parts = factValueParts(value);
+  const caption = `<span>${escapeHtml(label)}</span>`;
+  if (!parts) return `<div><strong>${escapeHtml(value)}</strong>${caption}</div>`;
+  const inner = parts.map((part) => `<b class="portfolio-fact__${part.kind}">${escapeHtml(part.text)}</b>`).join(" ");
+  return `<div${isWideFact(value, parts) ? ' class="is-wide"' : ""}><strong class="portfolio-fact__value">${inner}</strong>${caption}</div>`;
+};
 const projectMeta = (project: PortfolioProject, language: Language): string => [localized(project.location, language), project.role ? localized(project.role, language) : ""].filter(Boolean).join(" · ");
 // Unknown content is omitted (§8.4): a project without responsibilities prints no contribution block at all.
 const contributionItems = (data: PortfolioRuntimeData, project: PortfolioProject, layout: ProjectLayout) =>
@@ -225,7 +245,7 @@ const renderProject = (data: PortfolioRuntimeData, project: PortfolioProject, la
   // Unknown facts are omitted rather than printed as a dash.
   const keyFacts = (project.keyFacts ?? []).filter((fact) => fact.value.en && fact.label.en);
   const factItems = keyFacts.length
-    ? keyFacts.map((fact) => `<div><strong>${escapeHtml(localized(fact.value, language))}</strong><span>${escapeHtml(localized(fact.label, language))}</span></div>`).join("")
+    ? keyFacts.map((fact) => keyFactMarkup(localized(fact.value, language), localized(fact.label, language))).join("")
     : [
       project.year ? `<div><strong>${escapeHtml(String(project.year))}</strong><span>${text.year}</span></div>` : "",
       project.technologies.length ? `<div><strong>${project.technologies.length}</strong><span>${text.tools}</span></div>` : "",

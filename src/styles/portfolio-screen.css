@@ -433,3 +433,10 @@ html, body { background: #dfe8ec; }
 /* Balanced: the technology tags follow the contribution list instead of sitting at the column's foot. This keeps
    the `!important` pair on purpose: it overrides `margin-top: auto !important` of the base `.portfolio-tags`. */
 .portfolio-page .portfolio-project--balanced .portfolio-tags { margin-top: 7mm !important; padding-top: 0 !important; }
+
+/* Key facts (ADR-031, GD3-11; docs/ui-guidelines.md §8.4): a big number with a small unit on one baseline. Colours inherit
+   from the plain fact value, so the blue Technical / Editorial column keeps its own colour (no opacity). ---------- */
+.portfolio-page .portfolio-project-facts .portfolio-fact__value { display: flex; align-items: baseline; gap: 1.2mm; white-space: nowrap; }
+.portfolio-page .portfolio-project-facts .portfolio-fact__num { color: inherit; font-size: inherit; font-weight: inherit; }
+.portfolio-page .portfolio-project-facts .portfolio-fact__unit { color: inherit; font-size: var(--document-type-xl); font-weight: var(--document-weight-bold); }
+.portfolio-page .portfolio-project-facts > div.is-wide { grid-column: 1 / -1; }
