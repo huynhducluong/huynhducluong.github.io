@@ -1,45 +1,45 @@
-# Project notes
+# Ghi chú project
 
-<!-- Template from huynhducluong.github.io docs/ui-kit. Replace every <…>, delete rows that do not apply. -->
+<!-- Template từ docs/ui-kit của huynhducluong.github.io. Thay mọi <…>, xóa các hàng không áp dụng. -->
 
-<One sentence: stack, what the product is, where it deploys.> Built on the UI kit from huynhducluong.github.io: framework-free TypeScript renderers, CSS token families, print-ready documents.
+<Một câu: stack, sản phẩm là gì, deploy ở đâu.> Được xây dựng trên bộ UI từ huynhducluong.github.io: renderer TypeScript không framework, các họ token CSS, tài liệu sẵn sàng để in.
 
-## Read before you change
+## Đọc trước khi thay đổi
 
-| You are changing | Read first |
+| Phần đang thay đổi | Đọc trước |
 |---|---|
-| Back-office UI (`src/admin/**`, `src/styles/admin*.css`) | `docs/admin-ui-guidelines.md` |
-| Public pages | `docs/ui-guidelines.md` §1–§5 |
-| Printable documents | `docs/ui-guidelines.md` §6–§8 |
-| Any code, data shape, test or migration | `docs/coding-conventions.md` |
-| Architecture and data ownership | `docs/architecture.md` |
+| UI back-office (`src/admin/**`, `src/styles/admin*.css`) | `docs/admin-ui-guidelines.md` |
+| Trang công khai | `docs/ui-guidelines.md` §1–§5 |
+| Tài liệu có thể in | `docs/ui-guidelines.md` §6–§8 |
+| Mọi code, dạng dữ liệu, test hoặc migration | `docs/coding-conventions.md` |
+| Kiến trúc và quyền sở hữu dữ liệu | `docs/architecture.md` |
 
-If a change must break a documented rule, update that document in the same change and say why.
+Nếu thay đổi buộc phải phá vỡ quy tắc đã ghi, hãy cập nhật tài liệu đó trong cùng thay đổi và nêu lý do.
 
-## Commands
+## Lệnh
 
-- `npm run dev`: dev server.
-- `npm run test:watch`: Vitest while developing.
-- `npm run verify`: typecheck, tests, build<, bundle budget>. Run before finishing any change; CI runs the same gate.
+- `npm run dev`: server phát triển.
+- `npm run test:watch`: Vitest khi đang phát triển.
+- `npm run verify`: typecheck, test, build<, ngân sách bundle>. Chạy trước khi hoàn tất mọi thay đổi; CI chạy cùng cổng.
 
-## Non-negotiable UI/UX rules
+## Quy tắc UI/UX bắt buộc
 
-1. **Tokens, not literals.** Website `--color-*` / `--space-*` / `--font-*`; back office `--admin-*`; documents `--document-*`. Never hard-code a value a token covers, never mix families.
-2. **Reuse shared renderers** (`src/admin/ui.ts`, toast, confirm, text prompt, dirty state, `src/site/*`, print preview). Extract before a pattern's third copy.
-3. **Escape everything** interpolated into HTML (`escapeHtml`, `localize`).
-4. **Localized content** is `{ <en>, <vi> }`; forms show the primary language first; the page sets `<html lang>`; missing translations fall back to <en>.
-5. **One primary action** per header; destructive actions behind More with a danger confirmation.
-6. **Accessibility is part of done:** visible focus, accessible names, `aria-pressed` / `aria-expanded`, full keyboard support, image alt text, motion ≤150–180 ms and disabled under reduced motion.
-7. **Reuse existing breakpoints:** <list them>.
-8. **Print documents are fixed-size `mm` pages** with `@page { margin: 0 }`, `overflow: hidden`, overflow detection and browser-print export.
-9. **Light theme only** unless a full dark token set is added.
+1. **Dùng token, không dùng literal.** Website `--color-*` / `--space-*` / `--font-*`; back office `--admin-*`; tài liệu `--document-*`. Không viết cứng giá trị đã có token bao phủ, không trộn các họ.
+2. **Dùng lại renderer chung** (`src/admin/ui.ts`, toast, confirm, text prompt, dirty state, `src/site/*`, print preview). Tách ra trước bản sao thứ ba của một mẫu.
+3. **Escape mọi thứ** được nội suy vào HTML (`escapeHtml`, `localize`).
+4. **Nội dung bản địa hóa** là `{ <en>, <vi> }`; form hiển thị ngôn ngữ chính trước; trang đặt `<html lang>`; bản dịch thiếu dùng <en> làm dự phòng.
+5. **Một hành động primary** mỗi header; hành động phá hủy nằm sau More với xác nhận danger.
+6. **Accessibility là một phần của hoàn tất:** focus nhìn thấy được, tên truy cập, `aria-pressed` / `aria-expanded`, hỗ trợ đầy đủ bàn phím, alt text ảnh, chuyển động ≤150–180 ms và tắt khi reduced motion.
+7. **Dùng lại breakpoint hiện có:** <liệt kê>.
+8. **Tài liệu in là trang `mm` kích thước cố định** với `@page { margin: 0 }`, `overflow: hidden`, phát hiện overflow và export bằng chức năng in trình duyệt.
+9. **Chỉ theme sáng** trừ khi thêm bộ token dark đầy đủ.
 
 ## Backend
 
-<Secrets policy, auth model, migration naming and privilege rules. For Supabase: no service-role key in frontend; `security definer` functions check the admin predicate and revoke EXECUTE from `anon` / `authenticated`.>
+<Policy secret, mô hình auth, cách đặt tên migration và quy tắc quyền. Với Supabase: không có service-role key trong frontend; hàm `security definer` kiểm tra predicate admin và thu hồi EXECUTE khỏi `anon` / `authenticated`.>
 
-## Definition of done
+## Định nghĩa hoàn tất
 
-1. `npm run verify` passes.
-2. The relevant guideline checklist is satisfied.
-3. Docs are updated in the same change when behavior, a rule or a budget changes.
+1. `npm run verify` đạt.
+2. Checklist guideline liên quan đạt.
+3. Docs được cập nhật trong cùng thay đổi khi hành vi, quy tắc hoặc ngân sách đổi.

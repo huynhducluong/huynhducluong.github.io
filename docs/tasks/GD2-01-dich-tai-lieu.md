@@ -1,6 +1,6 @@
 # GD2-01 — Dịch tài liệu sang tiếng Việt
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd2/01-dich-tai-lieu` (tạo từ `origin/main` mới nhất: `git fetch; git switch -c gd2/01-dich-tai-lieu origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (11 file docs, không code) · **Người đang code:** Codex (token 95 %)
+> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd2/01-dich-tai-lieu` (tạo từ `origin/main` mới nhất: `git fetch; git switch -c gd2/01-dich-tai-lieu origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (11 file docs, không code) · **Người đang code:** Codex (token 95 %)
 > **Gộp (ADR-018):** tự gộp được — chỉ đổi `docs/`, không migration, không đổi giao diện.
 
 ## 1. Mục tiêu
@@ -45,18 +45,26 @@ Dịch các tài liệu tiếng Anh có sẵn sang tiếng Việt theo ADR-017, 
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · token trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi:
-- `verify:admin`:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi (chỗ bản gốc mâu thuẫn / khó hiểu):
+- Đã xong bước: 1, 2, 3, 4, 5.
+- Người code: Codex · token trước / sau: 95 % / không có chỉ số % khả dụng trong phiên Codex API.
+- Nhánh, commit cuối: `gd2/01-dich-tai-lieu` · `9f063c0` (`wip(GD2-01 bước 5): cập nhật anchor và kiểm tra`); commit báo cáo mục 5 nối sau.
+- File đã đổi: 11 file tài liệu trong mục 2; `decisions/ADR-REGISTER.md` (chỉ link anchor); file đề bài này (mục 5).
+- `verify:admin`: đạt bằng `npm.cmd run verify:admin` — typecheck đạt; 29 file test / 187 test đạt; build đạt; Admin JS 92,6 / 115,0 kB gzip, CSS 26,5 / 27,0 kB gzip. Kiểm thêm: 24 link anchor hợp lệ; 15 tham chiếu mục duy nhất trong `src/`, `scripts/` vẫn tồn tại; số tiêu đề, số mục và code block của 11 file khớp bản gốc.
+- Chỗ làm khác đề bài và lý do: Không.
+- Câu hỏi (chỗ bản gốc mâu thuẫn / khó hiểu): Không.
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `a2251bf` (worktree riêng `D:\wt\pf-review`, `npm ci` sạch).
+- Đã kiểm (script so `main` với nhánh, không dựa vào báo cáo):
+  - `verify:admin` đạt: 29 file / 187 test, Admin JS 92,6 / 115 kB, CSS 26,5 / 27 kB gzip.
+  - 11 file: số dòng, tiêu đề và số mục, danh sách, hàng bảng **khớp**; mọi khối code **giống hệt**; inline code và con số khớp (lệch duy nhất: `Adjust crops` thành **Adjust crops** theo quy ước nhãn nút; "0" thêm do dịch "zero count" thành "số đếm 0"; một `localize` thêm khi diễn đạt lại — đều đúng nghĩa).
+  - 25 link anchor trong repo hợp lệ; 19 dòng `src/`, `scripts/` trỏ `docs/…§x.y` vẫn tồn tại.
+  - `decisions/ADR-REGISTER.md` chỉ đổi link anchor (đúng ngoại lệ mục 3). Không đụng `src/`, `scripts/`, `supabase/`.
+  - Đọc đối chiếu nghĩa: admin-ui §6.3 "Rows must not jump", §6.4, §11, ui-guidelines §8.4: đúng nghĩa, không mất ý.
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận (không cần sửa):** bản dịch giữ nhiều thuật ngữ tiếng Anh trong câu (label, wrap, card, component, render…). Chấp nhận: là từ chuyên ngành, khớp tên trong code; nếu đọc thấy khó thì ghi W-xx để dịch lại theo cụm.
+- **Cần người vận hành chốt:** không.
+- Token: Codex 95 % → 61 % (~34 %, Vừa).
+- Kết luận: **ĐẠT** — `CHỜ DUYỆT` gộp: đây là đề bài **cuối GĐ 2** nên theo ADR-018 người vận hành duyệt gộp.

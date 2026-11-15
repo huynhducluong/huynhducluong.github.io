@@ -1,27 +1,27 @@
-# Admin password sign-in
+# Đăng nhập Admin bằng password
 
-The Admin page supports two Supabase Auth methods:
+Trang Admin hỗ trợ hai phương thức Supabase Auth:
 
-- Password is the primary method and does not require email delivery.
-- Magic Link remains available as a backup and requires a working email provider.
+- Password là phương thức chính và không cần gửi email.
+- Magic Link vẫn dùng làm phương án dự phòng và cần email provider hoạt động.
 
-No password or Supabase secret key belongs in this repository. The browser sends the password directly to Supabase Auth over HTTPS, and the existing `portfolio_admins` allowlist plus Row Level Security continues to control CMS access.
+Không password hay Supabase secret key nào được phép nằm trong repository này. Trình duyệt gửi password trực tiếp tới Supabase Auth qua HTTPS; allowlist `portfolio_admins` hiện có cùng Row Level Security tiếp tục kiểm soát quyền truy cập CMS.
 
-## Set the initial password
+## Đặt password ban đầu
 
-An authenticated Admin session is required before a user can set their own password safely.
+Cần có session Admin đã xác thực trước khi người dùng có thể tự đặt password an toàn.
 
-1. If the Admin session is still active in any browser, open `/admin/`.
-2. Select **Account security**.
-3. Enter and confirm a password of at least 12 characters.
-4. Save, sign out, and test the **Password** sign-in method.
+1. Nếu session Admin vẫn active trong bất kỳ trình duyệt nào, mở `/admin/`.
+2. Chọn **Account security**.
+3. Nhập và xác nhận password ít nhất 12 ký tự.
+4. Save, đăng xuất và kiểm tra phương thức đăng nhập **Password**.
 
-If no authenticated session remains, use the local one-time setup command:
+Nếu không còn session đã xác thực, dùng lệnh thiết lập cục bộ một lần:
 
-1. In Supabase Dashboard, open **Project Settings > API Keys** and copy the Secret key (`sb_secret_...`) or legacy `service_role` key.
-2. Open a VS Code terminal in the project folder.
-3. Run `npm run setup:admin-password`.
-4. Paste the Secret key, then enter and confirm the new password. All three prompts are hidden.
-5. After the success message, close the terminal and test Password sign-in at `/admin/`.
+1. Trong Supabase Dashboard, mở **Project Settings > API Keys** và sao chép Secret key (`sb_secret_...`) hoặc key `service_role` cũ.
+2. Mở terminal VS Code trong thư mục project.
+3. Chạy `npm run setup:admin-password`.
+4. Dán Secret key, sau đó nhập và xác nhận password mới. Cả ba prompt đều được ẩn.
+5. Sau thông báo thành công, đóng terminal và kiểm tra đăng nhập Password tại `/admin/`.
 
-The setup utility reads the project URL and Admin email from the shared project configuration. It does not save or print the Secret key or password. Never expose the Secret key in browser code, commit it, or send it to another person. Do not modify `auth.users` directly and do not delete/recreate the existing user, because its ID is linked to the Admin allowlist and may own uploaded Storage objects.
+Utility thiết lập đọc URL project và email Admin từ cấu hình project dùng chung. Nó không lưu hoặc in Secret key hay password. Không bao giờ làm lộ Secret key trong code trình duyệt, commit nó hoặc gửi cho người khác. Không sửa trực tiếp `auth.users` và không xóa/tạo lại người dùng hiện có, vì ID của họ liên kết với allowlist Admin và có thể sở hữu object Storage đã upload.

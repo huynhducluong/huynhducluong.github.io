@@ -12,20 +12,20 @@
 | ID | Quyết định | Trạng thái | Ngày | Không chọn | Tài liệu |
 |---|---|---|---|---|---|
 | ADR-001 | Vite multi-page + TypeScript, **không UI framework**; renderer trả chuỗi HTML | `[CHỐT]` 2026-11-15 | 2026-09-25 | React / Vue: thêm bundle, không cần cho site nội dung | [coding-conventions §1](../docs/coding-conventions.md) |
-| ADR-002 | Deploy GitHub Pages từ `main`; CI chạy `verify:admin` trước khi deploy | `[CHỐT]` 2026-11-15 | 2026-09-25 | | [architecture](../docs/architecture.md#admin-operational-health-and-release-gate) |
-| ADR-003 | Supabase là nguồn gốc nội dung; dữ liệu bundle chỉ là seed / dự phòng khi dev | `[CHỐT]` 2026-11-15 | 2026-09-27 | | [architecture](../docs/architecture.md#data-ownership) |
-| ADR-004 | Trang công khai đọc **release bất biến**; preview Admin đọc bản nháp | `[CHỐT]` 2026-11-15 | 2026-09-27 | | [architecture](../docs/architecture.md#publishing-workflow) |
-| ADR-005 | **Output chọn, Profile sở hữu**: Website / CV / Portfolio không lưu bản sao hay thứ tự riêng của Profile, Project, Tool | `[CHỐT]` 2026-11-15 | 2026-10-02 | Mỗi output tự lưu bản sao: lệch nội dung giữa các output | [architecture](../docs/architecture.md#data-ownership) |
-| ADR-006 | Project / Tool là thư viện gốc; `published` hiện là **Ready** = được phép chọn, không phải đã lên trang | `[CHỐT]` 2026-11-15 | 2026-10-02 | | [architecture](../docs/architecture.md#data-ownership) |
+| ADR-002 | Deploy GitHub Pages từ `main`; CI chạy `verify:admin` trước khi deploy | `[CHỐT]` 2026-11-15 | 2026-09-25 | | [architecture](../docs/architecture.md#health-vận-hành-admin-và-cổng-release) |
+| ADR-003 | Supabase là nguồn gốc nội dung; dữ liệu bundle chỉ là seed / dự phòng khi dev | `[CHỐT]` 2026-11-15 | 2026-09-27 | | [architecture](../docs/architecture.md#quyền-sở-hữu-dữ-liệu) |
+| ADR-004 | Trang công khai đọc **release bất biến**; preview Admin đọc bản nháp | `[CHỐT]` 2026-11-15 | 2026-09-27 | | [architecture](../docs/architecture.md#quy-trình-publish) |
+| ADR-005 | **Output chọn, Profile sở hữu**: Website / CV / Portfolio không lưu bản sao hay thứ tự riêng của Profile, Project, Tool | `[CHỐT]` 2026-11-15 | 2026-10-02 | Mỗi output tự lưu bản sao: lệch nội dung giữa các output | [architecture](../docs/architecture.md#quyền-sở-hữu-dữ-liệu) |
+| ADR-006 | Project / Tool là thư viện gốc; `published` hiện là **Ready** = được phép chọn, không phải đã lên trang | `[CHỐT]` 2026-11-15 | 2026-10-02 | | [architecture](../docs/architecture.md#quyền-sở-hữu-dữ-liệu) |
 | ADR-007 | Ba họ token `--color-*` / `--admin-*` / `--document-*`, không trộn | `[CHỐT]` 2026-11-15 | 2026-09-30 | | [ui-guidelines §1](../docs/ui-guidelines.md) |
 | ADR-008 | Song ngữ `LocalizedText { en, vi }`; EN bắt buộc, VI thiếu dùng EN; `?lang=vi` | `[CHỐT]` 2026-11-15 | 2026-10-04 | | [ui-guidelines §4](../docs/ui-guidelines.md) |
 | ADR-009 | Chỉ theme sáng (`color-scheme: light`) | `[CHỐT]` 2026-11-15 | 2026-09-30 | Dark mode: gấp đôi việc kiểm tương phản, tài liệu in luôn sáng | [AGENTS §5.10](../AGENTS.md) |
 | ADR-010 | Tài liệu in cố định A4 / A4 ngang, `@page { margin: 0 }`, phát hiện tràn; không tràn âm thầm | `[CHỐT]` 2026-11-15 | 2026-09-27 | | [ui-guidelines §6](../docs/ui-guidelines.md) |
 | ADR-011 | Màu tài liệu từ `buildDocumentThemeTokens` (≥ 4.5:1); accent không làm màu chữ; không mờ chữ bằng `opacity` | `[CHỐT]` 2026-11-15 | 2026-09-27 | | [ui-guidelines §7](../docs/ui-guidelines.md) |
-| ADR-012 | Admin đăng nhập Magic Link + mật khẩu; frontend chỉ có publishable key; RLS + allowlist `auth.uid()`; `security definer` kiểm `is_portfolio_admin()` và thu hồi EXECUTE của `anon` | `[CHỐT]` 2026-11-15 | 2026-09-28 | | [architecture](../docs/architecture.md#security-boundary), [E-004](../docs/91-error-bank.md#e-004) |
+| ADR-012 | Admin đăng nhập Magic Link + mật khẩu; frontend chỉ có publishable key; RLS + allowlist `auth.uid()`; `security definer` kiểm `is_portfolio_admin()` và thu hồi EXECUTE của `anon` | `[CHỐT]` 2026-11-15 | 2026-09-28 | | [architecture](../docs/architecture.md#ranh-giới-bảo-mật), [E-004](../docs/91-error-bank.md#e-004) |
 | ADR-013 | Ngân sách bundle Admin ban đầu: JS 115 kB, CSS 27 kB gzip | `[CHỐT]` 2026-11-15 | 2026-10-06 | | [admin-ui-guidelines §12](../docs/admin-ui-guidelines.md) |
 | ADR-014 | Một hành động chính mỗi header Admin; phá hủy nằm trong More, xác nhận `tone: "danger"` | `[CHỐT]` 2026-11-15 | 2026-10-02 | | [admin-ui-guidelines §3](../docs/admin-ui-guidelines.md) |
-| ADR-015 | Tài liệu gốc riêng tư (bằng cấp, chứng chỉ) chỉ ở bucket private, signed URL ngắn hạn; ảnh công khai duy nhất là crop do người vận hành tạo và bật "Show in Portfolio" | `[CHỐT]` 2026-11-15 | 2026-10-15 | | [architecture](../docs/architecture.md#media-lifecycle) |
+| ADR-015 | Tài liệu gốc riêng tư (bằng cấp, chứng chỉ) chỉ ở bucket private, signed URL ngắn hạn; ảnh công khai duy nhất là crop do người vận hành tạo và bật "Show in Portfolio" | `[CHỐT]` 2026-11-15 | 2026-10-15 | | [architecture](../docs/architecture.md#vòng-đời-media) |
 
 ## Quy trình làm việc (từ 2026-11-15)
 
