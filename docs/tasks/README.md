@@ -121,3 +121,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-01](GD3-01-admin-sua-nhanh.md) | Admin sửa nhanh (N1: UI-10, W-02, UI-12) | `ĐẠT` |
 | [GD3-02](GD3-02-credentials-khung-giay.md) | Credentials: khung tờ giấy trên nền trắng, Dual thẳng hàng (N3a: UI-11, UI-08) | `ĐẠT` |
 | [GD3-03](GD3-03-credentials-layout-chon-crop.md) | Credentials: layout chọn crop, bỏ "Print as" (N3b: W-05) | `ĐẠT` |
+| [GD3-04](GD3-04-card-profile-thu-gon.md) | Card Profile thu gọn, chống chữ dài tràn, việc nhỏ (N2: W-03, W-04, UI-13, UI-14) | `GIAO CODE` (Claude — cửa sổ code) |
