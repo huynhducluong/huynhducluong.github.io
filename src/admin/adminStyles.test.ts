@@ -250,6 +250,12 @@ describe("Admin stylesheet contract", () => {
     expect(profileDocumentWorkspaceSource).not.toContain("Required by layout");
   });
 
+  it("groups sibling Portfolio disclosures as exclusive accordions (§6.4)", () => {
+    expect(profileDocumentWorkspaceSource.match(/name="portfolio-layout-overrides"/g)).toHaveLength(1);
+    expect(profileDocumentWorkspaceSource.match(/name="portfolio-media-groups"/g)).toHaveLength(3);
+    expect(profileDocumentWorkspaceSource).toContain('bindAdminDisclosureReveal(form)');
+  });
+
   it("uses one styled required marker and keeps generated slugs optional to enter", () => {
     expect(mainSource).toContain('field("Slug", "slug", project.slug, "text", "Auto-generated from project name")');
     expect(mainSource).toContain('field("Slug", "slug", tool.slug, "text", "Auto-generated from tool name")');
