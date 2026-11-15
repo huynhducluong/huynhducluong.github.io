@@ -176,7 +176,10 @@ const inspect = async (page, label) => {
     const overflows = [...overflowing]
       .filter((element) => !overflowing.has(element.parentElement))
       .slice(0, 8)
-      .map(describe);
+      .map((element) => {
+        const parent = element.parentElement ? describe(element.parentElement) : "";
+        return parent ? `${describe(element)} (in ${parent})` : describe(element);
+      });
     // Uneven rows: fields that share a grid row must start their control at the same height (docs §6.3).
     const controlOf = (cell) => cell.querySelector("input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea, .admin-field-static:not([hidden]), .admin-year-picker__control");
     const misaligned = [...document.querySelectorAll(".admin-shell :is(.admin-form-grid, .admin-site-bilingual)")]
