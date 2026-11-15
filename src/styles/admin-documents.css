@@ -1337,3 +1337,11 @@ html.admin-app .admin-portfolio-media-row .admin-media-row__fields { grid-templa
   .admin-document-library:not(.is-editing) .admin-document-library__workspace { display: none; }
   .admin-document-library__collection { border-right: 0; }
 }
+
+/* Field reached from a Portfolio preview pencil (ADR-030, §7.2): held for about 1.2 s, no animation, so reduced motion needs no special case. */
+.admin-document-editor label.is-edit-target {
+  border-radius: var(--admin-radius-sm);
+  background: var(--admin-color-selected);
+  outline: 2px solid var(--admin-color-focus);
+  outline-offset: 3px;
+}

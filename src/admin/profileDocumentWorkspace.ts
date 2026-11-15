@@ -59,6 +59,8 @@ import {
   type PortfolioLayoutOption,
 } from "../portfolio/layouts";
 import { findPortfolioLayoutIssues } from "../portfolio/safeArea";
+import { portfolioEditFieldName, type PortfolioEditModeMessage, type PortfolioEditTargetMessage } from "../portfolio/editMarkers";
+import { focusPortfolioEditControl, readEditMarkersPreference, renderEditMarkersToggle, syncEditMarkersToggle, writeEditMarkersPreference } from "./portfolioEditTarget";
 import { bindCvProjectRows, renderCvProjectRow } from "./cvProjectSelection";
 import { portfolioLayoutLabel, renderPortfolioFeatureRow, renderPortfolioMediaRow, syncPortfolioFeatureRow, syncPortfolioMediaPreview, syncPortfolioMediaRow } from "./portfolioMediaSelection";
 import { bindPortfolioProjectRows, renderPortfolioProjectRow, syncPortfolioProjectRow } from "./portfolioProjectSelection";
@@ -120,6 +122,8 @@ const state: {
   tab: Record<ProfileDocumentKind, DocumentTab>;
   zoom: Record<ProfileDocumentKind, PreviewZoomState>;
   previewLanguage: Record<ProfileDocumentKind, Language>;
+  /** Portfolio preview pencils (ADR-030); off by default, remembered per browser. */
+  editMarkers: boolean;
   filter: Record<ProfileDocumentKind, DocumentFilter>;
   search: Record<ProfileDocumentKind, string>;
   dirty: Record<ProfileDocumentKind, boolean>;
@@ -137,6 +141,7 @@ const state: {
   tab: { cv: "content", portfolio: "content" },
   zoom: { cv: createPreviewZoomState(), portfolio: createPreviewZoomState() },
   previewLanguage: { cv: "en", portfolio: "en" },
+  editMarkers: readEditMarkersPreference(),
   filter: { cv: "all", portfolio: "all" },
   search: { cv: "", portfolio: "" },
   dirty: { cv: false, portfolio: false },
@@ -146,6 +151,11 @@ const state: {
 let previewTimer: number | undefined;
 let previewController: EmbeddedPreviewController | undefined;
 let previewSender: PreviewSender | undefined;
+let editTargetListener: ((event: MessageEvent<PortfolioEditTargetMessage>) => void) | undefined;
+const removeEditTargetListener = (): void => {
+  if (editTargetListener) window.removeEventListener("message", editTargetListener);
+  editTargetListener = undefined;
+};
 let previewZoomController: PreviewZoomController | undefined;
 
 const text = (form: FormData, name: string): string => String(form.get(name) ?? "").trim();
@@ -1209,7 +1219,7 @@ export const profileDocumentWorkspaceView = (kind: ProfileDocumentKind): string 
   const previewToolbar = renderAdminPreviewToolbar({
     title: `${documentLabel(kind)} preview`,
     meta: `${kind === "cv" ? "A4" : "A4 landscape"} · <span data-preview-page-count>${initialPageCount} pages</span> · <button type="button" class="admin-preview-status" data-document-validation-open data-kind="${issues.length ? "warning" : "success"}" aria-haspopup="dialog" aria-controls="${kind}-validation-dialog">${documentCheckStatus(issues, notes)}</button>`,
-    controls: `${languageControl}${zoomControls}`,
+    controls: `${languageControl}${kind === "portfolio" ? renderEditMarkersToggle(state.editMarkers) : ""}${zoomControls}`,
   });
   return `
     <section class="admin-document-library is-editing"><button class="admin-library-scrim" type="button" data-profile-document-library-close aria-label="Close document library" tabindex="-1"></button>${documentCollectionView(kind)}<div class="admin-document-library__workspace">
@@ -1275,6 +1285,7 @@ export const discardProfileDocumentChanges = (): void => {
   previewController = undefined;
   previewZoomController?.disconnect();
   previewZoomController = undefined;
+  removeEditTargetListener();
   state.zoom = { cv: createPreviewZoomState(), portfolio: createPreviewZoomState() };
   state.previewLanguage = { cv: "en", portfolio: "en" };
   const cvDocument = selectedDocument("cv");
@@ -1292,6 +1303,7 @@ export const invalidateProfileDocumentWorkspace = (): void => {
   previewController = undefined;
   previewZoomController?.disconnect();
   previewZoomController = undefined;
+  removeEditTargetListener();
   state.cv = null;
   state.portfolio = null;
   state.documents = { cv: [], portfolio: [] };
@@ -1343,6 +1355,12 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   const form = root.querySelector<HTMLFormElement>("[data-document-form]");
   if (kind === "portfolio" && form) bindAdminDisclosureReveal(form);
   const iframe = root.querySelector<HTMLIFrameElement>("[data-document-iframe]");
+  // Portfolio pencils (ADR-030): the preview needs the on/off state and the zoom so a pencil stays about 22 px on screen.
+  const sendEditMode = (): void => {
+    if (kind !== "portfolio" || !iframe) return;
+    const message: PortfolioEditModeMessage = { type: "hdl:portfolio-edit-mode", enabled: state.editMarkers, scale: state.zoom.portfolio.scale };
+    iframe.contentWindow?.postMessage(message, window.location.origin);
+  };
   const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
   const previewFrame = root.querySelector<HTMLElement>(".admin-document-frame");
   previewSender?.disconnect();
@@ -1361,13 +1379,17 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
         stage: previewStage,
         state: state.zoom[kind],
         contentWidth: () => kind === "cv" ? 793.7 : 1122.5,
-        onScale: () => previewController?.refresh(),
+        onScale: () => {
+          previewController?.refresh();
+          sendEditMode();
+        },
       })
     : undefined;
   previewSender = iframe && form
     ? bindPreviewSender(iframe, kind, () => previewRenderPayload(kind, form), () => {
       previewController?.refresh();
       previewController?.reveal();
+      sendEditMode();
       const pageCount = iframe.contentDocument?.querySelectorAll(kind === "cv" ? ".cv-page" : ".portfolio-page").length ?? 0;
       const pageCountLabel = root.querySelector<HTMLElement>("[data-preview-page-count]");
       if (pageCountLabel && pageCount) pageCountLabel.textContent = `${pageCount} page${pageCount === 1 ? "" : "s"}`;
@@ -1377,6 +1399,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
       }
     })
     : undefined;
+  iframe?.addEventListener("load", sendEditMode);
   iframe?.addEventListener("error", () => previewController?.setError(`${documentLabel(kind)} preview is unavailable.`));
   root.querySelector<HTMLButtonElement>("[data-document-language-toggle]")?.addEventListener("click", (event) => {
     state.previewLanguage[kind] = state.previewLanguage[kind] === "en" ? "vi" : "en";
@@ -1790,16 +1813,41 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     syncImageOverlayControl();
     markDirty("appearance");
   });
-  root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((button) => button.addEventListener("click", () => {
-    state.tab[kind] = button.dataset.documentTab as DocumentTab;
-    updateAdminRoute({ view: kind, item: state.selectedId[kind], tab: state.tab[kind] });
+  const selectDocumentTab = (tab: DocumentTab): void => {
+    state.tab[kind] = tab;
+    updateAdminRoute({ view: kind, item: state.selectedId[kind], tab });
     root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((item) => {
-      const selected = item === button;
+      const selected = item.dataset.documentTab === tab;
       item.classList.toggle("is-active", selected);
       item.setAttribute("aria-selected", String(selected));
     });
-    root.querySelectorAll<HTMLElement>("[data-document-panel]").forEach((panel) => { panel.hidden = panel.dataset.documentPanel !== state.tab[kind]; });
-  }));
+    root.querySelectorAll<HTMLElement>("[data-document-panel]").forEach((panel) => { panel.hidden = panel.dataset.documentPanel !== tab; });
+  };
+  root.querySelectorAll<HTMLButtonElement>("[data-document-tab]").forEach((button) => button.addEventListener("click", () => selectDocumentTab(button.dataset.documentTab as DocumentTab)));
+  // Edit markers: toggle, and the jump from a clicked pencil to its Content-tab field (ADR-030).
+  const editMarkersToggle = root.querySelector<HTMLButtonElement>("[data-document-edit-markers]");
+  editMarkersToggle?.addEventListener("click", () => {
+    state.editMarkers = !state.editMarkers;
+    writeEditMarkersPreference(state.editMarkers);
+    syncEditMarkersToggle(editMarkersToggle, state.editMarkers);
+    sendEditMode();
+  });
+  removeEditTargetListener();
+  if (kind === "portfolio" && iframe && form) {
+    editTargetListener = (event: MessageEvent<PortfolioEditTargetMessage>): void => {
+      if (
+        event.origin !== window.location.origin
+        || event.source !== iframe.contentWindow
+        || event.data?.type !== "hdl:portfolio-edit-target"
+      ) return;
+      // The control follows the language being previewed; unknown fields give null and are ignored.
+      const controlName = portfolioEditFieldName(event.data.field, state.previewLanguage.portfolio);
+      if (!controlName) return;
+      selectDocumentTab("content");
+      focusPortfolioEditControl(root, form, controlName);
+    };
+    window.addEventListener("message", editTargetListener);
+  }
   root.querySelector<HTMLButtonElement>("[data-document-print]")?.addEventListener("click", () => {
     if (!activeDocument) return;
     const previewWindow = window.open("", "_blank");

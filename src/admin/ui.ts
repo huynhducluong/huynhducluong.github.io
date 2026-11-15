@@ -211,7 +211,7 @@ export const renderAdminSegmented = ({
     <span class="admin-segmented__options">${options.map((option) => `<label><input type="radio" name="${escapeHtml(name)}" value="${escapeHtml(option.value)}"${option.value === value ? " checked" : ""}${attributes ? ` ${attributes}` : ""}><span>${escapeHtml(option.label)}</span></label>`).join("")}</span>
   </div>`;
 
-const scrollParent = (element: HTMLElement): HTMLElement | null => {
+export const scrollParent = (element: HTMLElement): HTMLElement | null => {
   for (let node = element.parentElement; node; node = node.parentElement) {
     const { overflowY } = getComputedStyle(node);
     if ((overflowY === "auto" || overflowY === "scroll") && node.scrollHeight > node.clientHeight) return node;
