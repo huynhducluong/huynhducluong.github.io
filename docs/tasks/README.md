@@ -118,4 +118,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | Đề bài | Tên | Trạng thái |
 |---|---|---|
 | [GD2-01](GD2-01-dich-tai-lieu.md) | Dịch tài liệu sang tiếng Việt | `ĐẠT` |
-| [GD3-01](GD3-01-admin-sua-nhanh.md) | Admin sửa nhanh (N1: UI-10, W-02, UI-12) | `GIAO CODE` (Codex) |
+| [GD3-01](GD3-01-admin-sua-nhanh.md) | Admin sửa nhanh (N1: UI-10, W-02, UI-12) | `ĐẠT` |

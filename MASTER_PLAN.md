@@ -1,7 +1,7 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.3.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
-> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024); [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) (N1) `GIAO CODE` cho Codex. **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
+> **Phiên bản:** 1.4.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. Kế tiếp: thiết kế N3 (Credentials trong Portfolio). **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
 ## 1. Tóm tắt dự án
@@ -60,6 +60,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.4.0 | 2026-11-15 | GD3-01 (N1) ĐẠT, Claude tự gộp lần đầu theo ADR-018 (`7c387b8`): UI-10, UI-12, W-02 đã sửa. UI-13 (NO TOOLTIP có từ trước) ghi mới |
 | 1.3.0 | 2026-11-15 | ADR-024 (thứ tự nhóm, sổ để Viewer, dòng đã xử lý nhớ bằng mã băm, chụp đúng phạm vi, tự đối chiếu bộ quy tắc docs/92 §0.1); W-01 `GIỮ`; guideline Admin §5, §6.4, §11 sửa trước cho N1; GD3-01 `GIAO CODE` |
 | 1.2.0 | 2026-11-15 | GD2-01 ĐẠT, gộp `9a6b65d`: GĐ 2 HOÀN THÀNH, GĐ 3 bắt đầu. Sổ lỗi UI/UX trên Google Docs (ADR-023, `tools/read-ui-feedback.mjs`, link trong `project-links.local`). Đọc sổ lần đầu: W-02…06, UI-10…12, E-008 (lộ thông tin cá nhân); đề xuất nhóm N1…N4 |
 | 1.1.0 | 2026-11-15 | Người vận hành chốt ADR-001…015, 019…022 và lộ trình; mọi câu hỏi gửi người vận hành kèm khuyến nghị (AGENTS §4); GD2-01 `GIAO CODE` (Codex, token 95 %); W-01 đầu tiên vào docs/93 |
