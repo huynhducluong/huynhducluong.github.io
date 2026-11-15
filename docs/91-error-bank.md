@@ -66,7 +66,7 @@
 - **Nguyên nhân:** thiết kế coi "crop do người vận hành tạo" là đủ an toàn để công khai (ADR-015), nhưng không có bước nào nhắc kiểm thông tin cá nhân trong vùng crop; Admin không có công cụ che vùng.
 - **Bài học:** tài liệu chứng chỉ thường in số giấy tờ, ngày sinh, mã thí sinh. "Riêng tư bằng cách chỉ công khai bản crop" chỉ đúng khi vùng crop không chứa các thông tin đó.
 - **Phòng ngừa:**
-  - Ngay: người vận hành crop lại tránh vùng số định danh / ngày sinh (hoặc tắt Show in Portfolio), và xóa / che ảnh đó trong sổ Google Docs.
+  - Ngay: người vận hành crop lại tránh vùng số định danh / ngày sinh (hoặc tắt Show in Portfolio), và xóa / che ảnh đó trong sổ Google Docs. **Quyết định 2026-11-15:** người vận hành tự quản việc công khai (chỉ bật Show in Portfolio và publish khi chủ động muốn), không cắt lại ảnh hiện có; Claude không nhắc lại như việc gấp. Lời nhắc trong hộp crop (GD3-03) vẫn giữ làm lưới an toàn.
   - Thiết kế (N3): hộp Adjust crops nhắc "kiểm số giấy tờ, ngày sinh trước khi công khai"; xét công cụ che vùng (redact) ghi thẳng vào bản crop WebP.
   - Sổ lỗi UI/UX: quy tắc riêng tư ở [docs/93](93-workflow-friction.md#sổ-lỗi-uiux-trên-google-docs-chốt-adr-023-2026-11-15).
 

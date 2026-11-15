@@ -1,7 +1,7 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
 > **Phiên bản:** 1.6.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
-> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) `GIAO CODE` cho Codex; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026 `[CHỐT]`) `NHÁP` đủ điều kiện, giao sau khi GD3-02 gộp. **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
+> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) `GIAO CODE` cho Codex; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026 `[CHỐT]`) `NHÁP` đủ điều kiện, giao sau khi GD3-02 gộp. GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
 ## 1. Tóm tắt dự án
@@ -37,7 +37,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 | 9 | ~~ADR-026: bỏ "Print as", layout chọn crop~~ | Xong | `[CHỐT]` 2026-11-15; docs đã sửa; GD3-03 giao sau khi GD3-02 gộp |
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
 | 5 | ~~Sổ lỗi UI/UX dùng chung~~ | Xong | ADR-023 |
-| 6 | **Ảnh minh chứng công khai lộ số định danh, ngày sinh** | `[MỞ]` gấp | [E-008](docs/91-error-bank.md#e-008): người vận hành crop lại / tắt Show in Portfolio và xóa ảnh trong sổ Google Docs; nhắc + công cụ che vùng xét ở N3 |
+| 6 | Ảnh minh chứng có số định danh, ngày sinh | `[GIỮ]` | [E-008](docs/91-error-bank.md#e-008): người vận hành tự quản việc công khai (2026-11-15, không cắt lại); lời nhắc trong hộp crop làm ở GD3-03; công cụ che vùng (redact) chỉ xét nếu người vận hành muốn |
 | 7 | ~~Thứ tự nhóm nâng cấp GĐ 3~~ | Xong | ADR-024: N1 → N3 → N2 → N4; N1 = [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) |
 | 8 | ~~Phiên đăng nhập cho `npm run shots`~~ | Xong | `.auth/admin.json` có 2026-11-15 |
 
