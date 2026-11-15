@@ -1,6 +1,6 @@
 # GD2-01 — Dịch tài liệu sang tiếng Việt
 
-> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd2/01-dich-tai-lieu` (tạo từ `origin/main` mới nhất: `git fetch; git switch -c gd2/01-dich-tai-lieu origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (11 file docs, không code) · **Người đang code:** Codex (token 95 %)
+> **Trạng thái:** ĐẠT (gộp `9a6b65d`, 2026-11-15) · **Nhánh:** `gd2/01-dich-tai-lieu` (tạo từ `origin/main` mới nhất: `git fetch; git switch -c gd2/01-dich-tai-lieu origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (11 file docs, không code) · **Người đang code:** Codex (token 95 %)
 > **Gộp (ADR-018):** tự gộp được — chỉ đổi `docs/`, không migration, không đổi giao diện.
 
 ## 1. Mục tiêu
@@ -67,4 +67,4 @@ Dịch các tài liệu tiếng Anh có sẵn sang tiếng Việt theo ADR-017, 
 - **Ghi nhận (không cần sửa):** bản dịch giữ nhiều thuật ngữ tiếng Anh trong câu (label, wrap, card, component, render…). Chấp nhận: là từ chuyên ngành, khớp tên trong code; nếu đọc thấy khó thì ghi W-xx để dịch lại theo cụm.
 - **Cần người vận hành chốt:** không.
 - Token: Codex 95 % → 61 % (~34 %, Vừa).
-- Kết luận: **ĐẠT** — `CHỜ DUYỆT` gộp: đây là đề bài **cuối GĐ 2** nên theo ADR-018 người vận hành duyệt gộp.
+- Kết luận: **ĐẠT** — người vận hành duyệt gộp 2026-11-15 (lúc review: đây là đề bài **cuối GĐ 2** nên theo ADR-018 chờ người vận hành).

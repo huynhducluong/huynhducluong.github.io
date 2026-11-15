@@ -9,7 +9,7 @@
 
 | Ngày | Đề bài / lượt | Cỡ | Còn trước | Còn sau | Tốn | Ghi chú |
 |---|---|---|---|---|---|---|
-| 2026-11-15 | GD2-01 | Vừa | 95 % | | | Đề bài đầu tiên theo quy trình mới; chỉ docs |
+| 2026-11-15 | GD2-01 | Vừa | 95 % | 61 % | **~34 %** | Đề bài đầu theo quy trình mới; dịch 11 file docs (~780 dòng), 5 bước wip, không lượt sửa |
 
 ## Claude — cửa sổ code (% đã dùng)
 

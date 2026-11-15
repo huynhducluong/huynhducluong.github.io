@@ -59,6 +59,17 @@
 - **Bài học:** công việc bị ngắt phải để lại dấu vết đủ để người khác làm tiếp.
 - **Phòng ngừa:** đề bài chia bước, mỗi bước commit `wip` trên nhánh riêng và ghi "Đã xong bước" ở mục 5 (ADR-016, [docs/tasks/README.md](tasks/README.md)).
 
+<a id="e-008"></a>
+## E-008 — Ảnh minh chứng công khai để lộ số định danh và ngày sinh (2026-11-15)
+
+- **Hiện tượng:** crop Landscape của phiếu điểm TOEIC đang bật "Show in Portfolio" cho thấy rõ họ tên, **số định danh cá nhân** và **ngày sinh**; cùng ảnh được dán vào sổ lỗi UI/UX trên Google Docs (ai có link đều xem được). Claude phát hiện khi đọc sổ lần đầu.
+- **Nguyên nhân:** thiết kế coi "crop do người vận hành tạo" là đủ an toàn để công khai (ADR-015), nhưng không có bước nào nhắc kiểm thông tin cá nhân trong vùng crop; Admin không có công cụ che vùng.
+- **Bài học:** tài liệu chứng chỉ thường in số giấy tờ, ngày sinh, mã thí sinh. "Riêng tư bằng cách chỉ công khai bản crop" chỉ đúng khi vùng crop không chứa các thông tin đó.
+- **Phòng ngừa:**
+  - Ngay: người vận hành crop lại tránh vùng số định danh / ngày sinh (hoặc tắt Show in Portfolio), và xóa / che ảnh đó trong sổ Google Docs.
+  - Thiết kế (N3): hộp Adjust crops nhắc "kiểm số giấy tờ, ngày sinh trước khi công khai"; xét công cụ che vùng (redact) ghi thẳng vào bản crop WebP.
+  - Sổ lỗi UI/UX: quy tắc riêng tư ở [docs/93](93-workflow-friction.md#sổ-lỗi-uiux-trên-google-docs-chốt-adr-023-2026-11-15).
+
 ## Mẫu
 
 ```markdown

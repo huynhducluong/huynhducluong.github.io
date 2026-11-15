@@ -1,7 +1,7 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.1.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
-> **Giai đoạn hiện tại:** **GĐ 2** — chuyển sang quy trình nhiều Agent (ADR-016) và dịch tài liệu sang tiếng Việt (ADR-017). Khung quy trình dựng và mọi ADR chốt 2026-11-15; [GD2-01](docs/tasks/GD2-01-dich-tai-lieu.md) `GIAO CODE` cho Codex. Sổ lỗi UI/UX trên tài liệu dùng chung: chờ chọn cách ([vấn đề mở #5](#4-vấn-đề-còn-mở)).
+> **Phiên bản:** 1.2.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; đề xuất 4 nhóm N1…N4, thứ tự chờ người vận hành chốt ([docs/93](docs/93-workflow-friction.md#nhóm-nâng-cấp-gđ-3-đề-xuất)). **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
 ## 1. Tóm tắt dự án
@@ -17,13 +17,13 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 | GĐ | Nội dung | Trạng thái | Kết thúc khi |
 |---|---|---|---|
 | **1** | Dựng khung: Website, Project / Tool, CV, Portfolio, Cover Letter, Admin CMS, publish, media, crop | **HOÀN THÀNH** (tới commit `7ffffdb`, 2026-11-15) | Đã có khung trình bày cơ bản cho mọi output |
-| **2** | Quy trình làm việc: `AGENTS.md`, ADR, đề bài, các sổ 91 / 92 / 93 / 95 / 96; dịch tài liệu sang tiếng Việt (GD2-01) | **ĐANG LÀM** | ADR nhập lại được duyệt; GD2-01 ĐẠT; chạy trọn một vòng giao → code → review |
-| **3** | **Dùng thật và sửa.** Người vận hành nhập nội dung thật, xuất CV / Portfolio / Cover Letter, dùng Admin hằng ngày. Chỗ vướng ghi vào [docs/93](docs/93-workflow-friction.md) (W-xx), lỗi giao diện vào [docs/92](docs/92-ui-rules.md) (UI-xx). Claude gom thành **nhóm nâng cấp** (N1, N2…), người vận hành chốt thứ tự, mỗi nhóm 1–3 đề bài | Chưa bắt đầu | Hai – ba vòng liền không còn W-xx / UI-xx mức "Lỗi"; người vận hành chốt hết |
+| **2** | Quy trình làm việc: `AGENTS.md`, ADR, đề bài, các sổ 91 / 92 / 93 / 95 / 96; dịch tài liệu sang tiếng Việt (GD2-01) | **HOÀN THÀNH** 2026-11-15 (GD2-01 gộp `9a6b65d`) | ADR nhập lại được duyệt; GD2-01 ĐẠT; chạy trọn một vòng giao → code → review |
+| **3** | **Dùng thật và sửa.** Người vận hành nhập nội dung thật, xuất CV / Portfolio / Cover Letter, dùng Admin hằng ngày. Chỗ vướng ghi vào [docs/93](docs/93-workflow-friction.md) (W-xx), lỗi giao diện vào [docs/92](docs/92-ui-rules.md) (UI-xx). Claude gom thành **nhóm nâng cấp** (N1, N2…), người vận hành chốt thứ tự, mỗi nhóm 1–3 đề bài | **ĐANG LÀM** từ 2026-11-15 | Hai – ba vòng liền không còn W-xx / UI-xx mức "Lỗi"; người vận hành chốt hết |
 | **4** | Sẵn sàng công khai `[MỞ]`: nội dung thật đủ EN / VI, SEO và thẻ chia sẻ, hiệu năng trang công khai, kiểm PDF cuối, sao lưu Supabase | Chưa bắt đầu | Danh sách chốt ở cuối GĐ 3 |
 
 **Cách chạy GĐ 3** (như GĐ 8b của BCE):
 
-- Gặp vướng thì **ghi ngay** (nhắn Claude một câu + ảnh nếu có), không sửa lẻ tẻ, trừ lỗi chặn công việc (lỗi dữ liệu, không publish được) → đề bài sửa ngay.
+- Gặp vướng thì **ghi ngay** vào sổ lỗi UI/UX trên Google Docs (ADR-023, cách đọc ở [docs/93](docs/93-workflow-friction.md)) rồi nhắn Claude "đọc sổ", không sửa lẻ tẻ, trừ lỗi chặn công việc (lỗi dữ liệu, không publish được) → đề bài sửa ngay.
 - Sau mỗi đợt dùng (vài ngày hoặc một hồ sơ nộp), Claude gom W-xx / UI-xx thành nhóm, xếp theo lợi ích / công sức, kèm một khuyến nghị.
 - Ngoài sửa lỗi, mỗi nhóm có thể kèm **cải thiện** (cách làm tốt hơn) nếu người vận hành chốt.
 
@@ -33,9 +33,12 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 |---|---|---|---|
 | 1 | ~~Duyệt ADR-001…015 (nhập lại) và ADR-019…022~~ | Xong | Người vận hành chốt hết 2026-11-15 |
 | 2 | Nhánh cũ `feature/*` (6 nhánh) còn giữ hay xóa | `[MỞ]` | Kiểm đã gộp hết vào `main` chưa trước khi xóa |
-| 3 | Layout Portfolio Dual: tiêu đề credential ba dòng làm hai khung lệch nhau 4,5 mm | `[MỞ]` | [UI-08](docs/92-ui-rules.md#ui-08); ứng viên đề bài đầu GĐ 3 |
+| 3 | Layout Portfolio Dual: tiêu đề credential ba dòng làm hai khung lệch nhau 4,5 mm | `[MỞ]` | [UI-08](docs/92-ui-rules.md#ui-08); gom vào nhóm N3 |
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
-| 5 | Sổ lỗi UI/UX dùng chung: người vận hành dán ảnh + ghi chú một lần, Claude đọc trực tiếp (thay gửi từng ảnh) | `[ĐỀ XUẤT]` | Phương án và khuyến nghị: tin nhắn 2026-11-15; chốt thì ghi ADR-023 và cách đọc vào docs/93 |
+| 5 | ~~Sổ lỗi UI/UX dùng chung~~ | Xong | ADR-023 |
+| 6 | **Ảnh minh chứng công khai lộ số định danh, ngày sinh** | `[MỞ]` gấp | [E-008](docs/91-error-bank.md#e-008): người vận hành crop lại / tắt Show in Portfolio và xóa ảnh trong sổ Google Docs; nhắc + công cụ che vùng xét ở N3 |
+| 7 | Thứ tự nhóm nâng cấp GĐ 3 (đề xuất N1 → N3 → N2 → N4) | `[ĐỀ XUẤT]` | [docs/93](docs/93-workflow-friction.md#nhóm-nâng-cấp-gđ-3-đề-xuất) |
+| 8 | Phiên đăng nhập cho `npm run shots` (Claude tự chụp Admin khi review) | `[MỞ]` | Người vận hành chạy `npm run shots:login` một lần |
 
 ## 5. Thuật ngữ
 
@@ -57,5 +60,6 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.2.0 | 2026-11-15 | GD2-01 ĐẠT, gộp `9a6b65d`: GĐ 2 HOÀN THÀNH, GĐ 3 bắt đầu. Sổ lỗi UI/UX trên Google Docs (ADR-023, `tools/read-ui-feedback.mjs`, link trong `project-links.local`). Đọc sổ lần đầu: W-02…06, UI-10…12, E-008 (lộ thông tin cá nhân); đề xuất nhóm N1…N4 |
 | 1.1.0 | 2026-11-15 | Người vận hành chốt ADR-001…015, 019…022 và lộ trình; mọi câu hỏi gửi người vận hành kèm khuyến nghị (AGENTS §4); GD2-01 `GIAO CODE` (Codex, token 95 %); W-01 đầu tiên vào docs/93 |
 | 1.0.0 | 2026-11-15 | Tạo file. Áp dụng quy trình nhiều Agent từ BCE (ADR-016); docs tiếng Việt (ADR-017); quy tắc gộp vì push = deploy (ADR-018); nhập lại ADR-001…015 chờ duyệt; lộ trình GĐ 1–4 (ADR-022). Thêm `AGENTS.md`, `decisions/`, `docs/tasks/`, `docs/91`, `92`, `93`, `95`, `96`; `CLAUDE.md` chỉ còn `@AGENTS.md` |

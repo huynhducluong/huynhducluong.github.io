@@ -24,7 +24,7 @@ Chỉ người vận hành đổi dòng `MODE`.
 
 | Vai trò | Agent | Được làm | Không được làm |
 |---|---|---|---|
-| Thiết kế, viết đề bài, review | **Claude** (phiên Claude Code chính) | Bàn và soạn thiết kế với người vận hành; sửa `docs/`, `decisions/`, `MASTER_PLAN.md`, `AGENTS.md`; viết đề bài `docs/tasks/`; review (verify, đọc diff, chụp và đo giao diện); gộp khi đạt sạch (ADR-018) | Sửa `src/`, `supabase/`, `scripts/` (lỗi tìm thấy → viết đề bài sửa); chốt thay người vận hành |
+| Thiết kế, viết đề bài, review | **Claude** (phiên Claude Code chính) | Bàn và soạn thiết kế với người vận hành; sửa `docs/`, `decisions/`, `MASTER_PLAN.md`, `AGENTS.md`, `tools/` (script phân tích / review, không đi vào bản build); viết đề bài `docs/tasks/`; review (verify, đọc diff, chụp và đo giao diện); gộp khi đạt sạch (ADR-018) | Sửa `src/`, `supabase/`, `scripts/` (lỗi tìm thấy → viết đề bài sửa); chốt thay người vận hành |
 | Code | **Codex** | Code và test trong `src/`, `supabase/migrations/`, `scripts/` **đúng đề bài**; chạy `verify:admin`; báo theo mục 5 của đề bài | Sửa tài liệu thiết kế, ADR, `MASTER_PLAN.md`; tự thêm / bỏ / đổi phạm vi; làm khác thiết kế (không làm được → **dừng, báo**); gộp vào `main`; push |
 | Code dự phòng | **Claude — cửa sổ code** (phiên Claude Code **riêng**: VS Code → Terminal mới → `claude`) | Như Codex, khi người vận hành giao (chọn theo bảng token, hoặc Codex dừng giữa chừng) | Như Codex; code khi Codex đang giữ nhánh; review hay gộp chính việc mình code |
 
@@ -171,7 +171,8 @@ Thân commit ghi lý do, ngân sách bundle tăng, migration mới, và kết qu
 | Bộ UI dùng lại cho dự án khác | `docs/ui-kit/` |
 | Lỗi / sai giả định đã gặp | `docs/91-error-bank.md` |
 | Lỗi giao diện → quy tắc UI-xx | `docs/92-ui-rules.md` (quy tắc gốc vẫn ở guideline, ADR-021) |
-| Vướng mắc khi người vận hành dùng thật | `docs/93-workflow-friction.md` |
+| Vướng mắc khi người vận hành dùng thật; cách đọc sổ lỗi UI/UX trên Google Docs | `docs/93-workflow-friction.md` |
+| Link riêng (sổ lỗi UI/UX…) | `project-links.local` (chỉ trên máy, không vào Git) |
 | Kinh nghiệm dùng lại cho dự án khác | `docs/95-reusable-playbook.md` |
 | Theo dõi token mỗi lần giao code | `docs/96-token-log.md` |
 
@@ -180,7 +181,8 @@ Thân commit ghi lý do, ngân sách bundle tăng, migration mới, và kết qu
 - `npm run dev` — Vite dev server.
 - `npm run test:watch` — Vitest khi đang code.
 - `npm run verify:admin` — typecheck, test, build, ngân sách bundle Admin. Chạy trước khi báo xong; CI chạy đúng cổng này trước khi deploy.
-- `npm run shots` — chụp Admin ở ba màn hình mục tiêu (`docs/admin-ui-guidelines.md` §11).
+- `npm run shots` — chụp Admin ở ba màn hình mục tiêu (`docs/admin-ui-guidelines.md` §11). Cần phiên đăng nhập: người vận hành chạy `npm run shots:login` một lần mỗi máy / khi hết hạn.
+- `node tools/read-ui-feedback.mjs --new` — đọc các dòng mới của sổ lỗi UI/UX trên Google Docs ([docs/93](docs/93-workflow-friction.md), ADR-023). Link riêng nằm trong `project-links.local` (không vào Git).
 - **Windows:** chạy lệnh từ thư mục có ổ đĩa **viết hoa** (`D:\…`). Từ `d:\…` mọi file test lỗi `Cannot read properties of undefined (reading 'config')` ([E-006](docs/91-error-bank.md#e-006)).
 
 ## 11. Định nghĩa "xong"
