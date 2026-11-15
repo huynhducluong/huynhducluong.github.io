@@ -80,8 +80,18 @@
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `c41c0ec` (worktree `D:\wt\pf-review`, `npm ci` sạch). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 34 file / 211 test; Admin JS 92,8 / 115, **CSS 26,6 / 27,0 kB gzip** (trong ngân sách). Diff 10 file, đúng phạm vi mục 3; không migration, không dependency, không đụng `docs/`, trang công khai, CV, Portfolio.
+  - Đo trên Admin thật (mở, không lưu), laptop 1440 × 731: mặc định cả 4 Experience và 3 Education **thu gọn**, mọi card cao **92 px**, cả 4 card Experience nằm trong khung nhìn; tóm tắt đúng dữ liệu thật (`BIM Coordinator · Vietnam · 02/2026 – Present`, `Transportation Engineering · 2016–2021 · 1 credential`); `aria-expanded`, `aria-controls` (vùng đích có thật và `hidden`), `aria-label` "Expand …" đúng; thứ tự Tab ↓ → ⌄ (↑ bị vô hiệu ở card đầu); hai card mở độc lập; sửa Position khi card đang mở rồi thu gọn: `FormData` trả giá trị mới và dòng tóm tắt đổi theo; bấm ↓ trên card đang mở thì card **vẫn mở** ở vị trí mới; **+ Add company** thêm card mở ở đầu và focus ô Company.
+  - `showRelatedEntry` từ liên kết Education ở tab Credentials: chuyển tab Education, mở đúng card, tiêu đề card ở 250 px, **dưới** mép thanh tab (225 px), focus nằm trong card, shell và window không cuộn.
+  - 1920 × 940, 2560 × 1300: card 92 px; khung hẹp 1180: card 148 px (nút xuống hàng dưới như mọi card hiện có); không phần tử nào vượt mép card ở cả bốn cỡ.
+  - **Bộ phát hiện (UI-14):** tự tái tạo lỗi kiểu B trong worktree tạm (khối tên `width: max-content`): `npm run shots -- --stress --views=profile` báo `overflows its container → div…` ở **cả 1440 và 1180**; khôi phục thì hết báo (đã `git checkout`, 0 file đổi). `--stress` toàn Admin ở laptop: **0** dòng *overflows*, còn đúng **3** dòng *NO TOOLTIP* như báo cáo (chữ cố định bị cắt khi tên dự án dài, ở thẻ chọn dự án CV / Portfolio): ghi [UI-15](../92-ui-rules.md#ui-15).
+  - UI-13 đã hết (Slug, meta Cover Letter, nhãn bộ chọn); `credentialPreviews` → `credentialSnapshotPreviews` đúng.
+- **Phải sửa:** không.
+- **Nên sửa:** không (các điểm dưới đây là việc kế tiếp, không thuộc đề bài này).
+- **Trả lời câu hỏi của người code:** *không* đổi mặc định của `revealAdminElement` trong đề bài này. Hướng đúng là để helper tự cộng chiều cao của phần tử `position: sticky` ở đầu vùng cuộn của nó, nhưng đó là thay đổi file dùng chung của mọi chỗ gọi (Cover Letter, CV, liên kết mở mục…), cần test và đo từng nơi: tách thành đề bài nhỏ riêng (MASTER_PLAN vấn đề mở #12). Cách bù `inset` tại chỗ trong `showRelatedEntry` là đúng và đã đo.
+- **Ghi nhận:** (1) dấu `·` nằm trong chuỗi tóm tắt thay vì `::before`: chấp nhận, một chuỗi, một `title`. (2) không thêm tự mở card lỗi: đúng điều kiện đề bài (chưa có đường cuộn tới card lỗi). (3) `summaryOf` đọc cả form (`readProfileForm`) mỗi lần gõ: ~25 ô nên chưa thành vấn đề, đo khi form lớn hơn. (4) Nhãn của bộ phát hiện chỉ có tên thẻ và lớp đầu (`→ div`): khó lần ra chỗ lỗi; thêm lớp của cha khi làm đề bài quét. (5) Cùng mẫu thiếu tooltip ở `profileDocumentWorkspace.ts:901` chưa được script báo: xét khi quét.
+- **Cần người vận hành chốt:** không.
+- Token: Claude — cửa sổ code 70 % → 76 % đã dùng (~6 %, Lớn).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 (chỉ Admin và script, không migration, không đổi trang công khai hay PDF): Claude gộp và push.
