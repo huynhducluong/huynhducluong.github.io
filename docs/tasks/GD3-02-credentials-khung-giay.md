@@ -60,15 +60,15 @@ Thực hiện kiểu **B** người vận hành đã chọn từ demo thật (AD
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · token trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi:
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- Kết quả `portfolio-credentials-check` (số PASS / FAIL, dán dòng FAIL nếu có; **không dán ảnh**):
-- `portfolio-print.css` có ghi đè selector nào ở mục 3 không:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3.
+- Người code: Codex · token trước / sau: 36% / phiên Codex API không cung cấp chỉ số % còn lại.
+- Nhánh, commit cuối: `gd3/02-credentials-khung-giay` · `03044d4` (WIP bước 3; commit báo cáo ở ngay sau).
+- File đã đổi: `src/styles/portfolio-screen.css`, `src/portfolio/layouts.test.ts`.
+- `verify:admin`: 194 / 194 test đạt (31 file); bundle Admin JS 92,8 / 115,0 kB gzip, CSS 26,5 / 27,0 kB gzip.
+- Kết quả `portfolio-credentials-check` (số PASS / FAIL, dán dòng FAIL nếu có; **không dán ảnh**): 24 PASS / 0 FAIL, `All PASS`; hai ca Dual tiêu đề dài có hai khung cùng bắt đầu ở 87,15 mm, kích thước 120,48 × 90,36 mm.
+- `portfolio-print.css` có ghi đè selector nào ở mục 3 không: Không.
+- Chỗ làm khác đề bài và lý do: Không; đã đổi `gap: 9mm` thành `column-gap: 9mm` đúng điều kiện mục 3.2 vì grid nay có ba hàng và shorthand sẽ tạo thêm row-gap.
+- Câu hỏi: Không có.
 
 ## 6. Review của Claude
 
