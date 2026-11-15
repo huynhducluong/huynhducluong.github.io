@@ -437,11 +437,13 @@ body:has(.admin-shell) {
 }
 .admin-content-item--trash { grid-template-columns: minmax(0, 1fr) auto; }
 .admin-content-item__reorder { display: flex; align-items: center; gap: .15rem; align-self: start; }
+.admin-content-item__reorder-grid { display: grid; grid-template-columns: repeat(2, auto); gap: .15rem; }
 .admin-content-item__drag { display: inline-grid; min-width: 1.2rem; place-items: center; color: var(--color-text-muted); cursor: grab; font-size: 1rem; letter-spacing: -.2em; line-height: 1; }
 .admin-content-item__drag:active { cursor: grabbing; }
 .admin-content-item__reorder button { width: 1.35rem; height: 1.35rem; padding: 0; border: 1px solid var(--color-border); border-radius: .3rem; background: #fff; color: var(--color-primary-dark); cursor: pointer; font: inherit; font-size: var(--admin-text-xs); font-weight: 900; line-height: 1; }
 .admin-content-item__reorder button:hover:not(:disabled) { border-color: var(--color-primary); background: var(--admin-color-selected); }
 .admin-content-item__reorder button:disabled { cursor: default; opacity: .38; }
+.admin-content-item__reorder button:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 1px; }
 .admin-content-item.is-dragging { opacity: .45; }
 .admin-content-item.is-drag-over { border-color: var(--color-primary); background: var(--admin-color-selected); }
 @media (pointer: coarse) {
@@ -641,24 +643,6 @@ textarea { line-height: 1.5; }
 .admin-attention-list small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .admin-attention-list strong { font-size: var(--admin-text-sm); }
 .admin-attention-list small { margin-top: .15rem; color: var(--color-text-muted); font-size: var(--admin-text-2xs); }
-.admin-reorder-menu {
-  position: fixed;
-  inset: auto;
-  width: max-content;
-  min-width: 10.5rem;
-  margin: 0;
-  padding: .35rem;
-  border: 1px solid var(--admin-color-border);
-  border-radius: .5rem;
-  background: #fff;
-  box-shadow: 0 10px 30px rgb(16 45 59 / 18%);
-}
-.admin-reorder-menu::backdrop { background: transparent; }
-.admin-reorder-menu:popover-open { display: grid; gap: .2rem; }
-.admin-reorder-menu button { display: grid; min-height: 2.25rem; grid-template-columns: 1.25rem minmax(0, 1fr); align-items: center; gap: .5rem; padding: .45rem .6rem; border: 0; border-radius: .35rem; background: transparent; color: var(--admin-color-text); cursor: pointer; font: inherit; font-size: var(--admin-text-xs); font-weight: 700; text-align: left; }
-.admin-reorder-menu button:hover:not(:disabled) { background: var(--admin-color-hover); color: var(--color-primary-dark); }
-.admin-reorder-menu button:disabled { color: var(--admin-color-text-muted); cursor: default; opacity: .5; }
-.admin-reorder-menu button span { color: var(--color-primary-dark); font-size: var(--admin-text-base); font-weight: 900; text-align: center; }
 .admin-workflow { display: grid; gap: .8rem; margin: 0; padding: 0; list-style: none; }
 .admin-workflow li { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr); align-items: start; gap: .65rem; }
 .admin-workflow li > span { display: grid; width: 1.7rem; height: 1.7rem; place-items: center; border-radius: 999px; background: var(--color-primary-light); color: var(--color-primary-dark); font-size: var(--admin-text-2xs); font-weight: 900; }
