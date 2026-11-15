@@ -1,4 +1,4 @@
-# GD3-05 — Hộp thoại đóng khi bấm ra ngoài, quét chữ dài (nhóm N5)
+﻿# GD3-05 — Hộp thoại đóng khi bấm ra ngoài, quét chữ dài (nhóm N5)
 
 > **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/05-hop-thoai-quet-chu-dai` (`git fetch; git switch -c gd3/05-hop-thoai-quet-chu-dai origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~10–12 file) · **Người đang code:** Claude — cửa sổ code
 > **Gộp (ADR-018):** tự gộp được — chỉ Admin, script và công cụ đo, không migration, không đổi trang công khai hay PDF, không phải đề bài cuối giai đoạn.
@@ -50,18 +50,20 @@
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
+- Đã xong bước: 1, 2, 3, 4, 5 (cả năm).
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: không ghi (không có số token trong phiên).
+- Nhánh, commit cuối: `gd3/05-hop-thoai-quet-chu-dai`, commit `wip(GD3-05 bước 5)` (xem `git log`).
 - File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- `tools/dialog-backdrop-check.mjs` (số PASS / FAIL; dán dòng FAIL nếu có):
-- Thử phá test hợp đồng (xóa một lần gắn → báo lỗi):
-- Kết quả `--stress` (laptop mọi view; 1180 các view đã nêu); phần còn lại cần thiết kế lại:
-- Ghi chú vận hành cho docs:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
-
+  - **Dùng chung:** `src/admin/ui.ts` (thêm `shouldCloseDialogOnBackdrop`, `bindAdminDialogBackdropClose`); `src/styles/admin-ui.css` (meta của thanh công cụ preview cho xuống dòng, bỏ `overflow: hidden` / `nowrap`); `src/styles/admin-documents.css` (UI-15); `scripts/admin-screenshots.mjs` (nhãn *overflows* kèm lớp cha).
+  - Dialog: `confirmDialog.ts`, `textInputDialog.ts`, `profilePhotoCropper.ts`, `projectCoverCropper.ts` (chuyển sang hàm chung); `coverLetterWorkspace.ts`, `main.ts` (Security), `profileDocumentWorkspace.ts`, `siteWorkspace.ts` (gắn mới); `credentialWorkspace.ts` (gắn mới + hỏi xác nhận).
+  - Test: `ui.test.ts` (hàm thuần), `dialogBackdropContract.test.ts` (mới, hợp đồng).
+- `verify:admin`: 214 / 214 test đạt (35 file); bundle JS 92,9 / 115,0 kB, CSS 26,7 / 27,0 kB gzip.
+- `tools/dialog-backdrop-check.mjs`: **All PASS** (0 FAIL, kể cả kéo chuột ra ngoài không đóng, Keep editing, Discard changes).
+- Thử phá test hợp đồng: bỏ dòng gắn của `renameDialog` trong `siteWorkspace.ts` → test báo `./siteWorkspace.ts: 3 dialog(s), 2 bind(s)`; đã `git checkout` lại, không commit.
+- Kết quả `--stress`: laptop mọi view **0** overflows, **0** NO TOOLTIP; 1180×731 (profile, homepage, cv, portfolio, cover-letters, projects, tools) **0 / 0** sau khi sửa. Lần quét đầu ở 1180 có một lỗi: `div.admin-preview-toolbar__meta "Live draft · Synced · 46 issues"` bị cắt không tooltip ở ba view homepage → sửa bằng CSS (meta cho xuống dòng). Không còn mục nào cần thiết kế lại. Dòng *truncated with tooltip* còn lại là dữ liệu người dùng có tooltip, được phép (§6.2).
+- Ghi chú vận hành cho docs: Add credential nay hỏi "Discard credential changes?" trên mọi đường đóng khi đã gõ. Meta thanh preview có thể thành hai dòng ở khung hẹp (Claude nên chụp kiểm chiều cao thanh khi review). Mẫu thẻ tool (`profileDocumentWorkspace.ts` ~901) không bị quét báo lỗi nên **không sửa**.
+- Chỗ làm khác đề bài và lý do: mục 5 UI-15 sửa bằng CSS (state text `flex: none`, location co lại) thay vì tách track trong HTML; không rút ngắn câu vì vừa ở khung 1180. Thêm sửa CSS thanh preview ngoài danh sách (mục 7 cho phép sửa nhỏ).
+- Câu hỏi: không.
 ## 6. Review của Claude
 
 - Ngày, commit đã review:
