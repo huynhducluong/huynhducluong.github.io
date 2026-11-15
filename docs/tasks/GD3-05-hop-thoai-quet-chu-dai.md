@@ -1,6 +1,6 @@
 ﻿# GD3-05 — Hộp thoại đóng khi bấm ra ngoài, quét chữ dài (nhóm N5)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/05-hop-thoai-quet-chu-dai` (`git fetch; git switch -c gd3/05-hop-thoai-quet-chu-dai origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~10–12 file) · **Người đang code:** Claude — cửa sổ code
+> **Trạng thái:** ĐẠT (Claude tự gộp `25d9fa8` theo ADR-018, 2026-11-15) · **Nhánh:** `gd3/05-hop-thoai-quet-chu-dai` (`git fetch; git switch -c gd3/05-hop-thoai-quet-chu-dai origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~10–12 file) · **Người đang code:** Claude — cửa sổ code
 > **Gộp (ADR-018):** tự gộp được — chỉ Admin, script và công cụ đo, không migration, không đổi trang công khai hay PDF, không phải đề bài cuối giai đoạn.
 
 ## 1. Mục tiêu

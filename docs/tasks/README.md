@@ -123,5 +123,5 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-03](GD3-03-credentials-layout-chon-crop.md) | Credentials: layout chọn crop, bỏ "Print as" (N3b: W-05) | `ĐẠT` |
 | [GD3-04](GD3-04-card-profile-thu-gon.md) | Card Profile thu gọn, chống chữ dài tràn, việc nhỏ (N2: W-03, W-04, UI-13, UI-14) | `ĐẠT` |
 | [GD3-05](GD3-05-hop-thoai-quet-chu-dai.md) | Hộp thoại đóng khi bấm ra ngoài, quét chữ dài (N5: W-07, UI-15) | `ĐẠT` |
-| [GD3-06](GD3-06-preview-cap-nhat-ngay.md) | Preview cập nhật ngay, không chờ ảnh tải lười (N7: W-09) | `GIAO CODE` (Claude — cửa sổ code) |
-| [GD3-07](GD3-07-link-video-portfolio.md) | Link "▶ Video" trong Portfolio (N6: W-08) | `NHÁP` (giao sau GD3-06) |
+| [GD3-06](GD3-06-preview-cap-nhat-ngay.md) | Preview cập nhật ngay, không chờ ảnh tải lười (N7: W-09) | `ĐẠT` |
+| [GD3-07](GD3-07-link-video-portfolio.md) | Link "▶ Video" trong Portfolio (N6: W-08) | `GIAO CODE` (Claude — cửa sổ code) |

@@ -1,6 +1,6 @@
 # GD3-07 — Link "▶ Video" trong Portfolio (nhóm N6)
 
-> **Trạng thái:** NHÁP — giao sau GD3-06 gộp xong (một người ghi một lúc, AGENTS §1.1) · **Nhánh:** `gd3/07-link-video-portfolio` (`git fetch; git switch -c gd3/07-link-video-portfolio origin/main`) · **Ngày giao:** — · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (Codex còn ít token)
+> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/07-link-video-portfolio` (`git fetch; git switch -c gd3/07-link-video-portfolio origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (Codex còn ít token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện PDF và bản web của Portfolio. Claude review xong thì chuyển `CHỜ DUYỆT`.
 
 ## 1. Mục tiêu
