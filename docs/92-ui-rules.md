@@ -13,6 +13,16 @@
 | 3. Dùng thật | Người vận hành | GĐ 3 và cuối mỗi nhóm nâng cấp | Gửi **một lần** mọi chỗ chưa ưng (ảnh + một câu); Claude ghi UI-xx / W-xx |
 
 - Lỗi nhỏ trong lúc code một nhóm: gom vào lượt duyệt cuối nhóm, không báo từng cái.
+- **Chụp đúng phạm vi** (người vận hành 2026-11-15): chỉ chụp và xem **màn hình bị thay đổi** (`npm run shots -- --views=…`), ở ba màn hình mục tiêu. Ngoại lệ: thay đổi chạm **file dùng chung** (`admin-ui.css`, `ui.ts`, `tokens.css`, theme, khung shell) thì chụp **mọi** view một lần và chỉ xem kỹ ảnh khác thường (báo *uneven field row*, *NO TOOLTIP*, cuộn ngang). Màn hình không bị ảnh hưởng không review lại.
+
+### 0.1 Đồng bộ với bộ quy tắc (mọi đề xuất)
+
+Trước khi đề xuất hay viết đề bài có giao diện, Claude **tự đối chiếu** với guideline (`admin-ui-guidelines.md`, `ui-guidelines.md`) và §1 của sổ này, không chờ người vận hành nhắc:
+
+1. Tìm quy tắc đang áp cho thành phần / màn hình đó; đề xuất **dẫn mục** (ví dụ "admin-ui §6.4") và làm theo.
+2. Ý người vận hành trái một quy tắc → đề xuất theo quy tắc và nói rõ chỗ khác, vì sao (vd. W-03: nút ⌄ sau ↑ ↓ theo §6.4).
+3. Chưa có quy tắc (mẫu mới) → ghi `[ĐỀ XUẤT] quy tắc mới` trong đề xuất để người vận hành duyệt; duyệt xong thì ghi vào guideline **trước khi** giao code (ADR-020).
+4. Sửa xong một lỗi giao diện → quy tắc nằm trong guideline + dòng UI-xx trỏ tới; áp cho **mọi** màn hình cùng loại, không chỉ màn hình gây lỗi.
 - Test so chuỗi CSS / HTML chứng minh "đã sửa file", **không** chứng minh "người dùng thấy đúng". Yêu cầu hiển thị (không cắt, một hàng, thẳng hàng, không tràn) phải đo trên trình duyệt thật.
 
 ## 1. Danh sách

@@ -92,7 +92,7 @@ Thuộc tính đi kèm: `[CẦN KIỂM THỬ]` — đã chốt thiết kế như
 ## 4. Quy trình cho mỗi chủ đề thiết kế
 
 1. **Yêu cầu:** người vận hành nêu chủ đề (hoặc một dòng W-xx / UI-xx tới lượt).
-2. **Phân tích:** Claude đọc tài liệu (mục 2), kiểm tra xung đột với ADR, xem code và giao diện thật, rồi đưa phương án kèm **một khuyến nghị**.
+2. **Phân tích:** Claude đọc tài liệu (mục 2), kiểm tra xung đột với ADR, xem code và giao diện thật, **tự đối chiếu bộ quy tắc UI/UX** ([docs/92 §0.1](docs/92-ui-rules.md#01-đồng-bộ-với-bộ-quy-tắc-mọi-đề-xuất): dẫn mục quy tắc, nói rõ chỗ khác ý người vận hành, mẫu mới chưa có quy tắc thì ghi `[ĐỀ XUẤT] quy tắc mới`), rồi đưa phương án kèm **một khuyến nghị**.
 3. **Quyết định:** người vận hành chốt, sửa, hoặc hoãn.
 4. **Cập nhật tài liệu:** tài liệu chuyên đề + ADR + bảng trạng thái và changelog trong `MASTER_PLAN.md`.
 5. **Review nhất quán:** checklist mục 7.

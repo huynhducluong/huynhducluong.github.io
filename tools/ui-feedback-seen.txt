@@ -1,0 +1,9 @@
+# Dòng đã xử lý của sổ lỗi UI/UX trên Google Docs (tools/read-ui-feedback.mjs --mark). Chỉ mã băm, không chứa nội dung.
+7b42a76c UI-10 2026-11-15
+b6b8e758 W-02 2026-11-15
+4cc0408a W-03 2026-11-15
+fa60f67d W-04 2026-11-15
+75aca368 W-05 2026-11-15
+ede6e6fe W-06 2026-11-15
+ef62a73a UI-11 2026-11-15
+dc73d87f UI-12 2026-11-15

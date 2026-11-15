@@ -1,7 +1,7 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.2.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
-> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; đề xuất 4 nhóm N1…N4, thứ tự chờ người vận hành chốt ([docs/93](docs/93-workflow-friction.md#nhóm-nâng-cấp-gđ-3-đề-xuất)). **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
+> **Phiên bản:** 1.3.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024); [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) (N1) `GIAO CODE` cho Codex. **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
 ## 1. Tóm tắt dự án
@@ -37,8 +37,8 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
 | 5 | ~~Sổ lỗi UI/UX dùng chung~~ | Xong | ADR-023 |
 | 6 | **Ảnh minh chứng công khai lộ số định danh, ngày sinh** | `[MỞ]` gấp | [E-008](docs/91-error-bank.md#e-008): người vận hành crop lại / tắt Show in Portfolio và xóa ảnh trong sổ Google Docs; nhắc + công cụ che vùng xét ở N3 |
-| 7 | Thứ tự nhóm nâng cấp GĐ 3 (đề xuất N1 → N3 → N2 → N4) | `[ĐỀ XUẤT]` | [docs/93](docs/93-workflow-friction.md#nhóm-nâng-cấp-gđ-3-đề-xuất) |
-| 8 | Phiên đăng nhập cho `npm run shots` (Claude tự chụp Admin khi review) | `[MỞ]` | Người vận hành chạy `npm run shots:login` một lần |
+| 7 | ~~Thứ tự nhóm nâng cấp GĐ 3~~ | Xong | ADR-024: N1 → N3 → N2 → N4; N1 = [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) |
+| 8 | ~~Phiên đăng nhập cho `npm run shots`~~ | Xong | `.auth/admin.json` có 2026-11-15 |
 
 ## 5. Thuật ngữ
 
@@ -60,6 +60,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.3.0 | 2026-11-15 | ADR-024 (thứ tự nhóm, sổ để Viewer, dòng đã xử lý nhớ bằng mã băm, chụp đúng phạm vi, tự đối chiếu bộ quy tắc docs/92 §0.1); W-01 `GIỮ`; guideline Admin §5, §6.4, §11 sửa trước cho N1; GD3-01 `GIAO CODE` |
 | 1.2.0 | 2026-11-15 | GD2-01 ĐẠT, gộp `9a6b65d`: GĐ 2 HOÀN THÀNH, GĐ 3 bắt đầu. Sổ lỗi UI/UX trên Google Docs (ADR-023, `tools/read-ui-feedback.mjs`, link trong `project-links.local`). Đọc sổ lần đầu: W-02…06, UI-10…12, E-008 (lộ thông tin cá nhân); đề xuất nhóm N1…N4 |
 | 1.1.0 | 2026-11-15 | Người vận hành chốt ADR-001…015, 019…022 và lộ trình; mọi câu hỏi gửi người vận hành kèm khuyến nghị (AGENTS §4); GD2-01 `GIAO CODE` (Codex, token 95 %); W-01 đầu tiên vào docs/93 |
 | 1.0.0 | 2026-11-15 | Tạo file. Áp dụng quy trình nhiều Agent từ BCE (ADR-016); docs tiếng Việt (ADR-017); quy tắc gộp vì push = deploy (ADR-018); nhập lại ADR-001…015 chờ duyệt; lộ trình GĐ 1–4 (ADR-022). Thêm `AGENTS.md`, `decisions/`, `docs/tasks/`, `docs/91`, `92`, `93`, `95`, `96`; `CLAUDE.md` chỉ còn `@AGENTS.md` |
