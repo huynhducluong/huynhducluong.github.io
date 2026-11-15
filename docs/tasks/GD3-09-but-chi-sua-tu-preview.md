@@ -1,6 +1,6 @@
 # GD3-09 — Bút chì "sửa ở đâu" trên preview Portfolio (nhóm N4a)
 
-> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/09-but-chi-sua-tu-preview` (`git fetch; git switch -c gd3/09-but-chi-sua-tu-preview origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** ĐẠT (Claude tự gộp, 2026-11-15) · **Nhánh:** `gd3/09-but-chi-sua-tu-preview` (`git fetch; git switch -c gd3/09-but-chi-sua-tu-preview origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** tự gộp được nếu review sạch **và** test chứng minh trang công khai, bản in và PDF không đổi (bút chì chỉ có trong preview nhúng của Admin).
 
 ## 1. Mục tiêu
@@ -107,3 +107,12 @@ W-06 (Sổ #6), ADR-030: người vận hành không biết chữ trên Portfoli
 - **Cần người vận hành chốt:** không.
 - Token: Claude — cửa sổ code 60 % → 66 % đã dùng (~6 %, Vừa; chưa tính lượt sửa).
 - Kết luận: **CẦN SỬA** (2 mục "Phải sửa", cùng một chỗ: vị trí bút chì). Người code sửa trên cùng nhánh rồi báo lại; Claude review lại (chủ yếu chạy lại công cụ đo) và gộp nếu sạch.
+
+### Review 2 (2026-11-15, `54059e4`, worktree sạch; đã xóa)
+
+- `verify:admin`: 41 file / 258 test đạt; Admin JS 92,8 / 115,0, CSS 26,6 / 27,0 kB gzip (không đổi). Diff lượt sửa: hàm `place` neo bút chì ở cuối dòng chữ đầu của khối, tránh chồng bằng cách dời xuống từng bước; dấu cách `twoDigits` đã sửa.
+- **`node tools/portfolio-edit-markers-check.mjs`: All PASS** (24 dòng ở 1024, 1440 × 731, 1920; mốc trước sửa: 10 FAIL). Ảnh xem tay ở 1440: mỗi bút chì nằm ngay sau chữ của nó, không chồng nhau.
+- **Phải sửa:** không. **Nên sửa:** không. **Cần người vận hành chốt:** không.
+- **Ghi nhận:** (1) nhánh "tránh chồng sang trái khi hết chỗ" chưa làm (công cụ đo không gặp); hiện chỉ dời xuống, bút chì chồng đủ nhiều ở mép dưới trang là việc nhỏ cho sau. (2) CSS `portfolio-edit-markers.css` được nạp cả ở trang Portfolio công khai nhưng không có phần tử nào dùng nên không đổi giao diện; chưa đo ảnh hưởng dung lượng (nhỏ). (3) Tài liệu `archived` chưa đo (không có dữ liệu thật để thử).
+- Token: Claude — cửa sổ code 68 % → 69 % đã dùng cho lượt sửa (~1 %); cả đề bài 60 % → 69 % (~9 %, Vừa).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 (chỉ preview nhúng và Admin, không migration; markup khi tắt giống hệt từng byte theo snapshot; `/portfolio/` và `?preview=1` không có bút chì): Claude gộp và push.
