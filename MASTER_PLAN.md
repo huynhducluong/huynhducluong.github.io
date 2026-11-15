@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.12.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.13.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -36,10 +36,10 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 | 3 | ~~Layout Portfolio Dual: tiêu đề credential ba dòng làm hai khung lệch nhau 4,5 mm~~ | Xong | [UI-08](docs/92-ui-rules.md#ui-08); cách sửa chốt ADR-025, làm ở GD3-02 |
 | 9 | ~~ADR-026: bỏ "Print as", layout chọn crop~~ | Xong | GD3-03 ĐẠT, gộp `154b8d8` |
 | 10 | ~~Việc nhỏ (UI-13, đổi tên `credentialPreviews`)~~ | Xong | GD3-04 gộp `ec6a1d2` |
-| 11 | Quét chữ dài tràn / thiếu tooltip toàn Admin | `[MỞ]` | `--stress` toàn Admin: **0** dòng *overflows*, **3** dòng *NO TOOLTIP* ([UI-15](docs/92-ui-rules.md#ui-15)) + mẫu cùng loại ở `profileDocumentWorkspace.ts:901`; cải thiện nhãn phát hiện (thêm lớp của cha). Đề bài nhỏ, tự gộp được |
+| 11 | ~~Quét chữ dài tràn / thiếu tooltip toàn Admin~~ | Xong | GD3-05 gộp `25d9fa8`: 0 *overflows*, 0 *NO TOOLTIP* ở laptop và 1180 px |
 | 12 | `revealAdminElement` tự bù phần tử `position: sticky` ở đầu vùng cuộn (thay vì mỗi chỗ gọi tự tính `inset`) | `[ĐỀ XUẤT]` | Đổi file dùng chung của mọi chỗ gọi: cần test và đo từng nơi; đề bài nhỏ riêng (trả lời câu hỏi của người code ở review GD3-04) |
 | 13 | ~~Thứ tự nhóm N5 – N7 từ sổ #9 – #11~~ | Xong | ADR-028: N5 → N7 → N6 → N4; N5 = [GD3-05](docs/tasks/GD3-05-hop-thoai-quet-chu-dai.md), N7 = [GD3-06](docs/tasks/GD3-06-preview-cap-nhat-ngay.md), N6 chờ demo |
-| 14 | W-10: Print / PDF đọc bản nháp đã lưu nên có thể có ảnh vỡ mà Admin preview không có (đo: 3 ảnh vỡ so với 0); đề xuất nhóm N8 ngay sau N5; tạm thời bấm Save draft trước khi xuất PDF | `[ĐỀ XUẤT]` | [docs/93](docs/93-workflow-friction.md) W-10; chờ người vận hành chốt thứ tự |
+| 14 | ~~W-10: Print / PDF đọc bản nháp đã lưu~~ | **Rút lại** | Báo động nhầm: nút Print / PDF và Publish luôn lưu bản dựng từ form hiện tại trước khi in / xuất bản; xem [W-10](docs/93-workflow-friction.md) |
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
 | 5 | ~~Sổ lỗi UI/UX dùng chung~~ | Xong | ADR-023 |
 | 6 | Ảnh minh chứng có số định danh, ngày sinh | `[GIỮ]` | [E-008](docs/91-error-bank.md#e-008): người vận hành tự quản việc công khai (2026-11-15, không cắt lại); lời nhắc trong hộp crop làm ở GD3-03; công cụ che vùng (redact) chỉ xét nếu người vận hành muốn |
@@ -66,6 +66,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.13.0 | 2026-11-15 | GD3-05 (N5) ĐẠT, tự gộp `25d9fa8`: W-07, UI-15 đã sửa; 21 phép đo hộp thoại All PASS. Người vận hành chốt kiểu A cho link video (ADR-029). **Rút lại W-10 / N8** (báo động nhầm: phép thử của tôi mở thẳng URL in, bỏ qua bước lưu của nút Print). GD3-06 (N7) `GIAO CODE`, GD3-07 (N6) `NHÁP` |
 | 1.12.0 | 2026-11-15 | Người vận hành chốt N5 → N7 → N6 → N4 (ADR-028); sổ #11: **tìm ra nguyên nhân** (preview chờ ảnh tải lười tối đa 4 s, đo 3.880 ms khi bấm EN / VI liên tục) → N7 đổi thành sửa độ trễ, giữ nút EN / VI như cũ; công cụ `tools/dialog-backdrop-check.mjs` (mốc 10 FAIL); GD3-05 `GIAO CODE`, GD3-06 `NHÁP` |
 | 1.11.0 | 2026-11-15 | Đọc sổ Google Docs lần hai (#9 – #11): W-07, W-08, W-09; nhóm N5 – N7 đề xuất; công cụ `tools/preview-language-check.mjs` (EN / VI: All PASS, không tái hiện được lỗi; INFO: Website nhớ VI, CV / Portfolio tự về EN) |
 | 1.10.0 | 2026-11-15 | GD3-04 (N2) ĐẠT, tự gộp `ec6a1d2`: W-03, W-04, UI-13 đã sửa; UI-14 có bộ phát hiện (`shots --stress`, `--viewport`) đã chứng minh bắt đúng lỗi kiểu B; UI-15 ghi mới; vấn đề mở #11, #12 |

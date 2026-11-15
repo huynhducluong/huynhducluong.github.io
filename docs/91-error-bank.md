@@ -70,6 +70,14 @@
   - Thiết kế (N3): hộp Adjust crops nhắc "kiểm số giấy tờ, ngày sinh trước khi công khai"; xét công cụ che vùng (redact) ghi thẳng vào bản crop WebP.
   - Sổ lỗi UI/UX: quy tắc riêng tư ở [docs/93](93-workflow-friction.md#sổ-lỗi-uiux-trên-google-docs-chốt-adr-023-2026-11-15).
 
+<a id="e-009"></a>
+## E-009 — Báo động nhầm vì mở thẳng đường dẫn nội bộ, bỏ qua bước của luồng thật (2026-11-15)
+
+- **Hiện tượng:** khi làm demo N6, Claude mở trực tiếp `/portfolio/?mode=print&document=<id>` và thấy 3 ảnh vỡ, rồi báo người vận hành "bấm Save draft trước khi xuất PDF" và đề xuất nhóm N8 (W-10). Sau đó đọc mã mới thấy nút Print / PDF và Publish **luôn lưu bản dựng từ form hiện tại** trước khi mở trang in / xuất bản, nên PDF thật không bị ảnh vỡ.
+- **Nguyên nhân:** phép thử bỏ qua bước trung gian mà giao diện làm (lưu bản đang xem) và dữ liệu đọc ra là bản đã lưu cũ; kết luận được đưa ra trước khi đọc mã của luồng thật.
+- **Bài học:** muốn khẳng định "người dùng sẽ gặp lỗi" phải tái hiện bằng **đúng thao tác của người dùng** (bấm nút) hoặc đọc mã của luồng đó, không mở thẳng URL nội bộ; và không đưa lời khuyên thao tác cho người vận hành trước khi xác minh.
+- **Phòng ngừa:** mọi phát hiện kiểu "PDF / bản xuất sai" kèm một dòng "đã đi qua nút nào"; nếu thao tác thật ghi vào dữ liệu thì đọc mã trước, nói rõ phần chưa chạy thử. Xem [W-10](93-workflow-friction.md) (đã rút lại).
+
 ## Mẫu
 
 ```markdown

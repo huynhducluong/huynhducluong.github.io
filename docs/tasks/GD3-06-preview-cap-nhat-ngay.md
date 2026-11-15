@@ -1,6 +1,6 @@
 # GD3-06 — Preview cập nhật ngay, không chờ ảnh tải lười (nhóm N7)
 
-> **Trạng thái:** NHÁP — giao sau khi GD3-05 gộp (một người ghi một lúc, AGENTS §1.1) · **Nhánh:** `gd3/06-preview-cap-nhat-ngay` (`git fetch; git switch -c gd3/06-preview-cap-nhat-ngay origin/main`) · **Ngày giao:** — · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn đủ token, bảng chọn người code)
+> **Trạng thái:** NHÁP — giao sau khi GD3-05 gộp (một người ghi một lúc, AGENTS §1.1) · **Nhánh:** `gd3/06-preview-cap-nhat-ngay` (`git fetch; git switch -c gd3/06-preview-cap-nhat-ngay origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code
 > **Gộp (ADR-018):** tự gộp được — chỉ chế độ preview (`?preview=1&embedded=1`) và Admin; trang công khai không kích hoạt bộ nhận preview nên không đổi.
 
 ## 1. Mục tiêu

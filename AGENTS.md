@@ -185,6 +185,7 @@ Thân commit ghi lý do, ngân sách bundle tăng, migration mới, và kết qu
 - `node tools/portfolio-credentials-check.mjs <thư-mục-tạm>` — đo các trang Credentials của Portfolio trên trình duyệt thật (cần `npm run dev -- --port 5199 --strictPort` đang chạy và `.auth/`); ảnh chụp ra thư mục tạm, không vào Git (E-008).
 - `node tools/preview-language-check.mjs` — đo công tắc EN / VI của preview Website, CV, Portfolio (cần dev server cổng 5199 và `.auth/`); xem [W-09](docs/93-workflow-friction.md).
 - `node tools/dialog-backdrop-check.mjs` — đo hành vi bấm ra ngoài của mọi hộp thoại Admin (cần dev server cổng 5199 và `.auth/`); xem [W-07](docs/93-workflow-friction.md), admin-ui §8.1.
+- `node tools/portfolio-video-link-check.mjs <thư-mục-tạm>` — đo link "▶ Video" của Portfolio trên trình dựng thật, 12 layout × EN / VI, kèm kiểm /URI trong PDF (cần dev server cổng 5199 và `.auth/`); xem [W-08](docs/93-workflow-friction.md), ui-guidelines §8.4.
 - `node tools/read-ui-feedback.mjs --new` — đọc các dòng mới của sổ lỗi UI/UX trên Google Docs ([docs/93](docs/93-workflow-friction.md), ADR-023). Link riêng nằm trong `project-links.local` (không vào Git).
 - **Windows:** chạy lệnh từ thư mục có ổ đĩa **viết hoa** (`D:\…`). Từ `d:\…` mọi file test lỗi `Cannot read properties of undefined (reading 'config')` ([E-006](docs/91-error-bank.md#e-006)).
 
