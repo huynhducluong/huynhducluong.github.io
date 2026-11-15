@@ -3,6 +3,12 @@
 //   npm run shots                    capture every view on every screen
 //   npm run shots -- --views=cv,portfolio --screens=laptop
 //   npm run shots -- --path="/admin/?view=projects&item=new"
+//   npm run shots -- --stress        long-text stress (UI-14): before inspecting, replace the text of elements whose
+//                                    tooltip equals their own text (user data) and of [data-stress-text] elements with a
+//                                    130-character string. Changes the DOM only; nothing is typed into a field or saved.
+//   npm run shots -- --viewport=1180x731   one extra custom size instead of the three target screens
+// Warnings: "truncated … NO TOOLTIP" (clipped text without a full tooltip), "overflows its container → <element>"
+// (a visible element wider than the nearest framed or clipping ancestor; topmost element of the chain only, UI-14).
 import { mkdirSync, existsSync, rmSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { createLogger, createServer } from "vite";
@@ -71,7 +77,16 @@ if (!existsSync(authFile)) {
   await stop(undefined, 1);
 }
 
-const screenNames = list(args.screens, Object.keys(screens));
+if (args.viewport) {
+  const match = /^(\d{3,5})x(\d{3,5})$/.exec(args.viewport);
+  if (!match) {
+    console.error('Use --viewport=<width>x<height>, for example --viewport=1180x731.');
+    await stop(undefined, 1);
+  }
+  screens[args.viewport] = { width: Number(match[1]), height: Number(match[2]) };
+}
+
+const screenNames = args.viewport ? [args.viewport] : list(args.screens, Object.keys(screens));
 const unknownScreen = screenNames.find((name) => !screens[name]);
 if (unknownScreen) {
   console.error(`Unknown screen "${unknownScreen}". Use: ${Object.keys(screens).join(", ")}`);
@@ -91,6 +106,22 @@ const settle = async (page) => {
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(250);
 };
+
+const stressText = "Stress test with a very long unbroken-by-design label that must stay inside its card without widening it or pushing the actions away";
+
+const applyStress = (page) => page.evaluate((text) => {
+  const normalize = (value) => value.replace(/\s+/g, " ").trim();
+  const longText = text.slice(0, 130).trim();
+  document.querySelectorAll(".admin-shell [data-stress-text], .admin-shell [title]").forEach((element) => {
+    if (element.children.length) return;
+    const current = normalize(element.textContent ?? "");
+    if (!current) return;
+    if (!element.hasAttribute("data-stress-text") && normalize(element.getAttribute("title") ?? "") !== current) return;
+    element.textContent = longText;
+    element.setAttribute("title", longText);
+    element.hidden = false;
+  });
+}, stressText);
 
 const inspect = async (page, label) => {
   const found = await page.evaluate(() => {
@@ -124,6 +155,28 @@ const inspect = async (page, label) => {
         const label = tooltip && tooltip.startsWith(text.replace(/…$/, "").slice(0, 24)) ? "with tooltip" : "NO TOOLTIP";
         return `${label} ${describe(element)} "${text.slice(0, 70)}"`;
       });
+    // UI-14: an element wider than the nearest ancestor that draws a frame (border / background) or clips.
+    // Only the topmost element of an overflowing chain is reported; absolutely positioned popups and horizontal scrollers are exempt.
+    const framing = (element) => {
+      const style = getComputedStyle(element);
+      return style.overflowX !== "visible"
+        || parseFloat(style.borderRightWidth) > 0
+        || !/^rgba\(.*, 0\)$|^transparent$/.test(style.backgroundColor);
+    };
+    const overflowing = new Set(elements
+      .filter((element) => !element.matches("svg, svg *, .sr-only, option"))
+      .filter((element) => !["absolute", "fixed"].includes(getComputedStyle(element).position))
+      .filter((element) => {
+        let ancestor = element.parentElement;
+        while (ancestor && ancestor !== document.body && !framing(ancestor)) ancestor = ancestor.parentElement;
+        if (!ancestor || ancestor === document.body || ancestor.closest(".admin-shell") === null) return false;
+        if (["auto", "scroll"].includes(getComputedStyle(ancestor).overflowX)) return false;
+        return element.getBoundingClientRect().right > ancestor.getBoundingClientRect().right + 1;
+      }));
+    const overflows = [...overflowing]
+      .filter((element) => !overflowing.has(element.parentElement))
+      .slice(0, 8)
+      .map(describe);
     // Uneven rows: fields that share a grid row must start their control at the same height (docs §6.3).
     const controlOf = (cell) => cell.querySelector("input:not([type='checkbox']):not([type='radio']):not([type='hidden']), select, textarea, .admin-field-static:not([hidden]), .admin-year-picker__control");
     const misaligned = [...document.querySelectorAll(".admin-shell :is(.admin-form-grid, .admin-site-bilingual)")]
@@ -153,6 +206,7 @@ const inspect = async (page, label) => {
       horizontal: document.documentElement.scrollWidth > width,
       pastEdge,
       truncated: [...new Set(truncated)],
+      overflows: [...new Set(overflows)],
       misaligned: [...new Set(misaligned)],
       stackedOptions,
     };
@@ -161,6 +215,7 @@ const inspect = async (page, label) => {
   if (found.horizontal) report("page scrolls horizontally");
   if (found.pastEdge.length) report(`past right edge → ${found.pastEdge.join(", ")}`);
   for (const text of found.truncated) report(`truncated ${text}`);
+  for (const element of found.overflows) report(`overflows its container → ${element}`);
   for (const grid of found.misaligned) report(`uneven field row → ${grid}`);
   for (const option of found.stackedOptions) report(`checkbox stacked above its text → ${option}`);
 };
@@ -200,6 +255,7 @@ for (const screenName of screenNames) {
         await settle(page);
         shotName = `${target.name}-${slug(label)}`;
       }
+      if (args.stress) await applyStress(page);
       await inspect(page, `${screenName}/${shotName}`);
       await page.screenshot({ path: `${outDir}/${screenName}/${shotName}.png` });
       console.log(`✓ tmp/screenshots/${screenName}/${shotName}.png`);
