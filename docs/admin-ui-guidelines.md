@@ -1,163 +1,163 @@
-# Admin UI/UX guidelines
+# Hướng dẫn UI/UX Admin
 
-These rules keep every Admin workspace consistent. Read them before changing anything under `src/admin/` or `src/styles/admin*.css`. When a change needs to break a rule, update this file in the same change and explain why.
+Các quy tắc này giữ mọi workspace Admin nhất quán. Đọc chúng trước khi thay đổi bất kỳ thứ gì trong `src/admin/` hoặc `src/styles/admin*.css`. Khi thay đổi cần phá vỡ một quy tắc, hãy cập nhật file này trong cùng thay đổi và giải thích lý do.
 
-Related: public website and printable documents follow `docs/ui-guidelines.md`; code style, tests and migrations follow `docs/coding-conventions.md`; the reusable kit for other projects is `docs/ui-kit/README.md`.
+Liên quan: website công khai và tài liệu có thể in theo `docs/ui-guidelines.md`; style code, test và migration theo `docs/coding-conventions.md`; bộ dùng lại cho dự án khác nằm trong `docs/ui-kit/README.md`.
 
-## 1. One system, shared components
+## 1. Một hệ thống, component dùng chung
 
-Admin has one visual system. A workspace composes shared renderers from `src/admin/ui.ts` instead of writing its own markup for the same pattern.
+Admin có một hệ thống hình ảnh. Workspace kết hợp các renderer dùng chung từ `src/admin/ui.ts` thay vì tự viết markup cho cùng một mẫu.
 
-| Pattern | Use |
+| Mẫu | Cách dùng |
 |---|---|
-| Document workspace header (Homepage, Profile, CV, Portfolio, Cover Letters) | `renderAdminDocumentHeader` |
-| Master-item editor header (Projects, Automation tools) | `renderAdminEditorHeader` |
-| Form section card | `renderAdminSectionCard` |
-| Field label, required marker | `renderAdminFieldLabel(label, required)` |
-| Preview toolbar and its controls | `renderAdminPreviewToolbar`, `renderAdminPreviewSelect`, `renderAdminPreviewLanguageToggle`, `renderPreviewZoomControls` |
-| Select control, dropdown chevron | `renderAdminSelectControl`, `adminChevronIcon` (see §6.1) |
-| Dialog header and close button | `renderAdminDialogHeader`, `adminCloseIcon` (see §8.1) |
-| Clipped user text, move up/down icons | `renderAdminTruncatedText`, `adminArrowUpIcon`, `adminArrowDownIcon` (see §6.2) |
-| Card More menu (⋯) | `renderAdminMoreMenu`, `installAdminMoreMenus` (see §6.4) |
-| Scroll an element into view | `revealAdminElement` (see §12) |
-| Media row (pending and saved), file picker, segmented choice | `renderPendingMediaRow`, `renderSavedMediaRow` (`mediaRows.ts`), `renderAdminFilePicker` + `bindAdminFilePickers`, `renderAdminSegmented` (see §6.5) |
-| Selection group heading and count | `renderAdminSelectionHeading`, `bindAdminSelectionCounts`, `adminSelectionCountText` (see §6.6) |
-| Selection row with print options (CV projects) | `renderCvProjectRow`, `bindCvProjectRows`, `cvProjectStateText` (`cvProjectSelection.ts`, see §6.7) |
-| Portfolio media row, layout override group | `renderPortfolioMediaRow`, `syncPortfolioMediaRow`, `portfolioMediaRowState` (`portfolioMediaSelection.ts`, see §6.8); `layoutOverrideGroup` (see §6.6) |
-| Field label row, inline checkbox, static field, hint | `.admin-field-label-row`, `.admin-inline-check`, `.admin-field-static`, `.admin-field-hint` (see §6.3) |
-| Image cropper | `cropGeometry.ts` (pure math), `bindCropStage` / `waitForCropImage` (`cropStage.ts`), `renderAdminCropZoomControls` (see §7.1) |
-| Loading, empty and error states | `renderAdminWorkspaceState` |
-| Confirmation | `confirmAdmin` (`confirmDialog.ts`) |
-| Text prompt | `requestAdminText` (`textInputDialog.ts`) |
-| Feedback message | `showAdminToast` (`toast.ts`) |
-| Unsaved changes | `setAdminDirty` / `isAdminDirty` (`dirtyState.ts`) |
+| Header workspace tài liệu (Homepage, Profile, CV, Portfolio, Cover Letter) | `renderAdminDocumentHeader` |
+| Header trình chỉnh sửa mục chính (Project, Automation Tool) | `renderAdminEditorHeader` |
+| Card section form | `renderAdminSectionCard` |
+| Label trường, dấu bắt buộc | `renderAdminFieldLabel(label, required)` |
+| Toolbar preview và các điều khiển | `renderAdminPreviewToolbar`, `renderAdminPreviewSelect`, `renderAdminPreviewLanguageToggle`, `renderPreviewZoomControls` |
+| Điều khiển select, chevron dropdown | `renderAdminSelectControl`, `adminChevronIcon` (xem §6.1) |
+| Header dialog và nút đóng | `renderAdminDialogHeader`, `adminCloseIcon` (xem §8.1) |
+| Text người dùng bị cắt, icon di chuyển lên/xuống | `renderAdminTruncatedText`, `adminArrowUpIcon`, `adminArrowDownIcon` (xem §6.2) |
+| Menu More trên card (⋯) | `renderAdminMoreMenu`, `installAdminMoreMenus` (xem §6.4) |
+| Scroll một phần tử vào vùng nhìn thấy | `revealAdminElement` (xem §12) |
+| Hàng media (pending và đã lưu), bộ chọn file, lựa chọn segmented | `renderPendingMediaRow`, `renderSavedMediaRow` (`mediaRows.ts`), `renderAdminFilePicker` + `bindAdminFilePickers`, `renderAdminSegmented` (xem §6.5) |
+| Tiêu đề và số đếm nhóm lựa chọn | `renderAdminSelectionHeading`, `bindAdminSelectionCounts`, `adminSelectionCountText` (xem §6.6) |
+| Hàng lựa chọn có tùy chọn in (Project CV) | `renderCvProjectRow`, `bindCvProjectRows`, `cvProjectStateText` (`cvProjectSelection.ts`, xem §6.7) |
+| Hàng media Portfolio, nhóm override layout | `renderPortfolioMediaRow`, `syncPortfolioMediaRow`, `portfolioMediaRowState` (`portfolioMediaSelection.ts`, xem §6.8); `layoutOverrideGroup` (xem §6.6) |
+| Hàng label trường, checkbox inline, trường tĩnh, hint | `.admin-field-label-row`, `.admin-inline-check`, `.admin-field-static`, `.admin-field-hint` (xem §6.3) |
+| Cropper ảnh | `cropGeometry.ts` (phép tính thuần), `bindCropStage` / `waitForCropImage` (`cropStage.ts`), `renderAdminCropZoomControls` (xem §7.1) |
+| Trạng thái loading, empty và error | `renderAdminWorkspaceState` |
+| Xác nhận | `confirmAdmin` (`confirmDialog.ts`) |
+| Prompt text | `requestAdminText` (`textInputDialog.ts`) |
+| Thông báo phản hồi | `showAdminToast` (`toast.ts`) |
+| Thay đổi chưa lưu | `setAdminDirty` / `isAdminDirty` (`dirtyState.ts`) |
 
-If a new pattern appears in two workspaces, extract it into `ui.ts` before adding a third copy.
+Nếu mẫu mới xuất hiện trong hai workspace, hãy tách nó vào `ui.ts` trước khi thêm bản sao thứ ba.
 
-## 2. Page structure
+## 2. Cấu trúc trang
 
-Every workspace uses the same layers, top to bottom:
+Mọi workspace dùng cùng các lớp từ trên xuống dưới:
 
-1. **Admin top bar** (`.admin-header`): breadcrumb on the left; global actions on the right (header density toggle, View website). Workspace-specific actions never go here.
-2. **Workspace header**: identity on the left (eyebrow, title or title switcher, meta) and actions on the right.
-3. **Body**: document workspaces use the two-column split `--admin-document-columns` (editor 44 / preview 56). The editor column starts with tabs (`.admin-document-tabs`, `role="tablist"`); the preview column starts with the preview toolbar.
+1. **Top bar Admin** (`.admin-header`): breadcrumb bên trái; hành động toàn cục bên phải (toggle mật độ header, View website). Hành động riêng của workspace không bao giờ nằm ở đây.
+2. **Header workspace**: nhận diện bên trái (eyebrow, title hoặc bộ chuyển title, meta) và hành động bên phải.
+3. **Body**: workspace tài liệu dùng bố cục hai cột `--admin-document-columns` (editor 44 / preview 56). Cột editor bắt đầu bằng tab (`.admin-document-tabs`, `role="tablist"`); cột preview bắt đầu bằng toolbar preview.
 
-The eyebrow names the workspace type (Website, CV document, Portfolio document, Applications, Shared content). The title is the document name; when several documents exist, the title is the document switcher (`.admin-document-title-switcher`) that opens the library drawer.
+Eyebrow nêu loại workspace (Website, CV document, Portfolio document, Applications, Shared content). Title là tên tài liệu; khi có nhiều tài liệu, title là bộ chuyển tài liệu (`.admin-document-title-switcher`) mở library drawer.
 
-## 3. Header actions
+## 3. Hành động header
 
-Actions appear in this fixed order, left to right, through the `renderAdminDocumentHeader` slots:
+Các hành động xuất hiện theo thứ tự cố định từ trái sang phải qua các slot của `renderAdminDocumentHeader`:
 
 `saveState` → `utilityActions` (History) → `moreActions` (More) → `saveActions` (Save draft) → `primaryActions` (Publish / Finalize)
 
-- Exactly one primary button per header, with class `admin-action-publish`. Save uses `admin-action-save`, History and similar use `admin-action-utility`, create uses `admin-action-new`.
-- Destructive or rare actions (archive, delete, duplicate, rename) go inside More, never as separate header buttons. The same rule applies to every card (Experience, Education, Language, Credential, evidence file, photo); see §6.4.
-- Every destructive action asks for confirmation through `confirmAdmin` with `tone: "danger"`.
-- Button labels are short verbs in sentence case: "Save draft", "Publish", "History (4)".
+- Mỗi header có đúng một nút primary với class `admin-action-publish`. Save dùng `admin-action-save`, History và hành động tương tự dùng `admin-action-utility`, create dùng `admin-action-new`.
+- Hành động phá hủy hoặc ít dùng (archive, delete, duplicate, rename) nằm trong More, không bao giờ là nút header riêng. Cùng quy tắc áp dụng cho mọi card (Experience, Education, Language, Credential, file bằng chứng, ảnh); xem §6.4.
+- Mọi hành động phá hủy yêu cầu xác nhận qua `confirmAdmin` với `tone: "danger"`.
+- Label nút là động từ ngắn theo sentence case: "Save draft", "Publish", "History (4)".
 
-## 4. Header density
+## 4. Mật độ header
 
-The top-bar toggle (`headerDensity.ts`) switches every document header between comfortable and compact. It is one global preference stored in `localStorage` and applied as `data-header-density="compact"` on `<html>`.
+Toggle top bar (`headerDensity.ts`) chuyển mọi header tài liệu giữa comfortable và compact. Đây là một preference toàn cục được lưu trong `localStorage` và áp dụng bằng `data-header-density="compact"` trên `<html>`.
 
-Compact mode may hide only the eyebrow and secondary meta details. It must never hide:
+Chế độ compact chỉ được ẩn eyebrow và chi tiết meta phụ. Không bao giờ được ẩn:
 
-- the title or document switcher,
-- the status chip and the active-version marker,
-- the save state ("Saved" / unsaved),
-- any header action.
+- title hoặc bộ chuyển tài liệu,
+- chip trạng thái và dấu phiên bản đang hoạt động,
+- trạng thái lưu ("Saved" / chưa lưu),
+- bất kỳ hành động header nào.
 
-Hidden meta remains readable through the meta tooltip (`adminDocumentMetaText`). New meta content therefore uses `.status`, `.admin-document-meta__active` or `.admin-document-meta__detail` spans, so compact mode and the tooltip handle it automatically.
+Meta bị ẩn vẫn đọc được qua tooltip meta (`adminDocumentMetaText`). Vì vậy, nội dung meta mới dùng các span `.status`, `.admin-document-meta__active` hoặc `.admin-document-meta__detail` để chế độ compact và tooltip tự động xử lý.
 
-## 5. Status and state
+## 5. Trạng thái
 
-- Status chips use `.status` with one modifier defined in `admin-ui.css`: `status--draft`, `status--published`, `status--final`, `status--archived`, or `status--new` (an entry that needs the editor's attention, such as a Profile entry not yet selected in a document). Add a modifier there before using a new one. In Admin copy, the backend `published` value of a master item is presented as **Ready**.
-- Every editable workspace reports unsaved changes through `dirtyState.ts`. Leaving a dirty workspace asks for confirmation; closing the tab is guarded by `bindAdminBeforeUnload`.
-- Save state text is a live region (`aria-live="polite"`).
-- Preview status ("Synced", "Ready", "N issues") lives in the preview toolbar meta. Issues open the pre-publish check dialog.
+- Chip trạng thái dùng `.status` với một modifier được định nghĩa trong `admin-ui.css`: `status--draft`, `status--published`, `status--final`, `status--archived` hoặc `status--new` (mục cần người chỉnh sửa chú ý, như mục Profile chưa được chọn trong tài liệu). Thêm modifier tại đó trước khi dùng loại mới. Trong copy Admin, giá trị backend `published` của mục chính được trình bày là **Ready**.
+- Mọi workspace có thể chỉnh sửa báo thay đổi chưa lưu qua `dirtyState.ts`. Rời workspace dirty phải hỏi xác nhận; đóng tab được `bindAdminBeforeUnload` bảo vệ.
+- Text trạng thái lưu là live region (`aria-live="polite"`).
+- Trạng thái preview ("Synced", "Ready", "N issues") nằm trong meta toolbar preview. Issues mở dialog kiểm tra pre-publish.
 
-### Shared data and outputs
+### Dữ liệu dùng chung và output
 
-- Professional Profile is the single source for identity, photo, Experience, Education, Credentials, Skills and Languages, and for their order. Projects and Automation tools are the single source for their own content and order.
-- Outputs (Website, CV, Portfolio, Cover Letters) only **select** shared entries. They never store a separate order or an editable copy of shared content; role-specific fields (CV/Portfolio title and summary) are the only exception and refresh only through an explicit "Sync from …" action.
-- Every mutation of shared data must refresh the workspaces that consume it (for example `onProfessionalProfileSaved`, `onProfessionalCredentialsChanged`). Do not add manual "Sync latest" buttons to work around a missing refresh.
-- Background selection uses one pattern everywhere: `backgroundGroup` sections with `backgroundRow` checkboxes, a "N of M shown" count, a **New** chip for unselected entries added since the draft was last saved, and an "Edit Professional Profile" action.
+- Professional Profile là nguồn duy nhất cho nhận diện, ảnh, Experience, Education, Credential, Skill và Language cùng thứ tự của chúng. Project và Automation Tool là nguồn duy nhất cho nội dung và thứ tự riêng.
+- Output (Website, CV, Portfolio, Cover Letter) chỉ **chọn** các mục dùng chung. Chúng không bao giờ lưu thứ tự riêng hoặc bản sao nội dung dùng chung có thể chỉnh sửa; các trường riêng theo vai trò (title và summary CV/Portfolio) là ngoại lệ duy nhất và chỉ làm mới qua hành động "Sync from …" rõ ràng.
+- Mọi mutation dữ liệu dùng chung phải refresh các workspace sử dụng nó (ví dụ `onProfessionalProfileSaved`, `onProfessionalCredentialsChanged`). Không thêm nút "Sync latest" thủ công để né việc thiếu refresh.
+- Lựa chọn Background dùng một mẫu ở mọi nơi: section `backgroundGroup` với checkbox `backgroundRow`, số đếm "N of M shown", chip **New** cho mục chưa chọn được thêm sau lần lưu Draft gần nhất, và hành động "Edit Professional Profile".
 
-## 6. Forms
+## 6. Form
 
-- Group fields in `renderAdminSectionCard` with a title and a one-line note. The note is clipped to one line, so keep it at 60 characters or fewer (it must fit the narrow side cards on the 1440px laptop) and do not repeat the title.
-- Required fields use `renderAdminFieldLabel(label, true)` and the matching `required` / `aria-required` attribute.
-- Paired localized fields always appear English first, then Vietnamese, labelled `(EN)` and `(VI)`.
-- Validation errors appear next to the field they belong to; publish-blocking issues are also listed in the pre-publish check dialog. Do not use a toast as the only place an error is shown.
+- Nhóm các trường trong `renderAdminSectionCard` với title và note một dòng. Note bị cắt còn một dòng, vì vậy giữ ở 60 ký tự trở xuống (phải vừa card bên hẹp trên laptop 1440px) và không lặp title.
+- Trường bắt buộc dùng `renderAdminFieldLabel(label, true)` cùng thuộc tính `required` / `aria-required` tương ứng.
+- Cặp trường đã bản địa hóa luôn hiển thị tiếng Anh trước, sau đó tiếng Việt, với label `(EN)` và `(VI)`.
+- Lỗi validation xuất hiện cạnh trường tương ứng; lỗi chặn publish cũng được liệt kê trong dialog kiểm tra pre-publish. Không dùng toast làm nơi duy nhất hiển thị lỗi.
 
-### 6.1 Dropdown chevrons
+### 6.1 Chevron dropdown
 
-Every dropdown arrow in Admin is the same glyph in the same place, so a column of selects, pickers and comboboxes lines up vertically.
+Mọi mũi tên dropdown trong Admin dùng cùng glyph ở cùng vị trí, để một cột select, picker và combobox thẳng hàng theo chiều dọc.
 
-- **Glyph.** Use `adminChevronIcon` from `ui.ts` (16×16 viewBox, `m4 6 4 4 4-4`, stroke 1.75, `currentColor`, muted text color). Never paste the SVG, use another arrow shape, a Unicode `▾`, or a CSS `background-image` arrow.
-- **Native selects.** Always render through `renderAdminSelectControl`. A bare `<select>` shows the browser's own arrow, which sits at a different offset and looks different in every browser. The preview toolbar uses the same control through `renderAdminPreviewSelect`.
-- **Geometry.** The chevron is centered in a slot flush with the control's right edge. Use the tokens in `admin-ui.css`, never literal widths:
+- **Glyph.** Dùng `adminChevronIcon` từ `ui.ts` (viewBox 16×16, `m4 6 4 4 4-4`, stroke 1.75, `currentColor`, màu text muted). Không bao giờ dán SVG, dùng hình mũi tên khác, Unicode `▾` hoặc mũi tên CSS `background-image`.
+- **Native select.** Luôn render qua `renderAdminSelectControl`. `<select>` trần hiển thị mũi tên riêng của trình duyệt, nằm ở offset khác và trông khác nhau trên từng trình duyệt. Toolbar preview dùng cùng điều khiển qua `renderAdminPreviewSelect`.
+- **Hình học.** Chevron được căn giữa trong slot sát mép phải điều khiển. Dùng token trong `admin-ui.css`, không bao giờ dùng chiều rộng literal:
 
-  | Token | Default | Compact (`.admin-select-control--compact`, preview toolbar) |
+  | Token | Mặc định | Compact (`.admin-select-control--compact`, toolbar preview) |
   |---|---|---|
   | `--admin-chevron-size` (icon) | `1rem` | `.875rem` |
-  | `--admin-chevron-slot` (slot width; icon center sits half of it from the right edge) | `2.5rem` | `1.5rem` |
-  | `--admin-chevron-reserve` (text `padding-right` so a long value never runs under the icon) | `3rem` | `1.75rem` |
+  | `--admin-chevron-slot` (chiều rộng slot; tâm icon cách mép phải một nửa chiều rộng này) | `2.5rem` | `1.5rem` |
+  | `--admin-chevron-reserve` (`padding-right` của text để giá trị dài không bao giờ chạy dưới icon) | `3rem` | `1.75rem` |
 
-- **Custom pickers** (year picker, profile photo, location combobox) reuse the same slot: either an absolutely positioned `.admin-select-chevron` inside a `position: relative` control with `padding-right: var(--admin-chevron-reserve)`, or a last grid column of `var(--admin-chevron-slot)` with no right padding on the control.
-- **State.** The chevron rotates 180° when its control has `aria-expanded="true"` (140 ms, off under `prefers-reduced-motion`). Disabled selects fade the chevron to 50 %.
-- **Allowed difference.** The document title switcher keeps its tinted icon tile because it is a header button, not a form field, but it still uses `adminChevronIcon` and the shared stroke.
-- Glyph and rotation rules live only in `admin-ui.css`. `adminStyles.test.ts` fails if a workspace renders a bare `<select>`, copies the chevron SVG, restyles the chevron glyph outside `admin-ui.css`, or hard-codes `padding-right: 3rem`.
+- **Custom picker** (year picker, profile photo, location combobox) dùng lại cùng slot: hoặc `.admin-select-chevron` có position absolute bên trong điều khiển `position: relative` với `padding-right: var(--admin-chevron-reserve)`, hoặc cột grid cuối `var(--admin-chevron-slot)` và điều khiển không có padding phải.
+- **Trạng thái.** Chevron xoay 180° khi điều khiển có `aria-expanded="true"` (140 ms, tắt khi `prefers-reduced-motion`). Select disabled làm chevron mờ còn 50 %.
+- **Khác biệt được phép.** Bộ chuyển title tài liệu giữ tile icon có màu vì đây là nút header, không phải trường form, nhưng vẫn dùng `adminChevronIcon` và stroke dùng chung.
+- Quy tắc glyph và xoay chỉ nằm trong `admin-ui.css`. `adminStyles.test.ts` thất bại nếu workspace render `<select>` trần, sao chép SVG chevron, restyle glyph chevron ngoài `admin-ui.css` hoặc viết cứng `padding-right: 3rem`.
 
-### 6.2 Long user text next to controls
+### 6.2 Text người dùng dài cạnh điều khiển
 
-User data has no length limit; fixed interface copy does. Layout must give way on the user data, never on the interface.
+Dữ liệu người dùng không có giới hạn độ dài; copy giao diện cố định thì có. Layout phải nhường chỗ ở dữ liệu người dùng, không bao giờ ở giao diện.
 
-- **Fixed copy never shrinks or wraps.** Labels, section titles, counts and action buttons use `white-space: nowrap` and `flex: 0 0 auto` (or an `auto` grid track). Never put fixed copy in a `minmax(0, 1fr)` track beside an `auto` track that holds user data. That is exactly what squeezed "Credentials & evidence" onto two lines.
-- **Only user data truncates.** It sits in a `minmax(0, 1fr)` track (or a flex item with `min-width: 0`), on one line with an ellipsis, and always with the full value as a tooltip. Use `renderAdminTruncatedText(text)` (`.admin-truncate` plus `title`); a truncated heading gets a `title` attribute. Clipping without a tooltip is a bug.
-- **Never concatenate user data and meta in one label.** "Engineer Degree … · 1 file" cannot be truncated sensibly. The count, date or status is its own element that does not shrink.
-- **A list of 0..n user items is vertical.** Render one full-width row per item (the `.admin-linked-credential` pattern: kind badge, truncating title, status, meta, chevron), not inline buttons beside a label. Rows stay aligned with fixed-width badge columns.
-- **Narrow layouts stack with `align-items: stretch`.** A `flex-direction: column` with `align-items: flex-start` sizes each child to its full text width, so the ellipsis never applies and the card overflows.
-- **React to the container, not the viewport.** Layout inside a form card uses `@container admin-form` (40rem, as the entry cards do), never `@media`. The editor column is only about 44% of the screen.
-- **Icon-only buttons use shared SVGs.** Move up/down uses `adminArrowUpIcon` / `adminArrowDownIcon` with `aria-label` and `title`, never a typed `↑` or `&#8593;`.
+- **Copy cố định không bao giờ co hoặc wrap.** Label, title section, số đếm và nút hành động dùng `white-space: nowrap` cùng `flex: 0 0 auto` (hoặc track grid `auto`). Không bao giờ đặt copy cố định trong track `minmax(0, 1fr)` cạnh track `auto` chứa dữ liệu người dùng. Chính lỗi đó đã ép "Credentials & evidence" thành hai dòng.
+- **Chỉ dữ liệu người dùng bị cắt.** Nó nằm trong track `minmax(0, 1fr)` (hoặc flex item có `min-width: 0`), trên một dòng với dấu chấm lửng và luôn có toàn bộ giá trị làm tooltip. Dùng `renderAdminTruncatedText(text)` (`.admin-truncate` cộng `title`); heading bị cắt nhận thuộc tính `title`. Cắt mà không có tooltip là lỗi.
+- **Không bao giờ nối dữ liệu người dùng và meta vào một label.** Không thể cắt "Engineer Degree … · 1 file" hợp lý. Số đếm, ngày hoặc trạng thái là phần tử riêng không co.
+- **Danh sách 0..n mục người dùng xếp dọc.** Render một hàng toàn chiều rộng cho mỗi mục (mẫu `.admin-linked-credential`: badge loại, title có thể cắt, trạng thái, meta, chevron), không dùng các nút inline cạnh label. Các hàng giữ thẳng hàng với cột badge chiều rộng cố định.
+- **Layout hẹp xếp chồng với `align-items: stretch`.** `flex-direction: column` cùng `align-items: flex-start` đặt kích thước mỗi phần tử con theo toàn bộ chiều rộng text, nên dấu chấm lửng không bao giờ áp dụng và card bị tràn.
+- **Phản ứng theo container, không theo viewport.** Layout bên trong card form dùng `@container admin-form` (40rem, như các card entry), không bao giờ dùng `@media`. Cột editor chỉ chiếm khoảng 44% màn hình.
+- **Nút chỉ có icon dùng SVG dùng chung.** Di chuyển lên/xuống dùng `adminArrowUpIcon` / `adminArrowDownIcon` với `aria-label` và `title`, không bao giờ gõ `↑` hoặc `&#8593;`.
 
-### 6.3 Field rows and field states
+### 6.3 Hàng trường và trạng thái trường
 
-- **Every row follows the form grid.** A row of fields uses `.admin-form-grid` (two equal columns) or `.admin-site-bilingual`. Never give one row its own column count (the old three-column date row did not line up with the fields above and below).
-- **An option that changes one field lives in that field's label row.** Use `.admin-field-label-row`: the label on the left, an `.admin-inline-check` checkbox on the right ("Expiry date … ☑ Does not expire"). Never make it a separate boxed control or field.
-- **A field that does not apply looks disabled, or is replaced.** Disabled fields get the muted background (the disabled rule repeats the base field selector so it always wins). When a value cannot apply at all, hide the input and show an `.admin-field-static` box with the reason ("No expiry"), styled like a disabled field. Turning the field back on moves focus into it.
-- **Browser-locale controls get a hint.** Native date inputs show the browser's own format (mm/dd/yyyy), while Admin shows "14 Sept 2021". Add an `.admin-field-hint` under the input that repeats the value through `formatAdminDate`. Keep the native input; it is keyboard and screen-reader friendly.
-- **Swap, don't resize.** When a field is replaced by a stand-in ("No expiry"), wrap both in `.admin-field-swap`. The input stays in the layout, invisible and disabled, and the stand-in covers it exactly, so the row never changes height. Never use `hidden` on one and show the other: their heights differ by a few pixels in each browser, and the row goes uneven.
+- **Mọi hàng theo form grid.** Một hàng trường dùng `.admin-form-grid` (hai cột bằng nhau) hoặc `.admin-site-bilingual`. Không bao giờ cho một hàng số cột riêng (hàng ngày ba cột cũ không thẳng với trường phía trên và dưới).
+- **Option thay đổi một trường nằm trong hàng label của trường đó.** Dùng `.admin-field-label-row`: label bên trái, checkbox `.admin-inline-check` bên phải ("Expiry date … ☑ Does not expire"). Không bao giờ biến nó thành điều khiển hoặc trường có box riêng.
+- **Trường không áp dụng phải trông disabled hoặc được thay thế.** Trường disabled nhận nền muted (quy tắc disabled lặp selector trường cơ sở để luôn thắng). Khi một giá trị hoàn toàn không thể áp dụng, ẩn input và hiển thị box `.admin-field-static` với lý do ("No expiry"), có style như trường disabled. Bật lại trường sẽ chuyển focus vào đó.
+- **Điều khiển theo locale trình duyệt cần hint.** Input ngày native hiển thị định dạng riêng của trình duyệt (mm/dd/yyyy), còn Admin hiển thị "14 Sept 2021". Thêm `.admin-field-hint` dưới input lặp lại giá trị qua `formatAdminDate`. Giữ input native; nó thân thiện với bàn phím và screen reader.
+- **Hoán đổi, không đổi kích thước.** Khi trường được thay bằng phần tử đại diện ("No expiry"), bọc cả hai trong `.admin-field-swap`. Input vẫn trong layout, vô hình và disabled, còn phần tử đại diện phủ chính xác lên nó để hàng không bao giờ đổi chiều cao. Không bao giờ dùng `hidden` trên một phần tử rồi hiển thị phần tử kia: chiều cao của chúng lệch vài pixel trên từng trình duyệt và hàng sẽ không đều.
 
-#### Rows must not jump (alignment contract)
+#### Hàng không được nhảy (hợp đồng căn chỉnh)
 
-Uneven rows and labels that suddenly wrap are the most frequent Admin regression. They almost always come from a component that looks right in one place and is restyled in another. These rules apply to every field, form row and dialog:
+Hàng không đều và label đột ngột wrap là lỗi hồi quy Admin thường gặp nhất. Chúng gần như luôn đến từ component trông đúng ở một nơi nhưng bị restyle ở nơi khác. Các quy tắc này áp dụng cho mọi trường, hàng form và dialog:
 
-1. **Fields in one grid row align on their control.** Every cell's label line has the height of a plain label (one line of `--admin-text-xs`), so the inputs below start at the same y. Anything placed in a label row (a checkbox option, a counter, a help link) must fit that height. Checkboxes use a negative block margin so the 1rem box never makes the row taller.
-2. **Components do not depend on where they are rendered.** Broad container rules (`.admin-document-editor`, `.admin-form-section`, `.admin-dialog`, workspaces) may style field labels and text fields only. They select `label:where(:not(.admin-inline-check))` and `input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]))`, never a bare `input` or `label`. Bare rules turned the "Does not expire" checkbox into a full-width grid stacked above its text. `:where()` keeps specificity unchanged. Shared field-row components in `admin-ui.css` are prefixed with `html.admin-app` so no container rule outranks them.
-3. **A dialog measures itself.** `.admin-dialog` declares `container: admin-form / inline-size`, so container queries inside a modal use the dialog's width, not the panel behind it. Without it, a wide dialog over a narrow editor collapsed to one column.
-4. **Test in the real context.** Check a component where it is actually rendered (a dialog opened from inside the Profile editor, not on an empty page), with both states of every toggle, at 1440px and around 1180px. `npm run shots` reports *uneven field row* and *checkbox stacked above its text* for every visible form grid (§11).
+1. **Các trường trong một hàng grid căn theo điều khiển.** Dòng label của mỗi cell có chiều cao bằng label thường (một dòng `--admin-text-xs`), để input bên dưới bắt đầu cùng tọa độ y. Mọi thứ đặt trong hàng label (option checkbox, counter, link trợ giúp) phải vừa chiều cao đó. Checkbox dùng block margin âm để box 1rem không bao giờ làm hàng cao hơn.
+2. **Component không phụ thuộc nơi được render.** Quy tắc container rộng (`.admin-document-editor`, `.admin-form-section`, `.admin-dialog`, workspace) chỉ được style label trường và trường text. Chúng chọn `label:where(:not(.admin-inline-check))` và `input:where(:not([type="checkbox"], [type="radio"], [type="range"], [type="color"], [type="file"]))`, không bao giờ chọn `input` hoặc `label` trần. Quy tắc trần từng biến checkbox "Does not expire" thành grid toàn chiều rộng xếp trên text. `:where()` giữ nguyên specificity. Component hàng trường dùng chung trong `admin-ui.css` có tiền tố `html.admin-app` để không quy tắc container nào ưu tiên hơn chúng.
+3. **Dialog tự đo chính nó.** `.admin-dialog` khai báo `container: admin-form / inline-size`, để container query bên trong modal dùng chiều rộng dialog, không phải panel phía sau. Nếu thiếu, dialog rộng trên editor hẹp sẽ thu về một cột.
+4. **Test trong ngữ cảnh thật.** Kiểm tra component tại nơi nó thực sự được render (dialog mở từ bên trong editor Profile, không phải trên trang trống), với cả hai trạng thái của mọi toggle, ở 1440px và khoảng 1180px. `npm run shots` báo *uneven field row* và *checkbox stacked above its text* cho mọi form grid nhìn thấy (§11).
 
-### 6.4 Item cards
+### 6.4 Card mục
 
-Profile cards (Experience, Education, Language, Credential, photo) and the rows inside them share one anatomy:
+Card Profile (Experience, Education, Language, Credential, ảnh) và các hàng bên trong dùng chung một cấu trúc:
 
-| Part | Rules |
+| Phần | Quy tắc |
 |---|---|
-| **Identity (left)** | Eyebrow (type) with the status chip beside it, then the title, then a muted subtitle. Status belongs to the identity, never between action buttons. Clipped values carry a `title` (§6.2). |
-| **Actions (right)** | In this order: move up/down → the one frequent action ("Edit", "Open") → More (⋯, `renderAdminMoreMenu`) with the rare or destructive actions (Delete, Archive, Rename), marked `tone: "danger"` when they destroy. A card never shows a loose destructive button. An archived item shows "Restore as draft" instead of Edit; its More holds only "Delete permanently" where the item supports hard delete (Credential: removes the row and its private evidence files). Permanent delete is never offered on an active item — archive first. |
-| **Facts** | One meta line separated by `·` (`.admin-credential-card__meta`), not boxed tiles. In narrow cards the facts stack one per line without separators. A fact that points to another entry is a link that opens it (`showRelatedEntry`). |
-| **Description** | At most two lines (`line-clamp`), with the full text as a `title`. |
-| **Child list** | A header row (name, count, "+ Add …"), then one row per child. Hide a zero count when an empty-state line already says so. Uploads stage in a pending row (file, type, Upload, Cancel), like pending project media; nothing uploads on file selection alone. |
+| **Nhận diện (trái)** | Eyebrow (loại) với chip trạng thái bên cạnh, sau đó title rồi subtitle muted. Trạng thái thuộc về nhận diện, không bao giờ nằm giữa các nút hành động. Giá trị bị cắt mang `title` (§6.2). |
+| **Hành động (phải)** | Theo thứ tự: di chuyển lên/xuống → một hành động thường dùng ("Edit", "Open") → More (⋯, `renderAdminMoreMenu`) với hành động ít dùng hoặc phá hủy (Delete, Archive, Rename), đánh dấu `tone: "danger"` khi phá hủy. Card không bao giờ hiển thị nút phá hủy rời. Mục archived hiển thị "Restore as draft" thay cho Edit; More chỉ chứa "Delete permanently" khi mục hỗ trợ xóa cứng (Credential: xóa row và các file bằng chứng riêng tư). Không bao giờ cho phép xóa vĩnh viễn mục đang active — phải archive trước. |
+| **Fact** | Một dòng meta phân tách bằng `·` (`.admin-credential-card__meta`), không dùng tile có box. Trong card hẹp, các fact xếp mỗi dòng một mục, không có dấu phân tách. Fact trỏ tới entry khác là link mở entry đó (`showRelatedEntry`). |
+| **Mô tả** | Tối đa hai dòng (`line-clamp`), toàn bộ text nằm trong `title`. |
+| **Danh sách con** | Một hàng header (tên, số đếm, "+ Add …"), sau đó một hàng cho mỗi mục con. Ẩn số đếm 0 khi dòng empty-state đã nêu rõ. Upload được xếp tạm trong hàng pending (file, loại, Upload, Cancel), giống media Project pending; chỉ chọn file không làm upload bất kỳ thứ gì. |
 
-- **At most two levels of boxes:** the card, and the rows inside it. Sections inside a card are separated by a divider, not by another bordered box. A disclosure group (`.admin-disclosure-group`: layout overrides, Portfolio media) is the card: its rows sit on the surface color and are separated by dividers, never boxed again.
-- **Each fact appears once per card.** Counts, privacy notes and status are not repeated in tiles, headings and rows at the same time.
-- **Archived items read as muted through color and a dashed border,** never through `opacity`.
-- **Credential evidence rows** follow the media row (§6.5) at card density: the thumbnail is the public crop of the printed orientation when one exists, otherwise an `IMG` / `PDF` badge; the meta line is "Type · size", plus "In Portfolio" for the shown file or "Not printed in Portfolio" for a PDF. Actions: Open → "Adjust crops" (images only, §7.1 rule 13) → More with "Hide from Portfolio" (only while shown) and "Delete file" (`danger`). A PDF never offers a crop action.
-- **More menus share one behavior** (`installAdminMoreMenus`, installed once in `main.ts`): only one menu is open at a time, it closes on an outside click, on Escape and after an action is chosen, and focus returns to the ⋯ trigger, so a confirmation dialog restores focus to something visible. An ancestor of a card with a More menu must not use `overflow: hidden`, or the menu is clipped (the photo card rounds its image instead).
+- **Tối đa hai cấp box:** card và các hàng bên trong. Section trong card được phân tách bằng divider, không bằng box có viền khác. Nhóm disclosure (`.admin-disclosure-group`: override layout, media Portfolio) chính là card: các hàng nằm trên màu surface và được phân tách bằng divider, không bao giờ thêm box.
+- **Mỗi fact xuất hiện một lần trong mỗi card.** Số đếm, ghi chú riêng tư và trạng thái không lặp đồng thời trong tile, heading và hàng.
+- **Mục archived trông muted bằng màu và viền nét đứt,** không bao giờ bằng `opacity`.
+- **Hàng bằng chứng Credential** theo hàng media (§6.5) ở mật độ card: thumbnail là crop công khai theo hướng in nếu có, nếu không là badge `IMG` / `PDF`; dòng meta là "Type · size", cộng "In Portfolio" cho file được hiển thị hoặc "Not printed in Portfolio" cho PDF. Hành động: Open → "Adjust crops" (chỉ ảnh, quy tắc 13 §7.1) → More với "Hide from Portfolio" (chỉ khi đang hiển thị) và "Delete file" (`danger`). PDF không bao giờ có hành động crop.
+- **Menu More dùng chung một hành vi** (`installAdminMoreMenus`, cài một lần trong `main.ts`): mỗi lúc chỉ mở một menu, menu đóng khi click bên ngoài, nhấn Escape và sau khi chọn hành động, rồi focus trở lại trigger ⋯ để dialog xác nhận khôi phục focus vào thứ nhìn thấy được. Phần tử tổ tiên của card có menu More không được dùng `overflow: hidden`, nếu không menu bị cắt (card ảnh bo chính ảnh thay thế).
 
-### 6.5 Media rows and file uploads
+### 6.5 Hàng media và upload file
 
-Project and tool media (`mediaRows.ts`) use one row anatomy for pending uploads and saved images, so both read as the same component. Only the status line and the actions differ.
+Media Project và Tool (`mediaRows.ts`) dùng cùng một cấu trúc hàng cho upload pending và ảnh đã lưu, để cả hai được hiểu là cùng component. Chỉ dòng trạng thái và hành động khác nhau.
 
 ```
 [thumb 4:3]  File name or "Image 01" (truncated, title)        [↑][↓] [primary] [⋯]
@@ -167,35 +167,35 @@ Alt text (EN) *        | Alt text (VI)
 Caption (EN)           | Caption (VI)
 ```
 
-- **Bilingual pairs share a row.** The `.admin-form-grid` holds only EN | VI pairs, in order (Alt EN, Alt VI, Caption EN, Caption VI). A control that is not a bilingual pair ("Use as") never sits in that grid, or the pairs shift diagonally. Below 40rem the grid stacks into one column in the same EN-then-VI order.
-- **The role appears once.** Pending rows use `renderAdminSegmented` (Cover | Gallery, native radios, so arrow keys work). Saved rows show a role chip. There is no badge over the thumbnail. Choosing Cover makes English alt text required, and only one pending image can be the cover.
-- **Actions follow §6.4.** Pending: move, and More → Remove from upload. Saved: move (gallery only), "Adjust crops", and More → Set as cover, Download original, Delete image. **Save appears only while the row has unsaved edits**, together with an *Unsaved* chip.
-- **Never show the browser's file input.** Bulk uploads use `renderAdminFilePicker` (drop zone, drag and drop, visually hidden native input, focus ring on the zone) with `bindAdminFilePickers`. A single-file action uses a button that clicks an input with the `hidden` attribute (profile photo, credential evidence). `adminStyles.test.ts` fails on a visible file input.
-- **The upload footer says what will happen.** It shows "N images ready" with Clear and "Upload N images". Upload stays disabled, and the reason shows in the footer, while a pending cover lacks English alt text; that field is marked `aria-invalid`.
-- **`hidden` always wins.** `html.admin-app [hidden] { display: none !important; }`: a class that sets `display` (`.button`, `.status`) can never keep a hidden element visible. Components do not add their own `[hidden]` rules.
+- **Cặp song ngữ dùng chung một hàng.** `.admin-form-grid` chỉ chứa cặp EN | VI theo thứ tự (Alt EN, Alt VI, Caption EN, Caption VI). Điều khiển không phải cặp song ngữ ("Use as") không bao giờ nằm trong grid đó, nếu không các cặp sẽ lệch chéo. Dưới 40rem, grid xếp thành một cột theo cùng thứ tự EN rồi VI.
+- **Role xuất hiện một lần.** Hàng pending dùng `renderAdminSegmented` (Cover | Gallery, radio native để phím mũi tên hoạt động). Hàng đã lưu hiển thị chip role. Không có badge phủ thumbnail. Chọn Cover làm alt text tiếng Anh trở thành bắt buộc và chỉ một ảnh pending có thể là cover.
+- **Hành động theo §6.4.** Pending: di chuyển và More → Remove from upload. Đã lưu: di chuyển (chỉ gallery), "Adjust crops", và More → Set as cover, Download original, Delete image. **Save chỉ xuất hiện khi hàng có chỉnh sửa chưa lưu**, cùng chip *Unsaved*.
+- **Không bao giờ hiển thị file input của trình duyệt.** Upload hàng loạt dùng `renderAdminFilePicker` (drop zone, kéo thả, input native ẩn về hình ảnh, focus ring trên zone) với `bindAdminFilePickers`. Hành động một file dùng nút click input có thuộc tính `hidden` (ảnh Profile, bằng chứng Credential). `adminStyles.test.ts` thất bại khi có file input nhìn thấy được.
+- **Footer upload nói rõ điều sẽ xảy ra.** Nó hiển thị "N images ready" với Clear và "Upload N images". Upload giữ trạng thái disabled và lý do hiển thị trong footer khi cover pending thiếu alt text tiếng Anh; trường đó được đánh dấu `aria-invalid`.
+- **`hidden` luôn thắng.** `html.admin-app [hidden] { display: none !important; }`: class đặt `display` (`.button`, `.status`) không bao giờ được giữ phần tử hidden nhìn thấy được. Component không thêm quy tắc `[hidden]` riêng.
 
-### 6.6 Selection counts ("shown" vs "selected")
+### 6.6 Số đếm lựa chọn ("shown" và "selected")
 
-Every list where you include or exclude items has a heading with a count chip, rendered by `renderAdminSelectionHeading` and kept live by `bindAdminSelectionCounts`. The word follows what the checkbox does:
+Mọi danh sách đưa vào hoặc loại mục đều có heading kèm chip số đếm, được render bằng `renderAdminSelectionHeading` và cập nhật trực tiếp bằng `bindAdminSelectionCounts`. Từ ngữ theo tác dụng của checkbox:
 
-| Word | When | Where |
+| Từ ngữ | Khi nào | Ở đâu |
 |---|---|---|
-| **N of M shown** | The toggle controls whether an entry that already belongs to the source appears in the output. | CV Background (Experience, Education, Credentials, Skills, Languages); Website content ("On website", plus "· K on Homepage") |
-| **N of M selected** | You pick items from a library to include in a document or letter. | CV content (Projects: display is not "Off"; Tools), Portfolio content (Projects, Tools), Cover letter evidence (Projects, Tools) |
+| **N of M shown** | Toggle điều khiển việc entry đã thuộc nguồn có xuất hiện trong output hay không. | Background CV (Experience, Education, Credential, Skill, Language); nội dung Website ("On website", cộng "· K on Homepage") |
+| **N of M selected** | Chọn mục từ thư viện để đưa vào tài liệu hoặc thư. | Nội dung CV (Project: display không phải "Off"; Tool), nội dung Portfolio (Project, Tool), bằng chứng Cover Letter (Project, Tool) |
 
-- **M counts only eligible items.** Draft or archived items cannot be chosen, so they are not part of the total and carry no `data-selection-count-item`. A finalized letter disables its inputs but keeps them eligible.
-- **Empty states are words, not zero.** "Hidden" (shown lists), "None selected" (selected lists), "None available" when the source is empty. The chip uses the muted color via `data-empty`.
-- **One wording function.** `adminSelectionCountText` is the only place that writes these strings; workspaces never format their own "… selected" text. `adminStyles.test.ts` checks that every selection list uses the shared heading.
-- **Pre-publish checks have two sections.** CV and Portfolio use the Website's structure (`.admin-site-validation`): *Required fixes* (block publishing) and *Recommendations* (never block). In the dialog they stack in one column; recommendations use the muted text color, not warning. The preview chip reads "N issues", "Ready · N recommendations" or "Ready". Each recommendation is one line per item, naming everything it is missing.
-- Disclosure summaries over an already-selected subset (Portfolio media, layout overrides) show a plain number, because they list only the chosen items.
-- **Profile page** (Portfolio › Background) uses the same group anatomy: *Capability cards* (a "N of M selected" count; once the limit is reached the remaining rows are disabled and read muted through color) and *Figures* (two selects, because each choice has four options; §6.7 keeps segmented controls for three or fewer).
-- **Item layout overrides** (Portfolio › Appearance) are one group per item family, all rendered by `layoutOverrideGroup`: Project, Automation and Credentials overrides. A group lists only the items selected for the Portfolio (Credentials also need the Credentials page switched on), its first option is "Use … default", and unselected rows stay hidden in the form so a saved override survives deselecting an item. Add a new family through the same helper, never as a fourth hand-written copy.
-- **A group heading is the title and its count, nothing else.** No per-group note under the heading: the section card's note explains the whole list ("Choose what appears. Order follows Professional Profile."). A fact about how the output paginates belongs with the layout it describes (Appearance › Credentials: "· 2 per page", from `PORTFOLIO_CREDENTIALS_PER_PAGE`). CV and Portfolio Background groups use the same `renderAdminSelectionHeading` as every other list.
-- A count item is a checkbox, or a `<select>` or radiogroup (`renderAdminSegmented({ groupAttributes })`) whose `data-selection-off` value means "not included".
+- **M chỉ đếm mục đủ điều kiện.** Không thể chọn mục Draft hoặc archived, nên chúng không nằm trong tổng và không có `data-selection-count-item`. Thư đã Final làm disabled input nhưng vẫn giữ chúng đủ điều kiện.
+- **Trạng thái trống dùng từ ngữ, không dùng số 0.** "Hidden" (danh sách shown), "None selected" (danh sách selected), "None available" khi nguồn trống. Chip dùng màu muted qua `data-empty`.
+- **Một hàm định dạng từ ngữ.** `adminSelectionCountText` là nơi duy nhất viết các chuỗi này; workspace không tự format text "… selected". `adminStyles.test.ts` kiểm tra mọi danh sách lựa chọn dùng heading chung.
+- **Kiểm tra pre-publish có hai section.** CV và Portfolio dùng cấu trúc Website (`.admin-site-validation`): *Required fixes* (chặn publish) và *Recommendations* (không bao giờ chặn). Trong dialog, chúng xếp thành một cột; recommendation dùng màu text muted, không dùng warning. Chip preview ghi "N issues", "Ready · N recommendations" hoặc "Ready". Mỗi recommendation là một dòng cho mỗi mục, nêu tên mọi thứ còn thiếu.
+- Summary disclosure trên tập con đã chọn (media Portfolio, override layout) hiển thị số thường vì chỉ liệt kê các mục đã chọn.
+- **Trang Profile** (Portfolio › Background) dùng cùng cấu trúc nhóm: *Capability cards* (số đếm "N of M selected"; khi đạt giới hạn, các hàng còn lại disabled và trông muted bằng màu) và *Figures* (hai select vì mỗi lựa chọn có bốn option; §6.7 giữ điều khiển segmented cho ba option trở xuống).
+- **Override layout mục** (Portfolio › Appearance) là một nhóm cho mỗi family mục, tất cả render bằng `layoutOverrideGroup`: override Project, Automation và Credentials. Nhóm chỉ liệt kê các mục được chọn cho Portfolio (Credential còn cần bật trang Credentials), option đầu là "Use … default", và hàng chưa chọn vẫn hidden trong form để override đã lưu tồn tại qua việc bỏ chọn mục. Thêm family mới qua cùng helper, không bao giờ viết tay bản sao thứ tư.
+- **Heading nhóm chỉ là title và số đếm.** Không có note riêng cho nhóm dưới heading: note của card section giải thích toàn bộ danh sách ("Choose what appears. Order follows Professional Profile."). Fact về cách output phân trang nằm cùng layout nó mô tả (Appearance › Credentials: "· 2 per page", từ `PORTFOLIO_CREDENTIALS_PER_PAGE`). Nhóm Background CV và Portfolio dùng cùng `renderAdminSelectionHeading` như mọi danh sách khác.
+- Mục đếm là checkbox, hoặc `<select>` hay radiogroup (`renderAdminSegmented({ groupAttributes })`) có giá trị `data-selection-off` nghĩa là "not included".
 
-### 6.7 Selection rows with options (CV projects)
+### 6.7 Hàng lựa chọn có option (Project CV)
 
-When an output picks an item **and** sets how it prints (CV projects: Off, Compact or Detailed, plus summary and responsibilities), each item is one row, implemented in `cvProjectSelection.ts`:
+Khi output chọn một mục **và** đặt cách in (Project CV: Off, Compact hoặc Detailed, cộng summary và trách nhiệm), mỗi mục là một hàng được triển khai trong `cvProjectSelection.ts`:
 
 ```
 Duong giao thong ra dao Hon Khoai                [Off | Compact | Detailed] [⌄]
@@ -206,19 +206,19 @@ Responsibilities * · 3 of 4
 ☑ …
 ```
 
-- **The choice is a segmented control, never a select** (`renderAdminSegmented`, legend kept for screen readers with `hideLegend`). With three or fewer options every state is visible and one click away. "Off" is the first option and the default.
-- **The row says what will print.** The muted line is the location, then the state: "Not in this CV", "Name and year only" (Compact) or "Summary · N of M responsibilities" (Detailed). It is derived from the inputs by `cvProjectStateText` and updates live; workspaces do not write their own state text.
-- **Options appear only where they apply.** Compact prints only name and year, so only Detailed rows get the disclosure button (`aria-expanded`, `aria-controls`, `adminChevronIcon` rotating within 150 ms). Options are collapsed by default, open when the user chooses Detailed, and close when the row leaves Detailed. Hidden inputs still submit, so collapsing never changes the payload.
-- **Problems are never collapsed away.** A Detailed row without a responsibility renders open and reopens on every change while the problem remains. Its count reads "0 of M" and its state line "Choose at least one responsibility", both in `--admin-color-warning`, so closing the options by hand still leaves the warning visible.
-- **The row never jumps.** The segmented control reserves the disclosure button's height, so switching Detailed ↔ Compact ↔ Off keeps every control at the same y (§6.3).
-- **Chips only for exceptions.** Ready is the normal state and shows no chip. Draft or archived projects show their chip beside the name, use the dashed muted card of §6.4, keep their row, are disabled and are not counted (§6.6). An Off row uses the subtle surface and a muted title; nothing is faded with `opacity`.
-- **One box level.** The options sit under a divider inside the row, not in a nested bordered box (§6.4).
-- **Order follows the source library.** No reordering here: Projects owns the order (§5).
-- Below the `cv-selection` 44rem container width, the segmented control moves to its own line under the identity; the disclosure stays at the top right.
+- **Lựa chọn là điều khiển segmented, không bao giờ là select** (`renderAdminSegmented`, giữ legend cho screen reader bằng `hideLegend`). Với ba option trở xuống, mọi trạng thái đều nhìn thấy và cách một click. "Off" là option đầu và mặc định.
+- **Hàng nói rõ nội dung sẽ in.** Dòng muted là địa điểm rồi đến trạng thái: "Not in this CV", "Name and year only" (Compact) hoặc "Summary · N of M responsibilities" (Detailed). Nó được suy ra từ input bằng `cvProjectStateText` và cập nhật trực tiếp; workspace không tự viết text trạng thái.
+- **Option chỉ xuất hiện nơi áp dụng.** Compact chỉ in tên và năm, nên chỉ hàng Detailed có nút disclosure (`aria-expanded`, `aria-controls`, `adminChevronIcon` xoay trong 150 ms). Option mặc định collapsed, mở khi người dùng chọn Detailed và đóng khi hàng rời Detailed. Input hidden vẫn submit nên collapse không bao giờ đổi payload.
+- **Vấn đề không bao giờ bị collapse để ẩn.** Hàng Detailed không có trách nhiệm render ở trạng thái mở và mở lại sau mỗi thay đổi khi vấn đề còn tồn tại. Số đếm ghi "0 of M" và dòng trạng thái ghi "Choose at least one responsibility", cả hai dùng `--admin-color-warning`, nên đóng option bằng tay vẫn để warning nhìn thấy được.
+- **Hàng không bao giờ nhảy.** Điều khiển segmented dành sẵn chiều cao nút disclosure, nên chuyển Detailed ↔ Compact ↔ Off giữ mọi điều khiển ở cùng tọa độ y (§6.3).
+- **Chip chỉ dành cho ngoại lệ.** Ready là trạng thái bình thường và không có chip. Project Draft hoặc archived hiển thị chip cạnh tên, dùng card muted nét đứt của §6.4, giữ hàng, bị disabled và không được đếm (§6.6). Hàng Off dùng surface nhẹ và title muted; không có gì bị làm mờ bằng `opacity`.
+- **Một cấp box.** Option nằm dưới divider bên trong hàng, không nằm trong box viền lồng nhau (§6.4).
+- **Thứ tự theo thư viện nguồn.** Không sắp xếp lại tại đây: Project sở hữu thứ tự (§5).
+- Dưới chiều rộng container `cv-selection` 44rem, điều khiển segmented chuyển xuống dòng riêng dưới nhận diện; disclosure vẫn ở góc trên bên phải.
 
-### 6.8 Portfolio media rows
+### 6.8 Hàng media Portfolio
 
-Portfolio › Appearance › Portfolio media assigns the primary and supporting visual of every selected project and tool. Each item is one row from `renderPortfolioMediaRow` (`portfolioMediaSelection.ts`), which reuses the media-row anatomy of §6.5 so it reads like the media list in Projects:
+Portfolio › Appearance › Portfolio media gán hình Primary và Supporting cho mọi Project và Tool đã chọn. Mỗi mục là một hàng từ `renderPortfolioMediaRow` (`portfolioMediaSelection.ts`), dùng lại cấu trúc hàng media của §6.5 để trông giống danh sách media trong Projects:
 
 ```
 [preview 4:3]  Duong Vanh Dai 3                        (clipped, title)
@@ -227,168 +227,168 @@ Primary visual *                 Supporting visual *
 [Cover · Image 01          ⌄]   [Gallery · Image 02          ⌄]
 ```
 
-- **Rows, not boxes.** Rows are grouped in the Projects and Automation tools disclosure groups (count = selected items) and separated by dividers (§6.4).
-- **The preview is the chosen primary visual** and follows the select live (`syncPortfolioMediaPreview`); an item without images shows "No image", never a broken image.
-- **The meta line says why the fields look the way they do:** layout name (from the override or the default), what it needs (`mediaRequirementLabel`) and, in `--admin-color-warning`, "Only N images in Media" when the item has fewer images than the layout requires. `portfolioMediaRowState` is the only place that writes it.
-- **Labels use the shared field label.** The required mark follows the text directly (`renderAdminFieldLabel` anatomy) and is toggled, never moved; no status text sits in the label row, so labels stay on one line and both controls start at the same y (§6.3).
-- **A visual the layout does not use is replaced, not disabled in place.** The select stays in an `.admin-field-swap` (disabled, invisible) and an `.admin-field-static` "Not used by this layout" covers it at the same size, so both columns keep equal height and width. A disabled field must never show a stale value.
-- Two selects share a row down to a 22rem `admin-form` container, then stack; the bilingual 32rem rule of §6.5 does not apply to them.
-- **Cover & closing** is the first group: one row (`renderPortfolioFeatureRow`) with Project ("First selected project" + the selected projects) and Image ("Its primary visual" + that project's images). There is one image select per project; only the visible one is enabled, so exactly one value is submitted, and the preview follows it (`syncPortfolioFeatureRow`, also run when the project selection changes).
-- **Structured slots** (Project › Key facts, Tool › Workflow steps) are fixed, numbered slots (`structuredSlots` in `main.ts`): each slot is a labelled group (`role="group"` with its "Fact 1" title), its EN | VI pairs sit on the shared form grid, slots are divided by a rule inside one card, and empty slots are not saved. A half-filled slot blocks Ready ("Key fact 1 needs an English value and label"); missing Vietnamese is a recommendation.
-- **Portfolio project rows** (Projects & tools) reuse the CV project-row anatomy of §6.7 (`portfolioProjectSelection.ts`): identity and a state line ("Technical · 2 of 4 responsibilities"), an "In Portfolio" switch, and a disclosure with the responsibilities to print. The state line follows the layout chosen in Appearance and warns when nothing, or more than the layout prints, is selected.
-- **Project pages** (Appearance) is one segmented choice, *Summary* | *Challenge · Approach · Outcome*, for Technical and Editorial.
-- **A field that holds several controls is a labelled group, never a `<label>`.** A `<label>` binds to its first control only (here a hidden, disabled select), so clicking it does nothing and assistive tech reads the wrong control. Use `role="group"` + `aria-labelledby` on a wrapper styled like a field label, and give each control its own `aria-label`.
-- Changing a layout default or override calls `syncPortfolioMediaRow` for every row; choosing the same image twice clears the supporting visual.
+- **Dùng hàng, không dùng box.** Các hàng được nhóm trong disclosure group Projects và Automation tools (số đếm = mục đã chọn) và phân tách bằng divider (§6.4).
+- **Preview là hình Primary đã chọn** và theo select trực tiếp (`syncPortfolioMediaPreview`); mục không có ảnh hiển thị "No image", không bao giờ hiển thị ảnh hỏng.
+- **Dòng meta giải thích vì sao trường có hình thức đó:** tên layout (từ override hoặc mặc định), yêu cầu của nó (`mediaRequirementLabel`) và, bằng `--admin-color-warning`, "Only N images in Media" khi mục có ít ảnh hơn layout yêu cầu. `portfolioMediaRowState` là nơi duy nhất viết dòng này.
+- **Label dùng field label dùng chung.** Dấu bắt buộc theo ngay sau text (cấu trúc `renderAdminFieldLabel`) và được toggle, không bao giờ di chuyển; không có text trạng thái trong hàng label, nên label giữ một dòng và cả hai điều khiển bắt đầu cùng tọa độ y (§6.3).
+- **Hình layout không dùng được thay thế, không disabled tại chỗ.** Select vẫn nằm trong `.admin-field-swap` (disabled, vô hình) và `.admin-field-static` "Not used by this layout" phủ nó ở cùng kích thước, để cả hai cột giữ cùng chiều cao và chiều rộng. Trường disabled không bao giờ được hiển thị giá trị cũ.
+- Hai select dùng chung một hàng cho đến container `admin-form` 22rem rồi xếp chồng; quy tắc song ngữ 32rem của §6.5 không áp dụng cho chúng.
+- **Cover & closing** là nhóm đầu: một hàng (`renderPortfolioFeatureRow`) với Project ("First selected project" + các Project đã chọn) và Image ("Its primary visual" + ảnh của Project đó). Có một image select cho mỗi Project; chỉ mục nhìn thấy được enabled, nên đúng một giá trị được submit và preview theo nó (`syncPortfolioFeatureRow`, cũng chạy khi lựa chọn Project thay đổi).
+- **Vị trí có cấu trúc** (Project › Key facts, Tool › Workflow steps) là các vị trí cố định có đánh số (`structuredSlots` trong `main.ts`): mỗi vị trí là nhóm có label (`role="group"` với title "Fact 1"), cặp EN | VI nằm trên form grid dùng chung, các vị trí được chia bằng đường kẻ bên trong một card và vị trí trống không được lưu. Vị trí điền một nửa chặn Ready ("Key fact 1 needs an English value and label"); thiếu tiếng Việt là recommendation.
+- **Hàng Project Portfolio** (Projects & tools) dùng lại cấu trúc hàng Project CV của §6.7 (`portfolioProjectSelection.ts`): nhận diện và dòng trạng thái ("Technical · 2 of 4 responsibilities"), switch "In Portfolio" và disclosure chứa các trách nhiệm sẽ in. Dòng trạng thái theo layout được chọn trong Appearance và cảnh báo khi không chọn gì hoặc chọn nhiều hơn số layout in.
+- **Project pages** (Appearance) là một lựa chọn segmented, *Summary* | *Challenge · Approach · Outcome*, cho Technical và Editorial.
+- **Trường chứa nhiều điều khiển là nhóm có label, không bao giờ là `<label>`.** `<label>` chỉ liên kết với điều khiển đầu tiên (ở đây là select hidden, disabled), nên click không làm gì và công nghệ hỗ trợ đọc sai điều khiển. Dùng `role="group"` + `aria-labelledby` trên wrapper có style như field label và cho mỗi điều khiển `aria-label` riêng.
+- Thay đổi mặc định hoặc override layout gọi `syncPortfolioMediaRow` cho mọi hàng; chọn cùng một ảnh hai lần sẽ xóa hình Supporting.
 
 ## 7. Preview
 
-- The toolbar order is: page select → device select → language toggle → zoom (Fit, −, +).
-- Previews exchange unsaved form payloads through the same-origin protocol in `src/shared/previewProtocol.ts`; do not reload the iframe to show edits.
-- Layout changes around the preview must keep Fit zoom working; `previewZoom.ts` observes the frame size.
+- Thứ tự toolbar là: select trang → select thiết bị → toggle ngôn ngữ → zoom (Fit, −, +).
+- Preview trao đổi payload form chưa lưu qua giao thức cùng origin trong `src/shared/previewProtocol.ts`; không reload iframe để hiển thị chỉnh sửa.
+- Thay đổi layout quanh preview phải giữ zoom Fit hoạt động; `previewZoom.ts` quan sát kích thước frame.
 
-### 7.1 Image crop editors and their previews
+### 7.1 Trình chỉnh sửa crop ảnh và preview
 
-Implemented by `cropGeometry.ts` (pure, unit-tested in `cropGeometry.test.ts`) and `cropStage.ts`; both the Portfolio media and the profile photo croppers use them.
+Được triển khai bằng `cropGeometry.ts` (thuần, có unit test trong `cropGeometry.test.ts`) và `cropStage.ts`; cả cropper media Portfolio và ảnh Profile đều dùng chúng.
 
-A crop preview is a promise about the saved file. These rules apply to every cropper (Portfolio media, profile photo, and any future one).
+Preview crop là lời cam kết về file đã lưu. Các quy tắc này áp dụng cho mọi cropper (media Portfolio, ảnh Profile và mọi loại trong tương lai).
 
-1. **One source of truth.** The editor keeps one normalized crop per format: `{ x, y, width, height }`, fractions of the original image. The preview, the saved crop row and the exported file are all computed from that same object. Never let a preview read the cropper's DOM or a library widget (`cropper-viewer`) on its own. It uses different timing and a different coordinate space, and it drifts.
-2. **Same math everywhere.** Preview and export use one pure function (crop state + output size → source rectangle). Unit-test it with a non-square source image in every format.
-3. **What you see is what you save.** The visible selection box, the preview and the saved file show exactly the same area. Values are clamped *before* the user sees them, never silently at save time.
-4. **No empty pixels.** The image always covers the selection. Bound panning and zoom-out with arithmetic, not by probing the DOM, so the checkerboard never shows inside the selection.
-5. **Preview at output ratio, without decoration.** The printed Portfolio frames use the same ratios (crop ratio contract, `docs/ui-guidelines.md` §8.4), so a crop is never re-cropped by a layout. The preview frame uses the output aspect ratio and shows only what the output contains. Chrome the real output adds on top (for example a page-number tile) is shown only when the real layout places it there, and in the same position and size.
-6. **Format tabs carry their facts.** Each tab shows a live thumbnail of its crop, its name and ratio ("Wide 21:9"), and a status only when it is informative: *Auto* (no saved custom crop) or *Edited* (changed in this session, not saved). A saved custom crop shows no label. Do not repeat the same word on every tab. Tabs follow §10: `role="tab"`, `aria-selected`, `aria-controls` pointing to one `role="tabpanel"`, and Arrow, Home and End keys. Because the thumbnails show every format, the side preview may hide on narrow screens.
-7. **Zoom controls match preview zoom.** Render them with `renderAdminCropZoomControls` and update them with `setAdminCropZoomValue`. They use the same − / + icons as `renderPreviewZoomControls` (`adminZoomOutIcon`, `adminZoomInIcon`), never typed `-` or `+`. Zoom 100% means the image just covers the selection, and the slider shows and announces its percentage.
-8. **Reset is explicit.** "Reset to auto" affects only the active format, and it is part of the unsaved changes Cancel discards.
-9. **Drag anywhere.** A plain `cropper-handle action="move"` is the last child of the selection, so a drag inside the selection moves the image instead of landing on the grid or crosshair.
-10. **Wait for the image.** Call `waitForCropImage` before setting a crop. `$ready()` alone resolves early for a cached source, and the element then re-centers itself over the crop you set.
-11. **Dispose before destroy.** Call `CropStage.dispose()` before `cropper.destroy()`, so teardown transforms never overwrite a stored crop.
-12. **Rotation is part of the crop dialog.** Rotate ↺ / ↻ (`renderAdminCropZoomControls({ rotate: true })`, `adminRotateLeftIcon` / `adminRotateRightIcon`) sit after zoom in their own labelled group, with `[` and `]` as keyboard shortcuts (`aria-keyshortcuts`, ignored while typing in a field). Every cropper offers it: Portfolio media, profile photo and credential evidence.
-    - Turns are quarter turns, always redrawn from the untouched original (`imageRotation.ts`), so turning four times never re-encodes the picture.
-    - A turn re-crops every format automatically and marks them *Edited*; the meta line says "Rotated 90° clockwise · all formats re-cropped". Turning back to the saved orientation restores the saved crops. A turn is an unsaved change that Cancel asks to discard.
-    - The rotate buttons are never disabled while a turn is in progress (a disabled button drops focus out of the dialog); a guard ignores repeated presses instead.
-    - **Project and Tool media:** Save replaces the original with the rotated file (PNG stays PNG, JPEG stays JPEG), so the Website shows it upright too. The rotated file is uploaded beside the old one, the crops are saved, then the image row is pointed at it; the old file is removed only when no published release references it. A failed save removes the uploaded file and leaves the image as it was.
-    - **Credential evidence:** the private original is never rewritten. The turns are stored as `credential_assets.preview_rotation`, and the dialog reopens at that orientation with its saved crops.
-13. **Credential evidence uses the same dialog** (`PortfolioMediaCropTarget.evidence`). Differences, and nothing else:
-    - Only the formats the Credentials layouts print are offered (Landscape and Portrait). The Wide tab is hidden, not disabled.
-    - The header reads "Credential evidence · Adjust evidence crops · Crop a public preview; the original file stays private."
-    - Under the format preview: "Print as" (`renderAdminSegmented`, Landscape | Portrait; choosing one opens that format) and "Show in Portfolio" (`.admin-inline-check`, off by default) with the hint "Visible to anyone with the Portfolio link." Turning it on asks for confirmation (not `danger`: nothing is destroyed). Only one file per credential is shown; turning one on turns the others off.
-    - While shown, the printed orientation always has a saved crop: Save writes it when missing, and "Reset to auto" saves the automatic crop instead of deleting it.
+1. **Một nguồn dữ liệu duy nhất.** Editor giữ một crop chuẩn hóa cho mỗi format: `{ x, y, width, height }`, là tỉ lệ trên ảnh gốc. Preview, row crop đã lưu và file export đều được tính từ cùng object đó. Không bao giờ để preview tự đọc DOM của cropper hoặc widget thư viện (`cropper-viewer`). Nó dùng timing và hệ tọa độ khác nên sẽ bị lệch.
+2. **Cùng phép tính ở mọi nơi.** Preview và export dùng một hàm thuần (trạng thái crop + kích thước output → hình chữ nhật nguồn). Unit test với ảnh nguồn không vuông ở mọi format.
+3. **Thấy gì lưu nấy.** Box lựa chọn nhìn thấy được, preview và file đã lưu hiển thị chính xác cùng vùng. Giá trị được clamp *trước khi* người dùng nhìn thấy, không bao giờ âm thầm clamp lúc lưu.
+4. **Không có pixel trống.** Ảnh luôn phủ kín vùng lựa chọn. Giới hạn pan và zoom-out bằng phép tính, không dò DOM, để checkerboard không bao giờ xuất hiện trong vùng lựa chọn.
+5. **Preview theo tỉ lệ output, không trang trí.** Frame Portfolio in dùng cùng tỉ lệ (hợp đồng tỉ lệ crop, `docs/ui-guidelines.md` §8.4), nên crop không bao giờ bị layout crop lại. Frame preview dùng aspect ratio output và chỉ hiển thị nội dung output chứa. Chrome mà output thật thêm phía trên (ví dụ tile số trang) chỉ hiển thị khi layout thật đặt nó tại đó, ở cùng vị trí và kích thước.
+6. **Tab format mang thông tin riêng.** Mỗi tab hiển thị thumbnail trực tiếp của crop, tên và tỉ lệ ("Wide 21:9"), cùng trạng thái chỉ khi có ích: *Auto* (không có crop tùy chỉnh đã lưu) hoặc *Edited* (đã thay đổi trong phiên này, chưa lưu). Crop tùy chỉnh đã lưu không có label. Không lặp cùng một từ trên mọi tab. Tab theo §10: `role="tab"`, `aria-selected`, `aria-controls` trỏ tới một `role="tabpanel"`, cùng phím Arrow, Home và End. Vì thumbnail hiển thị mọi format, preview bên có thể ẩn trên màn hình hẹp.
+7. **Điều khiển zoom khớp zoom preview.** Render bằng `renderAdminCropZoomControls` và cập nhật bằng `setAdminCropZoomValue`. Chúng dùng cùng icon − / + như `renderPreviewZoomControls` (`adminZoomOutIcon`, `adminZoomInIcon`), không bao giờ gõ `-` hoặc `+`. Zoom 100% nghĩa là ảnh vừa phủ vùng lựa chọn, slider hiển thị và thông báo phần trăm.
+8. **Reset rõ ràng.** "Reset to auto" chỉ ảnh hưởng format đang active và là một phần của thay đổi chưa lưu mà Cancel loại bỏ.
+9. **Kéo ở bất kỳ đâu.** `cropper-handle action="move"` thuần là phần tử con cuối của vùng lựa chọn, để kéo bên trong vùng lựa chọn sẽ di chuyển ảnh thay vì rơi vào grid hoặc crosshair.
+10. **Chờ ảnh.** Gọi `waitForCropImage` trước khi đặt crop. Chỉ `$ready()` sẽ resolve sớm với source đã cache, rồi phần tử tự căn lại lên crop vừa đặt.
+11. **Dispose trước khi destroy.** Gọi `CropStage.dispose()` trước `cropper.destroy()` để transform lúc teardown không bao giờ ghi đè crop đã lưu.
+12. **Xoay là một phần của dialog crop.** Rotate ↺ / ↻ (`renderAdminCropZoomControls({ rotate: true })`, `adminRotateLeftIcon` / `adminRotateRightIcon`) nằm sau zoom trong nhóm có label riêng, với `[` và `]` làm phím tắt (`aria-keyshortcuts`, bỏ qua khi đang nhập trong trường). Mọi cropper đều có: media Portfolio, ảnh Profile và bằng chứng Credential.
+    - Mỗi lần xoay là một phần tư vòng, luôn vẽ lại từ bản gốc chưa chạm tới (`imageRotation.ts`), nên xoay bốn lần không bao giờ encode lại ảnh.
+    - Một lần xoay tự động crop lại mọi format và đánh dấu *Edited*; dòng meta ghi "Rotated 90° clockwise · all formats re-cropped". Xoay về hướng đã lưu khôi phục crop đã lưu. Xoay là thay đổi chưa lưu mà Cancel sẽ hỏi để loại bỏ.
+    - Nút xoay không bao giờ disabled khi đang xoay (nút disabled làm focus rời khỏi dialog); thay vào đó guard bỏ qua lần nhấn lặp.
+    - **Media Project và Tool:** Save thay bản gốc bằng file đã xoay (PNG vẫn là PNG, JPEG vẫn là JPEG), để Website cũng hiển thị đúng chiều. File đã xoay được upload cạnh file cũ, crop được lưu, sau đó row ảnh trỏ tới nó; file cũ chỉ bị xóa khi không Release đã publish nào tham chiếu. Lưu thất bại xóa file đã upload và giữ ảnh nguyên trạng.
+    - **Bằng chứng Credential:** bản gốc riêng tư không bao giờ bị ghi lại. Lượt xoay được lưu thành `credential_assets.preview_rotation`, và dialog mở lại ở hướng đó với các crop đã lưu.
+13. **Bằng chứng Credential dùng cùng dialog** (`PortfolioMediaCropTarget.evidence`). Chỉ có các khác biệt sau:
+    - Chỉ cung cấp format mà layout Credentials in (Landscape và Portrait). Tab Wide bị hidden, không phải disabled.
+    - Header ghi "Credential evidence · Adjust evidence crops · Crop a public preview; the original file stays private."
+    - Dưới preview format: "Print as" (`renderAdminSegmented`, Landscape | Portrait; chọn một mục sẽ mở format đó) và "Show in Portfolio" (`.admin-inline-check`, mặc định tắt) với hint "Visible to anyone with the Portfolio link." Bật nó sẽ hỏi xác nhận (không phải `danger`: không có gì bị phá hủy). Chỉ một file mỗi Credential được hiển thị; bật một file sẽ tắt các file khác.
+    - Khi được hiển thị, hướng in luôn có crop đã lưu: Save ghi crop khi thiếu, còn "Reset to auto" lưu crop tự động thay vì xóa.
 
-## 8. Feedback
+## 8. Phản hồi
 
-- Success and informational messages use `showAdminToast`. Errors that block an action use `showAdminToast(..., "error")` plus field-level or dialog-level detail.
-- Dialogs use `<dialog class="admin-dialog">` with an eyebrow, a heading referenced by `aria-labelledby`, and an `.admin-actions` row. See §8.1.
+- Thông báo thành công và thông tin dùng `showAdminToast`. Lỗi chặn hành động dùng `showAdminToast(..., "error")` cùng chi tiết cấp trường hoặc dialog.
+- Dialog dùng `<dialog class="admin-dialog">` với eyebrow, heading được `aria-labelledby` tham chiếu và một hàng `.admin-actions`. Xem §8.1.
 
-### 8.1 Dialog anatomy
+### 8.1 Cấu trúc dialog
 
-Every Admin dialog has the same three bands, so they look like one family regardless of size.
+Mọi dialog Admin có cùng ba dải để trông như một family bất kể kích thước.
 
-| Band | Rules |
+| Dải | Quy tắc |
 |---|---|
-| **Header** | Eyebrow (`.section-kicker`, names the area) → title (`h2`, `--admin-title-sm` in every dialog) → optional one-line note (`--admin-text-xs`, muted, ≤ 80 characters, hidden below 680px height). The close button sits top-right, vertically centered on the **title line**, and the right gutter equals the left gutter. One divider below. |
-| **Body** | Same horizontal gutter as the header. Tabs, when present, sit directly under the header with that same gutter. |
-| **Footer** | One divider above. Tools for the content (zoom, reset) on the left; actions on the right in the §3 order: **Cancel, then the single primary action at the far right**. |
+| **Header** | Eyebrow (`.section-kicker`, nêu tên khu vực) → title (`h2`, `--admin-title-sm` trong mọi dialog) → note một dòng tùy chọn (`--admin-text-xs`, muted, ≤ 80 ký tự, hidden dưới chiều cao 680px). Nút đóng nằm góc trên phải, căn giữa theo chiều dọc với **dòng title**, và gutter phải bằng gutter trái. Một divider bên dưới. |
+| **Body** | Cùng gutter ngang như header. Tab, nếu có, nằm ngay dưới header với cùng gutter. |
+| **Footer** | Một divider phía trên. Công cụ cho nội dung (zoom, reset) bên trái; hành động bên phải theo thứ tự §3: **Cancel, sau đó một hành động primary duy nhất ở ngoài cùng bên phải**. |
 
-- **Close button:** one component for every dialog, rendered by `renderAdminDialogHeader`: `.admin-dialog__close`, a square icon button at `--admin-control-height-sm` with `--admin-control-radius` and `adminCloseIcon`. Never use a typed `×`, which sits on the text baseline and looks off-center. Library drawer close buttons (`.admin-drawer-close`) use the same icon. Accessible name: "Close <dialog name>".
-- **Gutters:** `--admin-dialog-gutter` (1rem, .75rem below 560px) for header, tabs, body and footer. A dialog never mixes gutters between bands.
-- **No per-dialog header CSS.** Size differences between dialogs come from the dialog width, never from restyled headers. Every dialog with a close button uses `renderAdminDialogHeader`. The small form dialogs (confirm, text input, rename) have no close button and keep their compact form header.
-- **Dismissal:** Escape, backdrop click, the close button and Cancel all close the dialog. When the dialog holds unsaved input, every one of them first asks through `confirmAdmin` ("Keep editing" / "Discard changes", `tone: "danger"`).
+- **Nút đóng:** một component cho mọi dialog, được render bằng `renderAdminDialogHeader`: `.admin-dialog__close`, nút icon vuông ở `--admin-control-height-sm` với `--admin-control-radius` và `adminCloseIcon`. Không bao giờ dùng ký tự `×`, vì nó nằm trên baseline text và trông lệch tâm. Nút đóng library drawer (`.admin-drawer-close`) dùng cùng icon. Tên truy cập: "Close <dialog name>".
+- **Gutter:** `--admin-dialog-gutter` (1rem, .75rem dưới 560px) cho header, tab, body và footer. Dialog không bao giờ trộn gutter giữa các dải.
+- **Không có CSS header riêng theo dialog.** Khác biệt kích thước giữa các dialog đến từ chiều rộng dialog, không bao giờ từ header đã restyle. Mọi dialog có nút đóng dùng `renderAdminDialogHeader`. Dialog form nhỏ (confirm, text input, rename) không có nút đóng và giữ header form compact.
+- **Đóng:** Escape, click backdrop, nút đóng và Cancel đều đóng dialog. Khi dialog chứa input chưa lưu, tất cả trước tiên hỏi qua `confirmAdmin` ("Keep editing" / "Discard changes", `tone: "danger"`).
 
-## 9. Design tokens
+## 9. Token thiết kế
 
-Use the `--admin-*` tokens from `admin-ui.css` and `admin-typography.css`; do not hard-code values that a token already covers.
+Dùng token `--admin-*` từ `admin-ui.css` và `admin-typography.css`; không viết cứng giá trị đã có token bao phủ.
 
-- Colors: `--admin-color-*` (canvas, surface, border, text, focus, success, warning, danger).
-- Controls: `--admin-control-height` (2.5rem), `-sm`, `-lg`, `--admin-control-radius`, `--admin-control-padding-x`.
-- Radius and shadow: `--admin-radius-sm|md|lg`, `--admin-shadow-card`.
-- Type scale: `--admin-text-2xs` … `--admin-text-lg`, `--admin-title-sm|md|lg`, `--admin-weight-*`.
+- Màu: `--admin-color-*` (canvas, surface, border, text, focus, success, warning, danger).
+- Điều khiển: `--admin-control-height` (2.5rem), `-sm`, `-lg`, `--admin-control-radius`, `--admin-control-padding-x`.
+- Radius và shadow: `--admin-radius-sm|md|lg`, `--admin-shadow-card`.
+- Thang type: `--admin-text-2xs` … `--admin-text-lg`, `--admin-title-sm|md|lg`, `--admin-weight-*`.
 - Layout: `--admin-workspace-gutter`, `--admin-workspace-header-min-height`, `--admin-document-columns`, `--admin-tabs-height`.
 
-Icons are inline SVG on a 16×16 (controls) or 24×24 (navigation) view box, drawn with `stroke: currentcolor`, no fill, round caps and joins.
+Icon là SVG inline trên viewBox 16×16 (điều khiển) hoặc 24×24 (navigation), được vẽ với `stroke: currentcolor`, không fill, đầu và điểm nối bo tròn.
 
 ## 10. Accessibility
 
-- Icon-only buttons have an `aria-label` and a matching `title` tooltip.
-- Toggles use `aria-pressed`; disclosures, menus and drawers use `aria-expanded` and `aria-controls`.
-- Focus is always visible (`:focus-visible` outline in `--admin-color-focus`). Never remove an outline without a replacement.
-- Every action works by keyboard. Tabs follow `bindAdminTablists` (Arrow keys, Home, End).
-- Motion stays at or below 150 ms and is disabled under `prefers-reduced-motion: reduce`. Do not animate height.
+- Nút chỉ có icon có `aria-label` và tooltip `title` tương ứng.
+- Toggle dùng `aria-pressed`; disclosure, menu và drawer dùng `aria-expanded` cùng `aria-controls`.
+- Focus luôn nhìn thấy được (outline `:focus-visible` bằng `--admin-color-focus`). Không bao giờ xóa outline khi chưa có thay thế.
+- Mọi hành động dùng được bằng bàn phím. Tab theo `bindAdminTablists` (phím Arrow, Home, End).
+- Chuyển động không quá 150 ms và bị tắt khi `prefers-reduced-motion: reduce`. Không animate chiều cao.
 
-## 11. Responsive behavior
+## 11. Hành vi responsive
 
-Existing breakpoints: `1280px`, `1180px`, `900px` (rail/mobile switch; `901px` for desktop-only rules), `720px`, `560px`, and the `64rem` container query on document headers. Reuse these instead of adding new values.
+Các breakpoint hiện có: `1280px`, `1180px`, `900px` (chuyển rail/mobile; `901px` cho quy tắc chỉ desktop), `720px`, `560px` và container query `64rem` trên header tài liệu. Dùng lại chúng thay vì thêm giá trị mới.
 
-Below the container breakpoint, the header identity stacks above the actions and the actions wrap; action order never changes.
+Dưới breakpoint container, nhận diện header xếp trên các hành động và hành động wrap; thứ tự hành động không bao giờ đổi.
 
-### Shell frame
+### Frame shell
 
-- **One top-bar height.** `--admin-topbar-height` (4rem) sizes the rail brand, the workspace header and the first row of `.admin-main`, on every screen and in both header densities, so the brand's bottom border and the header's bottom border are one line. Below 900px the rail row and the header row both use it. Toasts are positioned from it. Never give one of them its own height.
-- **The frame never changes with screen height.** A browser bookmark bar, the taskbar or a short window only change the viewport height; that must not move a border or reflow a control. `max-height` rules may only tighten the navigation list (item height, group spacing, icon size); they never touch `.admin-brand`, `.admin-header`, `.admin-main` or `.admin-rail__footer`.
-- **Rail footer: one row.** Security and Sign out always share one row as two equal columns (≥ 2rem tall, no wrapping), on desktop and in the mobile rail.
-- **Every column reaches the window bottom.** Rail, collection list, workspace frame and preview all end on the same line. A workspace that hosts a frame (editor shell, document library, cover letter shell, document, site or profile workspace) keeps its top and side `--admin-workspace-gutter` but has **no bottom gutter**; the frame stands on the window edge with no bottom border and square bottom corners. The rule lives once, at the end of `admin-ui.css`; a workspace never sets its own bottom padding again.
-- **Breathing room lives inside the scroll area.** Each scroll area ends with about one gutter (20 px) of space after its last item: panels through their own padding, the collection list through `padding-bottom: var(--admin-workspace-gutter)`. Outer-scrolling previews (CV, Homepage, cover letter) keep their own padding so Fit zoom is unchanged. The internally scrolling Portfolio preview has no bottom frame padding (`embeddedPreview` reads it) and ends with `calc(1.25rem / var(--embedded-preview-scale))` inside the document, so the gap after the last page is 20 px on screen at any zoom. Inner cards inside a column (for example Profile usage) keep their margins; only columns touch the edge.
-- **Rail identity.** The brand shows the product name and, under it, the owner's English (ASCII) name derived from Professional Profile › Full name. It follows the field live while editing (the same `updateAdminIdentity` call that updates the avatar), returns to the saved name when edits are discarded, and falls back to "Career workspace" until the profile loads. It is quiet secondary text: `--admin-text-2xs`, regular weight, `.02em` tracking (the name is usually all caps), in the rail muted color, so it never competes with the product name above it.
-- **Brand lines never wrap.** The text block takes all the room beside the avatar. A name that does not fit drops its tracking and shrinks proportionally (`fitAdminIdentityLabel`, re-run on edit, resize and font load) down to 10 px; only a name that still overflows is ellipsized, with the full name as tooltip. At the 1440/1920/2560 target screens four-word names (about 23 characters) fit in full. On the 12rem rail (≤ 1180px) the avatar is 2.15rem and the product name uses `--admin-text-xs` so "Career Hub Admin" stays on one line. The rail column is `minmax(0, 1fr)` so a long name ellipsizes with a tooltip instead of widening the rail; the avatar never shrinks.
-- `adminStyles.test.ts` locks these rules.
+- **Một chiều cao top bar.** `--admin-topbar-height` (4rem) đặt kích thước brand rail, header workspace và hàng đầu của `.admin-main` trên mọi màn hình và ở cả hai mật độ header, để viền dưới brand và viền dưới header thành một đường. Dưới 900px, hàng rail và hàng header đều dùng nó. Toast được định vị từ đó. Không bao giờ đặt chiều cao riêng cho một trong các phần này.
+- **Frame không bao giờ thay đổi theo chiều cao màn hình.** Bookmark bar trình duyệt, taskbar hoặc cửa sổ thấp chỉ thay đổi chiều cao viewport; điều đó không được di chuyển viền hoặc reflow điều khiển. Quy tắc `max-height` chỉ được làm navigation list chặt hơn (chiều cao mục, khoảng cách nhóm, kích thước icon); không bao giờ chạm `.admin-brand`, `.admin-header`, `.admin-main` hoặc `.admin-rail__footer`.
+- **Footer rail: một hàng.** Security và Sign out luôn dùng chung một hàng thành hai cột bằng nhau (cao ≥ 2rem, không wrap), trên desktop và trong rail mobile.
+- **Mọi cột chạm đáy cửa sổ.** Rail, collection list, frame workspace và preview đều kết thúc trên cùng một đường. Workspace chứa frame (editor shell, thư viện tài liệu, shell Cover Letter, workspace tài liệu, site hoặc Profile) giữ `--admin-workspace-gutter` trên và hai bên nhưng **không có gutter dưới**; frame đứng trên mép cửa sổ, không viền dưới và góc dưới vuông. Quy tắc chỉ tồn tại một lần ở cuối `admin-ui.css`; workspace không bao giờ tự đặt padding dưới lần nữa.
+- **Khoảng thở nằm bên trong vùng scroll.** Mỗi vùng scroll kết thúc với khoảng một gutter (20 px) sau mục cuối: panel qua padding riêng, collection list qua `padding-bottom: var(--admin-workspace-gutter)`. Preview scroll ngoài (CV, Homepage, Cover Letter) giữ padding riêng để zoom Fit không đổi. Preview Portfolio scroll trong không có padding frame dưới (`embeddedPreview` đọc giá trị này) và kết thúc bằng `calc(1.25rem / var(--embedded-preview-scale))` bên trong tài liệu, để khoảng trống sau trang cuối là 20 px trên màn hình ở mọi mức zoom. Card bên trong cột (ví dụ usage Profile) giữ margin; chỉ cột chạm mép.
+- **Nhận diện rail.** Brand hiển thị tên sản phẩm và bên dưới là tên tiếng Anh (ASCII) của người vận hành, suy ra từ Professional Profile › Full name. Nó theo trường trực tiếp khi chỉnh sửa (cùng lệnh gọi `updateAdminIdentity` cập nhật avatar), trở lại tên đã lưu khi bỏ chỉnh sửa và dùng "Career workspace" làm dự phòng cho đến khi Profile tải. Đây là text phụ nhẹ: `--admin-text-2xs`, weight regular, tracking `.02em` (tên thường toàn chữ hoa), bằng màu muted rail, để không cạnh tranh với tên sản phẩm phía trên.
+- **Dòng brand không bao giờ wrap.** Block text chiếm toàn bộ chỗ cạnh avatar. Tên không vừa sẽ bỏ tracking và co tỉ lệ (`fitAdminIdentityLabel`, chạy lại khi chỉnh sửa, resize và tải font) xuống 10 px; chỉ tên vẫn tràn mới bị ellipsis, với tên đầy đủ làm tooltip. Ở ba màn hình mục tiêu 1440/1920/2560, tên bốn từ (khoảng 23 ký tự) vừa đầy đủ. Trên rail 12rem (≤ 1180px), avatar là 2.15rem và tên sản phẩm dùng `--admin-text-xs` để "Career Hub Admin" nằm trên một dòng. Cột rail là `minmax(0, 1fr)` để tên dài ellipsis với tooltip thay vì làm rail rộng ra; avatar không bao giờ co.
+- `adminStyles.test.ts` khóa các quy tắc này.
 
-### Target screens
+### Màn hình mục tiêu
 
-The owner works on these three screens. Every Admin layout change must look right at all three CSS viewports (resolution ÷ Windows scale, minus taskbar and browser chrome). Heights are approximate for a maximized Chrome window; confirm with `innerWidth`/`innerHeight` when it matters.
+Người vận hành làm việc trên ba màn hình này. Mọi thay đổi layout Admin phải hiển thị đúng ở cả ba CSS viewport (độ phân giải ÷ tỉ lệ Windows, trừ taskbar và chrome trình duyệt). Chiều cao là gần đúng cho cửa sổ Chrome tối đa; xác nhận bằng `innerWidth`/`innerHeight` khi cần.
 
-| Screen | Physical | Scale | CSS viewport | Band |
+| Màn hình | Vật lý | Tỉ lệ | CSS viewport | Dải |
 |---|---|---|---|---|
-| Laptop | 2880×1800 | 200% (DPR 2) | 1440 × 731 with the bookmark bar, ≈ 763 without (measured) | 1281–1480 wide; height in the 621–760 band (tighter navigation only) |
-| Monitor 1 | 2560×1440 | 100% | 2560 × ≈1300 | wide desktop (no rule above 1480) |
-| Monitor 2 | 1920×1080 | 100% | 1920 × ≈940 | wide desktop (no rule above 1480) |
+| Laptop | 2880×1800 | 200% (DPR 2) | 1440 × 731 có bookmark bar, ≈ 763 khi không có (đã đo) | rộng 1281–1480; chiều cao trong dải 621–760 (chỉ navigation chặt hơn) |
+| Monitor 1 | 2560×1440 | 100% | 2560 × ≈1300 | desktop rộng (không có quy tắc trên 1480) |
+| Monitor 2 | 1920×1080 | 100% | 1920 × ≈940 | desktop rộng (không có quy tắc trên 1480) |
 
-Mobile breakpoints (`900px` and below) stay supported but are not the daily target.
+Breakpoint mobile (`900px` trở xuống) vẫn được hỗ trợ nhưng không phải mục tiêu hằng ngày.
 
-A shell change is checked at all three screens and at the laptop with and without the bookmark bar (1440 × 731 and 1440 × 763): the brand and header bottoms match to the pixel, the rail footer is one row and the navigation does not scroll. `npm run shots` covers the three screens; the bookmark-bar case is the 731 height it already uses.
+Thay đổi shell được kiểm tra trên cả ba màn hình và trên laptop có/không có bookmark bar (1440 × 731 và 1440 × 763): đáy brand và header khớp từng pixel, footer rail là một hàng và navigation không scroll. `npm run shots` bao phủ ba màn hình; trường hợp có bookmark bar là chiều cao 731 mà lệnh đã dùng.
 
-### Visual check
+### Kiểm tra hình ảnh
 
-After any Admin layout change, capture the affected views at the three target screens and look at the images before calling the change done. `scripts/admin-screenshots.mjs` holds the same viewports as the table above; keep them in sync.
+Sau mọi thay đổi layout Admin, chụp các view bị ảnh hưởng ở ba màn hình mục tiêu và xem ảnh trước khi gọi thay đổi là xong. `scripts/admin-screenshots.mjs` chứa cùng viewport như bảng trên; giữ chúng đồng bộ.
 
-- `npm run shots:login` — once per machine (and when the session expires): opens Chromium, you sign in, the session is saved to `.auth/admin.json` (git-ignored).
-- `npm run shots` — starts Vite on port 5199 and writes `tmp/screenshots/<screen>/<view>.png` for every view.
-- `npm run shots -- --views=cv,portfolio --screens=laptop` — limit the run.
-- `npm run shots -- --path="/admin/?view=projects&item=new" --name=new-project` — capture a specific route.
+- `npm run shots:login` — một lần trên mỗi máy (và khi session hết hạn): mở Chromium, đăng nhập, session được lưu vào `.auth/admin.json` (Git bỏ qua).
+- `npm run shots` — khởi động Vite trên port 5199 và ghi `tmp/screenshots/<screen>/<view>.png` cho mọi view.
+- `npm run shots -- --views=cv,portfolio --screens=laptop` — giới hạn lần chạy.
+- `npm run shots -- --path="/admin/?view=projects&item=new" --name=new-project` — chụp route cụ thể.
 
-The run opens every workspace tab and warns when a page scrolls horizontally, an element extends past the right edge, or a single-line text is clipped. Each clipped text is labelled **with tooltip** or **NO TOOLTIP**. Clipped fixed copy (notes, meta, health descriptions) must be shortened. Clipped user data (long project names, slugs) is acceptable only when it is labelled *with tooltip* (§6.2). Any *NO TOOLTIP* line is a bug.
+Lần chạy mở mọi tab workspace và cảnh báo khi trang scroll ngang, phần tử vượt mép phải hoặc text một dòng bị cắt. Mỗi text bị cắt được đánh dấu **with tooltip** hoặc **NO TOOLTIP**. Copy cố định bị cắt (note, meta, mô tả health) phải được rút ngắn. Dữ liệu người dùng bị cắt (tên Project dài, slug) chỉ chấp nhận được khi có nhãn *with tooltip* (§6.2). Mọi dòng *NO TOOLTIP* đều là lỗi.
 
-Before a layout change to anything that shows user data, test it once with maximum-length data: names, titles and file names of about 120 characters, and at least three linked items (for example three credentials on one Education entry). Do it at 1440px and around 1180px. Most "wraps badly" bugs only show up with long data.
+Trước khi thay đổi layout của bất kỳ thứ gì hiển thị dữ liệu người dùng, test một lần với dữ liệu dài tối đa: tên, title và tên file khoảng 120 ký tự, cùng ít nhất ba mục liên kết (ví dụ ba Credential trên một entry Education). Làm ở 1440px và khoảng 1180px. Phần lớn lỗi "wraps badly" chỉ xuất hiện với dữ liệu dài.
 
-The run also reports **uneven field row** when the fields sharing one row of an `.admin-form-grid` or `.admin-site-bilingual` start their controls more than 1px apart. It reports **checkbox stacked above its text** when an `.admin-inline-check` box and its text are not on one line. Both are bugs (§6.3, "Rows must not jump"). Forms inside dialogs are not opened by the run, so open them by hand in both toggle states.
+Lần chạy cũng báo **uneven field row** khi các trường dùng chung một hàng `.admin-form-grid` hoặc `.admin-site-bilingual` bắt đầu điều khiển lệch nhau hơn 1px. Nó báo **checkbox stacked above its text** khi box `.admin-inline-check` và text không nằm trên một dòng. Cả hai đều là lỗi (§6.3, "Rows must not jump"). Lần chạy không mở form trong dialog, vì vậy hãy mở chúng bằng tay ở cả hai trạng thái toggle.
 
-Collection lists beside an editor (Content, CV/Portfolio library, Cover letters) use `--admin-collection-width`, which grows from 21.5rem on the laptop to 30rem on wide monitors; the `1280px` and `1180px` rules still narrow it.
+Collection list cạnh editor (Content, thư viện CV/Portfolio, Cover Letter) dùng `--admin-collection-width`, tăng từ 21.5rem trên laptop lên 30rem trên monitor rộng; quy tắc `1280px` và `1180px` vẫn thu hẹp nó.
 
-## 12. CSS and bundle rules
+## 12. Quy tắc CSS và bundle
 
-- Stylesheet load order is locked by `adminStyles.test.ts`; `admin-ui.css` is the final normalization layer and holds shared chrome.
-- Workspace-specific styles go in that workspace's stylesheet; shared patterns go in `admin-ui.css`.
-- **Scrolling and layout frames.** The shell, workspace and two-column layout frames use `overflow: clip`, not `hidden`. A `hidden` frame can still be scrolled by script, so `element.scrollIntoView()` (or `focus()` on a far-away field) could scroll the whole workspace up and leave an empty band below (the "Language: English" link bug). Only the editor, preview and list panes scroll (`overflow-y: auto`). To bring something into view, call `revealAdminElement(element, { align })`. It scrolls only the nearest real scroll container. After switching tab or panel, wait one animation frame before revealing, and focus with `{ preventScroll: true }`. Never call `scrollIntoView` in Admin; `adminStyles.test.ts` enforces this.
-- `npm run check:admin-bundle` enforces the initial Admin budget (JS 115 kB, CSS 27 kB gzip). Remove dead CSS before raising a budget, and explain any increase in the commit message.
+- Thứ tự tải stylesheet được `adminStyles.test.ts` khóa; `admin-ui.css` là lớp chuẩn hóa cuối cùng và chứa chrome dùng chung.
+- Style riêng workspace nằm trong stylesheet của workspace đó; mẫu dùng chung nằm trong `admin-ui.css`.
+- **Scroll và frame layout.** Frame shell, workspace và layout hai cột dùng `overflow: clip`, không dùng `hidden`. Frame `hidden` vẫn có thể bị script scroll, nên `element.scrollIntoView()` (hoặc `focus()` vào trường ở xa) có thể scroll toàn bộ workspace lên và để lại dải trống phía dưới (lỗi link "Language: English"). Chỉ pane editor, preview và list được scroll (`overflow-y: auto`). Để đưa thứ gì đó vào vùng nhìn thấy, gọi `revealAdminElement(element, { align })`. Hàm chỉ scroll container thật gần nhất. Sau khi chuyển tab hoặc panel, chờ một animation frame trước khi reveal, và focus với `{ preventScroll: true }`. Không bao giờ gọi `scrollIntoView` trong Admin; `adminStyles.test.ts` bắt buộc điều này.
+- `npm run check:admin-bundle` bắt buộc ngân sách Admin ban đầu (JS 115 kB, CSS 27 kB gzip). Xóa CSS thừa trước khi tăng ngân sách và giải thích mọi mức tăng trong commit message.
 
-## 13. Persisted UI preferences
+## 13. Preference UI được lưu lâu dài
 
-Per-viewer conveniences (header density, last opened document) use `localStorage`. Every read and write is wrapped in `try/catch` and falls back to the default, so Admin still works in private windows. Content and anything that must be shared never goes into `localStorage`.
+Tiện ích theo từng người xem (mật độ header, tài liệu mở gần nhất) dùng `localStorage`. Mọi lượt đọc và ghi được bọc trong `try/catch` và dùng mặc định làm dự phòng, để Admin vẫn hoạt động trong cửa sổ riêng tư. Nội dung và bất kỳ thứ gì phải dùng chung không bao giờ được đưa vào `localStorage`.
 
-## 14. Checklist before finishing an Admin UI change
+## 14. Checklist trước khi hoàn tất thay đổi UI Admin
 
-1. `npm run verify:admin` passes.
-2. The change looks and behaves the same in Homepage, Professional Profile, CV, Portfolio and Cover Letters (or the difference is intentional and documented here).
-3. Checked in comfortable and compact header density.
-4. Checked at desktop width, around 1180px, and below 900px.
-5. Every new control works by keyboard and has an accessible name.
-6. Every new dropdown uses `renderAdminSelectControl` or the shared chevron slot (§6.1); its arrow lines up with the selects above and below it.
-7. A new or changed dialog follows §8.1 (header, close button, gutters, footer order). Compare it side by side with one existing dialog.
-8. Any preview of a generated file (crop, PDF, image) is computed from the same state and function as the saved output (§7.1). Change a value and check that the preview and the saved result match.
-9. Anything that shows user data was checked with maximum-length data (§6.2, §11). Fixed labels stay on one line, and every clipped value has a tooltip.
-10. New fields sit on the form grid, and their disabled state looks disabled (§6.3). New cards follow the item-card anatomy: status with the identity, destructive actions in More, facts as one meta line, at most two levels of boxes (§6.4).
-11. Anything that jumps to another place (links to an entry, reorder, validation focus) uses `revealAdminElement` and leaves the shell, header and tabs where they were (§12).
-12. Every form row you touched was checked in its real container and in each toggle state: the controls in a row start at the same height, labels stay on one line, and no checkbox stacks above its text (§6.3 "Rows must not jump"). `npm run shots` shows no *uneven field row* lines.
-13. Lists of uploaded or pending items follow §6.5: one row anatomy, EN | VI pairs on the same row, actions in More, no visible native file input, and Save only while a row has edits. Anything you hide with the `hidden` attribute is actually invisible.
-14. Every list that includes or excludes items has a `renderAdminSelectionHeading` count with the right word: *shown* for visibility toggles, *selected* for library picks (§6.6). The total counts only eligible items.
-15. A choice between three or fewer options that is repeated on every row is a segmented control, not a select; options that apply to only one choice are disclosed for that choice alone, and a row with a problem stays open (§6.7).
-16. Rows inside a disclosure group are divided, not boxed. A field that does not apply is swapped for a same-size `.admin-field-static` with the reason, and required marks sit right after the label text (§6.4, §6.8).
+1. `npm run verify:admin` đạt.
+2. Thay đổi có hình thức và hành vi giống nhau trong Homepage, Professional Profile, CV, Portfolio và Cover Letter (hoặc khác biệt là có chủ ý và được ghi tại đây).
+3. Đã kiểm tra với mật độ header comfortable và compact.
+4. Đã kiểm tra ở chiều rộng desktop, khoảng 1180px và dưới 900px.
+5. Mọi điều khiển mới dùng được bằng bàn phím và có tên truy cập.
+6. Mọi dropdown mới dùng `renderAdminSelectControl` hoặc slot chevron dùng chung (§6.1); mũi tên thẳng hàng với select phía trên và dưới.
+7. Dialog mới hoặc đã thay đổi theo §8.1 (header, nút đóng, gutter, thứ tự footer). So sánh cạnh một dialog hiện có.
+8. Mọi preview file được tạo (crop, PDF, ảnh) được tính từ cùng trạng thái và hàm như output đã lưu (§7.1). Thay đổi một giá trị và kiểm tra preview khớp kết quả đã lưu.
+9. Mọi thứ hiển thị dữ liệu người dùng được kiểm tra với dữ liệu dài tối đa (§6.2, §11). Label cố định giữ một dòng và mọi giá trị bị cắt đều có tooltip.
+10. Trường mới nằm trên form grid và trạng thái disabled trông disabled (§6.3). Card mới theo cấu trúc card mục: trạng thái cùng nhận diện, hành động phá hủy trong More, fact thành một dòng meta, tối đa hai cấp box (§6.4).
+11. Mọi thứ nhảy sang vị trí khác (link tới entry, sắp xếp lại, focus validation) dùng `revealAdminElement` và giữ shell, header cùng tab nguyên vị trí (§12).
+12. Mọi hàng form đã chạm tới được kiểm tra trong container thật và ở từng trạng thái toggle: điều khiển trong một hàng bắt đầu cùng chiều cao, label giữ một dòng và không checkbox nào xếp trên text (§6.3 "Rows must not jump"). `npm run shots` không hiển thị dòng *uneven field row*.
+13. Danh sách mục đã upload hoặc pending theo §6.5: một cấu trúc hàng, cặp EN | VI trên cùng hàng, hành động trong More, không có file input native nhìn thấy được và Save chỉ xuất hiện khi hàng có chỉnh sửa. Bất kỳ thứ gì ẩn bằng thuộc tính `hidden` đều thực sự vô hình.
+14. Mọi danh sách đưa vào hoặc loại mục có số đếm `renderAdminSelectionHeading` với đúng từ: *shown* cho toggle hiển thị, *selected* cho lựa chọn thư viện (§6.6). Tổng chỉ đếm mục đủ điều kiện.
+15. Lựa chọn giữa ba option trở xuống được lặp trên mọi hàng là điều khiển segmented, không phải select; option chỉ áp dụng cho một lựa chọn được disclosure riêng cho lựa chọn đó, và hàng có vấn đề giữ trạng thái mở (§6.7).
+16. Hàng trong disclosure group được phân chia, không đóng box. Trường không áp dụng được thay bằng `.admin-field-static` cùng kích thước có lý do, và dấu bắt buộc nằm ngay sau text label (§6.4, §6.8).
