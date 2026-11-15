@@ -45,13 +45,13 @@ Dịch các tài liệu tiếng Anh có sẵn sang tiếng Việt theo ADR-017, 
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · token trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi:
-- `verify:admin`:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi (chỗ bản gốc mâu thuẫn / khó hiểu):
+- Đã xong bước: 1, 2, 3, 4, 5.
+- Người code: Codex · token trước / sau: 95 % / không có chỉ số % khả dụng trong phiên Codex API.
+- Nhánh, commit cuối: `gd2/01-dich-tai-lieu` · `9f063c0` (`wip(GD2-01 bước 5): cập nhật anchor và kiểm tra`); commit báo cáo mục 5 nối sau.
+- File đã đổi: 11 file tài liệu trong mục 2; `decisions/ADR-REGISTER.md` (chỉ link anchor); file đề bài này (mục 5).
+- `verify:admin`: đạt bằng `npm.cmd run verify:admin` — typecheck đạt; 29 file test / 187 test đạt; build đạt; Admin JS 92,6 / 115,0 kB gzip, CSS 26,5 / 27,0 kB gzip. Kiểm thêm: 24 link anchor hợp lệ; 15 tham chiếu mục duy nhất trong `src/`, `scripts/` vẫn tồn tại; số tiêu đề, số mục và code block của 11 file khớp bản gốc.
+- Chỗ làm khác đề bài và lý do: Không.
+- Câu hỏi (chỗ bản gốc mâu thuẫn / khó hiểu): Không.
 
 ## 6. Review của Claude
 
