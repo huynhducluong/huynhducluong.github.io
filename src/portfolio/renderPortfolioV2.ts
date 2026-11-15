@@ -16,6 +16,7 @@ import type {
 import { pickCredentialPreview } from "../shared/credentialPreviews";
 import { PORTFOLIO_CREDENTIALS_PER_PAGE, credentialsLayoutDocumentProfile, PORTFOLIO_PROFILE_CARD_ITEMS, portfolioCapabilityGroups, portfolioContributionLimit, portfolioCredentialPages, portfolioProjectResponsibilities, type PortfolioCredentialPage, portfolioPageCount, resolveAutomationLayout, resolveProjectLayout } from "./layouts";
 import { resolvePortfolioMedia } from "./mediaSlots";
+import type { PortfolioEditField } from "./editMarkers";
 
 // Every visible string lives here so the Vietnamese PDF never falls back to English chrome.
 const copy = {
@@ -64,7 +65,19 @@ const videoLink = (url: string | undefined, name: string, language: Language): s
   const label = escapeHtml(copy[language].watchVideo(name));
   return `<a class="portfolio-video-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${label}" title="${label}"><svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true" focusable="false"><path d="M2 1l7 4-7 4z" fill="currentColor"/></svg><span>${copy[language].video}</span></a>`;
 };
-const twoDigits = (value: number): string => String(value).padStart(2, "0");
+// Edit markers (ADR-030) exist only in the Admin's embedded preview. State is module-level because rendering is
+// synchronous; renderPortfolio sets it and always resets it. With markers off, `mark` returns "" so markup is unchanged.
+let editMarkers = false;
+let markedOnce = new Set<PortfolioEditField>();
+const mark = (field: PortfolioEditField, firstOnly = false): string => {
+  if (!editMarkers) return "";
+  if (firstOnly) {
+    if (markedOnce.has(field)) return "";
+    markedOnce.add(field);
+  }
+  return ` data-edit-field="${field}"`;
+};
+const twoDigits =(value: number): string => String(value).padStart(2, "0");
 const numberedCaption = (index: number, label: string): string => `${twoDigits(index)} / ${label}`;
 // Sparse content stretches across the row instead of leaving half a page empty.
 const columnsStyle = (count: number, max: number): string => `style="--pf-columns: ${Math.max(1, Math.min(max, count))}"`;
@@ -105,7 +118,7 @@ const page = (content: string, className: string, layoutId: string, chrome: Page
   const header = chrome.section === undefined ? "" : `<header class="portfolio-page-header"><strong>${escapeHtml(chrome.displayName)}</strong><span>${escapeHtml(chrome.section)}</span></header>`;
   const footer = chrome.section === undefined
     ? `<span class="portfolio-page-number">${pageLabel}</span>`
-    : `<footer class="portfolio-page-footer"><span>${escapeHtml(chrome.footerText)}</span><strong>${pageLabel}</strong></footer>`;
+    : `<footer class="portfolio-page-footer"><span${mark("portfolio_footer_text", true)}>${escapeHtml(chrome.footerText)}</span><strong>${pageLabel}</strong></footer>`;
   return `<section class="portfolio-page ${className}" data-portfolio-layout="${escapeHtml(layoutId)}">${header}${content}${footer}</section>`;
 };
 const projectMeta = (project: PortfolioProject, language: Language): string => [localized(project.location, language), project.role ? localized(project.role, language) : ""].filter(Boolean).join(" · ");
@@ -144,12 +157,12 @@ const renderCover = (data: PortfolioRuntimeData, language: Language, selectedPro
   const highlightKicker = localized(content.coverHighlight.kicker, language);
   const highlightLines = content.coverHighlight.lines.map((line) => localized(line, language)).filter(Boolean);
   // The aside is the editor's highlight; with nothing written it is left out (§8.4).
-  const highlight = highlightKicker || highlightLines.length ? `<aside>${highlightKicker ? `<span>${escapeHtml(highlightKicker)}</span>` : ""}${highlightLines.length ? `<strong>${highlightLines.map(escapeHtml).join("<br>")}</strong>` : ""}</aside>` : "";
-  const identity = `<div class="portfolio-cover__identity"><strong>${escapeHtml(displayName)}</strong><span>${escapeHtml(localized(content.profile.professionalTitle, language))}</span></div>`;
-  const kicker = `<p class="portfolio-kicker">${escapeHtml(localized(content.kicker, language))}</p>`;
-  if (content.layouts.cover === "cover.split-image") return `<div class="portfolio-cover portfolio-cover--split"><div class="portfolio-cover__copy">${kicker}<h1>${escapeHtml(content.title)}</h1>${identity}${statement ? `<p class="portfolio-cover__statement">${statement}</p>` : ""}<p class="portfolio-cover__year">${escapeHtml(content.year)}</p></div><figure>${imageMarkup(heroMedia, hero?.name, language, "portrait", "portfolio-cover__image")}<figcaption>${hero ? escapeHtml(localized(hero.name, language)) : copy[language].imagePlaceholder}</figcaption></figure></div>`;
-  if (content.layouts.cover === "cover.horizontal") return `<div class="portfolio-cover portfolio-cover--horizontal"><div class="portfolio-cover__copy">${kicker}<h1>${escapeHtml(content.title)}</h1>${identity}${statement ? `<p class="portfolio-cover__statement">${statement}</p>` : ""}</div><div class="portfolio-cover__horizontal-media">${imageMarkup(heroMedia, hero?.name, language, "wide", "portfolio-cover__image")}${highlight}</div></div>`;
-  return `<div class="portfolio-cover portfolio-cover--classic"><div class="portfolio-cover__rail"></div><div class="portfolio-cover__copy">${kicker}<h1>${escapeHtml(content.title)}</h1>${identity}</div><p class="portfolio-cover__year">${escapeHtml(content.year)}</p></div>`;
+  const highlight = highlightKicker || highlightLines.length ? `<aside>${highlightKicker ? `<span${mark("portfolio_highlight_kicker")}>${escapeHtml(highlightKicker)}</span>` : ""}${highlightLines.length ? `<strong${mark("portfolio_highlight_lines")}>${highlightLines.map(escapeHtml).join("<br>")}</strong>` : ""}</aside>` : "";
+  const identity = `<div class="portfolio-cover__identity"><strong>${escapeHtml(displayName)}</strong><span${mark("portfolio_profile_title")}>${escapeHtml(localized(content.profile.professionalTitle, language))}</span></div>`;
+  const kicker = `<p class="portfolio-kicker"${mark("portfolio_kicker")}>${escapeHtml(localized(content.kicker, language))}</p>`;
+  if (content.layouts.cover === "cover.split-image") return `<div class="portfolio-cover portfolio-cover--split"><div class="portfolio-cover__copy">${kicker}<h1${mark("portfolio_title")}>${escapeHtml(content.title)}</h1>${identity}${statement ? `<p class="portfolio-cover__statement"${mark("portfolio_cover_statement")}>${statement}</p>` : ""}<p class="portfolio-cover__year">${escapeHtml(content.year)}</p></div><figure>${imageMarkup(heroMedia, hero?.name, language, "portrait", "portfolio-cover__image")}<figcaption>${hero ? escapeHtml(localized(hero.name, language)) : copy[language].imagePlaceholder}</figcaption></figure></div>`;
+  if (content.layouts.cover === "cover.horizontal") return `<div class="portfolio-cover portfolio-cover--horizontal"><div class="portfolio-cover__copy">${kicker}<h1${mark("portfolio_title")}>${escapeHtml(content.title)}</h1>${identity}${statement ? `<p class="portfolio-cover__statement"${mark("portfolio_cover_statement")}>${statement}</p>` : ""}</div><div class="portfolio-cover__horizontal-media">${imageMarkup(heroMedia, hero?.name, language, "wide", "portfolio-cover__image")}${highlight}</div></div>`;
+  return `<div class="portfolio-cover portfolio-cover--classic"><div class="portfolio-cover__rail"></div><div class="portfolio-cover__copy">${kicker}<h1${mark("portfolio_title")}>${escapeHtml(content.title)}</h1>${identity}</div><p class="portfolio-cover__year">${escapeHtml(content.year)}</p></div>`;
 };
 
 const profilePhoto = (data: PortfolioRuntimeData, displayName: string): string => `<div class="portfolio-about__photo" data-portfolio-profile-photo-frame><span aria-hidden="true">${escapeHtml(displayName.trim().split(/\s+/).slice(0, 3).map((part) => part[0] ?? "").join("").toUpperCase() || "HDL")}</span><img src="${escapeHtml(assetUrl(data.content.profile.photoPath))}" alt="${escapeHtml(displayName)}" data-portfolio-profile-photo></div>`;
@@ -173,9 +186,9 @@ const renderProfile = (data: PortfolioRuntimeData, language: Language, selectedP
   const displayName = profileName(profile.name, language);
   const cardGroups = portfolioCapabilityGroups(data);
   const capabilityCards = cardGroups.map((group, index) => `<article><span>${twoDigits(index + 1)}</span><strong>${escapeHtml(localized(group.title, language))}</strong><p>${group.items.slice(0, PORTFOLIO_PROFILE_CARD_ITEMS).map((item) => escapeHtml(localized(item.label, language))).join(" · ")}</p></article>`).join("");
-  if (content.layouts.profile === "profile.portrait") return `<div class="portfolio-profile portfolio-profile--portrait"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><strong>${escapeHtml(localized(profile.professionalTitle, language))}</strong></aside><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p>${(() => { const figures = profileFigures(data, language, selectedProjects); return figures ? `<div class="portfolio-profile__stats">${figures}</div>` : ""; })()}<address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)} · ${escapeHtml(localized(profile.location, language))}</span></address><div class="portfolio-profile__cards" ${columnsStyle(cardGroups.length, 3)}>${capabilityCards}</div></main></div>`;
-  if (content.layouts.profile === "profile.capability") return `<div class="portfolio-profile portfolio-profile--capability"><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-profile__capabilities">${capabilityCards}</div></main><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><strong>${escapeHtml(profile.phone)}</strong><span>${escapeHtml(localized(profile.location, language))}</span></address></aside></div>`;
-  return `<div class="portfolio-profile portfolio-profile--classic"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${escapeHtml(localized(profile.location, language))}</span></address></aside><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-skill-grid">${skillGroups.map((group) => `<section><h3>${escapeHtml(localized(group.title, language))}</h3>${tagList(group.items.map((item) => localized(item.label, language)))}</section>`).join("")}</div></main></div>`;
+  if (content.layouts.profile === "profile.portrait") return `<div class="portfolio-profile portfolio-profile--portrait"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><strong${mark("portfolio_profile_title")}>${escapeHtml(localized(profile.professionalTitle, language))}</strong></aside><main><p class="portfolio-kicker"${mark("about_kicker")}>${escapeHtml(localized(content.aboutKicker, language))}</p><h2${mark("about_heading")}>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead"${mark("portfolio_summary")}>${escapeHtml(localized(profile.summary, language))}</p>${(() => { const figures = profileFigures(data, language, selectedProjects); return figures ? `<div class="portfolio-profile__stats">${figures}</div>` : ""; })()}<address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)} · ${escapeHtml(localized(profile.location, language))}</span></address><div class="portfolio-profile__cards" ${columnsStyle(cardGroups.length, 3)}>${capabilityCards}</div></main></div>`;
+  if (content.layouts.profile === "profile.capability") return `<div class="portfolio-profile portfolio-profile--capability"><main><p class="portfolio-kicker"${mark("about_kicker")}>${escapeHtml(localized(content.aboutKicker, language))}</p><h2${mark("about_heading")}>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead"${mark("portfolio_summary")}>${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-profile__capabilities">${capabilityCards}</div></main><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p${mark("portfolio_profile_title")}>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><strong>${escapeHtml(profile.phone)}</strong><span>${escapeHtml(localized(profile.location, language))}</span></address></aside></div>`;
+  return `<div class="portfolio-profile portfolio-profile--classic"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p${mark("portfolio_profile_title")}>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${escapeHtml(localized(profile.location, language))}</span></address></aside><main><p class="portfolio-kicker"${mark("about_kicker")}>${escapeHtml(localized(content.aboutKicker, language))}</p><h2${mark("about_heading")}>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead"${mark("portfolio_summary")}>${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-skill-grid">${skillGroups.map((group) => `<section><h3>${escapeHtml(localized(group.title, language))}</h3>${tagList(group.items.map((item) => localized(item.label, language)))}</section>`).join("")}</div></main></div>`;
 };
 
 const indexRow = (project: PortfolioProject, index: number, language: Language): string => {
@@ -223,14 +236,14 @@ const renderProject = (data: PortfolioRuntimeData, project: PortfolioProject, la
   return { layout, html: `<div class="portfolio-project portfolio-project--classic"><div class="portfolio-project__visual" data-pf-bleed>${imageMarkup(media.primary, project.name, language, "portrait")}</div><div class="portfolio-project__content">${projectHeading(project, language, index)}${summaryBlock("portfolio-project__summary")}${contributionItems(data, project, layout).length ? `<ul class="portfolio-responsibilities">${contributionItems(data, project, layout).map((point) => `<li>${escapeHtml(localized(point.text, language))}</li>`).join("")}</ul>` : ""}${projectTags}</div></div>` };
 };
 
-const renderClassicAutomation = (data: PortfolioRuntimeData, tools: PortfolioTool[], language: Language): string => `<div class="portfolio-page__inner portfolio-automation portfolio-automation--classic"><p class="portfolio-kicker">${copy[language].selectedAutomation}</p><h2 class="portfolio-title">${escapeHtml(localized(data.content.automationStatement, language))}</h2><div class="portfolio-tools${tools.length === 1 ? " is-single" : ""}" ${columnsStyle(tools.length, 3)}>${tools.map((tool, index) => `<article><span>${copy[language].automation} ${twoDigits(index + 1)}</span><h3>${escapeHtml(tool.name)}</h3><p><strong>${copy[language].problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${copy[language].solution}</strong>${escapeHtml(localized(tool.solution, language))}</p>${tagList(tool.technologies)}${videoLink(tool.youtubeUrl, tool.name, language)}</article>`).join("")}</div></div>`;
+const renderClassicAutomation = (data: PortfolioRuntimeData, tools: PortfolioTool[], language: Language): string => `<div class="portfolio-page__inner portfolio-automation portfolio-automation--classic"><p class="portfolio-kicker">${copy[language].selectedAutomation}</p><h2 class="portfolio-title"${mark("automation_statement", true)}>${escapeHtml(localized(data.content.automationStatement, language))}</h2><div class="portfolio-tools${tools.length === 1 ? " is-single" : ""}" ${columnsStyle(tools.length, 3)}>${tools.map((tool, index) => `<article><span>${copy[language].automation} ${twoDigits(index + 1)}</span><h3>${escapeHtml(tool.name)}</h3><p><strong>${copy[language].problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${copy[language].solution}</strong>${escapeHtml(localized(tool.solution, language))}</p>${tagList(tool.technologies)}${videoLink(tool.youtubeUrl, tool.name, language)}</article>`).join("")}</div></div>`;
 const renderAutomation = (data: PortfolioRuntimeData, tool: PortfolioTool, layout: AutomationLayout, language: Language, index: number): string => {
   const text = copy[language];
   const benefit = tool.benefit ? localized(tool.benefit, language) : "";
   const media = resolvePortfolioMedia(tool.images, data.content.mediaAssignments.tools[tool.id]);
   const toolName: LocalizedText = { en: tool.name, vi: tool.name };
   const statement = escapeHtml(localized(data.content.automationStatement, language));
-  const heading = (): string => `<p class="portfolio-kicker">${text.selectedAutomation} / ${twoDigits(index + 1)}</p><h2>${escapeHtml(tool.name)}</h2>${statement ? `<p class="portfolio-automation__subtitle">${statement}</p>` : ""}${videoLink(tool.youtubeUrl, tool.name, language)}`;
+  const heading = (): string => `<p class="portfolio-kicker">${text.selectedAutomation} / ${twoDigits(index + 1)}</p><h2>${escapeHtml(tool.name)}</h2>${statement ? `<p class="portfolio-automation__subtitle"${mark("automation_statement", true)}>${statement}</p>` : ""}${videoLink(tool.youtubeUrl, tool.name, language)}`;
   if (layout === "automation.input-geometry") {
     return `<div class="portfolio-automation portfolio-automation--geometry">${heading()}<div class="portfolio-automation__geometry-grid"><section><p class="portfolio-kicker">${text.builtWith}</p>${tagList(tool.technologies)}<div class="portfolio-automation__brief"><p><strong>${text.problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${text.solution}</strong>${escapeHtml(localized(tool.solution, language))}</p></div></section><div class="portfolio-automation__media-pair"><figure>${imageMarkup(media.primary, toolName, language, "landscape", "portfolio-automation__image")}<figcaption>${mediaCaption(media.primary, language, numberedCaption(1, text.captionToolInput))}</figcaption></figure><figure>${imageMarkup(media.supporting, toolName, language, "landscape", "portfolio-automation__image")}<figcaption>${mediaCaption(media.supporting, language, numberedCaption(2, text.captionToolGenerated))}</figcaption></figure></div></div></div>`;
   }
@@ -273,15 +286,31 @@ const renderClosing = (data: PortfolioRuntimeData, language: Language, projects:
   const displayName = profileName(profile.name, language);
   // The closing kicker is the editable "Thank you" line; layouts with a display headline use it as that headline.
   const thankYou = escapeHtml(localized(content.closingKicker, language));
-  if (content.layouts.closing === "closing.blue") return `<div class="portfolio-closing portfolio-closing--blue"><h2>${thankYou}</h2><strong>${escapeHtml(localized(content.closingHeading, language))}</strong><p>${escapeHtml(localized(content.closingText, language))}</p><address><div><span>${text.email}</span><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a></div><div><span>${text.phone}</span><strong>${escapeHtml(profile.phone)}</strong></div><div><span>${text.location}</span><strong>${escapeHtml(localized(profile.location, language))}</strong></div></address></div>`;
+  if (content.layouts.closing === "closing.blue") return `<div class="portfolio-closing portfolio-closing--blue"><h2${mark("closing_kicker")}>${thankYou}</h2><strong${mark("closing_heading")}>${escapeHtml(localized(content.closingHeading, language))}</strong><p${mark("closing_text")}>${escapeHtml(localized(content.closingText, language))}</p><address><div><span>${text.email}</span><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a></div><div><span>${text.phone}</span><strong>${escapeHtml(profile.phone)}</strong></div><div><span>${text.location}</span><strong>${escapeHtml(localized(profile.location, language))}</strong></div></address></div>`;
   if (content.layouts.closing === "closing.white") {
     const { project: hero, media } = resolvePortfolioFeatureImage(data, projects);
-    return `<div class="portfolio-closing portfolio-closing--white"><main><h2>${thankYou}</h2><strong>${escapeHtml(localized(content.closingHeading, language))}</strong><h3>${escapeHtml(displayName)}</h3><p>${escapeHtml(localized(profile.professionalTitle, language))}</p></main><aside><p class="portfolio-kicker">${text.connect}</p><span>${text.email}</span><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${text.phone}</span><strong>${escapeHtml(profile.phone)}</strong><span>${text.location}</span><strong>${escapeHtml(localized(profile.location, language))}</strong></aside><figure>${imageMarkup(media, hero?.name, language, "wide", "portfolio-closing__image")}<figcaption>${mediaCaption(media, language, text.captionClosing)}</figcaption></figure></div>`;
+    return `<div class="portfolio-closing portfolio-closing--white"><main><h2${mark("closing_kicker")}>${thankYou}</h2><strong${mark("closing_heading")}>${escapeHtml(localized(content.closingHeading, language))}</strong><h3>${escapeHtml(displayName)}</h3><p>${escapeHtml(localized(profile.professionalTitle, language))}</p></main><aside><p class="portfolio-kicker">${text.connect}</p><span>${text.email}</span><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${text.phone}</span><strong>${escapeHtml(profile.phone)}</strong><span>${text.location}</span><strong>${escapeHtml(localized(profile.location, language))}</strong></aside><figure>${imageMarkup(media, hero?.name, language, "wide", "portfolio-closing__image")}<figcaption>${mediaCaption(media, language, text.captionClosing)}</figcaption></figure></div>`;
   }
-  return `<div class="portfolio-closing portfolio-closing--classic"><p class="portfolio-kicker">${thankYou}</p><h2>${escapeHtml(localized(content.closingHeading, language))}</h2><p>${escapeHtml(localized(content.closingText, language))}</p><div><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span></div></div>`;
+  return `<div class="portfolio-closing portfolio-closing--classic"><p class="portfolio-kicker"${mark("closing_kicker")}>${thankYou}</p><h2${mark("closing_heading")}>${escapeHtml(localized(content.closingHeading, language))}</h2><p${mark("closing_text")}>${escapeHtml(localized(content.closingText, language))}</p><div><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span></div></div>`;
 };
 
-export const renderPortfolio = (data: PortfolioRuntimeData, language: Language = "en"): string => {
+export interface RenderPortfolioOptions {
+  /** Admin embedded preview only: tag blocks that come from the Portfolio form with `data-edit-field`. */
+  editMarkers?: boolean;
+}
+
+export const renderPortfolio = (data: PortfolioRuntimeData, language: Language = "en", options: RenderPortfolioOptions = {}): string => {
+  editMarkers = options.editMarkers === true;
+  markedOnce = new Set();
+  try {
+    return renderPortfolioPages(data, language);
+  } finally {
+    editMarkers = false;
+    markedOnce = new Set();
+  }
+};
+
+const renderPortfolioPages = (data: PortfolioRuntimeData, language: Language): string => {
   const text = copy[language];
   const selectedProjects = data.projects.filter((project) => project.includeInPortfolio).sort((a, b) => a.portfolioOrder - b.portfolioOrder);
   const selectedTools = data.tools.filter((tool) => tool.includeInPortfolio).sort((a, b) => a.portfolioOrder - b.portfolioOrder);
