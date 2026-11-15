@@ -12,7 +12,8 @@ import type {
   PortfolioTool,
   ProjectLayout,
 } from "../types/portfolio";
-import { PORTFOLIO_CREDENTIALS_PER_PAGE, PORTFOLIO_PROFILE_CARD_ITEMS, portfolioCapabilityGroups, portfolioContributionLimit, portfolioCredentialPages, portfolioProjectResponsibilities, type PortfolioCredentialPage, portfolioPageCount, resolveAutomationLayout, resolveProjectLayout } from "./layouts";
+import { pickCredentialPreview } from "../shared/credentialPreviews";
+import { PORTFOLIO_CREDENTIALS_PER_PAGE, credentialsLayoutDocumentProfile, PORTFOLIO_PROFILE_CARD_ITEMS, portfolioCapabilityGroups, portfolioContributionLimit, portfolioCredentialPages, portfolioProjectResponsibilities, type PortfolioCredentialPage, portfolioPageCount, resolveAutomationLayout, resolveProjectLayout } from "./layouts";
 import { resolvePortfolioMedia } from "./mediaSlots";
 
 // Every visible string lives here so the Vietnamese PDF never falls back to English chrome.
@@ -240,8 +241,9 @@ const renderCredentials = (language: Language, credentialPage: PortfolioCredenti
   const kicker = `${copy[language].credentialsSubtitle}${pageTotal > 1 ? ` · ${pageIndex + 1} / ${pageTotal}` : ""}`;
   const title = (credential: PortfolioCredential | undefined): string => `<h3 class="portfolio-credential__title">${escapeHtml(credentialTitle(credential, language))}</h3>`;
   // The shown evidence crop at its own ratio, so it prints exactly as cropped; never tinted by the image overlay.
+  const frameProfile = credentialsLayoutDocumentProfile[credentialPage.layout];
   const documentFrame = (credential: PortfolioCredential | undefined): string => {
-    const preview = credential?.preview;
+    const preview = pickCredentialPreview(credential, frameProfile)?.preview;
     if (!preview) return `<div class="portfolio-document-frame portfolio-document-placeholder"><span>${copy[language].documentPlaceholder}</span></div>`;
     const source = preview.publicUrl || (/^https?:\/\//i.test(preview.storagePath) ? preview.storagePath : assetUrl(preview.storagePath));
     // The slot keeps the layout's document area; the page inside takes the crop's own ratio (never re-cropped).

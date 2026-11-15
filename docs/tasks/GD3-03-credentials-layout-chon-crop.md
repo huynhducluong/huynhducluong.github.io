@@ -39,19 +39,27 @@ Người vận hành không phải chọn "Print as" nữa (Sổ #5). Mỗi layo
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · token trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- Ghi chú vận hành cho docs:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1 dữ liệu + `credentialPreviews.ts` · 2 bảng hướng khung · 3 renderer · 4 validation · 5 bỏ "Print as" · 6 dòng nhắc E-008 · test. Mục 8 (lề trắng Landscape): **bỏ qua**, không đổi gì (cần đo bằng trình duyệt, để Claude quyết khi review).
+- Người code: Claude — cửa sổ code · token trước / sau: không đo được trong phiên
+- Nhánh, commit cuối: `gd3/03-credentials-layout-chon-crop`, commit `wip(GD3-03 bước 1-3)` rồi commit báo cáo này
+- File đã đổi (ghi rõ file dùng chung): MỚI `src/shared/credentialPreviews.ts` (+ test, dùng chung renderer / validation); `src/types/credential.ts`; `src/services/credentialRepository.ts`; `src/portfolio/layouts.ts`; `src/portfolio/renderPortfolioV2.ts`; `src/shared/profileDocumentValidation.ts`; `src/admin/projectCoverCropper.ts`; `src/admin/credentialWorkspace.ts`; test: `layouts.test.ts`, `profileDocumentValidation.test.ts`, `credentialWorkspace.test.ts`
+- `verify:admin`: đạt (bundle Admin 92,8 kB JS / 26,5 kB CSS gzip, trong ngân sách)
+- Ghi chú vận hành cho docs: không migration; cột `preview_profile` còn trong DB, app không đọc / ghi. Khi bật "Show in Portfolio", lưu sẽ luôn tạo / giữ crop Landscape (Reset to auto lưu crop tự động thay vì xóa).
+- Chỗ làm khác đề bài và lý do: ghi chú ở `profileDocumentWorkspace.ts` ("Each credential prints its evidence…") giữ nguyên, vẫn đúng. **Chưa chạy** `tools/portfolio-credentials-check.mjs` và chưa chụp ba màn hình (cần dev server + `.auth/`): để Claude làm khi review. Chưa có ca Portrait-trong-khung-Landscape trong công cụ đo.
+- Câu hỏi: không
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `4a2e32f` (worktree `D:\wt\pf-review`, `npm ci` sạch). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 32 file / 197 test; Admin JS 92,8 / 115, CSS 26,5 / 27 kB gzip. Diff 13 file, đúng phạm vi mục 3 (không migration, không dependency, không đụng `docs/`); không còn `previewProfile`, `printProfile`, `data-project-cover-print-profile` trong `src/`.
+  - `tools/portfolio-credentials-check.mjs`: **All PASS** (24 phép đo, dữ liệu bản nháp thật).
+  - Qua renderer + validation thật (crop giả, không có thông tin cá nhân), cả hai layout, EN + VI: có cả hai crop → in Landscape; chỉ Portrait → in Portrait (tỉ lệ 0,750) và Recommendation đúng câu của đề bài; không crop → placeholder; **release / draft cũ chỉ có `preview`** (Landscape và Portrait) in y như trước; `findPortfolioLayoutIssues` rỗng ở mọi ca.
+  - Hộp Adjust crops thật (mở rồi Cancel, **không lưu gì**) ở 1440 × 731, 1920 × 940, 2560 × 1300: không còn "Print as"; có hai dòng hint ("Visible to anyone…", "Check the crop for ID numbers and dates of birth before showing it."); mở ở tab Landscape; hộp vừa khung nhìn, không cuộn ngang, panel cài đặt nằm trong hộp.
+  - Quy tắc: không giá trị cứng, không chuỗi cần song ngữ (chuỗi Admin tiếng Anh), không `scrollIntoView`, `escapeHtml` giữ nguyên.
+- **Phải sửa:** không.
+- **Nên sửa (không chặn, làm kèm đề bài Admin kế tiếp):** hai hàm cùng tên `credentialPreviews` có nghĩa khác nhau: `src/services/credentialRepository.ts` (từ `ProfessionalCredential` ra `previews`) và `src/shared/credentialPreviews.ts` (từ snapshot ra bản ghi hướng → crop). Đổi tên hàm trong repository thành `credentialSnapshotPreviews` để khỏi nhầm khi import.
+- **Ghi nhận:** (1) ô crop ở giữa hộp hiện **trống (chỉ có caro)** khi chụp bằng Chromium chạy nền; kiểm lại trên `main` (`d87934f`, không có GD3-03) cũng y hệt, nên là hạn chế của môi trường đo chứ không phải hồi quy; ảnh nguồn đã tải đủ (2560 px) và không có lỗi console. Người vận hành nên mở một hộp thật trong trình duyệt của mình một lần sau khi deploy. (2) Mục 8 (lề trắng đều) bỏ qua, đúng quyền chọn của người code; lệch 1,1 mm đã ghi ở GD3-02, không xử lý. (3) Người code chưa chạy công cụ đo và chưa chụp ba màn hình (báo cáo mục 5 nói rõ): đã làm ở review này.
+- **Cần người vận hành chốt:** duyệt gộp (đổi PDF: crop nào được in, ADR-018).
+- Token: Claude — cửa sổ code 53 % → 56 % đã dùng (~3 %, Lớn; không chạy đo trình duyệt).
+- Kết luận: **ĐẠT** — `CHỜ DUYỆT` gộp.

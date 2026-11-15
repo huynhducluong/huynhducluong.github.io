@@ -108,7 +108,6 @@ describe("Credential card layout (§6.4)", () => {
       createdAt: "2026-01-01T00:00:00.000Z",
       showInPortfolio: false,
       previewRotation: 0,
-      previewProfile: "landscape",
       crops: [],
     }],
   });
@@ -154,7 +153,6 @@ describe("Credential card layout (§6.4)", () => {
     const shown = {
       ...image,
       showInPortfolio: true,
-      previewProfile: "portrait" as const,
       crops: [{ id: "crop-1", profile: "portrait" as const, storagePath: "portfolio-media-crops/credentials/x/portrait/y.webp", publicUrl: "https://example.com/y.webp", cropX: 0, cropY: 0, cropWidth: 1, cropHeight: 1, width: 1350, height: 1800 }],
     };
     const html = cardHtml({ ...base, assets: [shown, pdf] });
