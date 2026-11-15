@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.14.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.15.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -66,6 +66,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.15.0 | 2026-11-15 | GD3-07 (N6) ĐẠT, gộp sau khi người vận hành duyệt: W-08 đã sửa (link "▶ Video" ở 12 layout, 121 phép đo All PASS, sống sót trong PDF); index lưới ảnh đặt nút trên ảnh (§8.4 cập nhật) |
 | 1.14.0 | 2026-11-15 | GD3-06 (N7) ĐẠT, tự gộp `bcd1825`: W-09 đã sửa (preview theo kịp trong < 40 ms, "Synced" không bao giờ hiện khi còn sai); GD3-07 (N6, link video, kiểu A) `GIAO CODE` |
 | 1.13.0 | 2026-11-15 | GD3-05 (N5) ĐẠT, tự gộp `25d9fa8`: W-07, UI-15 đã sửa; 21 phép đo hộp thoại All PASS. Người vận hành chốt kiểu A cho link video (ADR-029). **Rút lại W-10 / N8** (báo động nhầm: phép thử của tôi mở thẳng URL in, bỏ qua bước lưu của nút Print). GD3-06 (N7) `GIAO CODE`, GD3-07 (N6) `NHÁP` |
 | 1.12.0 | 2026-11-15 | Người vận hành chốt N5 → N7 → N6 → N4 (ADR-028); sổ #11: **tìm ra nguyên nhân** (preview chờ ảnh tải lười tối đa 4 s, đo 3.880 ms khi bấm EN / VI liên tục) → N7 đổi thành sửa độ trễ, giữ nút EN / VI như cũ; công cụ `tools/dialog-backdrop-check.mjs` (mốc 10 FAIL); GD3-05 `GIAO CODE`, GD3-06 `NHÁP` |

@@ -21,4 +21,4 @@
 | 2026-11-15 | GD3-04 | Lớn | 70 % | 76 % | **~6 %** | N2: 10 file, 5 bước wip, đo trên Admin thật; không lượt sửa. "Đã dùng trước" 70 % (không phải 56 %) vì % của Claude tính chung cả tài khoản: gồm cả phiên thiết kế / review chạy giữa hai đề bài |
 | 2026-11-15 | GD3-05 | Vừa | 16 % | 28 % | **~12 %** | N5: 16 file, 5 bước wip, không lượt sửa; "trước" 16 % thấp hơn "sau" 76 % của GD3-04 vì hạn mức tài khoản đã làm mới giữa hai đề bài |
 | 2026-11-15 | GD3-06 | Nhỏ | 37 % | 38 % | **~1 %** | N7: 3 file, 2 commit, không lượt sửa; Website bấm nhanh 3.880 → 22 ms |
-| 2026-11-15 | GD3-07 | Vừa | | | | N6: link "▶ Video" Portfolio; đo bằng tools/portfolio-video-link-check.mjs |
+| 2026-11-15 | GD3-07 | Vừa | 43 % | 50 % | **~7 %** | N6: link "▶ Video" Portfolio; đo bằng tools/portfolio-video-link-check.mjs |
