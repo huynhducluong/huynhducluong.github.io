@@ -1,6 +1,6 @@
 # GD3-11 — Chỉ số dự án: số lớn + đơn vị nhỏ (nhóm N9)
 
-> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/11-chi-so-du-an-n9` (`git fetch; git switch -c gd3/11-chi-so-du-an-n9 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** ĐẠT (gộp sau khi người vận hành duyệt, 2026-11-15) · **Nhánh:** `gd3/11-chi-so-du-an-n9` (`git fetch; git switch -c gd3/11-chi-so-du-an-n9 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện PDF và bản web của Portfolio.
 
 ## 1. Mục tiêu

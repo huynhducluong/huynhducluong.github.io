@@ -25,4 +25,4 @@
 | 2026-11-15 | GD3-08 | Nhỏ | 52 % | 53 % | **~1 %** | N8: lưới 2×2 lên đầu / xuống cuối, bỏ menu ⋯ ở Projects / Tools |
 | 2026-11-15 | GD3-09 | Vừa | 60 % | 69 % | **~9 %** | N4a: bút chì sửa từ preview Portfolio (chỉ ô của form Portfolio) |
 | 2026-11-15 | GD3-10 | Vừa | 6 % | 10 % | **~4 %** | N11: chi tiết trình bày Portfolio; đo bằng tools/portfolio-detail-check.mjs |
-| 2026-11-15 | GD3-11 | Nhỏ | | | | N9: chỉ số dự án (số lớn + đơn vị nhỏ) |
+| 2026-11-15 | GD3-11 | Nhỏ | 12 % | 17 % | **~5 %** | N9: chỉ số dự án (số lớn + đơn vị nhỏ) |

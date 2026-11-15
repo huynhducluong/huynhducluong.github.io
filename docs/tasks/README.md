@@ -128,4 +128,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-08](GD3-08-nut-len-dau-xuong-cuoi.md) | Nút lên đầu / xuống cuối trong danh sách Projects / Tools (N8: W-11) | `ĐẠT` |
 | [GD3-09](GD3-09-but-chi-sua-tu-preview.md) | Bút chì "sửa ở đâu" trên preview Portfolio (N4a: W-06) | `ĐẠT` |
 | [GD3-10](GD3-10-chi-tiet-portfolio-n11.md) | Chi tiết trình bày Portfolio: nút Video, số đóng góp, khung ảnh Automation, meta index, thẻ công nghệ (N11: W-12, 14, 15, 16, 20, 21) | `ĐẠT` (gộp 2026-11-15, người vận hành duyệt) |
-| [GD3-11](GD3-11-chi-so-du-an-n9.md) | Chỉ số dự án: số lớn + đơn vị nhỏ (N9: W-13, 14, 17, 18) | `GIAO CODE` (Claude — cửa sổ code) |
+| [GD3-11](GD3-11-chi-so-du-an-n9.md) | Chỉ số dự án: số lớn + đơn vị nhỏ (N9: W-13, 14, 17, 18) | `ĐẠT` (gộp 2026-11-15, người vận hành duyệt) |
