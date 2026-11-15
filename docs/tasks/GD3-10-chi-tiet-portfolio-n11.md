@@ -1,6 +1,6 @@
 # GD3-10 — Chi tiết trình bày Portfolio (nhóm N11)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/10-chi-tiet-portfolio-n11` (`git fetch; git switch -c gd3/10-chi-tiet-portfolio-n11 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/10-chi-tiet-portfolio-n11` (`git fetch; git switch -c gd3/10-chi-tiet-portfolio-n11 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện PDF và bản web của Portfolio. Claude review xong thì chuyển `CHỜ DUYỆT`. **Làm xong rồi mới giao GD3-11** (cùng file `renderPortfolioV2.ts` và `portfolio-screen.css`).
 
 ## 1. Mục tiêu
@@ -63,8 +63,16 @@ Sáu chi tiết trình bày người vận hành chốt từ demo thật (ADR-03
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `1559a08` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập). Đo trên bản nháp Portfolio thật.
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 42 file / 280 test đạt; Admin JS 92,8 / 115,0, CSS 26,6 / 27,0 kB gzip (không đổi).
+  - **`node tools/portfolio-detail-check.mjs` chạy lại:** mọi dòng `[N11]` **PASS** (nút Video −0,34 px, số đóng góp −0,02 px, thẻ công nghệ Balanced cách 7 mm, meta index hai khối, khung ảnh Automation 3 / 3), **0 `no-issue` FAIL** (không tràn trang, EN và VI). Còn đúng **6 FAIL `[N9] facts`** của GD3-11 (chưa làm, như dự kiến).
+  - `node tools/portfolio-video-link-check.mjs`: **All PASS** (nút Video không xấu đi). `portfolio-print.css` không chứa các lớp mới.
+  - Đọc diff CSS: mọi quy tắc có tiền tố `.portfolio-page`, chỉ token `--document-*`; `!important` chỉ ở quy tắc thẻ công nghệ Balanced, đúng chỗ đề bài cho phép (đè `margin-top: auto !important` gốc). `gridMeta` escape một lần, thiếu địa điểm hoặc vai trò chỉ in khối còn lại; `projectMeta` và index danh sách giữ nguyên.
+  - Xem ảnh: `index.visual` 9 dự án (meta hai dòng gọn, thẻ ngắn và dài đều, không lấn footer), `project.balanced` (thẻ công nghệ ngay dưới danh sách đóng góp), `automation.workflow` (ảnh trong khung trắng viền mỏng, tỉ lệ crop giữ nguyên). Ảnh chụp lưu ngoài repo và đã xóa.
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận:** (1) ba chỗ làm khác đề bài đều hợp lý và có số đo (`<p>` bọc hai `<span>`; `- .2mm` bù số đóng góp; `margin-top: .6mm` cho nút Video xuống dòng riêng ở Editorial). (2) Băng chỉ số của Balanced ("≈17.95 km", "VND 25.773 trillion" xuống dòng) cao tới sát đường footer: sẽ được GD3-11 gỡ. (3) Dữ liệu có "Bim Coordinator" (viết thường chữ "im") ở hai dự án: lỗi chính tả dữ liệu, bạn sửa trong Admin nếu muốn.
+- **Cần người vận hành chốt:** không về thiết kế; chỉ cần **duyệt gộp** vì đổi giao diện PDF và bản web (ADR-018).
+- Token: Claude — cửa sổ code 6 % → 10 % đã dùng (~4 %, Vừa).
+- Kết luận: **ĐẠT, CHỜ DUYỆT** — sạch về kỹ thuật; chờ người vận hành duyệt rồi Claude gộp và push.
