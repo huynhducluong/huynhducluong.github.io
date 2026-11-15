@@ -183,6 +183,7 @@ Thân commit ghi lý do, ngân sách bundle tăng, migration mới, và kết qu
 - `npm run verify:admin` — typecheck, test, build, ngân sách bundle Admin. Chạy trước khi báo xong; CI chạy đúng cổng này trước khi deploy.
 - `npm run shots` — chụp Admin ở ba màn hình mục tiêu (`docs/admin-ui-guidelines.md` §11). Cần phiên đăng nhập: người vận hành chạy `npm run shots:login` một lần mỗi máy / khi hết hạn.
 - `node tools/portfolio-credentials-check.mjs <thư-mục-tạm>` — đo các trang Credentials của Portfolio trên trình duyệt thật (cần `npm run dev -- --port 5199 --strictPort` đang chạy và `.auth/`); ảnh chụp ra thư mục tạm, không vào Git (E-008).
+- `node tools/preview-language-check.mjs` — đo công tắc EN / VI của preview Website, CV, Portfolio (cần dev server cổng 5199 và `.auth/`); xem [W-09](docs/93-workflow-friction.md).
 - `node tools/read-ui-feedback.mjs --new` — đọc các dòng mới của sổ lỗi UI/UX trên Google Docs ([docs/93](docs/93-workflow-friction.md), ADR-023). Link riêng nằm trong `project-links.local` (không vào Git).
 - **Windows:** chạy lệnh từ thư mục có ổ đĩa **viết hoa** (`D:\…`). Từ `d:\…` mọi file test lỗi `Cannot read properties of undefined (reading 'config')` ([E-006](docs/91-error-bank.md#e-006)).
 
