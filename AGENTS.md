@@ -10,7 +10,7 @@ Dự án: website portfolio Vite + TypeScript (không framework) có Admin CMS c
 
 ```text
 MODE = IMPLEMENTATION
-Ghi chú: 2026-11-15 người vận hành chốt chuyển sang quy trình nhiều Agent (ADR-016); GĐ 2 đang làm (MASTER_PLAN §3)
+Ghi chú: 2026-11-15 người vận hành chốt chuyển sang quy trình nhiều Agent (ADR-016); GĐ 1 – 2 hoàn thành, GĐ 3 đang làm (MASTER_PLAN §3)
 ```
 
 | Chế độ | Được làm | Không được làm |
