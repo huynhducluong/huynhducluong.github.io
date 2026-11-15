@@ -169,7 +169,9 @@ describe("Portfolio crop ratio contract (docs/ui-guidelines.md §8.4)", () => {
     expect(screenCss).toContain('.portfolio-page [data-crop-profile="landscape"] { --pf-crop-ratio: 4 / 3;');
     expect(screenCss).toContain('.portfolio-page [data-crop-profile="portrait"] { --pf-crop-ratio: 3 / 4;');
     expect(screenCss).toMatch(/\.portfolio-page \[data-crop-profile\] \{ height: auto; aspect-ratio: var\(--pf-crop-ratio\); \}/);
-    const frameRules = screenCss.split("}").filter((rule) => /portfolio-media|portfolio-image-placeholder|__image\b|portfolio-document-preview/.test(rule.split("{")[0] ?? ""));
+    // Credentials document slots are Landscape-shaped, so a Landscape evidence crop fills its slot exactly.
+    expect(screenCss).toContain(".portfolio-document-frame { aspect-ratio: 4 / 3; }");
+    const frameRules = screenCss.split("}").filter((rule) => /portfolio-media|portfolio-image-placeholder|__image\b|portfolio-document-(preview|frame)/.test(rule.split("{")[0] ?? ""));
     // A frame may fill its slot (100%), never take a fixed length that ignores its crop ratio.
     expect(frameRules.filter((rule) => /[^-]height:\s*[\d.]+(mm|px|cm|rem|em)/.test(rule)).map((rule) => rule.split("{")[0].trim())).toEqual([]);
   });
