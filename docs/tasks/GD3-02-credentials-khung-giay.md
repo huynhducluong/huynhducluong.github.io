@@ -72,8 +72,16 @@ Thực hiện kiểu **B** người vận hành đã chọn từ demo thật (AD
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `87f0e23` (worktree `D:\wt\pf-review`, `npm ci` sạch).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 31 file / 194 test; Admin JS 92,8 / 115, CSS 26,5 / 27 kB gzip.
+  - Diff đúng 3 file (`portfolio-screen.css`, `layouts.test.ts`, đề bài); CSS đúng mục 3 (có thay `gap: 9mm` bằng `column-gap: 9mm`, đề bài cho phép); không đụng renderer, `layouts.ts`, `portfolio-print.css`.
+  - `tools/portfolio-credentials-check.mjs`: **All PASS** (24 phép đo). Trước khi sửa: 2 FAIL (`dual-*-longtitle`, 87,15 so với 82,69 mm); sau: cả hai khung ở 87,15 mm.
+  - Ca ngoài đề bài (dữ liệu giả, không có thông tin cá nhân): crop **Portrait** trong khung Landscape, cả hai layout, EN + VI: tỉ lệ đo 0,750, cao hết phần ruột (Dual 83,8 mm, Bands 47,5 mm), căn giữa, không lỗi `findPortfolioLayoutIssues`.
+  - Xem ảnh Dual (tiêu đề ba dòng) và Bands (VI): đúng kiểu B đã chọn.
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận (không chặn):** khung 4:3 đã gồm phần đệm nên phần ruột là 114,2 × 84,4 mm (tỉ lệ 1,36); crop Landscape đo được 111,8 × 83,8 mm, nên lề trắng trên / dưới 3,3 mm còn trái / phải 4,4 mm (lệch 1,1 mm, mắt thường khó thấy; demo kiểu B người vận hành đã xem có cùng đặc điểm). Muốn đều tuyệt đối thì để GD3-03 xử lý bằng `padding-inline`.
+- **Cần người vận hành chốt:** duyệt gộp (đổi giao diện PDF, ADR-018).
+- Token: Codex 36 % → 27 % (~9 %, Nhỏ).
+- Kết luận: **ĐẠT** — `CHỜ DUYỆT` gộp.
