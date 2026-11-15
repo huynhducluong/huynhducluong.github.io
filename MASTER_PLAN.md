@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.16.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.16.1 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -40,6 +40,8 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 | 12 | `revealAdminElement` tự bù phần tử `position: sticky` ở đầu vùng cuộn (thay vì mỗi chỗ gọi tự tính `inset`) | `[ĐỀ XUẤT]` | Đổi file dùng chung của mọi chỗ gọi: cần test và đo từng nơi; đề bài nhỏ riêng (trả lời câu hỏi của người code ở review GD3-04) |
 | 13 | ~~Thứ tự nhóm N5 – N7 từ sổ #9 – #11~~ | Xong | ADR-028: N5 → N7 → N6 → N4; N5 = [GD3-05](docs/tasks/GD3-05-hop-thoai-quet-chu-dai.md), N7 = [GD3-06](docs/tasks/GD3-06-preview-cap-nhat-ngay.md), N6 chờ demo |
 | 14 | ~~W-10: Print / PDF đọc bản nháp đã lưu~~ | **Rút lại** | Báo động nhầm: nút Print / PDF và Publish luôn lưu bản dựng từ form hiện tại trước khi in / xuất bản; xem [W-10](docs/93-workflow-friction.md) |
+| 15 | **Làm đẹp lại trang chủ Website** theo tham khảo của người vận hành: [joshwcomeau.com](https://www.joshwcomeau.com/) và [RSS](https://www.joshwcomeau.com/rss.xml) | `[MỞ]` — **nhắc người vận hành bàn trước khi giao** | Ghi 2026-11-15 theo yêu cầu người vận hành. Cần bàn: lấy gì từ tham khảo (bố cục, chuyển động, kiểu chữ, hay cả nguồn tin RSS cho bài viết / cập nhật); đối chiếu `docs/ui-guidelines.md` §1–§5 và ba màn hình mục tiêu; có thể kèm demo thật trước khi chốt. Chưa có phương án, chưa là đề bài |
+| 16 | **Sao lưu dữ liệu Admin ra file trên máy** (và nhập lại được): Project, Tool, Profile, nội dung CV / Portfolio / Cover Letter, metadata ảnh, cấu hình… | `[MỞ]` — **nhắc người vận hành bàn trước khi giao** | Ghi 2026-11-15 theo yêu cầu người vận hành: phòng mất hoặc hỏng web / Supabase, vẫn còn file (JSON hoặc tốt hơn) do Admin Hub **xuất** ra, lưu ở máy; sau này **nhập lại** hoặc dựng lại, không phải gõ lại metadata (rất tốn công). Cần bàn: phạm vi (chỉ dữ liệu hay cả ảnh / tệp trong Storage), định dạng (một file hay gói), nhập lại nguyên bản hay hợp nhất, lịch nhắc sao lưu, không đưa dữ liệu riêng tư vào Git. Liên quan GĐ 4 (mục "sao lưu Supabase", #4) |
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
 | 5 | ~~Sổ lỗi UI/UX dùng chung~~ | Xong | ADR-023 |
 | 6 | Ảnh minh chứng có số định danh, ngày sinh | `[GIỮ]` | [E-008](docs/91-error-bank.md#e-008): người vận hành tự quản việc công khai (2026-11-15, không cắt lại); lời nhắc trong hộp crop làm ở GD3-03; công cụ che vùng (redact) chỉ xét nếu người vận hành muốn |
@@ -66,6 +68,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.16.1 | 2026-11-15 | Ghi hai việc người vận hành muốn bàn sau GĐ3 vào mục 4: #15 làm đẹp trang chủ (tham khảo joshwcomeau.com), #16 sao lưu / xuất / nhập dữ liệu Admin; cả hai `[MỞ]`, nhắc bàn trước khi giao |
 | 1.16.0 | 2026-11-15 | GD3-08 (N8) ĐẠT, tự gộp `db875a1`: W-11 đã sửa (lưới 2×2 ⇈ ↑ / ⇊ ↓ thay menu ⋯, thẻ 72 px đồng đều, cụm hẹp hơn 24 px); còn N4 |
 | 1.15.0 | 2026-11-15 | GD3-07 (N6) ĐẠT, gộp sau khi người vận hành duyệt: W-08 đã sửa (link "▶ Video" ở 12 layout, 121 phép đo All PASS, sống sót trong PDF); index lưới ảnh đặt nút trên ảnh (§8.4 cập nhật) |
 | 1.14.0 | 2026-11-15 | GD3-06 (N7) ĐẠT, tự gộp `bcd1825`: W-09 đã sửa (preview theo kịp trong < 40 ms, "Synced" không bao giờ hiện khi còn sai); GD3-07 (N6, link video, kiểu A) `GIAO CODE` |
