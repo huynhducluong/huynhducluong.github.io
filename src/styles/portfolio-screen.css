@@ -329,7 +329,7 @@ html, body { background: #dfe8ec; }
 .portfolio-automation__brief p { display: grid; gap: 1.5mm; color: var(--document-text-muted); font-size: var(--document-type-sm); }
 /* Input and generated output side by side, both Landscape 4:3, so they read as a before/after pair at one size. */
 .portfolio-automation__media-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-content: start; gap: 5mm; }
-.portfolio-automation__media-pair figure { min-width: 0; padding: 4mm; background: var(--document-surface-muted); }
+.portfolio-automation__media-pair figure { min-width: 0; }
 
 
 /* Credentials ------------------------------------------------------------------------ */
@@ -415,3 +415,21 @@ html, body { background: #dfe8ec; }
 .portfolio-page :is(.portfolio-index, .portfolio-index-editorial) li.has-video .portfolio-video-link { align-self: center; margin-left: 0; }
 .portfolio-page .portfolio-automation > .portfolio-video-link, .portfolio-page .portfolio-tools article > .portfolio-video-link { margin: 3mm 0 0; }
 .portfolio-page .portfolio-index-visual article > div > .portfolio-video-link { position: absolute; z-index: 2; top: 2mm; right: 2mm; margin: 0; }
+
+/* Presentation details (ADR-031, GD3-10; docs/ui-guidelines.md §8.4). Measured with tools/portfolio-detail-check.mjs. ---- */
+/* Video pill beside the role line: baseline-aligned and nudged so its centre sits on the role text's centre. */
+/* The top margin only matters when a long role pushes the pill onto its own line: it keeps that pill clear of the role's line box. */
+.portfolio-page .portfolio-project-heading > strong + .portfolio-video-link { position: relative; top: -.45mm; margin-top: .6mm; vertical-align: baseline; }
+/* Contribution numbers: the numeral's centre meets the centre of the paragraph's first line (the text uses --document-leading-relaxed);
+   the .2mm lifts it onto the glyphs' own centre, which sits that far above the line box's centre. */
+.portfolio-page .portfolio-contributions article { align-items: start; }
+.portfolio-page .portfolio-contributions article > span { margin-top: calc((var(--document-type-xs) * var(--document-leading-relaxed) - var(--document-type-3xl)) / 2 - .2mm); line-height: var(--document-leading-none); }
+/* Automation images sit in a white, hairline-bordered frame; the padding is outside the image, so crop ratios still hold. */
+.portfolio-page .portfolio-automation figure { padding: 4mm; border: .25mm solid var(--document-border); background: var(--document-surface); }
+/* Grid index meta: location (muted) then role (bold, full text colour), two blocks inside the card's <p>. */
+.portfolio-page .portfolio-index-visual article > p > .portfolio-index__location,
+.portfolio-page .portfolio-index-visual article > p > .portfolio-index__role { display: block; }
+.portfolio-page .portfolio-index-visual article > p > .portfolio-index__role { color: var(--document-text); font-weight: var(--document-weight-bold); }
+/* Balanced: the technology tags follow the contribution list instead of sitting at the column's foot. This keeps
+   the `!important` pair on purpose: it overrides `margin-top: auto !important` of the base `.portfolio-tags`. */
+.portfolio-page .portfolio-project--balanced .portfolio-tags { margin-top: 7mm !important; padding-top: 0 !important; }
