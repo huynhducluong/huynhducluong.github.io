@@ -23,3 +23,4 @@
 | 2026-11-15 | GD3-06 | Nhỏ | 37 % | 38 % | **~1 %** | N7: 3 file, 2 commit, không lượt sửa; Website bấm nhanh 3.880 → 22 ms |
 | 2026-11-15 | GD3-07 | Vừa | 43 % | 50 % | **~7 %** | N6: link "▶ Video" Portfolio; đo bằng tools/portfolio-video-link-check.mjs |
 | 2026-11-15 | GD3-08 | Nhỏ | 52 % | 53 % | **~1 %** | N8: lưới 2×2 lên đầu / xuống cuối, bỏ menu ⋯ ở Projects / Tools |
+| 2026-11-15 | GD3-09 | Vừa | | | | N4a: bút chì sửa từ preview Portfolio (chỉ ô của form Portfolio) |

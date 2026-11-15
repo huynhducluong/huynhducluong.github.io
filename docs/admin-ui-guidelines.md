@@ -287,6 +287,15 @@ Preview crop là lời cam kết về file đã lưu. Các quy tắc này áp d�
     - Dưới preview format: "Show in Portfolio" (`.admin-inline-check`, mặc định tắt) với hint "Visible to anyone with the Portfolio link." và một dòng nhắc ngay dưới: "Check the crop for ID numbers and dates of birth before showing it." ([E-008](91-error-bank.md#e-008)). **Không có lựa chọn "Print as"** (ADR-026, từ GD3-03): layout Credential quyết định crop nào được in ([ui-guidelines §8.4](ui-guidelines.md)). Dialog mở ở tab Landscape. Bật nó sẽ hỏi xác nhận (không phải `danger`: không có gì bị phá hủy). Chỉ một file mỗi Credential được hiển thị; bật một file sẽ tắt các file khác.
     - Khi được hiển thị, mọi hướng khung mà layout Credential khai báo (`credentialsLayoutDocumentProfile`, hiện chỉ Landscape) luôn có crop đã lưu: Save ghi crop khi thiếu, còn "Reset to auto" lưu crop tự động thay vì xóa.
 
+### 7.2 Bút chì "sửa ở đâu" trên preview Portfolio (ADR-030, W-06)
+
+- **Phạm vi.** Chỉ chữ lấy từ **form của chính Portfolio** (tab Content): kicker, tiêu đề tài liệu, tagline và khối highlight của bìa; kicker, heading, chức danh, tóm tắt của trang giới thiệu; câu Automation; kicker, heading, nội dung trang kết; chân trang. Chữ đến từ Project, Tool, Profile, Credential, ảnh, số đếm **không có** bút chì (nó có đường vào riêng; thêm sẽ rối). Khối không có bút chì nghĩa là "sửa ở màn khác".
+- **Công tắc.** Một nút `aria-pressed` "Edit markers" trên thanh preview Portfolio (chỉ Portfolio), **mặc định tắt**, nhớ lựa chọn (`localStorage` bọc `try/catch`). Tắt thì preview giống hệt trước đây.
+- **Chỉ trong preview nhúng.** Bút chì và thuộc tính `data-edit-field` chỉ tồn tại khi renderer được bật `editMarkers` bởi preview nhúng của Admin; trang công khai, `?mode=print` và PDF **không bao giờ** có (test so markup từng byte). Bút chì là chrome Admin (token `--admin-*`), `position: absolute`, không chiếm chỗ trong layout, không tính vào `findPortfolioLayoutIssues`, `@media print` ẩn.
+- **Cỡ bấm được mọi mức zoom.** Admin gửi hệ số `--preview-scale` vào preview để bút chì luôn khoảng 22 px trên màn hình, không co theo zoom. Chuyển động ≤ 150 ms, tắt khi `prefers-reduced-motion`; `:focus-visible` thấy rõ; `aria-label` "Edit <khối>".
+- **Khối lặp.** Chân trang và câu Automation lặp trên nhiều trang: chỉ lần xuất hiện đầu tiên có bút chì.
+- **Bấm → ô.** Chuyển sang tab Content, mở thẻ thu gọn chứa ô, đưa vào tầm nhìn bằng `revealAdminElement` **không bị header dính che**, focus và làm sáng ô ~1,2 giây. Ô theo **ngôn ngữ preview đang xem** (preview VI → ô VI). Chọn layout từng trang (tab Appearance) chưa nằm trong bút chì.
+
 ## 8. Phản hồi
 
 - Thông báo thành công và thông tin dùng `showAdminToast`. Lỗi chặn hành động dùng `showAdminToast(..., "error")` cùng chi tiết cấp trường hoặc dialog.

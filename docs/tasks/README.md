@@ -126,3 +126,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-06](GD3-06-preview-cap-nhat-ngay.md) | Preview cập nhật ngay, không chờ ảnh tải lười (N7: W-09) | `ĐẠT` |
 | [GD3-07](GD3-07-link-video-portfolio.md) | Link "▶ Video" trong Portfolio (N6: W-08) | `ĐẠT` (gộp 2026-11-15, người vận hành duyệt) |
 | [GD3-08](GD3-08-nut-len-dau-xuong-cuoi.md) | Nút lên đầu / xuống cuối trong danh sách Projects / Tools (N8: W-11) | `ĐẠT` |
+| [GD3-09](GD3-09-but-chi-sua-tu-preview.md) | Bút chì "sửa ở đâu" trên preview Portfolio (N4a: W-06) | `GIAO CODE` (Claude — cửa sổ code) |

@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.16.1 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.17.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -68,6 +68,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.17.0 | 2026-11-15 | Người vận hành chốt N4a (ADR-030): bút chì chỉ cho chữ của form Portfolio, bỏ N4b; GD3-09 `GIAO CODE`; docs/admin-ui-guidelines §7.2 |
 | 1.16.1 | 2026-11-15 | Ghi hai việc người vận hành muốn bàn sau GĐ3 vào mục 4: #15 làm đẹp trang chủ (tham khảo joshwcomeau.com), #16 sao lưu / xuất / nhập dữ liệu Admin; cả hai `[MỞ]`, nhắc bàn trước khi giao |
 | 1.16.0 | 2026-11-15 | GD3-08 (N8) ĐẠT, tự gộp `db875a1`: W-11 đã sửa (lưới 2×2 ⇈ ↑ / ⇊ ↓ thay menu ⋯, thẻ 72 px đồng đều, cụm hẹp hơn 24 px); còn N4 |
 | 1.15.0 | 2026-11-15 | GD3-07 (N6) ĐẠT, gộp sau khi người vận hành duyệt: W-08 đã sửa (link "▶ Video" ở 12 layout, 121 phép đo All PASS, sống sót trong PDF); index lưới ảnh đặt nút trên ảnh (§8.4 cập nhật) |
