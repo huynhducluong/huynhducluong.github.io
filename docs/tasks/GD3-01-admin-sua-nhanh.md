@@ -57,15 +57,15 @@ Sửa ba chỗ khó chịu hằng ngày trong Admin mà người vận hành ghi
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · token trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- Giao diện đã chụp / đo:
-- Ghi chú vận hành cho docs:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3, 4.
+- Người code: Codex · token trước / sau: 61% / phiên Codex API không cung cấp chỉ số % còn lại.
+- Nhánh, commit cuối: `gd3/01-admin-sua-nhanh` · `d96f544` (WIP bước 4; commit báo cáo ở ngay sau).
+- File đã đổi (ghi rõ file dùng chung): dùng chung — `src/admin/main.ts`, `src/admin/ui.ts`, `src/styles/admin.css`; còn lại — `src/admin/brand.ts`, `src/admin/adminIdentityName.ts`, `src/admin/adminIdentityName.test.ts`, `src/admin/contentStatusFilters.ts`, `src/admin/contentStatusFilters.test.ts`, `src/admin/profileDocumentWorkspace.ts`, `src/admin/adminStyles.test.ts`, `src/admin/ui.test.ts`.
+- `verify:admin`: 194 / 194 test đạt (31 file); bundle Admin JS 92,8 / 115,0 kB gzip, CSS 26,5 / 27,0 kB gzip.
+- Giao diện đã chụp / đo: `npm run shots -- --views=portfolio,projects,tools --screens=laptop` tạo 10 ảnh 1440 × 731; kiểm tra rail, Projects, Tools và Portfolio › Appearance. Chụp bổ sung ba trạng thái Project / Automation / Credentials override bằng thay đổi nháp không lưu: mỗi trạng thái chỉ có 1 disclosure mở. Dòng tên rail có chữ 18 px, rỗng 18 px, chênh 0 px.
+- Ghi chú vận hành cho docs: Không có; không migration, không dependency mới, không đổi ngân sách bundle.
+- Chỗ làm khác đề bài và lý do: Không có.
+- Câu hỏi: Không có.
 
 ## 6. Review của Claude
 
