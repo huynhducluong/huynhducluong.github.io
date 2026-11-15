@@ -440,3 +440,8 @@ html, body { background: #dfe8ec; }
 .portfolio-page .portfolio-project-facts .portfolio-fact__num { color: inherit; font-size: inherit; font-weight: inherit; }
 .portfolio-page .portfolio-project-facts .portfolio-fact__unit { color: inherit; font-size: var(--document-type-xl); font-weight: var(--document-weight-bold); }
 .portfolio-page .portfolio-project-facts > div.is-wide { grid-column: 1 / -1; }
+/* Balanced band is wide: facts flow in rows by their own width, so a long value shares a row with the short ones
+   instead of forcing a second row that would push the summary into the footer. */
+.portfolio-page .portfolio-project--balanced .portfolio-project-facts { display: flex; flex-wrap: wrap; }
+.portfolio-page .portfolio-project--balanced .portfolio-project-facts > div { flex: 0 1 auto; max-width: 62mm; }
+.portfolio-page .portfolio-project--balanced .portfolio-project-facts > p { flex: 0 0 100%; }

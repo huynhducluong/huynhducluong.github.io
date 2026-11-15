@@ -43,15 +43,20 @@ Chỉ số dự án (Project › Key facts) không còn xuống dòng chắp vá
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- `tools/portfolio-detail-check.mjs` (PASS / FAIL):
-- `portfolio-print.css` có ghi đè không:
+- Đã xong bước: 1, 2, 3 (đủ).
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: chưa ghi (không đọc được số token trong phiên)
+- Nhánh, commit cuối: `gd3/11-chi-so-du-an-n9`; commit cuối là commit chứa báo cáo này
+- File đã đổi (**dùng chung** in đậm): **`src/portfolio/renderPortfolioV2.ts`** (`factValueParts`, `keyFactMarkup`; chỉ nhánh `keyFacts`, nhánh "year / tools" giữ nguyên) · **`src/styles/portfolio-screen.css`** (khối "Key facts" ở cuối file, mọi quy tắc có tiền tố `.portfolio-page`) · mới: `src/portfolio/factsN9.test.ts` (+ snapshot) · `src/portfolio/layouts.test.ts` (một khẳng định cũ: "18 km" giờ in thành số + đơn vị).
+- `verify:admin`: 43 file, 306 / 306 test đạt; Admin JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip (không đổi).
+- `tools/portfolio-detail-check.mjs` (cả `--section=n9` và `--section=n11`, tức `all`): **All PASS**, 0 FAIL (mốc trước: 6 FAIL ở n9); `portfolio-video-link-check`: **All PASS**.
+- `portfolio-print.css` có ghi đè không: **không** (`grep` ra 0 dòng; test CSS khẳng định).
+- Xem ảnh (lưu ngoài repo): Technical, Balanced, Editorial × EN và VI: số lớn, đơn vị nhỏ đọc rõ trên nền trắng, trên cột xanh và trong băng Balanced; không chỉ số nào xuống dòng; không trang nào bị `findPortfolioLayoutIssues` báo.
 - Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+  1. **`is-wide` chỉ theo độ dài (≥ 14 ký tự sau chuẩn hóa khoảng trắng), bỏ nhánh "≥ 3 token" của demo.** Với nhánh đó, "4 làn xe" (8 ký tự) bị coi là dài, chiếm cả hàng và đẩy băng Balanced bản VI xuống lấn footer.
+  2. **Thêm quy tắc riêng cho băng Balanced** (`display: flex; flex-wrap: wrap`, ô `max-width: 62mm`, đoạn tóm tắt `flex: 0 0 100%`). Lý do: chỉ với `is-wide` toàn hàng, giá trị "VND 25.773 trillion" tách thành hàng thứ hai và đáy băng ở dự án 01 vượt đường footer (đo: EN +4,7 px, VI +18,2 px; trước khi sửa là −1,0 và −14,2 px). Sau khi thêm, đáy băng cách footer −54 px ở cả EN và VI (tốt hơn trước), ba chỉ số nằm một hàng. `findPortfolioLayoutIssues` không bắt được lỗi này vì nó chỉ đo phần tử chữ chứ không đo nền băng; đề nghị Claude cân nhắc đo cả nền khi review.
+  3. Thêm `class="portfolio-fact__value"` trên `<strong>` của giá trị tách (đề bài không nêu) để CSS flex chỉ chạm giá trị tách; giá trị thuần giữ markup cũ từng byte. Token con dùng `<b>` (không dùng `<span>`) theo bẫy đã ghi ở mục 2, nối bằng một dấu cách để chữ được chọn / đọc đúng.
+  4. "Phase 1" (có chữ số, 2 token) được tách thành đơn vị "Phase" + số "1", đúng quy tắc của đề bài; snapshot "markup không đổi" vì vậy chỉ dùng các giá trị một token, trống hoặc không chữ số.
+- Câu hỏi: không.
 
 ## 6. Review của Claude
 
