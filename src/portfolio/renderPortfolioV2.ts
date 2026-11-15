@@ -191,6 +191,13 @@ const renderProfile = (data: PortfolioRuntimeData, language: Language, selectedP
   return `<div class="portfolio-profile portfolio-profile--classic"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p${mark("portfolio_profile_title")}>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${escapeHtml(localized(profile.location, language))}</span></address></aside><main><p class="portfolio-kicker"${mark("about_kicker")}>${escapeHtml(localized(content.aboutKicker, language))}</p><h2${mark("about_heading")}>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead"${mark("portfolio_summary")}>${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-skill-grid">${skillGroups.map((group) => `<section><h3>${escapeHtml(localized(group.title, language))}</h3>${tagList(group.items.map((item) => localized(item.label, language)))}</section>`).join("")}</div></main></div>`;
 };
 
+/** Grid index meta: location then role, as two blocks; a missing one is left out (§8.4 "Chi tiết trình bày"). */
+const gridMeta = (project: PortfolioProject, language: Language): string => {
+  const location = localized(project.location, language);
+  const role = project.role ? localized(project.role, language) : "";
+  return `${location ? `<span class="portfolio-index__location">${escapeHtml(location)}</span>` : ""}${role ? `<span class="portfolio-index__role">${escapeHtml(role)}</span>` : ""}`;
+};
+
 const indexRow = (project: PortfolioProject, index: number, language: Language): string => {
   const video = videoLink(project.youtubeUrl, localized(project.name, language), language);
   return `<li${video ? ' class="has-video"' : ""}><span>${twoDigits(index + 1)}</span><div><strong>${escapeHtml(localized(project.name, language))}</strong><small>${escapeHtml(projectMeta(project, language))}</small></div>${video}</li>`;
@@ -201,7 +208,7 @@ const renderIndex = (data: PortfolioRuntimeData, language: Language, projects: P
   if (!projects.length) return `<div class="portfolio-page__inner">${title}<p class="portfolio-empty">${copy[language].noProjects}</p></div>`;
   if (data.content.layouts.index === "index.visual") return `<div class="portfolio-page__inner portfolio-index-page portfolio-index-page--visual">${title}<div class="portfolio-index-visual${projects.length > 8 ? " is-dense" : ""}">${projects.map((project, index) => {
     const media = resolvePortfolioMedia(project.images, data.content.mediaAssignments.projects[project.id]).primary;
-    return `<article><div>${imageMarkup(media, project.name, language, "wide", "portfolio-index__image")}<span>${twoDigits(index + 1)}</span>${videoLink(project.youtubeUrl, localized(project.name, language), language)}</div><h3>${escapeHtml(localized(project.name, language))}</h3><p>${escapeHtml(projectMeta(project, language))}</p></article>`;
+    return `<article><div>${imageMarkup(media, project.name, language, "wide", "portfolio-index__image")}<span>${twoDigits(index + 1)}</span>${videoLink(project.youtubeUrl, localized(project.name, language), language)}</div><h3>${escapeHtml(localized(project.name, language))}</h3>${gridMeta(project, language)}</article>`;
   }).join("")}</div></div>`;
   if (data.content.layouts.index === "index.editorial") return `<div class="portfolio-index-editorial"><aside><p class="portfolio-kicker">${copy[language].selectedWork}</p><h2>${copy[language].projectIndex}</h2><strong>${twoDigits(projects.length)}</strong><span>${copy[language].selectedProjects}</span></aside><ol>${projects.map((project, index) => `${indexRow(project, index, language)}`).join("")}</ol></div>`;
   return `<div class="portfolio-page__inner portfolio-index-page">${title}<ol class="portfolio-index">${projects.map((project, index) => `${indexRow(project, index, language)}`).join("")}</ol></div>`;
