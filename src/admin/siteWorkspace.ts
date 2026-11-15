@@ -367,7 +367,7 @@ const websiteFeatured = (runtime: WebsiteRuntimeData): string => {
       ${runtime.projects.map((item) => {
         const ready = item.status === "published";
         return `<article class="admin-selection-card admin-selection-card--dual">
-          <span class="admin-site-content-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
+          <span class="admin-site-content-selection__identity" data-selection-content><strong title="${escapeHtml(item.name.en)}">${escapeHtml(item.name.en)}</strong><small title="${escapeHtml(item.slug ? `Slug: ${item.slug}` : "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
           <div class="admin-site-content-selection__checks">
             <label class="admin-site-content-selection__toggle admin-selection-card__control"><input type="checkbox" name="website_project" value="${escapeHtml(item.id)}"${ready ? " data-selection-count-item" : ""} data-selection-primary${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
             <label class="admin-site-content-selection__toggle admin-selection-card__control admin-selection-card__control--secondary"><input type="checkbox" name="featured_project" value="${escapeHtml(item.id)}"${ready ? " data-selection-extra-item" : ""} data-selection-secondary${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
@@ -379,7 +379,7 @@ const websiteFeatured = (runtime: WebsiteRuntimeData): string => {
       ${runtime.tools.map((item) => {
         const ready = item.status === "published";
         return `<article class="admin-selection-card admin-selection-card--dual">
-          <span class="admin-site-content-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
+          <span class="admin-site-content-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug ? `Slug: ${item.slug}` : "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span>
           <div class="admin-site-content-selection__checks">
             <label class="admin-site-content-selection__toggle admin-selection-card__control"><input type="checkbox" name="website_tool" value="${escapeHtml(item.id)}"${ready ? " data-selection-count-item" : ""} data-selection-primary${ready && item.websiteVisible !== false ? " checked" : ""}${ready ? "" : " disabled"}><span>On website</span></label>
             <label class="admin-site-content-selection__toggle admin-selection-card__control admin-selection-card__control--secondary"><input type="checkbox" name="featured_tool" value="${escapeHtml(item.id)}"${ready ? " data-selection-extra-item" : ""} data-selection-secondary${ready && item.featured ? " checked" : ""}${ready ? "" : " disabled"}><span>Homepage</span></label>
