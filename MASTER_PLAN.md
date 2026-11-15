@@ -1,7 +1,7 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.4.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
-> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. Kế tiếp: thiết kế N3 (Credentials trong Portfolio). **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
+> **Phiên bản:** 1.5.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) `GIAO CODE` cho Codex; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) `NHÁP` chờ người vận hành duyệt. **Việc gấp:** ảnh minh chứng công khai lộ số định danh ([E-008](docs/91-error-bank.md#e-008)). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
 ## 1. Tóm tắt dự án
@@ -33,7 +33,8 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 |---|---|---|---|
 | 1 | ~~Duyệt ADR-001…015 (nhập lại) và ADR-019…022~~ | Xong | Người vận hành chốt hết 2026-11-15 |
 | 2 | Nhánh cũ `feature/*` (6 nhánh) còn giữ hay xóa | `[MỞ]` | Kiểm đã gộp hết vào `main` chưa trước khi xóa |
-| 3 | Layout Portfolio Dual: tiêu đề credential ba dòng làm hai khung lệch nhau 4,5 mm | `[MỞ]` | [UI-08](docs/92-ui-rules.md#ui-08); gom vào nhóm N3 |
+| 3 | Layout Portfolio Dual: tiêu đề credential ba dòng làm hai khung lệch nhau 4,5 mm | `[MỞ]` | [UI-08](docs/92-ui-rules.md#ui-08); cách sửa chốt ADR-025, làm ở GD3-02 |
+| 9 | ADR-026: bỏ "Print as", layout chọn crop, snapshot lưu cả hai crop | `[ĐỀ XUẤT]` | Chờ người vận hành duyệt; chốt thì Claude sửa docs rồi giao GD3-03 |
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
 | 5 | ~~Sổ lỗi UI/UX dùng chung~~ | Xong | ADR-023 |
 | 6 | **Ảnh minh chứng công khai lộ số định danh, ngày sinh** | `[MỞ]` gấp | [E-008](docs/91-error-bank.md#e-008): người vận hành crop lại / tắt Show in Portfolio và xóa ảnh trong sổ Google Docs; nhắc + công cụ che vùng xét ở N3 |
@@ -60,6 +61,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.5.0 | 2026-11-15 | Demo N3 trên dữ liệu thật; người vận hành chọn kiểu B (ADR-025 `[CHỐT]`); ADR-026 `[ĐỀ XUẤT]`; tách N3 thành GD3-02 (Nhỏ, `GIAO CODE`) và GD3-03 (Lớn, `NHÁP`); công cụ đo `tools/portfolio-credentials-check.mjs` (mốc trước khi sửa: 2 FAIL); ui-guidelines §8.3, §8.4 sửa trước |
 | 1.4.0 | 2026-11-15 | GD3-01 (N1) ĐẠT, Claude tự gộp lần đầu theo ADR-018 (`7c387b8`): UI-10, UI-12, W-02 đã sửa. UI-13 (NO TOOLTIP có từ trước) ghi mới |
 | 1.3.0 | 2026-11-15 | ADR-024 (thứ tự nhóm, sổ để Viewer, dòng đã xử lý nhớ bằng mã băm, chụp đúng phạm vi, tự đối chiếu bộ quy tắc docs/92 §0.1); W-01 `GIỮ`; guideline Admin §5, §6.4, §11 sửa trước cho N1; GD3-01 `GIAO CODE` |
 | 1.2.0 | 2026-11-15 | GD2-01 ĐẠT, gộp `9a6b65d`: GĐ 2 HOÀN THÀNH, GĐ 3 bắt đầu. Sổ lỗi UI/UX trên Google Docs (ADR-023, `tools/read-ui-feedback.mjs`, link trong `project-links.local`). Đọc sổ lần đầu: W-02…06, UI-10…12, E-008 (lộ thông tin cá nhân); đề xuất nhóm N1…N4 |
