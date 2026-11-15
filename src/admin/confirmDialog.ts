@@ -1,3 +1,5 @@
+import { bindAdminDialogBackdropClose } from "./ui";
+
 export type AdminConfirmTone = "warning" | "danger" | "primary";
 
 export interface AdminConfirmOptions {
@@ -48,9 +50,7 @@ const ensureDialog = (): HTMLDialogElement => {
     event.preventDefault();
     finish(false);
   });
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) finish(false);
-  });
+  bindAdminDialogBackdropClose(dialog, () => finish(false));
   return dialog;
 };
 

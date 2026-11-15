@@ -281,6 +281,24 @@ export const renderAdminDialogHeader = ({
     <section${statusId ? ` id="${escapeHtml(statusId)}"` : ""} class="admin-dialog-status-region" data-admin-dialog-status aria-label="${escapeHtml(statusLabel)}" hidden></section>
   </header>`;
 
+/** True only when both the press and the release landed on the dialog backdrop itself (§8.1 "Đóng"). */
+export const shouldCloseDialogOnBackdrop = (
+  dialog: EventTarget,
+  pressTarget: EventTarget | null,
+  releaseTarget: EventTarget | null,
+): boolean => pressTarget === dialog && releaseTarget === dialog;
+
+/** One shared outside-click close for every admin dialog; a drag that starts inside the box never closes it. */
+export const bindAdminDialogBackdropClose = (dialog: HTMLDialogElement, requestClose: () => void): void => {
+  let pressTarget: EventTarget | null = null;
+  dialog.addEventListener("pointerdown", (event) => { pressTarget = event.target; });
+  dialog.addEventListener("click", (event) => {
+    const press = pressTarget;
+    pressTarget = null;
+    if (shouldCloseDialogOnBackdrop(dialog, press ?? event.target, event.target)) requestClose();
+  });
+};
+
 /** Zoom out, slider with visible value, zoom in and reset, for every cropper (§7.1). */
 export const renderAdminCropZoomControls = ({
   prefix,

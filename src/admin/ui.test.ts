@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { adminDocumentMetaText, adminSelectionCountText, bindAdminDisclosureReveal, renderAdminDocumentHeader, renderAdminFieldLabel, renderAdminPreviewOptions, renderAdminSelectionHeading } from "./ui";
+import { shouldCloseDialogOnBackdrop, adminDocumentMetaText, adminSelectionCountText, bindAdminDisclosureReveal, renderAdminDocumentHeader, renderAdminFieldLabel, renderAdminPreviewOptions, renderAdminSelectionHeading } from "./ui";
 
 describe("Admin disclosure reveal", () => {
   it("exports the shared disclosure binding", () => {
@@ -73,5 +73,17 @@ describe("Selection counts (§6.6)", () => {
     expect(markup).toContain('<header class="admin-selection-heading"><h4>');
     expect(markup).toContain("admin-required-mark");
     expect(markup).toContain('<span class="admin-selection-count" data-selection-count data-empty="false" aria-live="polite">4 of 7 selected</span>');
+  });
+});
+
+describe("Admin dialog backdrop close", () => {
+  const dialog = new EventTarget();
+  const inside = new EventTarget();
+  it("closes only when press and release are both on the backdrop", () => {
+    expect(shouldCloseDialogOnBackdrop(dialog, dialog, dialog)).toBe(true);
+    expect(shouldCloseDialogOnBackdrop(dialog, inside, dialog)).toBe(false);
+    expect(shouldCloseDialogOnBackdrop(dialog, dialog, inside)).toBe(false);
+    expect(shouldCloseDialogOnBackdrop(dialog, inside, inside)).toBe(false);
+    expect(shouldCloseDialogOnBackdrop(dialog, null, null)).toBe(false);
   });
 });
