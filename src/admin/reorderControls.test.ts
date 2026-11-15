@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import css from "../styles/admin.css?raw";
 import { renderReorderControls } from "./reorderControls";
 
 const item = { type: "project", id: "p1", name: "Bridge & <Road>" };
@@ -32,5 +33,13 @@ describe("Reorder controls", () => {
     expect(button(last, 'edge="first"')).not.toContain("disabled");
     const only = renderReorderControls(item, { first: true, last: true });
     expect(only.match(/ disabled/g)).toHaveLength(4);
+  });
+});
+
+describe("Reorder controls CSS", () => {
+  it("lays the four buttons out as a two-column grid and drops the popover menu rules", () => {
+    expect(css).toMatch(/\.admin-content-item__reorder-grid\s*\{[^}]*display:\s*grid;[^}]*repeat\(2,/);
+    expect(css).toContain(".admin-content-item__reorder button:focus-visible");
+    expect(css).not.toContain(".admin-reorder-menu");
   });
 });
