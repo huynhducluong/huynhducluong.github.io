@@ -1,0 +1,36 @@
+/* Edit markers (ADR-030, GD3-09): Admin chrome inside the embedded Portfolio preview, never part of the document. -----
+   `--edit-marker-scale` is the preview zoom; dividing by it keeps every pencil about 22 px on screen. */
+.portfolio-preview-shell:has(> .portfolio-edit-layer) { position: relative; }
+.portfolio-edit-layer { position: absolute; inset: 0; z-index: 20; pointer-events: none; }
+.portfolio-edit-marker {
+  --edit-marker-size: calc(22px / var(--edit-marker-scale, 1));
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: var(--edit-marker-size);
+  height: var(--edit-marker-size);
+  padding: 0;
+  transform: translate(-50%, -50%);
+  border: calc(1.5px / var(--edit-marker-scale, 1)) solid var(--color-primary);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary-dark);
+  box-shadow: 0 calc(1px / var(--edit-marker-scale, 1)) calc(4px / var(--edit-marker-scale, 1)) rgb(16 45 59 / 25%);
+  cursor: pointer;
+  pointer-events: auto;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.portfolio-edit-marker[hidden] { display: none; }
+.portfolio-edit-marker svg { width: 60%; height: 60%; fill: none; stroke: currentcolor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.portfolio-edit-marker:hover { background: var(--color-primary); color: var(--color-surface); }
+.portfolio-edit-marker:focus-visible {
+  outline: calc(2px / var(--edit-marker-scale, 1)) solid var(--color-primary);
+  outline-offset: calc(2px / var(--edit-marker-scale, 1));
+}
+/* The block the pencil belongs to: a soft ring, outside the box so nothing moves. */
+[data-edit-field].is-edit-target {
+  outline: calc(2px / var(--edit-marker-scale, 1)) dashed var(--color-primary);
+  outline-offset: calc(3px / var(--edit-marker-scale, 1));
+}
+@media (prefers-reduced-motion: reduce) { .portfolio-edit-marker { transition: none; } }
+@media print { .portfolio-edit-layer, .portfolio-edit-marker { display: none !important; } }

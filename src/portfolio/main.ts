@@ -4,6 +4,7 @@ import "../styles/document-typography.css";
 import "../styles/cv-screen.css";
 import "../styles/portfolio-screen.css";
 import "../styles/portfolio-print.css";
+import "../styles/portfolio-edit-markers.css";
 import "../styles/document-print-preview.css";
 import { loadPublishedPortfolioRelease } from "../services/documentRepository";
 import { loadPortfolioDraftData } from "../services/documentRepository";
@@ -24,6 +25,8 @@ import type { PortfolioRuntimeData } from "../types/portfolio";
 import type { StoredDocumentTheme } from "../types/theme";
 import { renderPortfolio } from "./renderPortfolioV2";
 import { findPortfolioLayoutIssues } from "./safeArea";
+import { clampEditScale, clearEditMarkerLayer, editTargetMessage, mountEditMarkerLayer, setEditMarkerScale } from "./editMarkerLayer";
+import type { PortfolioEditModeMessage } from "./editMarkers";
 
 const app = document.querySelector<HTMLDivElement>("#app");
 if (!app) throw new Error("App container was not found.");
@@ -49,14 +52,22 @@ const applyPortfolioAppearance = (
   documentRoot.style.setProperty("--portfolio-image-overlay-opacity", String(normalizedOverlayOpacity));
 };
 
-const render = (data: PortfolioRuntimeData, language: Language = "en"): void => {
+// Edit markers: only the Admin's embedded preview passes `editMarkers`; the public page and ?mode=print never do.
+const render = (data: PortfolioRuntimeData, language: Language = "en", editMarkers = false, editScale = 1): void => {
   data = normalizePortfolioRuntimeData(data);
   document.documentElement.lang = language;
   document.title = `${profileName(data.content.profile.name, language)} | Portfolio`;
-  app.innerHTML = `<main class="portfolio-preview-shell portfolio-preview-shell--public"><div class="portfolio-document" id="portfolio-document">${renderPortfolio(data, language)}</div></main>`;
+  app.innerHTML = `<main class="portfolio-preview-shell portfolio-preview-shell--public"><div class="portfolio-document" id="portfolio-document">${renderPortfolio(data, language, { editMarkers })}</div></main>`;
   const documentRoot = app.querySelector<HTMLElement>("#portfolio-document");
   if (!documentRoot) throw new Error("Portfolio document was not found.");
   applyPortfolioAppearance(documentRoot, data.content.theme, data.content.imageOverlay);
+  const shell = app.querySelector<HTMLElement>(".portfolio-preview-shell");
+  if (editMarkers && shell) {
+    setEditMarkerScale(document.documentElement, editScale);
+    mountEditMarkerLayer(shell, (field) => window.parent.postMessage(editTargetMessage(field), window.location.origin));
+  } else if (shell) {
+    clearEditMarkerLayer(shell);
+  }
   const photo = app.querySelector<HTMLImageElement>("[data-portfolio-profile-photo]");
   const updatePhoto = (): void => {
     photo?.closest("[data-portfolio-profile-photo-frame]")?.classList.toggle("has-image", Boolean(photo.complete && photo.naturalWidth > 0));
@@ -122,6 +133,25 @@ const initialize = async (): Promise<void> => {
     document.body.classList.add("document-preview-scroll");
   }
   if (embeddedPreview) {
+    let editMode = { enabled: false, scale: 1 };
+    let lastPreview: PortfolioPreviewData | undefined;
+    const renderEmbedded = (): void => {
+      if (lastPreview) render(lastPreview, lastPreview.previewLanguage ?? "en", editMode.enabled, editMode.scale);
+    };
+    window.addEventListener("message", (event: MessageEvent<PortfolioEditModeMessage>) => {
+      if (
+        event.origin !== window.location.origin
+        || event.source !== window.parent
+        || event.data?.type !== "hdl:portfolio-edit-mode"
+        || typeof event.data.enabled !== "boolean"
+      ) return;
+      const next = { enabled: event.data.enabled, scale: clampEditScale(event.data.scale) };
+      const toggled = next.enabled !== editMode.enabled;
+      editMode = next;
+      // Turning markers on or off changes the markup, so redraw; a zoom change only resizes the pencils.
+      if (toggled) renderEmbedded();
+      else if (editMode.enabled) setEditMarkerScale(document.documentElement, editMode.scale);
+    });
     window.addEventListener("message", (event: MessageEvent<PortfolioAppearancePreview>) => {
       if (
         event.origin !== window.location.origin
@@ -131,7 +161,10 @@ const initialize = async (): Promise<void> => {
       const documentRoot = app.querySelector<HTMLElement>("#portfolio-document");
       if (documentRoot) applyPortfolioAppearance(documentRoot, event.data.theme, event.data.imageOverlay);
     });
-    previewReceiver?.activate((previewData) => render(previewData, previewData.previewLanguage ?? "en"));
+    previewReceiver?.activate((previewData) => {
+      lastPreview = previewData;
+      renderEmbedded();
+    });
     return;
   }
   const data = adminPreview ? await loadPortfolioDraftData() : await loadPublishedPortfolioRelease();

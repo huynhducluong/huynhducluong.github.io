@@ -1,3 +1,5 @@
+import markerCss from "../styles/portfolio-edit-markers.css?raw";
+import mainSource from "./main.ts?raw";
 import { describe, expect, it } from "vitest";
 import { portfolioContentSeed, portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
 import type { PortfolioRuntimeData } from "../types/portfolio";
@@ -116,5 +118,33 @@ describe("portfolioEditFieldName", () => {
   });
   it("ignores unknown or malformed fields", () => {
     for (const bad of ["email", "project_name", "", "constructor", "__proto__", 5, null, undefined, {}]) expect(portfolioEditFieldName(bad, "en")).toBeNull();
+  });
+});
+
+describe("Edit marker styles and wiring", () => {
+  it("hides the pencils in print and removes motion for reduced-motion", () => {
+    expect(markerCss).toMatch(/@media print\s*\{[^}]*\.portfolio-edit-marker[^}]*display:\s*none/);
+    expect(markerCss).toMatch(/@media \(prefers-reduced-motion: reduce\)\s*\{[^}]*transition:\s*none/);
+  });
+  it("sizes the pencil by the preview zoom and keeps it out of the layout", () => {
+    expect(markerCss).toMatch(/--edit-marker-size:\s*calc\(22px \/ var\(--edit-marker-scale/);
+    expect(markerCss).toMatch(/\.portfolio-edit-layer\s*\{[^}]*position:\s*absolute/);
+    expect(markerCss).toMatch(/:focus-visible/);
+    expect(markerCss).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(markerCss).not.toMatch(/--admin-|--document-|--pf-/);
+  });
+  it("transitions stay within 150 ms", () => {
+    for (const [, ms] of markerCss.matchAll(/transition:[^;]*?(\d+)ms/g)) expect(Number(ms)).toBeLessThanOrEqual(150);
+  });
+  it("only the embedded Admin preview turns markers on", () => {
+    const embeddedAt = mainSource.indexOf("if (embeddedPreview) {");
+    expect(embeddedAt).toBeGreaterThan(0);
+    // The only state that can enable markers is declared inside the embedded branch; every other render() call uses the default (off).
+    expect(mainSource.indexOf("let editMode")).toBeGreaterThan(embeddedAt);
+    expect(mainSource.match(/render([^;]*editMode.enabled/g)?.length).toBe(1);
+    expect(mainSource).not.toMatch(/render\((document|data)[^)]*,\s*true/);
+  });
+  it("checks origin, source and shape before acting on the edit-mode message", () => {
+    expect(mainSource).toMatch(/event\.origin !== window\.location\.origin[\s\S]{0,120}event\.source !== window\.parent[\s\S]{0,120}hdl:portfolio-edit-mode/);
   });
 });
