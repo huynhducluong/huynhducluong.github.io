@@ -97,7 +97,7 @@ const documentKindOptions = (): string => Object.entries(documentKindLabels).map
  */
 const renderEvidenceRow = (asset: CredentialAsset, credentialId: string): string => {
   const image = asset.mimeType !== "application/pdf";
-  const crop = asset.crops.find((item) => item.profile === asset.previewProfile) ?? asset.crops[0];
+  const crop = asset.crops.find((item) => item.profile === "landscape") ?? asset.crops[0];
   const assetId = escapeHtml(asset.id);
   const portfolio = !image ? "Not printed in Portfolio" : asset.showInPortfolio ? "In Portfolio" : "";
   const more = [
@@ -574,7 +574,7 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
         ownerId: credential.id,
         imageId: asset.id,
         storagePath: asset.storagePath,
-        preferredProfile: asset.previewProfile,
+        preferredProfile: "landscape",
         crops: asset.crops.map((crop) => ({
           id: crop.id,
           profile: crop.profile,
@@ -599,7 +599,7 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
     const asset = credential?.assets.find((item) => item.id === button.dataset.credentialAssetHide);
     if (!asset) return;
     callbacks.beforeMutation();
-    void saveCredentialPreviewSettings(asset, { showInPortfolio: false, previewProfile: asset.previewProfile, previewRotation: asset.previewRotation })
+    void saveCredentialPreviewSettings(asset, { showInPortfolio: false, previewRotation: asset.previewRotation })
       .then(refreshCredentials)
       .then(() => callbacks.notify("Evidence hidden from the Portfolio. Republish the Portfolio to update the public release.", "success"))
       .catch((error: Error) => callbacks.notify(error.message, "error"));

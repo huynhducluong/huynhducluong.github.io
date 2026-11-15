@@ -37,7 +37,6 @@ interface CredentialAssetRow {
   /** 202611010002; absent until that migration is applied. */
   show_in_portfolio?: boolean;
   preview_rotation?: number;
-  preview_profile?: CredentialPreviewProfile;
   credential_media_crops?: Array<{ id: string; profile: CredentialPreviewProfile; storage_path: string; crop_x: number; crop_y: number; crop_width: number; crop_height: number; width: number; height: number }>;
 }
 
@@ -74,7 +73,6 @@ const assetFromRow = (row: CredentialAssetRow): CredentialAsset => ({
   createdAt: row.created_at,
   showInPortfolio: row.show_in_portfolio === true && row.mime_type !== "application/pdf",
   previewRotation: ([0, 1, 2, 3].includes(Number(row.preview_rotation)) ? Number(row.preview_rotation) : 0) as CredentialAsset["previewRotation"],
-  previewProfile: row.preview_profile === "portrait" ? "portrait" : "landscape",
   crops: (row.credential_media_crops ?? []).map((crop) => ({
     id: crop.id,
     profile: crop.profile,
@@ -89,11 +87,11 @@ const assetFromRow = (row: CredentialAssetRow): CredentialAsset => ({
   })),
 });
 
-/** The preview a credential prints: its shown image evidence, in the chosen orientation, once that crop is saved. */
-export const credentialPreview = (credential: ProfessionalCredential): CredentialPreview | undefined => {
+/** Every saved crop of the credential's shown image evidence; each layout picks the one that fits its frame. */
+export const credentialPreviews = (credential: ProfessionalCredential): CredentialSnapshot["previews"] | undefined => {
   const asset = credential.assets.find((item) => item.showInPortfolio);
-  const crop = asset?.crops.find((item) => item.profile === asset.previewProfile);
-  return crop ? { profile: crop.profile, storagePath: crop.storagePath, publicUrl: crop.publicUrl, width: crop.width, height: crop.height } : undefined;
+  const entries = (asset?.crops ?? []).map((crop): [CredentialPreviewProfile, CredentialPreview] => [crop.profile, { profile: crop.profile, storagePath: crop.storagePath, publicUrl: crop.publicUrl, width: crop.width, height: crop.height }]);
+  return entries.length ? Object.fromEntries(entries) : undefined;
 };
 
 const credentialFromRow = (row: CredentialRow): ProfessionalCredential => ({
@@ -131,7 +129,7 @@ export const credentialSnapshot = (credential: ProfessionalCredential): Credenti
   verificationUrl: credential.verificationUrl,
   status: credential.status,
   displayOrder: credential.displayOrder,
-  ...(credentialPreview(credential) ? { preview: credentialPreview(credential) } : {}),
+  ...(credentialPreviews(credential) ? { previews: credentialPreviews(credential) } : {}),
 });
 
 const toRow = (input: ProfessionalCredentialInput) => ({
@@ -289,12 +287,11 @@ export const downloadCredentialAsset = async (asset: CredentialAsset): Promise<B
 };
 
 /**
- * Saves how an evidence image is previewed: shown in the Portfolio or not (one file per credential), the orientation
- * printed, and the quarter turns applied before cropping. Turning one file on turns the other files of that credential off.
+ * Saves how an evidence image is previewed: shown in the Portfolio or not (one file per credential) and the quarter turns applied before cropping. Turning one file on turns the other files of that credential off.
  */
 export const saveCredentialPreviewSettings = async (
   asset: CredentialAsset,
-  settings: { showInPortfolio: boolean; previewProfile: CredentialPreviewProfile; previewRotation: CredentialAsset["previewRotation"] },
+  settings: { showInPortfolio: boolean; previewRotation: CredentialAsset["previewRotation"] },
 ): Promise<void> => {
   if (settings.showInPortfolio && asset.mimeType === "application/pdf") throw new Error("Only image evidence can be shown in the Portfolio.");
   if (settings.showInPortfolio) {
@@ -303,11 +300,10 @@ export const saveCredentialPreviewSettings = async (
   }
   const { error } = await supabase.from("credential_assets").update({
     show_in_portfolio: settings.showInPortfolio,
-    preview_profile: settings.previewProfile,
     preview_rotation: settings.previewRotation,
   }).eq("id", asset.id);
   if (error) {
-    if (/show_in_portfolio|preview_rotation|preview_profile/.test(error.message)) throw new Error("Apply the latest database migration before saving credential previews.");
+    if (/show_in_portfolio|preview_rotation/.test(error.message)) throw new Error("Apply the latest database migration before saving credential previews.");
     throw error;
   }
   credentialCache.invalidate();

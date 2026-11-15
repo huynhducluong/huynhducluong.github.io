@@ -115,7 +115,9 @@ describe("profileDocumentRecommendations (Portfolio)", () => {
     });
     data.credentials = [
       credential("c1", "No preview"),
-      { ...credential("c2", "Shown"), preview: { profile: "landscape", storagePath: "p.webp", publicUrl: "https://example.com/p.webp", width: 1600, height: 1200 } },
+      { ...credential("c2", "Shown"), previews: { landscape: { profile: "landscape" as const, storagePath: "p.webp", publicUrl: "https://example.com/p.webp", width: 1600, height: 1200 } } },
+      { ...credential("c3", "Old release"), preview: { profile: "landscape" as const, storagePath: "o.webp", publicUrl: "https://example.com/o.webp", width: 1600, height: 1200 } },
+      { ...credential("c4", "Tall"), previews: { portrait: { profile: "portrait" as const, storagePath: "t.webp", publicUrl: "https://example.com/t.webp", width: 1350, height: 1800 } } },
     ];
     const placeholder = (notes: string[]) => notes.filter((note) => note.includes("prints a placeholder"));
 
@@ -124,5 +126,6 @@ describe("profileDocumentRecommendations (Portfolio)", () => {
     expect(placeholder(profileDocumentRecommendations("portfolio", data))).toEqual([
       '"No preview" has no evidence shown in the Portfolio, so its page prints a placeholder; use Adjust crops on an evidence image in Profile › Credentials.',
     ]);
+    expect(profileDocumentRecommendations("portfolio", data)).toContain('"Tall" prints its Portrait crop in a Landscape frame; add a Landscape crop in Adjust crops to fill it.');
   });
 });

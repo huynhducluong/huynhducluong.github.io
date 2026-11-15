@@ -5,12 +5,14 @@ import {
   PORTFOLIO_PROFILE_CARD_GROUPS,
   PORTFOLIO_PROFILE_CARD_ITEMS,
   automationLayoutOptions,
+  credentialsLayoutDocumentProfile,
   portfolioCapabilityGroups,
   portfolioContributionLimit,
   portfolioProjectResponsibilities,
   profileLayoutOptions,
   projectLayoutOptions,
   resolveAutomationLayout,
+  resolveCredentialLayout,
   resolveProjectLayout,
 } from "../portfolio/layouts";
 import {
@@ -18,11 +20,13 @@ import {
   projectMediaRequirement,
   resolvePortfolioMedia,
 } from "../portfolio/mediaSlots";
+import { pickCredentialPreview } from "./credentialPreviews";
 
 const MAX_DETAILED_CV_PROJECTS = 7;
 const MAX_COMPACT_CV_PROJECTS = 8;
 const MAX_CV_TOOLS = 2;
 
+const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 const hasText = (value: string | null | undefined): boolean => Boolean(value?.trim());
 
 export const validateProfileDocument = (
@@ -149,8 +153,12 @@ export const profileDocumentRecommendations = (
     const layout = resolveAutomationLayout(data, tool.id);
     if (layout === "automation.workflow" && !hasText(tool.benefit?.en)) notes.push(`"${name}" has no benefit, so ${layoutLabel(automationLayoutOptions, layout)} prints no outcome.`);
   });
-  if (data.content.layouts.includeCredentials) data.credentials?.filter((item) => item.includeInPortfolio && !item.preview).forEach((credential) => {
-    notes.push(`"${credential.title.en.trim() || "Untitled credential"}" has no evidence shown in the Portfolio, so its page prints a placeholder; use Adjust crops on an evidence image in Profile › Credentials.`);
+  if (data.content.layouts.includeCredentials) data.credentials?.filter((item) => item.includeInPortfolio).forEach((credential) => {
+    const name = credential.title.en.trim() || "Untitled credential";
+    const wanted = credentialsLayoutDocumentProfile[resolveCredentialLayout(data, credential.id)];
+    const picked = pickCredentialPreview(credential, wanted);
+    if (!picked) notes.push(`"${name}" has no evidence shown in the Portfolio, so its page prints a placeholder; use Adjust crops on an evidence image in Profile › Credentials.`);
+    else if (!picked.exact) notes.push(`"${name}" prints its ${capitalize(picked.preview.profile)} crop in a ${capitalize(wanted)} frame; add a ${capitalize(wanted)} crop in Adjust crops to fill it.`);
   });
   return notes;
 };

@@ -10,6 +10,7 @@ import type {
   ProjectIndexLayout,
   ProjectLayout,
 } from "../types/portfolio";
+import type { CredentialPreviewProfile } from "../types/credential";
 
 export interface PortfolioLayoutOption<T extends string> {
   id: T;
@@ -55,6 +56,12 @@ export const credentialsLayoutOptions: readonly PortfolioLayoutOption<Credential
   { id: "credentials.dual", label: "Dual Documents", description: "Two equal document frames with concise metadata.", preview: "dual" },
   { id: "credentials.bands", label: "Document Bands", description: "Flexible horizontal bands for mixed document formats.", preview: "bands" },
 ];
+
+/** Orientation of each Credentials layout's document frame (`.portfolio-document-frame` is 4 / 3, Landscape). */
+export const credentialsLayoutDocumentProfile: Record<CredentialsLayout, CredentialPreviewProfile> = {
+  "credentials.dual": "landscape",
+  "credentials.bands": "landscape",
+};
 
 export const closingLayoutOptions: readonly PortfolioLayoutOption<ClosingLayout>[] = [
   { id: "closing.classic", label: "Classic Centered", description: "Minimal centered closing page.", preview: "classic" },

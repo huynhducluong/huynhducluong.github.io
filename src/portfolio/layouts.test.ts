@@ -7,6 +7,7 @@ import {
   closingLayoutOptions,
   coverLayoutOptions,
   credentialsLayoutOptions,
+  credentialsLayoutDocumentProfile,
   indexLayoutOptions,
   modernPortfolioLayouts,
   normalizePortfolioLayouts,
@@ -171,6 +172,7 @@ describe("Portfolio crop ratio contract (docs/ui-guidelines.md §8.4)", () => {
     expect(screenCss).toMatch(/\.portfolio-page \[data-crop-profile\] \{ height: auto; aspect-ratio: var\(--pf-crop-ratio\); \}/);
     // Credentials document slots are Landscape-shaped, so a Landscape evidence crop fills its slot exactly.
     expect(screenCss).toContain(".portfolio-document-frame { aspect-ratio: 4 / 3; }");
+    credentialsLayoutOptions.forEach((option) => expect(credentialsLayoutDocumentProfile[option.id], option.id).toBe("landscape"));
     expect(screenCss).toMatch(/\.portfolio-document-slot \{[^}]*padding: 3mm;/);
     expect(screenCss).toMatch(/\.portfolio-credentials--dual article \{[^}]*grid-template-rows: subgrid;/);
     expect(screenCss).not.toMatch(/\.portfolio-credentials--dual article header \{[^}]*min-height: 15mm;/);
@@ -235,11 +237,23 @@ describe("Portfolio credential pages", () => {
     });
   });
 
+  it("prints a legacy single preview, picks the crop matching the frame, and falls back to the other orientation", () => {
+    const data = runtime();
+    data.content.layouts.includeCredentials = true;
+    const crop = (profile: "landscape" | "portrait") => ({ profile, storagePath: `${profile}.webp`, publicUrl: `https://example.com/${profile}.webp`, width: 100, height: 100 });
+    data.credentials = [{ ...credential(1), preview: crop("landscape") }, { ...credential(2), previews: { landscape: crop("landscape"), portrait: crop("portrait") } }];
+    (["en", "vi"] as const).forEach((language) => {
+      const markup = renderPortfolio(data, language);
+      expect(markup.match(/data-crop-profile="landscape" data-portfolio-credential-preview/g), language).toHaveLength(2);
+      expect(markup).not.toContain('data-crop-profile="portrait" data-portfolio-credential-preview');
+    });
+  });
+
   it("prints a shown evidence crop at its own ratio inside the document slot, untinted, and keeps the placeholder otherwise", () => {
     const data = runtime();
     data.content.layouts.includeCredentials = true;
     data.credentials = [
-      { ...credential(1), preview: { profile: "portrait", storagePath: "portfolio-media-crops/credentials/c1/a1/portrait/x.webp", publicUrl: "https://example.com/c1.webp", width: 1350, height: 1800 } },
+      { ...credential(1), previews: { portrait: { profile: "portrait", storagePath: "portfolio-media-crops/credentials/c1/a1/portrait/x.webp", publicUrl: "https://example.com/c1.webp", width: 1350, height: 1800 } } },
       credential(2),
     ];
     credentialsLayoutOptions.forEach((option) => {

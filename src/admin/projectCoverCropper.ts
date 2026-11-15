@@ -15,7 +15,7 @@ import { confirmAdmin } from "./confirmDialog";
 import { automaticCrop, clampCrop, cropPreviewStyle, cropSourceRect, type CropState } from "./cropGeometry";
 import { bindCropStage, waitForCropImage, type CropStage } from "./cropStage";
 import { canvasToBlob, drawRotated, normalizeTurns, rotatedOriginalType, rotationLabel, type QuarterTurns } from "./imageRotation";
-import { renderAdminCropZoomControls, renderAdminDialogHeader, renderAdminSegmented, setAdminCropZoomValue, setButtonBusy } from "./ui";
+import { renderAdminCropZoomControls, renderAdminDialogHeader, setAdminCropZoomValue, setButtonBusy } from "./ui";
 
 interface CropLayoutConfig {
   id: MediaCropProfile;
@@ -36,7 +36,7 @@ export interface PortfolioMediaCropTarget {
   /**
    * Credential evidence (ownerType "credential"): the private original is never rewritten. Its quarter turns are
    * stored as preview_rotation, only the formats the Credentials layouts print are offered, and the dialog also
-   * sets the printed orientation and the explicit "Show in Portfolio" opt-in (§7.1).
+   * sets the explicit "Show in Portfolio" opt-in (§7.1).
    */
   evidence?: CredentialAsset;
 }
@@ -112,9 +112,9 @@ export const renderPortfolioMediaCropDialog = (): string => `
           <p data-project-cover-crop-meta></p>
         </div>
         <div class="admin-crop-evidence-settings" data-project-cover-crop-evidence hidden>
-          ${renderAdminSegmented({ legend: "Print as", name: "project-cover-print-profile", value: "landscape", options: [{ value: "landscape", label: "Landscape" }, { value: "portrait", label: "Portrait" }], attributes: "data-project-cover-print-profile" })}
           <label class="admin-inline-check"><input type="checkbox" data-project-cover-show-in-portfolio><span>Show in Portfolio</span></label>
           <p class="admin-field-hint">Visible to anyone with the Portfolio link.</p>
+          <p class="admin-field-hint">Check the crop for ID numbers and dates of birth before showing it.</p>
         </div>
       </aside>
     </div>
@@ -165,7 +165,6 @@ export const bindPortfolioMediaCropper = (
   const zoomValue = dialog?.querySelector<HTMLOutputElement>("[data-project-cover-zoom-value]") ?? null;
   const save = dialog?.querySelector<HTMLButtonElement>("[data-project-cover-crop-save]");
   const evidenceSettings = dialog?.querySelector<HTMLElement>("[data-project-cover-crop-evidence]");
-  const printInputs = [...(dialog?.querySelectorAll<HTMLInputElement>("[data-project-cover-print-profile]") ?? [])];
   const showInput = dialog?.querySelector<HTMLInputElement>("[data-project-cover-show-in-portfolio]");
 
   let target: PortfolioMediaCropTarget | undefined;
@@ -173,7 +172,6 @@ export const bindPortfolioMediaCropper = (
   let profiles: CropLayoutConfig[] = layouts;
   // Turns the saved crops were made at: 0 for media (rotation rewrites the original), preview_rotation for evidence.
   let baselineTurns: QuarterTurns = 0;
-  let printProfile: CredentialPreviewProfile = "landscape";
   let showInPortfolio = false;
   let sourceUrl: string | undefined;
   let sourceImage: HTMLImageElement | undefined;
@@ -196,7 +194,6 @@ export const bindPortfolioMediaCropper = (
   const isEdited = (id: MediaCropProfile): boolean => adjusted.has(id) || (automatic.has(id) && persisted.has(id));
   const settingsChanged = (): boolean => Boolean(target?.evidence && (
     turns !== target.evidence.previewRotation
-    || printProfile !== target.evidence.previewProfile
     || showInPortfolio !== target.evidence.showInPortfolio
   ));
   const isDirty = (): boolean => turns !== baselineTurns || settingsChanged() || profiles.some((layout) => isEdited(layout.id));
@@ -275,7 +272,6 @@ export const bindPortfolioMediaCropper = (
     baselineTurns = 0;
     profiles = layouts;
     showInPortfolio = false;
-    printProfile = "landscape";
   };
 
   const close = (): void => {
@@ -418,12 +414,6 @@ export const bindPortfolioMediaCropper = (
   };
   dialog.querySelector<HTMLButtonElement>("[data-project-cover-rotate-left]")?.addEventListener("click", () => void rotate(-1).catch((error: Error) => callbacks.notify(error.message, "error")));
   dialog.querySelector<HTMLButtonElement>("[data-project-cover-rotate-right]")?.addEventListener("click", () => void rotate(1).catch((error: Error) => callbacks.notify(error.message, "error")));
-  // Choosing the printed orientation also opens that format, so what prints is what is being positioned.
-  printInputs.forEach((input) => input.addEventListener("change", () => {
-    if (!input.checked) return;
-    printProfile = input.value as CredentialPreviewProfile;
-    if (printProfile !== activeLayout) void initializeLayout(printProfile).catch((error: Error) => callbacks.notify(error.message, "error"));
-  }));
   showInput?.addEventListener("change", () => {
     void (async () => {
       if (showInput.checked && !target?.evidence?.showInPortfolio && !(await confirmAdmin({
@@ -451,9 +441,9 @@ export const bindPortfolioMediaCropper = (
   save.addEventListener("click", () => {
     if (!sourceImage || !target) return;
     const evidence = target.evidence;
-    // A shown evidence file always keeps a saved crop in the printed orientation, so "Reset to auto" saves the
-    // automatic crop instead of deleting the one the Portfolio prints.
-    const printed = (profile: MediaCropProfile): boolean => Boolean(evidence && showInPortfolio && profile === printProfile);
+    // A shown evidence file always keeps a saved Landscape crop (the frame every Credentials layout has), so
+    // "Reset to auto" saves the automatic crop instead of deleting the one the Portfolio prints.
+    const printed = (profile: MediaCropProfile): boolean => Boolean(evidence && showInPortfolio && profile === "landscape");
     const changedProfiles = profiles.filter((layout) => adjusted.has(layout.id) || (printed(layout.id) && (!persisted.has(layout.id) || automatic.has(layout.id))));
     const removedProfiles = [...automatic].filter((profile) => persisted.has(profile) && !printed(profile));
     const saveSettings = settingsChanged();
@@ -495,7 +485,7 @@ export const bindPortfolioMediaCropper = (
       }));
       const owner = target as PortfolioMediaCropTarget;
       await savePortfolioMediaCrops(owner.ownerType, owner.ownerId, owner.imageId, outputs, removedProfiles);
-      if (evidence && saveSettings) await saveCredentialPreviewSettings(evidence, { showInPortfolio, previewProfile: printProfile, previewRotation: turns });
+      if (evidence && saveSettings) await saveCredentialPreviewSettings(evidence, { showInPortfolio, previewRotation: turns });
       const wasRotated = Boolean(rotatedPath && rotatedBlob);
       if (rotatedPath && rotatedBlob) await commitRotatedOriginal(owner.ownerType, owner.imageId, owner.storagePath, rotatedPath, rotatedBlob);
       rotatedPath = undefined;
@@ -526,16 +516,14 @@ export const bindPortfolioMediaCropper = (
         const evidence = nextTarget.evidence;
         profiles = evidence ? layouts.filter((layout) => (evidenceProfiles as MediaCropProfile[]).includes(layout.id)) : layouts;
         baselineTurns = evidence ? evidence.previewRotation : 0;
-        printProfile = evidence?.previewProfile ?? "landscape";
         showInPortfolio = evidence?.showInPortfolio ?? false;
-        activeLayout = evidence ? printProfile : nextTarget.preferredProfile;
+        activeLayout = evidence ? "landscape" : nextTarget.preferredProfile;
         const copy = evidence ? dialogCopy.evidence : dialogCopy.media;
         const header = dialog.querySelector(".admin-dialog__header");
         header?.querySelector(".section-kicker")?.replaceChildren(copy.eyebrow);
         header?.querySelector("h2")?.replaceChildren(copy.title);
         header?.querySelector(".admin-dialog__note")?.replaceChildren(copy.note);
         if (evidenceSettings) evidenceSettings.hidden = !evidence;
-        printInputs.forEach((input) => { input.checked = input.value === printProfile; });
         if (showInput) showInput.checked = showInPortfolio;
         nextTarget.crops.forEach((crop) => {
           if (!profiles.some((layout) => layout.id === crop.profile)) return;
