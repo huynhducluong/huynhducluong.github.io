@@ -1,6 +1,6 @@
 # GD3-03 — Credentials: layout chọn crop, bỏ "Print as" (N3b)
 
-> **Trạng thái:** NHÁP (chờ người vận hành duyệt ADR-026, và GD3-02 gộp xong) · **Nhánh:** `gd3/03-credentials-layout-chon-crop` · **Ngày giao:** — · **Cỡ:** Lớn (~10–12 file: types, repository, renderer, validation, cropper, workspace, test) · **Người đang code:** dự kiến Claude — cửa sổ code (Codex dự kiến còn dưới 30 % sau GD3-02, bảng chọn người code)
+> **Trạng thái:** NHÁP — **đã đủ điều kiện giao** (ADR-026 `[CHỐT]` 2026-11-15, docs đã sửa); Claude chuyển `GIAO CODE` ngay khi GD3-02 được gộp, vì một người ghi một lúc (AGENTS §1.1) · **Nhánh:** `gd3/03-credentials-layout-chon-crop` · **Ngày giao:** — · **Cỡ:** Lớn (~10–12 file: types, repository, renderer, validation, cropper, workspace, test) · **Người đang code:** dự kiến Claude — cửa sổ code (Codex dự kiến còn dưới 30 % sau GD3-02, bảng chọn người code)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi PDF Portfolio (crop nào được in).
 
 ## 1. Mục tiêu
@@ -9,7 +9,8 @@ Người vận hành không phải chọn "Print as" nữa (Sổ #5). Mỗi layo
 
 ## 2. Căn cứ
 
-- ADR-026 (`[ĐỀ XUẤT]` lúc soạn). **Chỉ giao khi ADR-026 là `[CHỐT]`**; khi đó Claude cập nhật mục "Căn cứ" dưới đây và sửa docs liên quan (ui-guidelines §8.4, admin-ui-guidelines §7.1 và §6.4 hàng bằng chứng Credential, architecture "Vòng đời media") **trước khi giao**, theo ADR-020.
+- ADR-026 `[CHỐT]`. Quy tắc đã sửa sẵn (đọc đúng các đoạn này): `docs/ui-guidelines.md` §8.4 gạch "Bằng chứng Credential chỉ in khi được cho hiển thị"; `docs/admin-ui-guidelines.md` §6.4 gạch "Hàng bằng chứng Credential" và §7.1 quy tắc 13 (bỏ "Print as", dòng nhắc E-008); `docs/architecture.md` đoạn Professional Credential (`previews`); `docs/admin-operations.md` mục "Preview bằng chứng Credential" (`preview_profile`).
+- Sổ: W-05, E-008, UI-11; mẫu tab / trạng thái hộp crop: admin-ui §7.1.
 - Code hiện tại: `src/types/credential.ts` (`CredentialPreviewProfile`, `CredentialPreview`, `CredentialSnapshot.preview`, `CredentialAsset.previewProfile`); `src/services/credentialRepository.ts` (`credentialPreview`, `credentialSnapshot`, `saveCredentialPreviewSettings`); `src/portfolio/renderPortfolioV2.ts` (`documentFrame`, dòng ~243); `src/shared/profileDocumentValidation.ts` (dòng ~152); `src/admin/projectCoverCropper.ts` (khối "Print as" dòng ~115, `printProfile`, `printed(...)`, `saveCredentialPreviewSettings(...)` dòng ~498); `src/admin/credentialWorkspace.ts` (dòng ~100, ~577, ~602); `src/portfolio/layouts.ts` (`credentialsLayoutOptions`).
 
 ## 3. Phạm vi (dự kiến, hoàn thiện khi giao)
@@ -22,7 +23,7 @@ Người vận hành không phải chọn "Print as" nữa (Sổ #5). Mỗi layo
 4. **Validation.** Recommendation mới khi `exact` là false: `"<tên>" prints its Portrait crop in a Landscape frame; add a Landscape crop in Adjust crops to fill it.` (hướng thật thay vào; dùng layout đã resolve của credential qua `resolveCredentialLayout`). Recommendation "no evidence shown" giữ nguyên; kiểm cả `preview` cũ.
 5. **Bỏ "Print as".** Xóa control, `printProfile`, `previewProfile` khỏi kiểu và UI; `saveCredentialPreviewSettings` chỉ ghi `show_in_portfolio` và `preview_rotation`. Mở hộp crop mặc định tab Landscape; thumbnail trong `credentialWorkspace` lấy crop Landscape, thiếu thì crop đầu tiên. Đánh dấu tab theo quy ước hộp crop Project / Tool (admin-ui §7.1), không còn nhãn "printed".
 6. **E-008.** Dưới ô "Show in Portfolio" thêm một dòng ghi chú: "Check the crop for ID numbers and dates of birth before showing it."
-7. **Không migration.** Cột `preview_profile` giữ nguyên trong DB, không còn đọc / ghi. Kiểm `supabase/migrations` xem cột có `not null` mà không có `default` không: nếu có, **dừng và báo** (cần migration, ADR-019).
+7. **Không migration** (Claude đã kiểm: `preview_profile` là `not null default 'landscape'` trong `202611010002_credential_portfolio_previews.sql`). Cột giữ nguyên trong DB, app không còn đọc / ghi; không sửa migration cũ.
 
 **Không làm:** layout Credential Portrait mới; công cụ che vùng (redact); đổi bucket / bảng crop.
 
