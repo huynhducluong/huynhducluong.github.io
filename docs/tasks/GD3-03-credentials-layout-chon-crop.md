@@ -39,14 +39,14 @@ Người vận hành không phải chọn "Print as" nữa (Sổ #5). Mỗi layo
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · token trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- Ghi chú vận hành cho docs:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1 dữ liệu + `credentialPreviews.ts` · 2 bảng hướng khung · 3 renderer · 4 validation · 5 bỏ "Print as" · 6 dòng nhắc E-008 · test. Mục 8 (lề trắng Landscape): **bỏ qua**, không đổi gì (cần đo bằng trình duyệt, để Claude quyết khi review).
+- Người code: Claude — cửa sổ code · token trước / sau: không đo được trong phiên
+- Nhánh, commit cuối: `gd3/03-credentials-layout-chon-crop`, commit `wip(GD3-03 bước 1-3)` rồi commit báo cáo này
+- File đã đổi (ghi rõ file dùng chung): MỚI `src/shared/credentialPreviews.ts` (+ test, dùng chung renderer / validation); `src/types/credential.ts`; `src/services/credentialRepository.ts`; `src/portfolio/layouts.ts`; `src/portfolio/renderPortfolioV2.ts`; `src/shared/profileDocumentValidation.ts`; `src/admin/projectCoverCropper.ts`; `src/admin/credentialWorkspace.ts`; test: `layouts.test.ts`, `profileDocumentValidation.test.ts`, `credentialWorkspace.test.ts`
+- `verify:admin`: đạt (bundle Admin 92,8 kB JS / 26,5 kB CSS gzip, trong ngân sách)
+- Ghi chú vận hành cho docs: không migration; cột `preview_profile` còn trong DB, app không đọc / ghi. Khi bật "Show in Portfolio", lưu sẽ luôn tạo / giữ crop Landscape (Reset to auto lưu crop tự động thay vì xóa).
+- Chỗ làm khác đề bài và lý do: ghi chú ở `profileDocumentWorkspace.ts` ("Each credential prints its evidence…") giữ nguyên, vẫn đúng. **Chưa chạy** `tools/portfolio-credentials-check.mjs` và chưa chụp ba màn hình (cần dev server + `.auth/`): để Claude làm khi review. Chưa có ca Portrait-trong-khung-Landscape trong công cụ đo.
+- Câu hỏi: không
 
 ## 6. Review của Claude
 
