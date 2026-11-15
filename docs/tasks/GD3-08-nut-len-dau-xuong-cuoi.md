@@ -51,14 +51,14 @@ Người vận hành chọn (2026-11-15): lưới 2×2, **chưa** làm đổi ch
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- Số đo thẻ (cao, rộng cụm) ở 3 màn hình:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3 (xong cả đề bài)
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: không đo
+- Nhánh, commit cuối: `gd3/08-nut-len-dau-xuong-cuoi` (xem `git log`)
+- File đã đổi (ghi rõ file dùng chung): **dùng chung:** `src/admin/ui.ts` (+`adminArrowTopIcon`, `adminArrowBottomIcon`), `src/styles/admin.css` (lưới `.admin-content-item__reorder-grid`, focus-visible, bỏ `.admin-reorder-menu`); `admin-ui.css` không đổi (biểu tượng đã bao phủ `.admin-content-item__reorder button > svg`). **Khác:** `src/admin/main.ts` (bỏ menu + trình xử lý, thêm trình xử lý `[data-reorder-edge]`, focus first / last có dự phòng nút còn bật), mới `src/admin/reorderControls.ts` + `reorderControls.test.ts`.
+- `verify:admin`: 229 / 229 test đạt; bundle JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip (giảm nhẹ)
+- Số đo thẻ (cao, rộng cụm) ở 3 màn hình: chưa đo bằng số; xem ảnh `shots --stress` ở 3 màn hình: mọi thẻ cùng chiều cao (~70 px, cạnh nhau đều, không so le), tên dài cắt có `title`; cụm = tay kéo + 2 cột × 22 px. **Claude đo số khi review.**
+- Chỗ làm khác đề bài và lý do: markup nút tách thành `reorderControls.ts` (đề bài để inline trong main.ts) để test được bằng hàm thuần; lưới nằm trong `div.admin-content-item__reorder-grid` (tay kéo ngoài lưới như đề bài). Focus sau ⇈ / ⇊: nút vừa bấm sẽ `disabled`, nên chuyển tới nút còn bật gần nhất (⇊ / ⇈ rồi ↓ / ↑) theo tiêu chí nghiệm thu.
+- Câu hỏi: không
 
 ## 6. Review của Claude
 
