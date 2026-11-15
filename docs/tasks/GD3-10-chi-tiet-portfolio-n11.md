@@ -47,15 +47,19 @@ Sáu chi tiết trình bày người vận hành chốt từ demo thật (ADR-03
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- `tools/portfolio-detail-check.mjs --section=n11` (PASS / FAIL); `portfolio-video-link-check` (PASS / FAIL):
-- `portfolio-print.css` có ghi đè không:
+- Đã xong bước: 1, 2, 3, 4 (đủ).
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: chưa ghi (không đọc được số token trong phiên)
+- Nhánh, commit cuối: `gd3/10-chi-tiet-portfolio-n11`; commit cuối là commit chứa báo cáo này
+- File đã đổi (**dùng chung** in đậm): **`src/portfolio/renderPortfolioV2.ts`** (hàm `gridMeta`, nhánh `index.visual` của `renderIndex`; `projectMeta` và `indexRow` không đổi) · **`src/styles/portfolio-screen.css`** (một khối quy tắc mới ở cuối file, tiền tố `.portfolio-page`; bỏ `padding` và nền của `.portfolio-automation__media-pair figure` vì khung mới thay thế) · mới: `src/portfolio/detailN11.test.ts` (+ snapshot) · cập nhật snapshot `src/portfolio/__snapshots__/editMarkers.test.ts.snap` (chỉ phần meta của index lưới ảnh, đúng thay đổi dự kiến).
+- `verify:admin`: 42 file, 280 / 280 test đạt; Admin JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip (không đổi).
+- `tools/portfolio-detail-check.mjs --section=n11`: **All PASS** (mốc trước: 28 FAIL; chạy lần cuối 46 PASS / 0 FAIL, đo trước khi đổi `line-height: 1` thành token cùng giá trị 1); `portfolio-video-link-check`: **All PASS, 121 PASS / 0 FAIL**.
+- `portfolio-print.css` có ghi đè không: **không** (`grep` các lớp mới trong file đó ra 0 dòng; test CSS cũng khẳng định).
+- Xem ảnh (lưu ngoài repo): `index.visual` 9 dự án: meta hai dòng gọn ở thẻ dài và ngắn, không lấn footer; Balanced: thẻ công nghệ ngay dưới danh sách đóng góp; Workflow và Input / Geometry: khung trắng viền mảnh quanh mọi ảnh; không trang nào tràn.
 - Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+  1. **Meta index lưới ảnh dùng `<p>` bọc hai `<span>`** thay vì hai `span` đứng trực tiếp trong `article`: công cụ đo tìm `.portfolio-index-visual article > p`; `<p>` cũng giữ quy tắc `.portfolio-index-visual p` sẵn có (muted, 2xs, cách 3 mm). Không còn `<p>` khi thiếu cả hai giá trị.
+  2. **Số đóng góp: bù thêm `- .2mm`** vào công thức demo (kết quả đo 0,74 px, quá ngưỡng 0,5): công cụ đo tâm hộp chữ của dòng đầu, thấp hơn tâm hộp dòng khoảng 0,73 px; dùng `var(--document-leading-none)` (= 1) thay cho `line-height: 1` vì test hiện có cấm `line-height` không đơn vị.
+  3. **Nút Video: thêm `margin-top: .6mm`** ngoài `top: -.45mm`: ở Editorial, vai trò dài ("BIM Modeling Team Leader & BIM Coordinator") đẩy nút xuống dòng riêng, nút dịch lên chạm dòng vai trò nên bị đo nhầm là "cùng hàng" (18,97 px). Lề trên chỉ có tác dụng khi nút xuống dòng riêng, không đổi vị trí khi cùng hàng (đo vẫn −0,34 px).
+- Câu hỏi: không.
 
 ## 6. Review của Claude
 

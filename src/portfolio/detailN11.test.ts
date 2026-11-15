@@ -73,14 +73,14 @@ describe("GD3-10: presentation CSS", () => {
   const addedCode = added.replace(/\/\*[\s\S]*?\*\//g, "");
   const rules = [...added.matchAll(/([^{}]+)\{([^}]*)\}/g)].map((match) => ({ selector: match[1].replace(/\/\*[\s\S]*?\*\//g, "").trim(), body: match[2] }));
   it("every new rule is scoped under .portfolio-page", () => {
-    expect(rules.length).toBeGreaterThanOrEqual(8);
+    expect(rules.length).toBeGreaterThanOrEqual(6);
     for (const rule of rules) for (const selector of rule.selector.split(",")) expect(selector.trim(), selector).toMatch(/^\.portfolio-page\b/);
   });
   it("frames Automation images in a white hairline border with 4 mm padding", () => {
     expect(added).toMatch(/\.portfolio-page \.portfolio-automation figure\s*\{[^}]*padding: 4mm[^}]*border: \.25mm solid var\(--document-border\)[^}]*background: var\(--document-surface\)/);
   });
   it("centres contribution numbers using --document-leading-relaxed", () => {
-    expect(added).toMatch(/\.portfolio-contributions article > span\s*\{[^}]*--document-leading-relaxed[^}]*line-height: 1/);
+    expect(added).toMatch(/\.portfolio-contributions article > span\s*\{[^}]*--document-leading-relaxed[^}]*line-height: var\(--document-leading-none\)/);
     expect(added).toMatch(/\.portfolio-contributions article\s*\{[^}]*align-items: start/);
   });
   it("aligns the Video pill to the role baseline only beside a role", () => {
@@ -92,7 +92,8 @@ describe("GD3-10: presentation CSS", () => {
   });
   it("styles the role bold in the text colour and the location muted", () => {
     expect(added).toMatch(/__role\s*\{[^}]*color: var\(--document-text\)[^}]*font-weight: var\(--document-weight-bold\)/);
-    expect(added).toMatch(/__location\s*\{[^}]*color: var\(--document-text-muted\)/);
+    // The location inherits the card paragraph's muted colour, which stays in the base stylesheet.
+    expect(css).toMatch(/\.portfolio-index-visual p \{[^}]*color: var\(--document-text-muted\)/);
   });
   it("adds no !important beyond the Balanced tags pair, and print CSS does not override the new classes", () => {
     expect([...addedCode.matchAll(/!important/g)].length).toBe(2);

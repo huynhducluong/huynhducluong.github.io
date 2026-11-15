@@ -195,7 +195,8 @@ const renderProfile = (data: PortfolioRuntimeData, language: Language, selectedP
 const gridMeta = (project: PortfolioProject, language: Language): string => {
   const location = localized(project.location, language);
   const role = project.role ? localized(project.role, language) : "";
-  return `${location ? `<span class="portfolio-index__location">${escapeHtml(location)}</span>` : ""}${role ? `<span class="portfolio-index__role">${escapeHtml(role)}</span>` : ""}`;
+  if (!location && !role) return "";
+  return `<p>${location ? `<span class="portfolio-index__location">${escapeHtml(location)}</span>` : ""}${role ? `<span class="portfolio-index__role">${escapeHtml(role)}</span>` : ""}</p>`;
 };
 
 const indexRow = (project: PortfolioProject, index: number, language: Language): string => {
