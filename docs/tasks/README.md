@@ -1,0 +1,120 @@
+# Đề bài giao code (ADR-016)
+
+> Quy trình và vai trò: [AGENTS.md §1.1](../../AGENTS.md). Mỗi đề bài một file `<GĐ>-<số>-<tên>.md`, ví dụ `GD3-01-credentials-dual-align.md`.
+> Claude viết mục 1–4; người code điền mục 5; Claude ghi review vào mục 6. File là nguồn duy nhất của đề bài: đổi phạm vi thì sửa ở đây và ghi lý do.
+
+## Trạng thái
+
+| Trạng thái | Nghĩa |
+|---|---|
+| `NHÁP` | Claude đang soạn; chưa được code |
+| `GIAO CODE` | Người vận hành đã duyệt; người code được làm |
+| `CHỜ REVIEW` | Người code báo xong; Claude review |
+| `PHẢI SỬA` | Review có mục "Phải sửa"; sửa trên cùng nhánh |
+| `CHỜ DUYỆT` | Review đạt nhưng cần người vận hành duyệt gộp (ADR-018) hoặc chạy migration (ADR-019) |
+| `ĐẠT` | Đã gộp vào `main` và push (= deploy) |
+
+## Mẫu
+
+```markdown
+# <GĐ>-<số> — <tên ngắn>
+
+> **Trạng thái:** NHÁP · **Nhánh:** `<gđ>/<số>-<tên>` (từ `main` tại `<hash>`) · **Ngày giao:** YYYY-MM-DD · **Cỡ:** Nhỏ / Vừa / Lớn · **Người đang code:** Codex / Claude — cửa sổ code
+> **Gộp (ADR-018):** tự gộp được / cần người vận hành duyệt — lý do: <migration · đổi giao diện công khai / PDF · cuối giai đoạn>
+
+## 1. Mục tiêu
+<một đoạn: bước này làm gì, giải quyết dòng W-xx / UI-xx nào>
+
+## 2. Căn cứ (chỉ làm đúng các chỗ này, đã trích đủ ở mục 3)
+- ADR: … · Quy tắc: docs/…§… · Sổ: UI-xx, W-xx, E-xxx
+- File liên quan: src/…
+
+## 3. Phạm vi
+**Làm:**
+- …
+
+**Không làm (để sau):**
+- …
+
+**Ràng buộc dùng chung không được đổi:** breakpoint, token, kích thước trang in, `admin-ui.css` chung, ngân sách bundle (nếu đề bài không cho); không sửa `docs/`, `decisions/`, `AGENTS.md`, `MASTER_PLAN.md`; không thêm dependency. Mọi thay đổi ở file dùng chung phải liệt kê ở mục 5.
+
+**Phép tính chỗ** (khi có yêu cầu "không cắt", "một hàng", "thẳng hàng"): kích thước có sẵn ở màn hình / trang nhỏ nhất, tổng các phần, phần dư.
+
+## 3b. Các bước (mỗi bước: test liên quan + commit `wip(<đề bài> bước k): …`, ghi vào mục 5)
+1. …
+2. …
+
+## 3c. Bước thủ công của người vận hành (nếu có)
+- Migration `supabase/migrations/…sql`: chạy trên production trước khi gộp (ADR-019); kiểm Admin Overview health.
+
+## 4. Tiêu chí nghiệm thu
+- [ ] Test Vitest: <tên test / ca bắt buộc và kết quả mong đợi>
+- [ ] `npm run verify:admin` đạt **một lần ở cuối** (chạy từ `D:\`, E-006)
+- [ ] Chuỗi mới có đủ EN / VI (UI chrome qua `copy`, nội dung qua `LocalizedText`)
+- [ ] Giao diện: <màn hình / trang> đã chụp ở <màn hình mục tiêu / EN + VI>; checklist docs/92 §2
+- [ ] …
+
+## 5. Báo cáo của người code
+- Đã xong bước: (ví dụ 1, 2, 3 — hash từng bước)
+- Người code: · token trước / sau (nếu biết):
+- Nhánh, commit cuối:
+- File đã đổi (ghi rõ file dùng chung):
+- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
+- Giao diện đã chụp / đo (nếu có):
+- Ghi chú vận hành cho docs (migration, ngân sách, quy tắc mới) — Claude chuyển vào docs:
+- Chỗ làm khác đề bài và lý do:
+- Câu hỏi cần người vận hành / Claude trả lời:
+
+## 6. Review của Claude
+- Ngày, commit đã review:
+- **Phải sửa:** …
+- **Nên sửa:** …
+- **Cần người vận hành chốt:** …
+- Kết luận: ĐẠT / PHẢI SỬA / CHỜ DUYỆT
+```
+
+## Prompt người vận hành dán cho Codex
+
+```text
+Đọc AGENTS.md (nhất là mục 1.1) và docs/tasks/<file>.md. Làm đúng đề bài trên nhánh ghi trong đề bài.
+Mỗi bước commit wip. Xong thì điền mục 5, commit, và trả lời tôi vài dòng theo mục 5. Trả lời bằng tiếng Việt.
+```
+
+Prompt sửa sau review:
+
+```text
+Đọc mục 6 (Review của Claude) trong docs/tasks/<file>.md. Sửa mọi mục "Phải sửa" trên cùng nhánh,
+cập nhật mục 5, commit, và trả lời tôi vài dòng theo mục 5 mới. Trả lời bằng tiếng Việt.
+```
+
+## Chọn người code và đổi giữa chừng
+
+Mỗi lúc **một** bên code. Trước khi dán prompt, người vận hành xem token còn lại và chọn theo **Cỡ** (Nhỏ: 1–3 file, sửa hẹp · Vừa: 4–10 file · Lớn: > 10 file, nhiều màn hình, hoặc có migration). Bảng là mốc ban đầu; Claude chỉnh theo [docs/96](../96-token-log.md).
+
+| Codex còn | Nhỏ | Vừa | Lớn |
+|---|---|---|---|
+| > 50 % | Codex | Codex | Codex |
+| 20 – 50 % | Codex | Codex | Claude — cửa sổ code |
+| < 20 % | Codex | Claude — cửa sổ code | Claude — cửa sổ code |
+
+**Prompt cố định cho cửa sổ Claude code** (VS Code → Terminal → New Terminal → `claude` → dán):
+
+```text
+Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề bài đang "GIAO CODE" trong docs/tasks/; commit phần dở còn trong thư mục (nếu có) thành wip, rồi làm tiếp từ bước chưa xong theo mục 5; mỗi bước test + commit; xong báo theo mẫu mục 5. Trả lời và ghi báo cáo bằng tiếng Việt.
+```
+
+**Tạo nhánh đề bài:** `git fetch; git switch -c <nhánh> origin/main`.
+
+## Giảm token
+
+**Claude khi viết đề bài:** trích đủ vào đề bài (giá trị, quy tắc, tên test và kết quả bắt buộc) để người code khỏi đọc tài liệu chung; không bắt người code chụp đủ mọi màn hình.
+
+**Người code:** chỉ đọc `AGENTS.md`, đề bài và đúng các mục được dẫn. Mỗi bước chạy test liên quan (`npx vitest run src/…test.ts`); `verify:admin` một lần cuối. Có sửa giao diện: chỉ chụp màn hình mình sửa (`npm run shots -- --views=… --screens=laptop`). Báo cáo ghi mục 5; chat chỉ: đã xong, commit cuối, kết quả test, chỗ làm khác, câu hỏi.
+
+**Theo dõi token, không thêm lượt nhắn:** người vận hành ghi `token: N%` khi giao và `token sau: N%` khi báo xong; Claude ghi vào [docs/96](../96-token-log.md).
+
+## Danh sách đề bài
+
+| Đề bài | Tên | Trạng thái |
+|---|---|---|
+| [GD2-01](GD2-01-dich-tai-lieu.md) | Dịch tài liệu sang tiếng Việt | `NHÁP` |
