@@ -1,6 +1,6 @@
 # GD3-08 — Nút "lên đầu / xuống cuối" trong danh sách Projects / Tools (nhóm N8)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/08-nut-len-dau-xuong-cuoi` (`git fetch; git switch -c gd3/08-nut-len-dau-xuong-cuoi origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** ĐẠT (Claude tự gộp, 2026-11-15) · **Nhánh:** `gd3/08-nut-len-dau-xuong-cuoi` (`git fetch; git switch -c gd3/08-nut-len-dau-xuong-cuoi origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** tự gộp được nếu review sạch — chỉ Admin, không migration, không đổi trang công khai hay PDF.
 
 ## 1. Mục tiêu
@@ -62,8 +62,15 @@ Người vận hành chọn (2026-11-15): lưới 2×2, **chưa** làm đổi ch
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `2bc0b2a` (worktree `D:wtpf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 39 file / 229 test đạt; Admin JS 92,8 / 115,0, CSS 26,6 / 27,0 kB gzip (giảm nhẹ). Đọc diff: không còn `data-reorder-menu`, popover hay trình xử lý của menu; `reorderMasterItem` giữ nguyên; trình xử lý `[data-reorder-edge]` gắn trực tiếp; tiêu điểm dự phòng sang nút còn bật gần nhất (đúng ý đề bài).
+  - **Đo trên Admin thật** (Projects 19 mục, Tools 3 mục; 1024, 1440, 1920 px): mọi thẻ cùng chiều cao **72 px** (không hàng so le), cụm **67 × 46 px** (cũ 91 × 22: hẹp hơn 24 px nên tên không bị cắt thêm); mục đầu `1100` (⇈ ↑ tắt), mục cuối `0011` (⇊ ↓ tắt); không còn menu.
+  - Ảnh thẻ ở 1024 px: lưới 2×2 đọc rõ, tên vẫn cắt có `title` như trước.
+  - Chưa đo được bằng bấm thật: bấm ⇈ / ⇊ ghi thứ tự lên Supabase thật; phép thử chặn ghi bị treo trang nên bỏ. Logic bấm là diff nhỏ, hàm đổi chỗ giữ nguyên.
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận:** (1) thẻ cao **72 px** thay vì 69 như đề bài ước tính: +3 px, đồng đều mọi thẻ, hệ quả của cụm hai hàng (46 px); đề bài ước tính sai chứ không phải lỗi code. (2) Cảm ứng (`pointer: coarse`): nút 36 px nên cụm 106 × 74 và thẻ cao 100 px; Admin ít dùng trên cảm ứng, không đo mốc cũ, xét nếu dùng thật bị vướng. (3) Tách `reorderControls.ts` ngoài đề bài: hợp lý, để test được bằng hàm thuần.
+- **Cần người vận hành chốt:** không.
+- Token: Claude — cửa sổ code 52 % → 53 % đã dùng (~1 %, Nhỏ).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 (chỉ Admin, không migration, không đổi trang công khai hay PDF): Claude gộp và push.
