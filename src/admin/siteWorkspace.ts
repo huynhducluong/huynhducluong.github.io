@@ -1393,7 +1393,9 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       }
       // Wait one frame so the newly shown panel has layout, then scroll only the editor column.
       requestAnimationFrame(() => {
-        revealAdminElement(card, { align: "start" });
+        // The tab bar is sticky: keep the card heading below it, not underneath (§6.4).
+        const tabBar = root.querySelector<HTMLElement>(".admin-document-tabs");
+        revealAdminElement(card, { align: "start", inset: (tabBar?.getBoundingClientRect().height ?? 0) + 8 });
         card.querySelector<HTMLElement>("input:not([type='hidden']), select, textarea")?.focus({ preventScroll: true });
       });
     },
