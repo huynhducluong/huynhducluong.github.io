@@ -500,7 +500,8 @@ describe("Portfolio structured content (phase 3)", () => {
     data.content.layouts.projectDefault = "project.balanced";
     data.projects[0].keyFacts = [fact("a", "18 km", "Bridge length"), fact("b", "37", "Bridges")];
     const page = pageOf(renderPortfolio(data), "project.balanced");
-    expect(page).toContain("<div><strong>18 km</strong><span>Bridge length</span></div><div><strong>37</strong><span>Bridges</span></div>");
+    // "18 km" is a number with a unit (GD3-11), so it prints as two parts; "37" stays a plain value.
+    expect(page).toContain('<div><strong class="portfolio-fact__value"><b class="portfolio-fact__num">18</b> <b class="portfolio-fact__unit">km</b></strong><span>Bridge length</span></div><div><strong>37</strong><span>Bridges</span></div>');
     expect(page).not.toContain("<span>Tools</span>");
     data.projects[0].keyFacts = [];
     expect(pageOf(renderPortfolio(data), "project.balanced")).toContain("<span>Tools</span>");
