@@ -21,6 +21,8 @@ export const adminRotateLeftIcon = '<svg viewBox="0 0 16 16" focusable="false" a
 export const adminRotateRightIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M12.5 6.5A5 5 0 1 0 11.4 11.4"/><path d="M12.5 2.8v3.7H8.8"/></svg>';
 export const adminZoomInIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M8 3.5v9M3.5 8h9"/></svg>';
 export const adminArrowUpIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M8 12.5v-9M4.5 7 8 3.5 11.5 7"/></svg>';
+export const adminArrowTopIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M4 3h8M8 13V6M4.5 9.5 8 6l3.5 3.5"/></svg>';
+export const adminArrowBottomIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M4 13h8M8 3v7M4.5 6.5 8 10l3.5-3.5"/></svg>';
 export const adminArrowDownIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="M8 3.5v9M4.5 9 8 12.5 11.5 9"/></svg>';
 export const adminChevronRightIcon = '<svg viewBox="0 0 16 16" focusable="false" aria-hidden="true"><path d="m6 4 4 4-4 4"/></svg>';
 

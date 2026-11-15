@@ -1,4 +1,5 @@
 import "@fontsource-variable/inter/wght.css";
+import { renderReorderControls } from "./reorderControls";
 import "../styles/reset.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
@@ -13,8 +14,6 @@ import "../styles/cover-letter-screen.css";
 import { supabaseConfig } from "../config/supabase";
 import { getAdminAccess, magicLinkRedirectUrl, safeReturnTo } from "./auth";
 import {
-  adminArrowDownIcon,
-  adminArrowUpIcon,
   bindAdminFilePickers,
   bindAdminTablists,
   installAdminMoreMenus,
@@ -160,7 +159,7 @@ type ContentFilter = "all" | "project" | "tool";
 type EditorTab = "overview" | "content" | "media";
 type CollectionView = "projects" | "tools" | "trash";
 type ReorderMovement = "up" | "down" | "first" | "last" | { targetId: string };
-type CollectionFocusTarget = "select" | "up" | "down" | "more";
+type CollectionFocusTarget = "select" | "up" | "down" | "first" | "last";
 
 interface CollectionRevealIntent {
   view: CollectionView;
@@ -361,9 +360,13 @@ const restoreCollectionScroll = (renderId: number): void => {
         select: "[data-select-item]",
         up: '[data-reorder-direction="up"]',
         down: '[data-reorder-direction="down"]',
-        more: "[data-reorder-menu-trigger]",
+        first: '[data-reorder-edge="first"]',
+        last: '[data-reorder-edge="last"]',
       };
-      row.querySelector<HTMLElement>(focusSelector[intent.focus])?.focus({ preventScroll: true });
+      // A button that became disabled cannot take focus: fall back to the nearest enabled one so the keyboard stays in the item.
+      const fallback: Record<CollectionFocusTarget, CollectionFocusTarget[]> = { select: [], up: ["down", "last"], down: ["up", "first"], first: ["last", "down"], last: ["first", "up"] };
+      const target = [intent.focus, ...fallback[intent.focus]].map((key) => row.querySelector<HTMLButtonElement>(focusSelector[key])).find((button) => button && !button.disabled);
+      (target ?? row.querySelector<HTMLElement>(focusSelector.select))?.focus({ preventScroll: true });
       collectionScrollPositions[view] = scroller.scrollTop;
     }
     pendingCollectionReveal = null;
@@ -720,7 +723,7 @@ const contentList = (): string => {
     const position = itemOrderPosition(item);
     return `
     <li class="admin-content-item${activeView === "trash" ? " admin-content-item--trash" : ""} ${isSelectedItem(item) ? "is-selected" : ""}" data-content-item="${escapeHtml(item.id)}">
-      ${activeView !== "trash" && !item.deletedAt ? `<div class="admin-content-item__reorder" aria-label="Reorder ${escapeHtml(item.name)}"><span class="admin-content-item__drag" draggable="true" data-reorder-drag data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" title="Drag to reorder" aria-label="Drag to reorder">⋮⋮</span><button type="button" data-reorder-direction="up" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} earlier" title="Move earlier"${position.first ? " disabled" : ""}>${adminArrowUpIcon}</button><button type="button" data-reorder-direction="down" data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.name)} later" title="Move later"${position.last ? " disabled" : ""}>${adminArrowDownIcon}</button><button type="button" data-reorder-menu-trigger data-reorder-type="${item.type}" data-reorder-item="${escapeHtml(item.id)}" aria-label="More reorder actions for ${escapeHtml(item.name)}" aria-haspopup="menu" aria-expanded="false" title="More reorder actions"${position.only ? " disabled" : ""}>⋯</button></div>` : ""}
+      ${activeView !== "trash" && !item.deletedAt ? renderReorderControls(item, position) : ""}
       <button class="admin-content-item__select" type="button" data-select-item="${escapeHtml(item.id)}" data-item-type="${item.type}" aria-pressed="${isSelectedItem(item)}">
         ${activeView === "trash" ? `<span class="admin-content-item__type">${item.type}</span>` : ""}
         <strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong>
@@ -1076,11 +1079,7 @@ const dashboardView = (): void => {
         <div class="admin-actions"><button class="button" type="submit" data-password-update-submit>Save password</button><button class="button button--secondary" type="button" data-password-close>Cancel</button></div>
       </form>
     </dialog>
-    ${(activeView === "projects" || activeView === "tools") && projectCoverCropperModule ? projectCoverCropperModule.renderPortfolioMediaCropDialog() : ""}
-    <div class="admin-reorder-menu" data-reorder-menu popover="auto" role="menu" aria-label="Reorder item">
-      <button type="button" role="menuitem" data-reorder-edge="first"><span aria-hidden="true">⇈</span>Move to first</button>
-      <button type="button" role="menuitem" data-reorder-edge="last"><span aria-hidden="true">⇊</span>Move to last</button>
-    </div>`;
+    ${(activeView === "projects" || activeView === "tools") && projectCoverCropperModule ? projectCoverCropperModule.renderPortfolioMediaCropDialog() : ""}`;
   bindAdminAvatarImage(app.querySelector<HTMLElement>("[data-admin-brand-avatar]"));
   fitAdminIdentityLabel();
   bindDashboard();
@@ -1496,7 +1495,7 @@ const reorderMasterItem = async (type: AdminItemType, id: string, movement: Reor
       view: type === "project" ? "projects" : "tools",
       itemId: id,
       align: movement === "first" || movement === "last" ? "center" : "nearest",
-      focus: movement === "up" || movement === "down" ? movement : movement === "first" || movement === "last" ? "more" : "select",
+      focus: movement === "up" || movement === "down" || movement === "first" || movement === "last" ? movement : "select",
     };
     dashboardView();
     if (!adminSchemaHealth.healthy) message(adminSchemaHealth.message, "error");
@@ -1825,36 +1824,11 @@ const bindContentItemActions = (root: ParentNode = app): void => {
     const direction = button.dataset.reorderDirection;
     if (id && (direction === "up" || direction === "down")) void reorderMasterItem(type, id, direction).catch((error: Error) => message(error.message, "error"));
   }));
-  root.querySelectorAll<HTMLButtonElement>("[data-reorder-menu-trigger]").forEach((button) => button.addEventListener("click", () => {
-    const menu = app.querySelector<HTMLElement>("[data-reorder-menu]");
-    const type = button.dataset.reorderType as AdminItemType | undefined;
+  root.querySelectorAll<HTMLButtonElement>("[data-reorder-edge]").forEach((button) => button.addEventListener("click", () => {
+    const type = button.dataset.reorderType as AdminItemType;
     const id = button.dataset.reorderItem;
-    if (!menu || !type || !id) return;
-    if (menu.matches(":popover-open")) menu.hidePopover();
-    app.querySelectorAll<HTMLElement>("[data-reorder-menu-trigger]").forEach((trigger) => trigger.setAttribute("aria-expanded", "false"));
-    const ordered = masterOrder(type);
-    const index = ordered.findIndex((item) => item.id === id);
-    menu.dataset.reorderType = type;
-    menu.dataset.reorderItem = id;
-    const first = menu.querySelector<HTMLButtonElement>('[data-reorder-edge="first"]');
-    const last = menu.querySelector<HTMLButtonElement>('[data-reorder-edge="last"]');
-    if (first) first.disabled = index <= 0;
-    if (last) last.disabled = index < 0 || index === ordered.length - 1;
-    button.setAttribute("aria-expanded", "true");
-    menu.showPopover();
-    requestAnimationFrame(() => {
-      if (!menu.matches(":popover-open")) return;
-      const triggerBounds = button.getBoundingClientRect();
-      const menuBounds = menu.getBoundingClientRect();
-      const gap = 6;
-      const left = Math.min(window.innerWidth - menuBounds.width - 8, Math.max(8, triggerBounds.right - menuBounds.width));
-      const below = triggerBounds.bottom + gap;
-      const top = below + menuBounds.height <= window.innerHeight - 8
-        ? below
-        : Math.max(8, triggerBounds.top - menuBounds.height - gap);
-      menu.style.left = `${left}px`;
-      menu.style.top = `${top}px`;
-    });
+    const edge = button.dataset.reorderEdge;
+    if (id && (edge === "first" || edge === "last")) void reorderMasterItem(type, id, edge).catch((error: Error) => message(error.message, "error"));
   }));
   let dragged: { type: AdminItemType; id: string } | null = null;
   root.querySelectorAll<HTMLElement>("[data-reorder-drag]").forEach((handle) => {
@@ -1892,20 +1866,6 @@ const bindContentItemActions = (root: ParentNode = app): void => {
 const bindDashboard = (): void => {
   bindAdminHeaderDensityToggle(app);
   const passwordDialog = app.querySelector<HTMLDialogElement>("[data-password-dialog]");
-  const reorderMenu = app.querySelector<HTMLElement>("[data-reorder-menu]");
-  reorderMenu?.addEventListener("toggle", () => {
-    if (!reorderMenu.matches(":popover-open")) {
-      app.querySelectorAll<HTMLElement>("[data-reorder-menu-trigger]").forEach((trigger) => trigger.setAttribute("aria-expanded", "false"));
-    }
-  });
-  reorderMenu?.querySelectorAll<HTMLButtonElement>("[data-reorder-edge]").forEach((button) => button.addEventListener("click", () => {
-    const type = reorderMenu.dataset.reorderType as AdminItemType | undefined;
-    const id = reorderMenu.dataset.reorderItem;
-    const edge = button.dataset.reorderEdge as "first" | "last" | undefined;
-    if (!type || !id || !edge) return;
-    reorderMenu.hidePopover();
-    void reorderMasterItem(type, id, edge).catch((error: Error) => message(error.message, "error"));
-  }));
   const coverCropper = projectCoverCropperModule?.bindPortfolioMediaCropper(app, {
     notify: message,
     onSaved: async (target) => {
