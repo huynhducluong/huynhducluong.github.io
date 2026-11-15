@@ -165,6 +165,7 @@ Card Profile (Experience, Education, Language, Credential, ảnh) và các hàng
 - **Mục archived trông muted bằng màu và viền nét đứt,** không bao giờ bằng `opacity`.
 - **Hàng bằng chứng Credential** theo hàng media (§6.5) ở mật độ card: thumbnail là crop Landscape công khai nếu có (không thì crop còn lại), nếu không là badge `IMG` / `PDF`; dòng meta là "Type · size", cộng "In Portfolio" cho file được hiển thị hoặc "Not printed in Portfolio" cho PDF. Hành động: Open → "Adjust crops" (chỉ ảnh, quy tắc 13 §7.1) → More với "Hide from Portfolio" (chỉ khi đang hiển thị) và "Delete file" (`danger`). PDF không bao giờ có hành động crop.
 - **Menu More dùng chung một hành vi** (`installAdminMoreMenus`, cài một lần trong `main.ts`): mỗi lúc chỉ mở một menu, menu đóng khi click bên ngoài, nhấn Escape và sau khi chọn hành động, rồi focus trở lại trigger ⋯ để dialog xác nhận khôi phục focus vào thứ nhìn thấy được. Phần tử tổ tiên của card có menu More không được dùng `overflow: hidden`, nếu không menu bị cắt (card ảnh bo chính ảnh thay thế).
+- **Sắp xếp mục trong danh sách Projects / Tools** (W-11, GD3-08): cụm điều khiển ở đầu thẻ là tay kéo + **lưới 2×2** `⇈ ↑ / ⇊ ↓` (lên đầu, lên một, xuống cuối, xuống một), mỗi nút một lần bấm, **không menu ⋯**. Mỗi nút có `aria-label` nêu tên mục; nút không áp dụng được (đã ở đầu / cuối, chỉ một mục) `disabled`; kéo thả giữ nguyên. Cụm này không rộng hơn cụm ↑ ↓ ⋯ cũ (khoảng 48 px so với 66 px) để tên dài không bị cắt thêm; kiểm ở ba màn hình mục tiêu và `shots --stress`.
 
 ### 6.5 Hàng media và upload file
 

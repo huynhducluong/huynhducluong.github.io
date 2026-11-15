@@ -53,7 +53,7 @@
 | **N4 Lối tắt sửa từ preview** | Nút "sửa ở đâu" trên preview Portfolio | W-06 | Lớn | Người vận hành duyệt |
 | **N5 Hộp thoại + quét chữ dài** → [GD3-05](tasks/GD3-05-hop-thoai-quet-chu-dai.md) | Bấm ra ngoài = Close cho mọi hộp thoại, Add credential hỏi khi gõ dở; sửa 3 chỗ NO TOOLTIP (UI-15) và mẫu cùng loại ở `profileDocumentWorkspace.ts:901`; quét `--stress` thêm ở 1180 px; nhãn bộ phát hiện thêm lớp của cha | W-07, UI-15 | Vừa | **ĐẠT**, đã tự gộp `25d9fa8` |
 | **N6 Link video trong PDF** → [GD3-07](tasks/GD3-07-link-video-portfolio.md) | Kiểu A "▶ Video" (ADR-029), 12 layout, vị trí theo demo; công cụ đo `tools/portfolio-video-link-check.mjs` | W-08 | Vừa | **Xong** (GD3-07, người vận hành duyệt 2026-11-15) |
-| **N8 Nút lên đầu / xuống cuối** → GD3-08 | Lưới 2×2 ⇈ ↑ / ⇊ ↓ thay menu ⋯ ở Projects / Tools | W-11 | Nhỏ | Tự gộp được (chỉ Admin) |
+| **N8 Nút lên đầu / xuống cuối** → [GD3-08](tasks/GD3-08-nut-len-dau-xuong-cuoi.md) | Lưới 2×2 ⇈ ↑ / ⇊ ↓ thay menu ⋯ ở Projects / Tools | W-11 | Nhỏ | Tự gộp được (chỉ Admin) |
 | **N7 Preview cập nhật ngay** → [GD3-06](tasks/GD3-06-preview-cap-nhat-ngay.md) | Preview không chờ ảnh tải lười và không xếp hàng cập nhật mới (sửa trễ khi bấm EN / VI liên tục và khi gõ); giữ nút EN / VI như cũ | W-09 | Nhỏ | **ĐẠT**, đã tự gộp `bcd1825` |
 | ~~N8 Print / PDF in đúng dữ liệu đang xem~~ | **Đã rút lại** cùng W-10: không phải lỗi | W-10 | — | — |
 
