@@ -16,6 +16,14 @@ import { listProfessionalCredentials } from "../services/credentialRepository";
 import { assetUrl, degreeClassificationValue, escapeHtml, normalizeProfileName, profileName, type Language } from "../shared/format";
 import { bindPreviewSender, type PreviewSender } from "../shared/previewProtocol";
 import { validateWebsitePublish } from "./contentValidation";
+import {
+  bindProfileEntryCards,
+  renderProfileEntryFieldsAttributes,
+  renderProfileEntrySummary,
+  renderProfileEntryToggle,
+  setProfileEntryExpanded,
+} from "./profileEntryCard";
+import { educationSummary, experienceSummary } from "./profileEntrySummary";
 import { documentThemes } from "../themes/documentThemes";
 import type { DocumentReleaseSummary } from "../types/portfolio";
 import type { ProfilePhotoAsset } from "../types/profilePhoto";
@@ -94,6 +102,8 @@ const state: {
   previewPage: WebsitePreviewPage;
   previewZoom: PreviewZoomState;
   stale: boolean;
+  /** Open Experience / Education cards (ids); lives here so it survives the panel re-render (§6.4). */
+  expandedProfileEntries: Set<string>;
 } = {
   runtime: null,
   releases: [],
@@ -108,6 +118,7 @@ const state: {
   previewLanguage: "en",
   previewPage: "homepage",
   previewZoom: createPreviewZoomState(),
+  expandedProfileEntries: new Set<string>(),
   stale: false,
 };
 
@@ -509,18 +520,19 @@ const experienceLocationCombobox = (item: Experience): string => {
   </div>`;
 };
 
-const experienceCard = (item: Experience, index: number, total: number): string => `
-  <article class="admin-experience-card admin-profile-entry-card" data-profile-experience="${escapeHtml(item.id)}">
+const experienceCard = (item: Experience, index: number, total: number, expanded: boolean): string => `
+  <article class="admin-experience-card admin-profile-entry-card${expanded ? "" : " is-collapsed"}" data-profile-experience="${escapeHtml(item.id)}">
     <input type="hidden" name="profile_experience_order" value="${escapeHtml(item.id)}">
     <header class="admin-experience-card__heading admin-profile-entry-card__heading">
-      <div><small>Experience ${index + 1}</small><h4 title="${escapeHtml(item.company || "New company")}">${escapeHtml(item.company || "New company")}</h4></div>
+      <div><small>Experience ${index + 1}</small><h4 title="${escapeHtml(item.company || "New company")}">${escapeHtml(item.company || "New company")}</h4>${renderProfileEntrySummary(experienceSummary(item), expanded)}</div>
       <div class="admin-experience-card__actions admin-profile-entry-card__actions">
         <button class="button button--secondary admin-icon-button" type="button" data-profile-experience-move="up" data-experience-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.company || "new company")} up" title="Move up"${index === 0 ? " disabled" : ""}>${adminArrowUpIcon}</button>
         <button class="button button--secondary admin-icon-button" type="button" data-profile-experience-move="down" data-experience-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.company || "new company")} down" title="Move down"${index === total - 1 ? " disabled" : ""}>${adminArrowDownIcon}</button>
+        ${renderProfileEntryToggle(item.id, item.company || "new company", expanded)}
         ${renderAdminMoreMenu({ label: `More actions for ${item.company || "new company"}`, items: [{ label: "Delete experience", attributes: `data-profile-experience-delete data-experience-id="${escapeHtml(item.id)}"`, tone: "danger" }] })}
       </div>
     </header>
-    <div class="admin-experience-card__fields admin-profile-entry-card__fields">
+    <div class="admin-experience-card__fields admin-profile-entry-card__fields" ${renderProfileEntryFieldsAttributes(item.id, expanded)}>
       <div class="admin-form-grid">
         ${field("Company", experienceFieldName(item.id, "company"), item.company, "text", `data-experience-company="${escapeHtml(item.id)}"`, true)}
         ${experienceLocationCombobox(item)}
@@ -542,12 +554,12 @@ const experienceCard = (item: Experience, index: number, total: number): string 
     </div>
   </article>`;
 
-const profileExperience = (professional: ProfessionalProfileContent): string => renderAdminSectionCard({
+const profileExperience = (professional: ProfessionalProfileContent, expandedIds: ReadonlySet<string>): string => renderAdminSectionCard({
   title: "Profile experience",
   note: "Shared career history used by the Website and CV.",
   headerActions: '<button class="button admin-action-new" type="button" data-profile-experience-new>+ Add company</button>',
   content: professional.experiences.length
-    ? `<div class="admin-document-cards admin-experience-list">${professional.experiences.map((item, index) => experienceCard(item, index, professional.experiences.length)).join("")}</div>`
+    ? `<div class="admin-document-cards admin-experience-list">${professional.experiences.map((item, index) => experienceCard(item, index, professional.experiences.length, expandedIds.has(item.id))).join("")}</div>`
     : '<div class="admin-empty-state"><div><strong>No experience entries</strong><small>Add a company to begin building the shared Website and CV history.</small></div></div>',
 });
 
@@ -561,18 +573,22 @@ const blankEducation = (): Education => ({
   endDate: "",
 });
 
-const educationCard = (item: Education, index: number, total: number, credentials: ProfessionalCredential[]): string => `
-  <article class="admin-education-card admin-profile-entry-card" data-profile-education="${escapeHtml(item.id)}">
+const linkedCredentialCount = (credentials: ProfessionalCredential[], relatedType: "education" | "language", relatedId: string): number =>
+  credentials.filter((credential) => credential.relatedType === relatedType && credential.relatedId === relatedId && credential.status !== "archived").length;
+
+const educationCard = (item: Education, index: number, total: number, credentials: ProfessionalCredential[], expanded: boolean): string => `
+  <article class="admin-education-card admin-profile-entry-card${expanded ? "" : " is-collapsed"}" data-profile-education="${escapeHtml(item.id)}">
     <input type="hidden" name="profile_education_order" value="${escapeHtml(item.id)}">
     <header class="admin-profile-entry-card__heading">
-      <div><small>Education ${index + 1}</small><h4 title="${escapeHtml(item.institution.en || "New education")}">${escapeHtml(item.institution.en || "New education")}</h4></div>
+      <div><small>Education ${index + 1}</small><h4 title="${escapeHtml(item.institution.en || "New education")}">${escapeHtml(item.institution.en || "New education")}</h4>${renderProfileEntrySummary(educationSummary(item, linkedCredentialCount(credentials, "education", item.id)), expanded)}</div>
       <div class="admin-profile-entry-card__actions">
         <button class="button button--secondary admin-icon-button" type="button" data-profile-education-move="up" data-education-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.institution.en || "new education")} up" title="Move up"${index === 0 ? " disabled" : ""}>${adminArrowUpIcon}</button>
         <button class="button button--secondary admin-icon-button" type="button" data-profile-education-move="down" data-education-id="${escapeHtml(item.id)}" aria-label="Move ${escapeHtml(item.institution.en || "new education")} down" title="Move down"${index === total - 1 ? " disabled" : ""}>${adminArrowDownIcon}</button>
+        ${renderProfileEntryToggle(item.id, item.institution.en || "new education", expanded)}
         ${renderAdminMoreMenu({ label: `More actions for ${item.institution.en || "new education"}`, items: [{ label: "Delete education", attributes: `data-profile-education-delete data-education-id="${escapeHtml(item.id)}"`, tone: "danger" }] })}
       </div>
     </header>
-    <div class="admin-profile-entry-card__fields">
+    <div class="admin-profile-entry-card__fields" ${renderProfileEntryFieldsAttributes(item.id, expanded)}>
       <div class="admin-site-bilingual">
         ${field("Institution (EN)", educationFieldName(item.id, "institution_en"), item.institution.en, "text", `data-education-institution="${escapeHtml(item.id)}"`, true)}
         ${field("Institution (VI)", educationFieldName(item.id, "institution_vi"), item.institution.vi)}
@@ -593,12 +609,12 @@ const educationCard = (item: Education, index: number, total: number, credential
     </div>
   </article>`;
 
-const profileEducation = (professional: ProfessionalProfileContent, credentials: ProfessionalCredential[]): string => renderAdminSectionCard({
+const profileEducation = (professional: ProfessionalProfileContent, credentials: ProfessionalCredential[], expandedIds: ReadonlySet<string>): string => renderAdminSectionCard({
   title: "Profile education",
   note: "Shared education history used by the Website and CV.",
   headerActions: '<button class="button admin-action-new" type="button" data-profile-education-new>+ Add education</button>',
   content: professional.education.length
-    ? `<div class="admin-document-cards admin-education-list">${professional.education.map((item, index) => educationCard(item, index, professional.education.length, credentials)).join("")}</div>`
+    ? `<div class="admin-document-cards admin-education-list">${professional.education.map((item, index) => educationCard(item, index, professional.education.length, credentials, expandedIds.has(item.id))).join("")}</div>`
     : '<div class="admin-empty-state"><div><strong>No education entries</strong><small>Add an education entry to reuse it across the Website and CVs.</small></div></div>',
 });
 
@@ -859,7 +875,7 @@ const profileView = (): string => {
       saveActions: '<button class="button admin-action-save" type="submit" form="profile-editor-form">Save changes</button>',
     })}
     <div class="admin-profile-layout">
-      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["photos","Photos"],["experience","Experience"],["education","Education"],["credentials","Credentials"],["skills","Skills"],["languages","Languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional, state.photos)}</section><section data-profile-panel="photos"${tab === "photos" ? "" : " hidden"}>${profilePhotos(state.photos)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional, state.credentials)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section><section data-profile-panel="languages"${tab === "languages" ? "" : " hidden"}>${profileLanguages(professional, state.credentials)}</section></form><section data-profile-panel="credentials"${tab === "credentials" ? "" : " hidden"}>${state.credentialError ? renderAdminSectionCard({ title: "Credentials unavailable", note: "Apply migration 202610060002, then reload Admin.", content: `<p class="admin-empty">${escapeHtml(state.credentialError)}</p>` }) : renderProfessionalCredentials(professional, state.credentials)}</section></section>
+      <section class="admin-document-editor"><nav class="admin-document-tabs" role="tablist" aria-label="Professional Profile sections">${([["identity","Identity"],["photos","Photos"],["experience","Experience"],["education","Education"],["credentials","Credentials"],["skills","Skills"],["languages","Languages"]] as Array<[ProfileTab,string]>).map(([id,label]) => `<button type="button" role="tab" data-profile-tab="${id}" aria-selected="${tab === id}" class="${tab === id ? "is-active" : ""}">${label}</button>`).join("")}</nav><form id="profile-editor-form" data-profile-form><section data-profile-panel="identity"${tab === "identity" ? "" : " hidden"}>${profileIdentity(professional, state.photos)}</section><section data-profile-panel="photos"${tab === "photos" ? "" : " hidden"}>${profilePhotos(state.photos)}</section><section data-profile-panel="experience"${tab === "experience" ? "" : " hidden"}>${profileExperience(professional, state.expandedProfileEntries)}</section><section data-profile-panel="education"${tab === "education" ? "" : " hidden"}>${profileEducation(professional, state.credentials, state.expandedProfileEntries)}</section><section data-profile-panel="skills"${tab === "skills" ? "" : " hidden"}>${profileSkills(professional)}</section><section data-profile-panel="languages"${tab === "languages" ? "" : " hidden"}>${profileLanguages(professional, state.credentials)}</section></form><section data-profile-panel="credentials"${tab === "credentials" ? "" : " hidden"}>${state.credentialError ? renderAdminSectionCard({ title: "Credentials unavailable", note: "Apply migration 202610060002, then reload Admin.", content: `<p class="admin-empty">${escapeHtml(state.credentialError)}</p>` }) : renderProfessionalCredentials(professional, state.credentials)}</section></section>
       <aside class="admin-profile-usage"><p class="section-kicker">Used by</p><h2>One profile, four outputs</h2><div><article><strong>Website</strong><span>Applied when the next Website release is published.</span></article><article><strong>Curriculum Vitae</strong><span>Use “Sync from Professional Profile” in the CV draft before publishing.</span></article><article><strong>Portfolio</strong><span>Sync from the Professional Profile or from the active CV draft.</span></article><article><strong>Cover Letters</strong><span>Drafts use the saved profile; finalized letters retain their sender snapshot.</span></article></div><p>Published releases and finalized letters remain unchanged.</p></aside>
     </div>
     ${renderProfilePhotoCropDialog()}
@@ -1144,7 +1160,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const renderExperiencePanel = (focusExperienceId?: string): void => {
     const panel = root.querySelector<HTMLElement>('[data-profile-panel="experience"]');
     if (!panel || !state.runtime) return;
-    panel.innerHTML = profileExperience(state.runtime.professional);
+    panel.innerHTML = profileExperience(state.runtime.professional, state.expandedProfileEntries);
     bindExperienceActions();
     if (focusExperienceId) {
       requestAnimationFrame(() => panel.querySelector<HTMLInputElement>(`[data-experience-company="${CSS.escape(focusExperienceId)}"]`)?.focus());
@@ -1153,6 +1169,15 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const bindExperienceActions = (): void => {
     if (!profileForm || !state.runtime) return;
     bindExperienceLocationComboboxes();
+    bindProfileEntryCards(root, {
+      cardSelector: "[data-profile-experience]",
+      idOf: (card) => card.dataset.profileExperience ?? "",
+      expanded: state.expandedProfileEntries,
+      summaryOf: (_card, id) => {
+        const item = readProfileForm(profileForm).experiences.find((entry) => entry.id === id);
+        return item ? experienceSummary(item) : "";
+      },
+    });
     root.querySelector<HTMLButtonElement>("[data-profile-experience-new]")?.addEventListener("click", () => {
       const professional = commitProfileDraft();
       if (!professional || !state.runtime) return;
@@ -1161,6 +1186,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
         ...state.runtime,
         professional: { ...professional, experiences: [experience, ...professional.experiences] },
       };
+      state.expandedProfileEntries.add(experience.id);
       markDirty();
       renderExperiencePanel(experience.id);
     });
@@ -1198,6 +1224,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
         ...state.runtime,
         professional: { ...professional, experiences: professional.experiences.filter((item) => item.id !== id) },
       };
+      state.expandedProfileEntries.delete(id);
       markDirty();
       renderExperiencePanel();
     }));
@@ -1205,7 +1232,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const renderEducationPanel = (focusEducationId?: string): void => {
     const panel = root.querySelector<HTMLElement>('[data-profile-panel="education"]');
     if (!panel || !state.runtime) return;
-    panel.innerHTML = profileEducation(state.runtime.professional, state.credentials);
+    panel.innerHTML = profileEducation(state.runtime.professional, state.credentials, state.expandedProfileEntries);
     bindEducationActions();
     if (focusEducationId) {
       requestAnimationFrame(() => panel.querySelector<HTMLInputElement>(`[data-education-institution="${CSS.escape(focusEducationId)}"]`)?.focus());
@@ -1214,6 +1241,15 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   const bindEducationActions = (): void => {
     if (!profileForm || !state.runtime) return;
     bindAdminYearPickers(root);
+    bindProfileEntryCards(root, {
+      cardSelector: "[data-profile-education]",
+      idOf: (card) => card.dataset.profileEducation ?? "",
+      expanded: state.expandedProfileEntries,
+      summaryOf: (_card, id) => {
+        const item = readProfileForm(profileForm).education.find((entry) => entry.id === id);
+        return item ? educationSummary(item, linkedCredentialCount(state.credentials, "education", id)) : "";
+      },
+    });
     root.querySelector<HTMLButtonElement>("[data-profile-education-new]")?.addEventListener("click", () => {
       const professional = commitProfileDraft();
       if (!professional || !state.runtime) return;
@@ -1222,6 +1258,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
         ...state.runtime,
         professional: { ...professional, education: [education, ...professional.education] },
       };
+      state.expandedProfileEntries.add(education.id);
       markDirty();
       renderEducationPanel(education.id);
     });
@@ -1259,6 +1296,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
         ...state.runtime,
         professional: { ...professional, education: professional.education.filter((item) => item.id !== id) },
       };
+      state.expandedProfileEntries.delete(id);
       markDirty();
       renderEducationPanel();
     }));
@@ -1349,6 +1387,10 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
       activateProfileTab(type === "education" ? "education" : "languages");
       const card = root.querySelector<HTMLElement>(type === "education" ? `[data-profile-education="${CSS.escape(id)}"]` : `[data-profile-language="${CSS.escape(id)}"]`);
       if (!card) return;
+      if (type === "education") {
+        state.expandedProfileEntries.add(id);
+        setProfileEntryExpanded(card, true);
+      }
       // Wait one frame so the newly shown panel has layout, then scroll only the editor column.
       requestAnimationFrame(() => {
         revealAdminElement(card, { align: "start" });
