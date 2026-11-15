@@ -1,6 +1,6 @@
 # GD3-03 — Credentials: layout chọn crop, bỏ "Print as" (N3b)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/03-credentials-layout-chon-crop` (`git fetch; git switch -c gd3/03-credentials-layout-chon-crop origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Lớn (~10–12 file: types, repository, renderer, validation, cropper, workspace, test) · **Người đang code:** Claude — cửa sổ code (Codex còn 27 %, cỡ Lớn → bảng chọn người code)
+> **Trạng thái:** ĐẠT (gộp `154b8d8`, 2026-11-15, người vận hành duyệt) · **Nhánh:** `gd3/03-credentials-layout-chon-crop` (`git fetch; git switch -c gd3/03-credentials-layout-chon-crop origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Lớn (~10–12 file: types, repository, renderer, validation, cropper, workspace, test) · **Người đang code:** Claude — cửa sổ code (Codex còn 27 %, cỡ Lớn → bảng chọn người code)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi PDF Portfolio (crop nào được in).
 
 ## 1. Mục tiêu
@@ -62,4 +62,4 @@ Người vận hành không phải chọn "Print as" nữa (Sổ #5). Mỗi layo
 - **Ghi nhận:** (1) ô crop ở giữa hộp hiện **trống (chỉ có caro)** khi chụp bằng Chromium chạy nền; kiểm lại trên `main` (`d87934f`, không có GD3-03) cũng y hệt, nên là hạn chế của môi trường đo chứ không phải hồi quy; ảnh nguồn đã tải đủ (2560 px) và không có lỗi console. Người vận hành nên mở một hộp thật trong trình duyệt của mình một lần sau khi deploy. (2) Mục 8 (lề trắng đều) bỏ qua, đúng quyền chọn của người code; lệch 1,1 mm đã ghi ở GD3-02, không xử lý. (3) Người code chưa chạy công cụ đo và chưa chụp ba màn hình (báo cáo mục 5 nói rõ): đã làm ở review này.
 - **Cần người vận hành chốt:** duyệt gộp (đổi PDF: crop nào được in, ADR-018).
 - Token: Claude — cửa sổ code 53 % → 56 % đã dùng (~3 %, Lớn; không chạy đo trình duyệt).
-- Kết luận: **ĐẠT** — `CHỜ DUYỆT` gộp.
+- Kết luận: **ĐẠT** — người vận hành duyệt gộp 2026-11-15.

@@ -17,4 +17,4 @@
 
 | Ngày | Đề bài / lượt | Cỡ | Đã dùng trước | Đã dùng sau | Tốn | Ghi chú |
 |---|---|---|---|---|---|---|
-| | | | | | | |
+| 2026-11-15 | GD3-03 | Lớn | 53 % | 56 % | **~3 %** | N3b: 13 file, 1 lượt (3 bước gộp một commit wip), không chạy đo trình duyệt (làm ở review); không lượt sửa |
