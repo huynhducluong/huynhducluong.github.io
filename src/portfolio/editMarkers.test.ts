@@ -141,7 +141,7 @@ describe("Edit marker styles and wiring", () => {
     expect(embeddedAt).toBeGreaterThan(0);
     // The only state that can enable markers is declared inside the embedded branch; every other render() call uses the default (off).
     expect(mainSource.indexOf("let editMode")).toBeGreaterThan(embeddedAt);
-    expect(mainSource.match(/render([^;]*editMode.enabled/g)?.length).toBe(1);
+    expect(mainSource.match(/render\([^;]*editMode\.enabled/g)?.length).toBe(1);
     expect(mainSource).not.toMatch(/render\((document|data)[^)]*,\s*true/);
   });
   it("checks origin, source and shape before acting on the edit-mode message", () => {
