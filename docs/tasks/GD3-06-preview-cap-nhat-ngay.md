@@ -56,8 +56,16 @@ Sửa **độ trễ preview** người vận hành báo ở Sổ #11 (W-09): b�
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `76d3fca` (worktree `D:\wt\pf-review`, `npm ci` sạch). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 36 file / 218 test; Admin JS 92,9 / 115, CSS 26,7 / 27,0 kB gzip (không đổi). Diff 3 file (`previewProtocol.ts`, test, đề bài); giao thức thông điệp (`hdl:*-preview`, `ready`, `rendered`, `sequence`) giữ nguyên.
+  - Đọc mã `drain`: bộ ngắt `wake` được gán đồng bộ ngay sau kiểm `if (pending) continue;` nên không có khe hở giữa kiểm và đặt; `wake` đã giải phóng thì gọi lại vô hại; `rendered` chỉ gửi khi không còn bản chờ, đúng `sequence` mới nhất; trần 4 giây giữ làm lưới an toàn. Dòng `if (pending) continue;` thêm ngoài đề bài là đúng và đã khai báo.
+  - **`tools/preview-language-check.mjs`: All PASS** (mốc trước khi sửa: 1 FAIL, Website 3.880 ms); ca "two quick clicks" còn **22 / 9 / 5 ms** (Website / CV / Portfolio).
+  - **Phần người code chưa quan sát, tôi đo trên Admin thật bằng giờ bấm thực ghi trong trang** (Website, trang Projects; 2, 3, 5, 8 cú bấm cách 60 – 150 ms, và 2 cú cách 800 ms): preview đúng ngôn ngữ **19 – 37 ms** sau cú bấm cuối; "Synced" ổn định sau **71 – 88 ms**; "Updating…" hiện đúng lúc; **0** mẫu hiện "Synced" khi preview còn sai ngôn ngữ; trạng thái cuối luôn đúng.
+  - CV và Portfolio: ngôn ngữ cuối luôn đúng ở 2, 5, 8 cú bấm (ổn định trong khoảng 0,2 – 1,4 giây tính từ cú bấm đầu, gồm cả thời gian bấm).
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận:** (1) bỏ qua ảnh tải lười chưa tải nghĩa là bản "đã vẽ" có thể được báo trước khi ảnh phía trên màn hình tải xong; với Website ảnh có khung tỉ lệ sẵn nên bố cục không nhảy, và preview vốn không dùng nó để quyết định gì khác ngoài trạng thái "Synced". (2) Độ trễ khi gõ một lần không đổi (~125 – 200 ms trước và sau), đúng như người code báo: phần trễ chỉ là hàng đợi khi cập nhật dồn dập. (3) Việc Website nhớ VI còn CV / Portfolio về EN giữ nguyên theo ADR-028.
+- **Cần người vận hành chốt:** không.
+- Token: Claude — cửa sổ code 37 % → 38 % đã dùng (~1 %, Nhỏ).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 (chỉ chế độ preview và Admin, không migration, không đổi trang công khai hay PDF): Claude gộp và push.
