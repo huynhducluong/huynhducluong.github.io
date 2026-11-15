@@ -39,6 +39,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 | 11 | Quét chữ dài tràn / thiếu tooltip toàn Admin | `[MỞ]` | `--stress` toàn Admin: **0** dòng *overflows*, **3** dòng *NO TOOLTIP* ([UI-15](docs/92-ui-rules.md#ui-15)) + mẫu cùng loại ở `profileDocumentWorkspace.ts:901`; cải thiện nhãn phát hiện (thêm lớp của cha). Đề bài nhỏ, tự gộp được |
 | 12 | `revealAdminElement` tự bù phần tử `position: sticky` ở đầu vùng cuộn (thay vì mỗi chỗ gọi tự tính `inset`) | `[ĐỀ XUẤT]` | Đổi file dùng chung của mọi chỗ gọi: cần test và đo từng nơi; đề bài nhỏ riêng (trả lời câu hỏi của người code ở review GD3-04) |
 | 13 | ~~Thứ tự nhóm N5 – N7 từ sổ #9 – #11~~ | Xong | ADR-028: N5 → N7 → N6 → N4; N5 = [GD3-05](docs/tasks/GD3-05-hop-thoai-quet-chu-dai.md), N7 = [GD3-06](docs/tasks/GD3-06-preview-cap-nhat-ngay.md), N6 chờ demo |
+| 14 | W-10: Print / PDF đọc bản nháp đã lưu nên có thể có ảnh vỡ mà Admin preview không có (đo: 3 ảnh vỡ so với 0); đề xuất nhóm N8 ngay sau N5; tạm thời bấm Save draft trước khi xuất PDF | `[ĐỀ XUẤT]` | [docs/93](docs/93-workflow-friction.md) W-10; chờ người vận hành chốt thứ tự |
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
 | 5 | ~~Sổ lỗi UI/UX dùng chung~~ | Xong | ADR-023 |
 | 6 | Ảnh minh chứng có số định danh, ngày sinh | `[GIỮ]` | [E-008](docs/91-error-bank.md#e-008): người vận hành tự quản việc công khai (2026-11-15, không cắt lại); lời nhắc trong hộp crop làm ở GD3-03; công cụ che vùng (redact) chỉ xét nếu người vận hành muốn |
