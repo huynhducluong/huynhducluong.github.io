@@ -1,28 +1,28 @@
-# Custom SMTP for Career Hub Admin
+# Custom SMTP cho Career Hub Admin
 
-Career Hub Admin supports Supabase password sign-in with Magic Link as an optional backup. SMTP credentials belong only in the Supabase Dashboard and must never be committed to this repository.
+Career Hub Admin hỗ trợ đăng nhập Supabase bằng password, với Magic Link làm phương án dự phòng tùy chọn. Thông tin xác thực SMTP chỉ được nằm trong Supabase Dashboard và không bao giờ được commit vào repository này.
 
-Custom SMTP is optional when the Admin account uses password sign-in. It is still required for reliable Magic Link delivery and email-based password recovery.
+Custom SMTP là tùy chọn khi tài khoản Admin dùng đăng nhập password. Nó vẫn bắt buộc để gửi Magic Link tin cậy và khôi phục password qua email.
 
-## Gmail SMTP for the single Admin account
+## Gmail SMTP cho tài khoản Admin duy nhất
 
-1. Enable 2-Step Verification for `huynhluong321998@gmail.com`.
-2. In Google Account security settings, create an App Password named `Supabase Portfolio`.
-3. Copy the generated 16-character App Password. Do not use the normal Gmail password.
-4. In Supabase, open **Authentication > Emails > SMTP Settings** and enable Custom SMTP.
-5. Enter:
+1. Bật 2-Step Verification cho `huynhluong321998@gmail.com`.
+2. Trong thiết lập bảo mật Google Account, tạo App Password tên `Supabase Portfolio`.
+3. Sao chép App Password 16 ký tự được tạo. Không dùng password Gmail thông thường.
+4. Trong Supabase, mở **Authentication > Emails > SMTP Settings** và bật Custom SMTP.
+5. Nhập:
    - Sender name: `Huynh Duc Luong Portfolio`
    - Sender email: `huynhluong321998@gmail.com`
    - Host: `smtp.gmail.com`
    - Port: `587`
    - Username: `huynhluong321998@gmail.com`
-   - Password: the Google App Password
-6. Save the settings.
-7. Keep the Site URL and redirect allowlist configured for:
+   - Password: Google App Password
+6. Lưu thiết lập.
+7. Giữ Site URL và redirect allowlist được cấu hình cho:
    - `https://huynhducluong.github.io/`
    - `https://huynhducluong.github.io/admin/`
-8. Request one Magic Link and inspect Supabase Auth Logs if delivery fails.
+8. Yêu cầu một Magic Link và kiểm tra Supabase Auth Logs nếu gửi thất bại.
 
-The frontend enforces a 60-second resend delay. Supabase rate limits should remain enabled. Revoke the Google App Password immediately if it is ever exposed.
+Frontend bắt buộc thời gian chờ gửi lại 60 giây. Nên giữ rate limit Supabase enabled. Thu hồi Google App Password ngay nếu bị lộ.
 
-For a future custom domain or multiple users, replace Gmail SMTP with a transactional provider such as Resend, Postmark, SendGrid, or Brevo and configure SPF, DKIM, and DMARC.
+Khi có custom domain hoặc nhiều người dùng trong tương lai, thay Gmail SMTP bằng provider giao dịch như Resend, Postmark, SendGrid hoặc Brevo và cấu hình SPF, DKIM cùng DMARC.

@@ -1,24 +1,24 @@
-# Supabase setup
+# Thiết lập Supabase
 
-The website uses the public publishable key in `src/config/supabase.ts`. Never add a secret or service-role key to this repository.
+Website dùng public publishable key trong `src/config/supabase.ts`. Không bao giờ thêm secret hoặc service-role key vào repository này.
 
-## One-time setup
+## Thiết lập một lần
 
-1. Open the Supabase project SQL editor and run `supabase/migrations/202609270001_portfolio_cms.sql`.
-2. Run `supabase/migrations/202609280001_cover_letters.sql`.
-3. Run `supabase/migrations/202609290001_unified_admin_cv.sql` to enable the unified Admin, CV content, CV releases, and Cover/Gallery media management.
-4. Apply all later timestamped migrations in order, including `202610150001_portfolio_media_crop_profiles.sql` for shared Project/Tool crop profiles.
-5. In Authentication settings, keep email enabled and add the production GitHub Pages URL plus its `/admin/` URL to the allowed redirect URLs.
-6. Disable public user signup. In Authentication > Users, invite `huynhluong321998@gmail.com`.
-7. After that user exists, run `supabase/bootstrap-admin.sql` in the SQL editor.
-8. Open `/admin/`, request a magic link, and sign in.
+1. Mở SQL editor của project Supabase và chạy `supabase/migrations/202609270001_portfolio_cms.sql`.
+2. Chạy `supabase/migrations/202609280001_cover_letters.sql`.
+3. Chạy `supabase/migrations/202609290001_unified_admin_cv.sql` để bật Admin thống nhất, nội dung CV, Release CV và quản lý media Cover/Gallery.
+4. Áp dụng mọi migration có timestamp sau đó theo thứ tự, gồm `202610150001_portfolio_media_crop_profiles.sql` cho crop profile Project/Tool dùng chung.
+5. Trong thiết lập Authentication, giữ email enabled và thêm URL GitHub Pages production cùng URL `/admin/` vào danh sách redirect URL được phép.
+6. Tắt đăng ký người dùng công khai. Trong Authentication > Users, mời `huynhluong321998@gmail.com`.
+7. Sau khi người dùng đó tồn tại, chạy `supabase/bootstrap-admin.sql` trong SQL editor.
+8. Mở `/admin/`, yêu cầu magic link và đăng nhập.
 
-All newly created projects and tools default to `draft` at both database and UI level. Uploading an image does not publish its parent record. A public page can read image metadata only when its project/tool is published.
+Mọi Project và Tool mới tạo mặc định là `draft` ở cả cấp cơ sở dữ liệu và UI. Upload ảnh không publish record cha. Trang công khai chỉ có thể đọc metadata ảnh khi Project/Tool của nó đã publish.
 
-## Media safety
+## An toàn media
 
-The `portfolio-public` bucket serves approved public-ready images. Do not upload source drawings, screenshots containing project accounts, internal filenames, client data, coordinates, or other confidential material. Sanitize/export images before upload. Use generated storage filenames; the original local filename is not stored in the public path.
+Bucket `portfolio-public` phục vụ ảnh đã duyệt, sẵn sàng công khai. Không upload bản vẽ nguồn, ảnh chụp chứa tài khoản project, tên file nội bộ, dữ liệu khách hàng, tọa độ hoặc tài liệu mật khác. Làm sạch/export ảnh trước khi upload. Dùng tên file Storage được tạo; tên file cục bộ gốc không được lưu trong đường dẫn công khai.
 
-## Backup
+## Sao lưu
 
-Export the database regularly from Supabase and back up the Storage bucket separately. Database backups do not constitute a backup of uploaded image objects.
+Export cơ sở dữ liệu định kỳ từ Supabase và sao lưu bucket Storage riêng. Bản sao lưu cơ sở dữ liệu không tạo thành bản sao lưu các object ảnh đã upload.
