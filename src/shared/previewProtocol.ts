@@ -31,8 +31,21 @@ const updateType = (kind: PreviewKind): string => `hdl:${kind}-preview`;
 
 const nextFrame = (): Promise<void> => new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
 
-const waitForPreviewAssets = async (): Promise<void> => {
-  const images = [...document.images];
+export interface PreviewImageState {
+  complete: boolean;
+  loading: string;
+  naturalWidth: number;
+}
+
+/**
+ * Chọn ảnh preview cần chờ. Ảnh `loading="lazy"` chưa hoàn tất bị bỏ qua vì
+ * trình duyệt không tải chúng cho tới khi cuộn tới (chờ sẽ luôn hết trần 4 giây).
+ */
+export const selectPreviewImagesToWait = <T extends PreviewImageState>(images: readonly T[]): T[] =>
+  images.filter((image) => image.complete || image.loading !== "lazy");
+
+const waitForPreviewAssets = async (interrupt: Promise<void>): Promise<void> => {
+  const images = selectPreviewImagesToWait([...document.images]);
   const imageReady = Promise.all(images.map(async (image) => {
     if (!image.complete) {
       await new Promise<void>((resolve) => {
@@ -47,6 +60,7 @@ const waitForPreviewAssets = async (): Promise<void> => {
   const assetsReady = Promise.all([document.fonts?.ready.catch(() => undefined), imageReady]);
   await Promise.race([
     assetsReady,
+    interrupt,
     new Promise<void>((resolve) => window.setTimeout(resolve, 4000)),
   ]);
   await nextFrame();
@@ -57,6 +71,7 @@ export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> 
   let pending: PreviewUpdate<T> | null = null;
   let renderPreview: ((data: T) => void | Promise<void>) | null = null;
   let rendering = false;
+  let wake: (() => void) | null = null;
 
   const drain = async (): Promise<void> => {
     if (rendering || !renderPreview) return;
@@ -66,7 +81,10 @@ export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> 
         const message = pending;
         pending = null;
         await renderPreview(message.data);
-        await waitForPreviewAssets();
+        if (pending) continue;
+        const interrupt = new Promise<void>((resolve) => { wake = resolve; });
+        await waitForPreviewAssets(interrupt);
+        wake = null;
         if (pending) continue;
         const rendered: PreviewRendered = {
           type: "hdl:preview-rendered",
@@ -89,6 +107,7 @@ export const createPreviewReceiver = <T>(kind: PreviewKind): PreviewReceiver<T> 
       || !event.data.data
     ) return;
     pending = event.data;
+    wake?.();
     void drain();
   };
 
