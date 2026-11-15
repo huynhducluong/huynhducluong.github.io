@@ -1,6 +1,6 @@
 # GD2-01 — Dịch tài liệu sang tiếng Việt
 
-> **Trạng thái:** NHÁP · **Nhánh:** `gd2/01-dich-tai-lieu` (từ `main` sau commit khung quy trình) · **Ngày giao:** — · **Cỡ:** Vừa (11 file docs, không code) · **Người đang code:** —
+> **Trạng thái:** GIAO CODE · **Nhánh:** `gd2/01-dich-tai-lieu` (tạo từ `origin/main` mới nhất: `git fetch; git switch -c gd2/01-dich-tai-lieu origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (11 file docs, không code) · **Người đang code:** Codex (token 95 %)
 > **Gộp (ADR-018):** tự gộp được — chỉ đổi `docs/`, không migration, không đổi giao diện.
 
 ## 1. Mục tiêu

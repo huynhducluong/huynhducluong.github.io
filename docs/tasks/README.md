@@ -117,4 +117,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 
 | Đề bài | Tên | Trạng thái |
 |---|---|---|
-| [GD2-01](GD2-01-dich-tai-lieu.md) | Dịch tài liệu sang tiếng Việt | `NHÁP` |
+| [GD2-01](GD2-01-dich-tai-lieu.md) | Dịch tài liệu sang tiếng Việt | `GIAO CODE` (Codex) |

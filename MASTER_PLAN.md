@@ -1,7 +1,7 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.0.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
-> **Giai đoạn hiện tại:** **GĐ 2** — chuyển sang quy trình nhiều Agent (ADR-016) và dịch tài liệu sang tiếng Việt (ADR-017). Khung quy trình dựng 2026-11-15; ADR-001…015 và ADR-019…022 chờ người vận hành duyệt; đề bài kế tiếp: [GD2-01](docs/tasks/GD2-01-dich-tai-lieu.md) (`NHÁP`).
+> **Phiên bản:** 1.1.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Giai đoạn hiện tại:** **GĐ 2** — chuyển sang quy trình nhiều Agent (ADR-016) và dịch tài liệu sang tiếng Việt (ADR-017). Khung quy trình dựng và mọi ADR chốt 2026-11-15; [GD2-01](docs/tasks/GD2-01-dich-tai-lieu.md) `GIAO CODE` cho Codex. Sổ lỗi UI/UX trên tài liệu dùng chung: chờ chọn cách ([vấn đề mở #5](#4-vấn-đề-còn-mở)).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
 ## 1. Tóm tắt dự án
@@ -12,7 +12,7 @@ Nền tảng hồ sơ nghề nghiệp của một BIM Coordinator: Website công
 
 Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-tin-chỉ-có-một-chỗ-chính).
 
-## 3. Lộ trình `[ĐỀ XUẤT]` (ADR-022)
+## 3. Lộ trình `[CHỐT]` 2026-11-15 (ADR-022)
 
 | GĐ | Nội dung | Trạng thái | Kết thúc khi |
 |---|---|---|---|
@@ -31,10 +31,11 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | # | Vấn đề | Nhãn | Ghi chú |
 |---|---|---|---|
-| 1 | Duyệt ADR-001…015 (nhập lại) và ADR-019…022 | `[MỞ]` | Người vận hành trả lời một lượt |
+| 1 | ~~Duyệt ADR-001…015 (nhập lại) và ADR-019…022~~ | Xong | Người vận hành chốt hết 2026-11-15 |
 | 2 | Nhánh cũ `feature/*` (6 nhánh) còn giữ hay xóa | `[MỞ]` | Kiểm đã gộp hết vào `main` chưa trước khi xóa |
 | 3 | Layout Portfolio Dual: tiêu đề credential ba dòng làm hai khung lệch nhau 4,5 mm | `[MỞ]` | [UI-08](docs/92-ui-rules.md#ui-08); ứng viên đề bài đầu GĐ 3 |
 | 4 | Danh sách việc của GĐ 4 | `[MỞ]` | Chốt cuối GĐ 3 |
+| 5 | Sổ lỗi UI/UX dùng chung: người vận hành dán ảnh + ghi chú một lần, Claude đọc trực tiếp (thay gửi từng ảnh) | `[ĐỀ XUẤT]` | Phương án và khuyến nghị: tin nhắn 2026-11-15; chốt thì ghi ADR-023 và cách đọc vào docs/93 |
 
 ## 5. Thuật ngữ
 
@@ -56,4 +57,5 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.1.0 | 2026-11-15 | Người vận hành chốt ADR-001…015, 019…022 và lộ trình; mọi câu hỏi gửi người vận hành kèm khuyến nghị (AGENTS §4); GD2-01 `GIAO CODE` (Codex, token 95 %); W-01 đầu tiên vào docs/93 |
 | 1.0.0 | 2026-11-15 | Tạo file. Áp dụng quy trình nhiều Agent từ BCE (ADR-016); docs tiếng Việt (ADR-017); quy tắc gộp vì push = deploy (ADR-018); nhập lại ADR-001…015 chờ duyệt; lộ trình GĐ 1–4 (ADR-022). Thêm `AGENTS.md`, `decisions/`, `docs/tasks/`, `docs/91`, `92`, `93`, `95`, `96`; `CLAUDE.md` chỉ còn `@AGENTS.md` |

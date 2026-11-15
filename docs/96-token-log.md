@@ -9,7 +9,7 @@
 
 | Ngày | Đề bài / lượt | Cỡ | Còn trước | Còn sau | Tốn | Ghi chú |
 |---|---|---|---|---|---|---|
-| | | | | | | |
+| 2026-11-15 | GD2-01 | Vừa | 95 % | | | Đề bài đầu tiên theo quy trình mới; chỉ docs |
 
 ## Claude — cửa sổ code (% đã dùng)
 

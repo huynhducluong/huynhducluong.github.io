@@ -18,7 +18,7 @@
 
 | # | Ngày | Màn hình / bước | Vướng gì | Mức | Hướng xử lý dự kiến | Trạng thái |
 |---|---|---|---|---|---|---|
-| | | | _(chưa có — bắt đầu khi vào GĐ 3)_ | | | |
+| W-01 | 2026-11-15 | Admin › Homepage → thanh preview, dropdown chọn trang | Dropdown liệt kê **mọi** Project và Tool (≈ 20 dòng "Project · …", cả "Tool · Test tool"), trong khi Website sau này chỉ hiện vài dự án: danh sách dài, thừa | Góp ý | Chỉ liệt kê trang thật sự có trên Website (Project / Tool đang được Website chọn), có thể nhóm Project / Tool; xét cùng lượt Admin đầu GĐ 3 | `GHI NHẬN` |
 
 ## Nhóm nâng cấp GĐ 3
 
