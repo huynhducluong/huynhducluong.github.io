@@ -64,6 +64,7 @@ import type { SiteWorkspaceKind } from "./siteWorkspace";
 import { adminBrand, adminDocumentTitle } from "./brand";
 import { renderAdminNavIcon } from "./adminIcons";
 import { readStoredAdminIdentityName, storeAdminIdentityName } from "./adminIdentityName";
+import { availableContentStatusFilters, type ContentStatusFilter } from "./contentStatusFilters";
 
 interface AdminMediaRow {
   id: string;
@@ -155,7 +156,6 @@ interface PendingMedia {
 type AdminView = "overview" | "homepage" | "projects" | "tools" | "profile" | "cv" | "portfolio" | "cover-letters" | "trash";
 type AdminItemType = "project" | "tool";
 type ContentFilter = "all" | "project" | "tool";
-type ContentStatusFilter = "all" | PublicationStatus;
 type EditorTab = "overview" | "content" | "media";
 type CollectionView = "projects" | "tools" | "trash";
 type ReorderMovement = "up" | "down" | "first" | "last" | { targetId: string };
@@ -1026,6 +1026,13 @@ const dashboardView = (): void => {
   const showCollection = activeView === "projects" || activeView === "tools" || activeView === "trash";
   const viewTitle: Record<AdminView, string> = { overview: "Overview", homepage: "Homepage", projects: "Projects", tools: "Automation tools", profile: "Professional Profile", cv: "Curriculum Vitae", portfolio: "Portfolio", "cover-letters": "Cover letters", trash: "Trash" };
   const collectionTitle = activeView === "projects" ? "Projects" : activeView === "tools" ? "Tools" : "Deleted items";
+  const statusFilterItems = activeView === "projects"
+    ? projects.filter((item) => !item.deleted_at)
+    : activeView === "tools"
+      ? tools.filter((item) => !item.deleted_at)
+      : [];
+  const statusFilters = availableContentStatusFilters(statusFilterItems);
+  if ((activeView === "projects" || activeView === "tools") && !statusFilters.includes(contentStatusFilter)) contentStatusFilter = "all";
   const collectionCount = visibleContentItems().length;
   const identityLabel = adminIdentityLabel(adminIdentity);
   const navButton = (view: AdminView, label: string): string => `<button type="button" data-admin-view="${view}" class="${activeView === view ? "is-active" : ""}"${activeView === view ? ' aria-current="page"' : ""}><span class="admin-nav__icon-shell" aria-hidden="true">${renderAdminNavIcon(view)}</span>${label}${view === "trash" && trashCount ? `<b>${trashCount}</b>` : ""}</button>`;
@@ -1050,7 +1057,7 @@ const dashboardView = (): void => {
             <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
             <div class="admin-list-controls">
               <label class="admin-search"><span class="sr-only">Search content</span><input type="search" placeholder="Search by name or slug..." value="${escapeHtml(contentSearch)}" data-content-search></label>
-              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}" aria-pressed="${contentFilter === filter}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}" aria-pressed="${contentStatusFilter === filter}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
+              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}" aria-pressed="${contentFilter === filter}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${statusFilters.map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}" aria-pressed="${contentStatusFilter === filter}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
             </div>
             <div class="admin-collection__scroll" data-collection-view="${activeView}"><ul class="admin-content-list" data-content-list>${contentList()}</ul></div>
           </aside>` : ""}
