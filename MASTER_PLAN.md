@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.18.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.19.0 · **Cập nhật:** 2026-11-15 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -68,6 +68,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.19.0 | 2026-11-15 | Đọc sổ #13 – #23 (W-12 … W-22), đo trên dữ liệu thật, demo N9 + N11; người vận hành chốt ADR-031; GD3-10 (N11) `GIAO CODE`, GD3-11 (N9) chờ GD3-10; N10 (chữ bị cắt) chưa bàn; công cụ `tools/portfolio-detail-check.mjs` (mốc 34 FAIL) |
 | 1.18.0 | 2026-11-15 | GD3-09 (N4a) ĐẠT, tự gộp: W-06 đã sửa (bút chì sửa từ preview Portfolio, 24 phép đo All PASS, trang công khai / PDF không đổi); **GĐ3 hết nhóm đã lên kế hoạch**: nhắc bàn #15, #16 và chốt danh sách GĐ 4 |
 | 1.17.0 | 2026-11-15 | Người vận hành chốt N4a (ADR-030): bút chì chỉ cho chữ của form Portfolio, bỏ N4b; GD3-09 `GIAO CODE`; docs/admin-ui-guidelines §7.2 |
 | 1.16.1 | 2026-11-15 | Ghi hai việc người vận hành muốn bàn sau GĐ3 vào mục 4: #15 làm đẹp trang chủ (tham khảo joshwcomeau.com), #16 sao lưu / xuất / nhập dữ liệu Admin; cả hai `[MỞ]`, nhắc bàn trước khi giao |

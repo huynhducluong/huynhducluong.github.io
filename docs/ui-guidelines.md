@@ -220,6 +220,14 @@ Mọi layout Portfolio căn theo token `--pf-*` trên `.portfolio-document` (`po
   - **CSS:** `.portfolio-page a { color: inherit }` có độ ưu tiên cao hơn một class, nên mọi quy tắc của nút bắt đầu bằng `.portfolio-page` ([coding-conventions §3](coding-conventions.md)); không dùng `!important`.
   - **Kiểm:** mọi layout phải qua `findPortfolioLayoutIssues`, EN và VI, kể cả tên dự án dài (nút không làm tràn; Balanced và Portrait đã tràn từ ~100 ký tự dù không có nút: giới hạn sẵn có); link **sống sót trong PDF in từ Chrome** (đếm `/URI` trong `page.pdf()` bằng số link); `node tools/portfolio-video-link-check.mjs` đo toàn bộ.
 
+- **Chi tiết trình bày Portfolio** (ADR-031, W-12 … W-21; GD3-10 và GD3-11; kiểm bằng `node tools/portfolio-detail-check.mjs`):
+  - **Chỉ số dự án (key facts):** giá trị tách theo khoảng trắng; **token có chữ số in lớn** (cỡ hiện tại của chỉ số), **token còn lại in nhỏ** (`--document-type-xl`, đậm), cùng một hàng, cùng đường cơ sở, `white-space: nowrap`; nhãn bên dưới vẫn được xuống dòng. Giá trị chỉ có một token hoặc không có chữ số thì in như cũ. Giá trị dài (từ 14 ký tự) chiếm cả hàng của lưới chỉ số. Không bao giờ có chỉ số xuống dòng hay tràn ngang ở Technical, Balanced, Editorial (EN và VI).
+  - **Nút Video cạnh dòng vai trò:** tâm nút lệch ≤ 0,5 px so với tâm chữ vai trò (căn theo đường cơ sở và bù, không `vertical-align: middle`).
+  - **Số 01 / 02 / 03 của phần đóng góp:** căn tâm số với tâm **dòng đầu** của đoạn chữ (số dùng `line-height: 1` và bù theo `--document-leading-relaxed`), lệch ≤ 0,5 px; áp dụng cho mọi layout có `.portfolio-contributions`.
+  - **Ảnh trang Automation:** mọi ảnh (Workflow và Input / Geometry) nằm trong khung `--document-surface` (trắng), viền `.25mm solid var(--document-border)`, đệm 4 mm; hợp đồng tỉ lệ crop giữ nguyên (đệm nằm ngoài ảnh).
+  - **Dòng meta của index lưới ảnh:** luôn hai khối: **địa điểm** (muted) rồi **vai trò** (`--document-text`, đậm); thiếu một trong hai thì chỉ in khối còn lại. Các index kiểu danh sách giữ "địa điểm · vai trò" một dòng.
+  - **Thẻ công nghệ ở Balanced:** ngay dưới danh sách đóng góp (cách ≤ 12 mm), không neo ở đáy cột.
+
 ## 9. Checklist trước khi hoàn tất thay đổi Website hoặc tài liệu
 
 1. `npm run verify:admin` đạt.
