@@ -337,17 +337,16 @@ html, body { background: #dfe8ec; }
 .portfolio-credentials > h2 { margin: var(--pf-kicker-gap) 0 10mm; font-size: var(--pf-title-size); }
 .portfolio-credential__title { color: var(--document-text); font-size: var(--document-type-3xl); line-height: var(--document-leading-tight); }
 .portfolio-document-placeholder { display: grid; place-items: center; border: .4mm dashed var(--document-border); background: var(--document-surface); color: var(--document-text-muted); }
-/* Every credentials document slot is exactly Landscape (4:3), the shape Adjust crops positions, so a Landscape crop
-   fills it edge to edge. A Portrait crop takes the slot's full height at 3:4, centred. Nothing is cut or letterboxed. */
+/* Every credentials document slot is exactly Landscape (4:3), the shape Adjust crops positions. The crop keeps its
+   own ratio inside a bordered white mat, with the padding contained by the fixed frame ratio. */
 .portfolio-document-frame { aspect-ratio: 4 / 3; }
-.portfolio-document-slot { display: grid; min-width: 0; place-items: center; container-type: size; }
-.portfolio-document-preview { display: block; width: min(100cqw, 100cqh * var(--pf-crop-ratio-n)); overflow: hidden; border: .3mm solid var(--document-border); border-radius: 1mm; background: var(--document-surface); }
+.portfolio-document-slot { box-sizing: border-box; display: grid; min-width: 0; place-items: center; padding: 3mm; border: .3mm solid var(--document-border); border-radius: 1mm; background: var(--document-surface); container-type: size; }
+.portfolio-document-preview { display: block; width: min(100cqw, 100cqh * var(--pf-crop-ratio-n)); overflow: hidden; border: .3mm solid var(--document-border); border-radius: 0; background: var(--document-surface); }
 .portfolio-document-preview img { display: block; width: 100%; height: 100%; object-fit: cover; }
 .portfolio-document-placeholder span { max-width: 42mm; text-align: center; font-size: var(--document-type-xs); font-weight: var(--document-weight-black); letter-spacing: var(--document-tracking-caps); text-transform: uppercase; }
-.portfolio-credentials--dual > div { display: grid; grid-template-columns: 1fr 1fr; gap: 9mm; }
-.portfolio-credentials--dual article { padding: 6mm; border: .3mm solid var(--document-border); border-radius: 2mm; background: var(--document-surface-muted); }
-/* Room for a two-line title keeps both document frames on the same baseline. */
-.portfolio-credentials--dual article header { display: flex; min-height: 15mm; align-items: center; gap: 4mm; margin-bottom: 4mm; }
+.portfolio-credentials--dual > div { display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: auto auto 1fr; align-items: stretch; column-gap: 9mm; }
+.portfolio-credentials--dual article { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; padding: 6mm; border: .3mm solid var(--document-border); border-radius: 2mm; background: var(--document-surface-muted); }
+.portfolio-credentials--dual article header { display: flex; min-height: 0; align-items: center; gap: 4mm; margin-bottom: 4mm; }
 .portfolio-credentials--dual article header span { display: grid; flex: none; width: 12mm; height: 12mm; place-items: center; border-radius: 1mm; background: var(--document-primary); color: var(--document-on-primary); font-weight: var(--document-weight-black); }
 /* The slot spans the card's width; its height follows from 4:3. */
 .portfolio-credentials--dual article > p { margin-top: 5mm !important; color: var(--document-text-muted); }
