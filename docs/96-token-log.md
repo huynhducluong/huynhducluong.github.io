@@ -19,3 +19,4 @@
 |---|---|---|---|---|---|---|
 | 2026-11-15 | GD3-03 | Lớn | 53 % | 56 % | **~3 %** | N3b: 13 file, 1 lượt (3 bước gộp một commit wip), không chạy đo trình duyệt (làm ở review); không lượt sửa |
 | 2026-11-15 | GD3-04 | Lớn | 70 % | 76 % | **~6 %** | N2: 10 file, 5 bước wip, đo trên Admin thật; không lượt sửa. "Đã dùng trước" 70 % (không phải 56 %) vì % của Claude tính chung cả tài khoản: gồm cả phiên thiết kế / review chạy giữa hai đề bài |
+| 2026-11-15 | GD3-05 | Vừa | | | | N5: hộp thoại, quét chữ dài; đo bằng tools/dialog-backdrop-check.mjs |

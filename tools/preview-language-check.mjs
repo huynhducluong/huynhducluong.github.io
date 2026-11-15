@@ -63,6 +63,25 @@ for (const area of areas) {
     report(took !== null && changed, `${area.name}: click VI ${settleMs ? "after the page settled" : "right after load"}`, took !== null ? `(${took} ms, button now "${await label(page, area.toggle)}")` : `(iframe still lang="${after.lang}")`);
     await context.close();
   }
+  // 1b) Rapid clicks: two clicks 150 ms apart must leave the preview in the right language quickly. The preview used to
+  //     wait up to 4 s for lazy images before taking the next update (W-09), so the second click showed up seconds late.
+  {
+    const { context, page } = await newPage(area.view);
+    await page.locator(area.frame).waitFor();
+    if (area.pages) await page.locator(area.pages).selectOption("projects");
+    await page.waitForTimeout(5000); // first render and its image wait are over
+    await page.locator(area.toggle).first().click();
+    await page.waitForTimeout(150);
+    await page.locator(area.toggle).first().click();
+    const clickedAt = Date.now();
+    let took = null;
+    while (Date.now() - clickedAt < 8000) {
+      if ((await state(page, area.frame)).lang === "en") { took = Date.now() - clickedAt; break; }
+      await page.waitForTimeout(50);
+    }
+    report(took !== null && took <= 1500, `${area.name}: two quick clicks (VI then EN) settle within 1.5 s`, took !== null ? `(${took} ms)` : "(never settled within 8 s)");
+    await context.close();
+  }
   // 2) Website only: changing the preview page while VI is on keeps VI.
   if (area.pages) {
     const { context, page } = await newPage(area.view);
