@@ -1,6 +1,6 @@
 # GD3-02 — Credentials: khung "tờ giấy trên nền trắng" và thẻ Dual thẳng hàng (N3a)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/02-credentials-khung-giay` (`git fetch; git switch -c gd3/02-credentials-khung-giay origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (3 file) · **Người đang code:** Codex (token 36 %)
+> **Trạng thái:** ĐẠT (gộp `d87934f`, 2026-11-15, người vận hành duyệt) · **Nhánh:** `gd3/02-credentials-khung-giay` (`git fetch; git switch -c gd3/02-credentials-khung-giay origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (3 file) · **Người đang code:** Codex (token 36 %)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện PDF Portfolio. Claude review xong thì chuyển `CHỜ DUYỆT`.
 
 ## 1. Mục tiêu
@@ -84,4 +84,4 @@ Thực hiện kiểu **B** người vận hành đã chọn từ demo thật (AD
 - **Ghi nhận (không chặn):** khung 4:3 đã gồm phần đệm nên phần ruột là 114,2 × 84,4 mm (tỉ lệ 1,36); crop Landscape đo được 111,8 × 83,8 mm, nên lề trắng trên / dưới 3,3 mm còn trái / phải 4,4 mm (lệch 1,1 mm, mắt thường khó thấy; demo kiểu B người vận hành đã xem có cùng đặc điểm). Muốn đều tuyệt đối thì để GD3-03 xử lý bằng `padding-inline`.
 - **Cần người vận hành chốt:** duyệt gộp (đổi giao diện PDF, ADR-018).
 - Token: Codex 36 % → 27 % (~9 %, Nhỏ).
-- Kết luận: **ĐẠT** — `CHỜ DUYỆT` gộp.
+- Kết luận: **ĐẠT** — người vận hành duyệt gộp 2026-11-15.

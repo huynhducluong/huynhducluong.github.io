@@ -43,7 +43,7 @@
 | Nhóm | Nội dung | Dòng | Cỡ ước | Gộp (ADR-018) |
 |---|---|---|---|---|
 | **N1 Admin sửa nhanh** → [GD3-01](tasks/GD3-01-admin-sua-nhanh.md) **ĐẠT** | Tên trên rail không đổi chữ khi tải; chip Archived; nhóm disclosure mở một cái (W-01 chuyển `GIỮ`) | UI-10, W-02, UI-12 | Vừa | Đã tự gộp `7c387b8` |
-| **N3 Credentials trong Portfolio** | **N3a** [GD3-02](tasks/GD3-02-credentials-khung-giay.md) (Nhỏ, `GIAO CODE`): kiểu B (ADR-025) + Dual thẳng hàng. **N3b** [GD3-03](tasks/GD3-03-credentials-layout-chon-crop.md) (Lớn, `NHÁP`): bỏ Print as, layout chọn crop (ADR-026) | UI-11, UI-08, W-05 | Nhỏ + Lớn | Người vận hành duyệt (đổi PDF) |
+| **N3 Credentials trong Portfolio** | **N3a** [GD3-02](tasks/GD3-02-credentials-khung-giay.md) (Nhỏ, **ĐẠT**): kiểu B (ADR-025) + Dual thẳng hàng. **N3b** [GD3-03](tasks/GD3-03-credentials-layout-chon-crop.md) (Lớn, `GIAO CODE`): bỏ Print as, layout chọn crop (ADR-026) | UI-11, UI-08, W-05 | Nhỏ + Lớn | Người vận hành duyệt (đổi PDF) |
 | **N2 Card Profile thu gọn** | Component card thu gọn dùng chung cho Experience, Education | W-03, W-04 | Vừa | Tự gộp được |
 | **N4 Lối tắt sửa từ preview** | Nút "sửa ở đâu" trên preview Portfolio | W-06 | Lớn | Người vận hành duyệt |
 

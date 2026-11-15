@@ -1,6 +1,6 @@
 # GD3-03 — Credentials: layout chọn crop, bỏ "Print as" (N3b)
 
-> **Trạng thái:** NHÁP — **đã đủ điều kiện giao** (ADR-026 `[CHỐT]` 2026-11-15, docs đã sửa); Claude chuyển `GIAO CODE` ngay khi GD3-02 được gộp, vì một người ghi một lúc (AGENTS §1.1) · **Nhánh:** `gd3/03-credentials-layout-chon-crop` · **Ngày giao:** — · **Cỡ:** Lớn (~10–12 file: types, repository, renderer, validation, cropper, workspace, test) · **Người đang code:** dự kiến Claude — cửa sổ code (Codex dự kiến còn dưới 30 % sau GD3-02, bảng chọn người code)
+> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/03-credentials-layout-chon-crop` (`git fetch; git switch -c gd3/03-credentials-layout-chon-crop origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Lớn (~10–12 file: types, repository, renderer, validation, cropper, workspace, test) · **Người đang code:** Claude — cửa sổ code (Codex còn 27 %, cỡ Lớn → bảng chọn người code)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi PDF Portfolio (crop nào được in).
 
 ## 1. Mục tiêu
@@ -24,6 +24,8 @@ Người vận hành không phải chọn "Print as" nữa (Sổ #5). Mỗi layo
 5. **Bỏ "Print as".** Xóa control, `printProfile`, `previewProfile` khỏi kiểu và UI; `saveCredentialPreviewSettings` chỉ ghi `show_in_portfolio` và `preview_rotation`. Mở hộp crop mặc định tab Landscape; thumbnail trong `credentialWorkspace` lấy crop Landscape, thiếu thì crop đầu tiên. Đánh dấu tab theo quy ước hộp crop Project / Tool (admin-ui §7.1), không còn nhãn "printed".
 6. **E-008.** Dưới ô "Show in Portfolio" thêm một dòng ghi chú: "Check the crop for ID numbers and dates of birth before showing it."
 7. **Không migration** (Claude đã kiểm: `preview_profile` là `not null default 'landscape'` trong `202611010002_credential_portfolio_previews.sql`). Cột giữ nguyên trong DB, app không còn đọc / ghi; không sửa migration cũ.
+
+8. **Tùy chọn (ghi nhận review GD3-02):** lề trắng quanh crop Landscape chưa đều (trên / dưới 3,3 mm, trái / phải 4,4 mm vì khung 4:3 đã gồm phần đệm). Chỉ làm nếu cách sửa đơn giản, **không đổi kích thước ngoài của khung** và không làm Dual tràn (đo bằng `tools/portfolio-credentials-check.mjs`, All PASS); phức tạp thì bỏ qua và ghi vào mục 5.
 
 **Không làm:** layout Credential Portrait mới; công cụ che vùng (redact); đổi bucket / bảng crop.
 

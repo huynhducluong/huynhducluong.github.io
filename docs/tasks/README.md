@@ -119,5 +119,5 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 |---|---|---|
 | [GD2-01](GD2-01-dich-tai-lieu.md) | Dịch tài liệu sang tiếng Việt | `ĐẠT` |
 | [GD3-01](GD3-01-admin-sua-nhanh.md) | Admin sửa nhanh (N1: UI-10, W-02, UI-12) | `ĐẠT` |
-| [GD3-02](GD3-02-credentials-khung-giay.md) | Credentials: khung tờ giấy trên nền trắng, Dual thẳng hàng (N3a: UI-11, UI-08) | `GIAO CODE` (Codex) |
-| [GD3-03](GD3-03-credentials-layout-chon-crop.md) | Credentials: layout chọn crop, bỏ "Print as" (N3b: W-05) | `NHÁP` (đủ điều kiện; giao sau khi GD3-02 gộp) |
+| [GD3-02](GD3-02-credentials-khung-giay.md) | Credentials: khung tờ giấy trên nền trắng, Dual thẳng hàng (N3a: UI-11, UI-08) | `ĐẠT` |
+| [GD3-03](GD3-03-credentials-layout-chon-crop.md) | Credentials: layout chọn crop, bỏ "Print as" (N3b: W-05) | `GIAO CODE` (Claude — cửa sổ code) |

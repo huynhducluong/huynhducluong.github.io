@@ -11,7 +11,7 @@
 |---|---|---|---|---|---|---|
 | 2026-11-15 | GD2-01 | Vừa | 95 % | 61 % | **~34 %** | Đề bài đầu theo quy trình mới; dịch 11 file docs (~780 dòng), 5 bước wip, không lượt sửa |
 | 2026-11-15 | GD3-01 | Vừa | 61 % | 36 % | **~25 %** | N1: 3 sửa Admin, 12 file, 4 bước wip, không lượt sửa |
-| 2026-11-15 | GD3-02 | Nhỏ | 36 % | | | N3a: CSS 2 file + test; đo bằng tools/portfolio-credentials-check.mjs |
+| 2026-11-15 | GD3-02 | Nhỏ | 36 % | 27 % | **~9 %** | N3a: CSS 2 file + test, 3 bước wip, không lượt sửa; đo bằng tools/portfolio-credentials-check.mjs |
 
 ## Claude — cửa sổ code (% đã dùng)
 
