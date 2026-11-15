@@ -1,6 +1,6 @@
 # GD3-07 — Link "▶ Video" trong Portfolio (nhóm N6)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/07-link-video-portfolio` (`git fetch; git switch -c gd3/07-link-video-portfolio origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (Codex còn ít token)
+> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/07-link-video-portfolio` (`git fetch; git switch -c gd3/07-link-video-portfolio origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (Codex còn ít token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện PDF và bản web của Portfolio. Claude review xong thì chuyển `CHỜ DUYỆT`.
 
 ## 1. Mục tiêu
@@ -60,8 +60,14 @@ Thêm link "▶ Video" vào Portfolio (PDF và bản web) cho Project và Tool c
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `5f540e0` (worktree `D:wtpf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 38 file / 225 test đạt; Admin JS 93,1 / 115,0, CSS 26,7 / 27,0 kB gzip.
+  - `tools/portfolio-video-link-check.mjs` chạy lại: **All PASS, 121 PASS / 0 FAIL** (mốc trước: 97 FAIL), gồm dòng PDF.
+  - `portfolio-print.css` không chứa `video-link`. Đọc diff: một thành phần `videoLink` dùng chung, `safeYouTubeUrl` không ném lỗi, escape một lần, mọi quy tắc CSS có tiền tố `.portfolio-page`, không `!important`, chỉ token `--document-*`; không có `youtubeUrl` thì markup không đổi (chỉ `indexRow` thay chuỗi tương đương).
+  - Xem ảnh `index.visual` (nút ở góc trên phải ảnh, đọc rõ, không đổi chiều cao hàng) và `project.balanced` (nút cùng hàng với vai trò, không thêm chiều cao). Ảnh dự án vỡ trong lúc đo do tải dữ liệu cục bộ, không liên quan đề bài.
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Cần người vận hành chốt:** vị trí nút ở `index.visual` khác §8.4 (trên ảnh thay vì ở dòng meta). Khuyến nghị: **giữ trên ảnh** (đã đo: đặt ở dòng meta làm trang index 9 dự án lấn footer ở bản VI); nếu chốt, Claude sửa §8.4 gạch "Index".
+- Token: Claude — cửa sổ code 43 % → 50 % đã dùng (~7 %, Vừa).
+- Kết luận: **CHỜ DUYỆT** — đạt về kỹ thuật nhưng đổi giao diện PDF và web (ADR-018): cần người vận hành chốt vị trí nút rồi duyệt gộp.
