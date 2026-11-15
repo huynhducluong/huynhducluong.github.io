@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { adminDocumentMetaText, adminSelectionCountText, renderAdminDocumentHeader, renderAdminFieldLabel, renderAdminPreviewOptions, renderAdminSelectionHeading } from "./ui";
+import { adminDocumentMetaText, adminSelectionCountText, bindAdminDisclosureReveal, renderAdminDocumentHeader, renderAdminFieldLabel, renderAdminPreviewOptions, renderAdminSelectionHeading } from "./ui";
+
+describe("Admin disclosure reveal", () => {
+  it("exports the shared disclosure binding", () => {
+    expect(bindAdminDisclosureReveal).toBeTypeOf("function");
+  });
+});
 
 describe("Admin field labels", () => {
   it("renders a styled visual marker with accessible required text", () => {

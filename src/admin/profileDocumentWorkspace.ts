@@ -90,6 +90,7 @@ import {
   setButtonBusy,
   adminChevronIcon,
   adminCloseIcon,
+  bindAdminDisclosureReveal,
   bindAdminSelectionCounts,
 } from "./ui";
 
@@ -269,7 +270,7 @@ const layoutOverrideGroup = ({ kind, title, hint, label, items }: {
   items: Array<{ id: string; name: string; selected: boolean; field: string; options: string }>;
 }): string => {
   const selected = items.filter((item) => item.selected).length;
-  return `<details class="admin-disclosure-group admin-layout-override-group" data-layout-override-group="${kind}"${selected ? "" : " hidden"}><summary>${escapeHtml(title)} <span data-layout-override-count>${selected}</span></summary><div>${items.map((item) => `<label data-layout-override-item data-layout-override-kind="${kind}" data-layout-override-id="${escapeHtml(item.id)}"${item.selected ? "" : " hidden"}><span><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(hint)}</small></span>${renderAdminSelectControl({ name: item.field, attributes: `aria-label="${escapeHtml(`${label} for ${item.name}`)}"`, options: item.options })}</label>`).join("")}</div></details>`;
+  return `<details class="admin-disclosure-group admin-layout-override-group" name="portfolio-layout-overrides" data-layout-override-group="${kind}"${selected ? "" : " hidden"}><summary>${escapeHtml(title)} <span data-layout-override-count>${selected}</span></summary><div>${items.map((item) => `<label data-layout-override-item data-layout-override-kind="${kind}" data-layout-override-id="${escapeHtml(item.id)}"${item.selected ? "" : " hidden"}><span><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small>${escapeHtml(hint)}</small></span>${renderAdminSelectControl({ name: item.field, attributes: `aria-label="${escapeHtml(`${label} for ${item.name}`)}"`, options: item.options })}</label>`).join("")}</div></details>`;
 };
 
 /** Portfolio media (§6.8): one media row per selected project or tool, grouped like the layout overrides. */
@@ -286,9 +287,9 @@ const portfolioMediaAssignmentsPanel = (runtime: PortfolioRuntimeData): string =
     choice: runtime.content.mediaAssignments.feature,
   }) : "";
   return `<div class="admin-portfolio-media-assignments" data-portfolio-media-assignments>
-    ${featureRow ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="feature"${selectedProjectCount ? "" : " hidden"}><summary>Cover &amp; closing</summary><div>${featureRow}</div></details>` : ""}
-    ${projectRows ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="project"${selectedProjectCount ? "" : " hidden"}><summary>Projects <span data-portfolio-media-group-count>${selectedProjectCount}</span></summary><div>${projectRows}</div></details>` : ""}
-    ${toolRows ? `<details class="admin-disclosure-group admin-portfolio-media-group" data-portfolio-media-group="tool"${selectedToolCount ? "" : " hidden"}><summary>Automation tools <span data-portfolio-media-group-count>${selectedToolCount}</span></summary><div>${toolRows}</div></details>` : ""}
+    ${featureRow ? `<details class="admin-disclosure-group admin-portfolio-media-group" name="portfolio-media-groups" data-portfolio-media-group="feature"${selectedProjectCount ? "" : " hidden"}><summary>Cover &amp; closing</summary><div>${featureRow}</div></details>` : ""}
+    ${projectRows ? `<details class="admin-disclosure-group admin-portfolio-media-group" name="portfolio-media-groups" data-portfolio-media-group="project"${selectedProjectCount ? "" : " hidden"}><summary>Projects <span data-portfolio-media-group-count>${selectedProjectCount}</span></summary><div>${projectRows}</div></details>` : ""}
+    ${toolRows ? `<details class="admin-disclosure-group admin-portfolio-media-group" name="portfolio-media-groups" data-portfolio-media-group="tool"${selectedToolCount ? "" : " hidden"}><summary>Automation tools <span data-portfolio-media-group-count>${selectedToolCount}</span></summary><div>${toolRows}</div></details>` : ""}
     <p class="admin-empty" data-portfolio-media-empty${selectedProjectCount || selectedToolCount ? " hidden" : ""}>Select projects or tools to configure their Portfolio visuals.</p>
   </div>`;
 };
@@ -1339,6 +1340,7 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
     if (event.key === "Escape") setLibraryOpen(false);
   });
   const form = root.querySelector<HTMLFormElement>("[data-document-form]");
+  if (kind === "portfolio" && form) bindAdminDisclosureReveal(form);
   const iframe = root.querySelector<HTMLIFrameElement>("[data-document-iframe]");
   const previewStage = root.querySelector<HTMLElement>("[data-embedded-preview-stage]");
   const previewFrame = root.querySelector<HTMLElement>(".admin-document-frame");

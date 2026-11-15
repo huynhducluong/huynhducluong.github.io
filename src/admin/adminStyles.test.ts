@@ -78,10 +78,13 @@ describe("Admin stylesheet contract", () => {
   it("names the owner in the rail and never lets a long name widen it (§11)", () => {
     const admin = Object.values(import.meta.glob<string>("../styles/admin.css", { query: "?raw", import: "default", eager: true }))[0];
     const main = Object.values(import.meta.glob<string>("./main.ts", { query: "?raw", import: "default", eager: true }))[0];
+    const adminModules = Object.values(import.meta.glob<string>(["./*.ts", "!./*.test.ts"], { query: "?raw", import: "default", eager: true })).join("\n");
     expect(main).toContain("<small data-admin-brand-identity");
-    expect(main).toMatch(/profileName\(profile\.name, "en"\)\.trim\(\) : ""\) \|\| adminBrand\.workspace/);
+    expect(main).toContain("readStoredAdminIdentityName()");
+    expect(main).toContain("storeAdminIdentityName(profileName(profile.name, \"en\"))");
+    expect(adminModules).not.toContain("Career workspace");
     expect(admin).toMatch(/\.admin-rail \{[^}]*grid-template-columns: minmax\(0, 1fr\);/);
-    expect(admin).toMatch(/\.admin-brand small \{[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/);
+    expect(admin).toMatch(/\.admin-brand small \{[^}]*min-block-size: 1lh;[^}]*text-overflow: ellipsis;[^}]*white-space: nowrap;/);
     // Both brand lines stay on one line: the name is fitted (10 px floor) before it is ever ellipsized.
     expect(admin).toMatch(/\.admin-brand strong \{[^}]*white-space: nowrap;/);
     expect(admin).toMatch(/\.admin-brand > div \{ flex: 1 1 auto; \}/);
@@ -245,6 +248,12 @@ describe("Admin stylesheet contract", () => {
     expect(profileDocumentWorkspaceSource).not.toContain("admin-portfolio-media-item");
     expect(profileDocumentWorkspaceSource).not.toContain("Not used by layout");
     expect(profileDocumentWorkspaceSource).not.toContain("Required by layout");
+  });
+
+  it("groups sibling Portfolio disclosures as exclusive accordions (§6.4)", () => {
+    expect(profileDocumentWorkspaceSource.match(/name="portfolio-layout-overrides"/g)).toHaveLength(1);
+    expect(profileDocumentWorkspaceSource.match(/name="portfolio-media-groups"/g)).toHaveLength(3);
+    expect(profileDocumentWorkspaceSource).toContain('bindAdminDisclosureReveal(form)');
   });
 
   it("uses one styled required marker and keeps generated slugs optional to enter", () => {

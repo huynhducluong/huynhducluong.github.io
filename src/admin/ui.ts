@@ -235,6 +235,17 @@ export const revealAdminElement = (
   else if (bounds.bottom > viewport.bottom - inset) scroller.scrollTop += bounds.bottom - viewport.bottom + inset;
 };
 
+export const bindAdminDisclosureReveal = (root: ParentNode): void => {
+  root.querySelectorAll<HTMLDetailsElement>('details.admin-disclosure-group[name]').forEach((details) => {
+    details.addEventListener("toggle", () => {
+      if (!details.open) return;
+      const summary = details.querySelector<HTMLElement>(":scope > summary");
+      if (!summary) return;
+      requestAnimationFrame(() => revealAdminElement(summary, { align: "start" }));
+    });
+  });
+};
+
 /** Single-line user text that may be clipped: ellipsis plus the full value as a tooltip (docs/admin-ui-guidelines.md §6.2). */
 export const renderAdminTruncatedText = (text: string, className = ""): string =>
   `<span class="admin-truncate${className ? ` ${escapeHtml(className)}` : ""}" title="${escapeHtml(text)}">${escapeHtml(text)}</span>`;

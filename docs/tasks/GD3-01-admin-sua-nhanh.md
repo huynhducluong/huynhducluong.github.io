@@ -1,6 +1,6 @@
 # GD3-01 — Admin sửa nhanh (nhóm N1)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/01-admin-sua-nhanh` (`git fetch; git switch -c gd3/01-admin-sua-nhanh origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6–8 file) · **Người đang code:** Codex (token 61 %)
+> **Trạng thái:** ĐẠT (Claude tự gộp theo ADR-018, 2026-11-15) · **Nhánh:** `gd3/01-admin-sua-nhanh` (`git fetch; git switch -c gd3/01-admin-sua-nhanh origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6–8 file) · **Người đang code:** Codex (token 61 %)
 > **Gộp (ADR-018):** tự gộp được — chỉ Admin, không migration, không đổi trang công khai / PDF, không phải đề bài cuối giai đoạn.
 
 ## 1. Mục tiêu
@@ -57,20 +57,30 @@ Sửa ba chỗ khó chịu hằng ngày trong Admin mà người vận hành ghi
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · token trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- Giao diện đã chụp / đo:
-- Ghi chú vận hành cho docs:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3, 4.
+- Người code: Codex · token trước / sau: 61% / phiên Codex API không cung cấp chỉ số % còn lại.
+- Nhánh, commit cuối: `gd3/01-admin-sua-nhanh` · `d96f544` (WIP bước 4; commit báo cáo ở ngay sau).
+- File đã đổi (ghi rõ file dùng chung): dùng chung — `src/admin/main.ts`, `src/admin/ui.ts`, `src/styles/admin.css`; còn lại — `src/admin/brand.ts`, `src/admin/adminIdentityName.ts`, `src/admin/adminIdentityName.test.ts`, `src/admin/contentStatusFilters.ts`, `src/admin/contentStatusFilters.test.ts`, `src/admin/profileDocumentWorkspace.ts`, `src/admin/adminStyles.test.ts`, `src/admin/ui.test.ts`.
+- `verify:admin`: 194 / 194 test đạt (31 file); bundle Admin JS 92,8 / 115,0 kB gzip, CSS 26,5 / 27,0 kB gzip.
+- Giao diện đã chụp / đo: `npm run shots -- --views=portfolio,projects,tools --screens=laptop` tạo 10 ảnh 1440 × 731; kiểm tra rail, Projects, Tools và Portfolio › Appearance. Chụp bổ sung ba trạng thái Project / Automation / Credentials override bằng thay đổi nháp không lưu: mỗi trạng thái chỉ có 1 disclosure mở. Dòng tên rail có chữ 18 px, rỗng 18 px, chênh 0 px.
+- Ghi chú vận hành cho docs: Không có; không migration, không dependency mới, không đổi ngân sách bundle.
+- Chỗ làm khác đề bài và lý do: Không có.
+- Câu hỏi: Không có.
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `b36e2ec` (worktree `D:\wt\pf-review`, `npm ci` sạch).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 31 file / 194 test; Admin JS 92,8 / 115, CSS 26,5 / 27 kB gzip.
+  - Diff đúng 12 file liệt kê; không đổi breakpoint, token, chiều cao top-bar; không `scrollIntoView`.
+  - `admin.css` là file dùng chung → `npm run shots` **mọi view × 3 màn hình**: không *uneven field row*, không cuộn ngang, không checkbox xuống dòng. 3 cảnh báo *NO TOOLTIP* ở thành phần nhánh không đụng (slug trong Homepage › Content selection, dòng meta và tên trong bộ chọn Cover Letter) → ghi [UI-13](../92-ui-rules.md#ui-13), không thuộc đề bài.
+  - Đo hành vi bằng Playwright ở 1440 × 731, 1920 × 940, 2560 × 1300 (phiên đăng nhập thật):
+    - UI-10: lần đầu trên máy dòng tên `""` → `HUYNH DUC LUONG`, cao 18 px cả hai; lần sau tên có **ngay từ đầu, không đổi**; không còn "Career workspace".
+    - W-02: chip lọc Projects và Tools = `all, draft, published` (không có mục archived).
+    - UI-12: mở Project → Automation overrides: chỉ một nhóm mở; Portfolio media cũng vậy; tiêu đề nhóm vừa mở nằm trong khung nhìn (khung đã cuộn tới đáy nên không lên sát mép được — đúng); shell và `window` không cuộn.
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận:** test của `bindAdminDisclosureReveal` chỉ kiểm hàm được export (Vitest không có DOM); hành vi đã đo ở review. Màu `#a9c2cc` của dòng tên là giá trị cứng có từ trước, không thuộc đề bài.
+- **Cần người vận hành chốt:** không.
+- Token: Codex 61 % → 36 % (~25 %, Vừa).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 → Claude gộp và push.

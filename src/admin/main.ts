@@ -63,6 +63,8 @@ import type { ProfileDocumentKind } from "./profileDocumentWorkspace";
 import type { SiteWorkspaceKind } from "./siteWorkspace";
 import { adminBrand, adminDocumentTitle } from "./brand";
 import { renderAdminNavIcon } from "./adminIcons";
+import { readStoredAdminIdentityName, storeAdminIdentityName } from "./adminIdentityName";
+import { availableContentStatusFilters, type ContentStatusFilter } from "./contentStatusFilters";
 
 interface AdminMediaRow {
   id: string;
@@ -154,7 +156,6 @@ interface PendingMedia {
 type AdminView = "overview" | "homepage" | "projects" | "tools" | "profile" | "cv" | "portfolio" | "cover-letters" | "trash";
 type AdminItemType = "project" | "tool";
 type ContentFilter = "all" | "project" | "tool";
-type ContentStatusFilter = "all" | PublicationStatus;
 type EditorTab = "overview" | "content" | "media";
 type CollectionView = "projects" | "tools" | "trash";
 type ReorderMovement = "up" | "down" | "first" | "last" | { targetId: string };
@@ -192,6 +193,7 @@ let reorderBusy = false;
 let navigationSequence = 0;
 let dashboardRenderSequence = 0;
 let adminIdentity: Profile | null = null;
+let storedAdminIdentityName = readStoredAdminIdentityName();
 let adminContentLoaded = false;
 let adminContentLoading: Promise<void> | null = null;
 let contentSearchTimer: number | undefined;
@@ -262,8 +264,9 @@ const identityInitials = (profile: Profile | null): string => (profile ? profile
   .join("")
   .toUpperCase() || "HDL";
 
-/** The rail subtitle is the owner's English (ASCII) name, live while the Profile is edited; the workspace label until it loads. */
-const adminIdentityLabel = (profile: Profile | null): string => (profile ? profileName(profile.name, "en").trim() : "") || adminBrand.workspace;
+/** The rail subtitle is the owner's English (ASCII) name, live while the Profile is edited; the stored name until it loads. */
+const adminIdentityLabel = (profile: Profile | null): string =>
+  (profile ? profileName(profile.name, "en").trim() : "") || storedAdminIdentityName;
 
 /**
  * Keeps the rail name on one line (§11): if it does not fit at its CSS size, drop the tracking and shrink it
@@ -300,7 +303,10 @@ const bindAdminAvatarImage = (avatar: HTMLElement | null): void => {
 };
 
 const updateAdminIdentity = (profile: Profile, persist = false): void => {
-  if (persist) adminIdentity = structuredClone(profile);
+  if (persist) {
+    adminIdentity = structuredClone(profile);
+    storedAdminIdentityName = storeAdminIdentityName(profileName(profile.name, "en"));
+  }
   const avatar = app.querySelector<HTMLElement>("[data-admin-brand-avatar]");
   if (!avatar) return;
   avatar.classList.remove("has-image");
@@ -309,7 +315,8 @@ const updateAdminIdentity = (profile: Profile, persist = false): void => {
   const label = app.querySelector<HTMLElement>("[data-admin-brand-identity]");
   if (label) {
     label.textContent = adminIdentityLabel(profile);
-    label.title = label.textContent;
+    if (label.textContent) label.title = label.textContent;
+    else label.removeAttribute("title");
     fitAdminIdentityLabel(label);
   }
 };
@@ -1019,13 +1026,21 @@ const dashboardView = (): void => {
   const showCollection = activeView === "projects" || activeView === "tools" || activeView === "trash";
   const viewTitle: Record<AdminView, string> = { overview: "Overview", homepage: "Homepage", projects: "Projects", tools: "Automation tools", profile: "Professional Profile", cv: "Curriculum Vitae", portfolio: "Portfolio", "cover-letters": "Cover letters", trash: "Trash" };
   const collectionTitle = activeView === "projects" ? "Projects" : activeView === "tools" ? "Tools" : "Deleted items";
+  const statusFilterItems = activeView === "projects"
+    ? projects.filter((item) => !item.deleted_at)
+    : activeView === "tools"
+      ? tools.filter((item) => !item.deleted_at)
+      : [];
+  const statusFilters = availableContentStatusFilters(statusFilterItems);
+  if ((activeView === "projects" || activeView === "tools") && !statusFilters.includes(contentStatusFilter)) contentStatusFilter = "all";
   const collectionCount = visibleContentItems().length;
+  const identityLabel = adminIdentityLabel(adminIdentity);
   const navButton = (view: AdminView, label: string): string => `<button type="button" data-admin-view="${view}" class="${activeView === view ? "is-active" : ""}"${activeView === view ? ' aria-current="page"' : ""}><span class="admin-nav__icon-shell" aria-hidden="true">${renderAdminNavIcon(view)}</span>${label}${view === "trash" && trashCount ? `<b>${trashCount}</b>` : ""}</button>`;
   app.innerHTML = `
     <a class="admin-skip-link" href="#admin-workspace">Skip to workspace</a>
     <main class="admin-shell">
       <aside class="admin-rail">
-        <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span class="admin-brand__avatar" data-admin-brand-avatar>${adminAvatarContent(adminIdentity)}</span><div><strong>${adminBrand.name}</strong><small data-admin-brand-identity title="${escapeHtml(adminIdentityLabel(adminIdentity))}">${escapeHtml(adminIdentityLabel(adminIdentity))}</small></div></a>
+        <a class="admin-brand" href="${import.meta.env.BASE_URL}admin/"><span class="admin-brand__avatar" data-admin-brand-avatar>${adminAvatarContent(adminIdentity)}</span><div><strong>${adminBrand.name}</strong><small data-admin-brand-identity${identityLabel ? ` title="${escapeHtml(identityLabel)}"` : ""}>${escapeHtml(identityLabel)}</small></div></a>
         <nav class="admin-nav" aria-label="Admin sections">
           <p>Overview</p>${navButton("overview", "Dashboard")}
           <p>Website</p>${navButton("homepage", "Homepage")}${navButton("projects", "Projects")}${navButton("tools", "Automation tools")}
@@ -1042,7 +1057,7 @@ const dashboardView = (): void => {
             <div class="admin-collection__heading"><div><small>Content</small><h2>${collectionTitle} <span>${collectionCount}</span></h2></div>${activeView === "projects" ? '<button class="button admin-action-new" type="button" data-new-project>+ New</button>' : activeView === "tools" ? '<button class="button admin-action-new" type="button" data-new-tool>+ New</button>' : ""}</div>
             <div class="admin-list-controls">
               <label class="admin-search"><span class="sr-only">Search content</span><input type="search" placeholder="Search by name or slug..." value="${escapeHtml(contentSearch)}" data-content-search></label>
-              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}" aria-pressed="${contentFilter === filter}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${(["all", "draft", "published", "archived"] as ContentStatusFilter[]).map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}" aria-pressed="${contentStatusFilter === filter}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
+              ${activeView === "trash" ? `<div class="admin-filter-row" aria-label="Content type">${(["all", "project", "tool"] as ContentFilter[]).map((filter) => `<button type="button" data-content-filter="${filter}" class="${contentFilter === filter ? "is-active" : ""}" aria-pressed="${contentFilter === filter}">${filter === "all" ? "All" : filter === "project" ? "Projects" : "Tools"}</button>`).join("")}</div>` : `<div class="admin-filter-row" aria-label="Content status">${statusFilters.map((filter) => `<button type="button" data-status-filter="${filter}" class="${contentStatusFilter === filter ? "is-active" : ""}" aria-pressed="${contentStatusFilter === filter}">${filter === "all" ? "All" : contentStatusLabel(filter)}</button>`).join("")}</div>`}
             </div>
             <div class="admin-collection__scroll" data-collection-view="${activeView}"><ul class="admin-content-list" data-content-list>${contentList()}</ul></div>
           </aside>` : ""}
@@ -2172,8 +2187,7 @@ const initialize = async (): Promise<void> => {
 
     dashboardView();
     void loadProfessionalProfile().then((professional) => {
-      adminIdentity = professional.profile;
-      updateAdminIdentity(professional.profile);
+      updateAdminIdentity(professional.profile, true);
     }).catch(() => undefined);
 
     if (activeView === "overview") {

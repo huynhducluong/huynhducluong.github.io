@@ -217,7 +217,7 @@ body:has(.admin-shell) {
 .admin-brand strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .admin-brand strong { font-size: var(--admin-text-base); }
-.admin-brand small { margin-top: .12rem; overflow: hidden; color: #a9c2cc; font-size: var(--admin-text-2xs); text-overflow: ellipsis; white-space: nowrap; }
+.admin-brand small { min-block-size: 1lh; margin-top: .12rem; overflow: hidden; color: #a9c2cc; font-size: var(--admin-text-2xs); text-overflow: ellipsis; white-space: nowrap; }
 
 .admin-nav {
   display: block;
