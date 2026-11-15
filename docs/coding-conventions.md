@@ -1,61 +1,61 @@
-# Coding conventions
+# Quy ước code
 
-How code in this repository is written. Follow the surrounding file when it is more specific than this page.
+Cách viết code trong repository này. Tuân theo file xung quanh nếu file đó có quy định cụ thể hơn trang này.
 
-## 1. Stack and boundaries
+## 1. Stack và ranh giới
 
-- Vite multi-page app, TypeScript, no UI framework. Each route is an `index.html` registered in `vite.config.ts` `rollupOptions.input`; add a new route there.
-- Runtime dependencies are intentionally few (`@supabase/supabase-js`, `cropperjs`, `@fontsource-variable/inter`). Adding one needs a reason and must keep `npm run check:admin-bundle` within budget.
-- `tsconfig.json` uses `verbatimModuleSyntax`, `erasableSyntaxOnly`, `noUnusedLocals`, `noUnusedParameters`. Therefore: use `import type` for type-only imports; no `enum`, `namespace` or constructor parameter properties; delete unused code instead of prefixing it (the existing `_content` parameter is the exception, kept for signature stability).
+- Ứng dụng Vite nhiều trang, TypeScript, không dùng UI framework. Mỗi route là một `index.html` được đăng ký trong `vite.config.ts` tại `rollupOptions.input`; thêm route mới tại đó.
+- Cố ý giữ ít runtime dependency (`@supabase/supabase-js`, `cropperjs`, `@fontsource-variable/inter`). Thêm dependency cần có lý do và phải giữ `npm run check:admin-bundle` trong ngân sách.
+- `tsconfig.json` dùng `verbatimModuleSyntax`, `erasableSyntaxOnly`, `noUnusedLocals`, `noUnusedParameters`. Vì vậy: dùng `import type` cho import chỉ dùng làm type; không dùng `enum`, `namespace` hoặc property trong tham số constructor; xóa code không dùng thay vì thêm tiền tố cho nó (tham số `_content` hiện có là ngoại lệ, được giữ để ổn định chữ ký).
 
-## 2. Folder roles
+## 2. Vai trò thư mục
 
-| Folder | Holds | May import |
+| Thư mục | Chứa | Được import |
 |---|---|---|
-| `src/types/` | Data shapes only | nothing at runtime |
-| `src/shared/` | Pure helpers used by more than one surface (format, validation, preview protocol, ordering) | `types` |
-| `src/data/` | Seed and fallback content | `types` |
-| `src/services/` | Supabase repositories (`*Repository.ts`) and caches | `types`, `shared`, `config` |
-| `src/site/`, `src/pages/`, `src/main.ts` | Public website | `shared`, `services`, `themes`, `site`, `admin/auth` |
-| `src/cv/`, `src/portfolio/`, `src/cover-letter/` | Document renderers and their entry points | `shared`, `services`, `themes`, `admin/auth` |
-| `src/themes/` | Document theme engine | `types` |
-| `src/admin/` | Admin CMS | anything above |
+| `src/types/` | Chỉ dạng dữ liệu | không có gì ở runtime |
+| `src/shared/` | Helper thuần dùng cho nhiều hơn một bề mặt (format, validation, giao thức preview, sắp xếp) | `types` |
+| `src/data/` | Nội dung seed và dự phòng | `types` |
+| `src/services/` | Repository Supabase (`*Repository.ts`) và cache | `types`, `shared`, `config` |
+| `src/site/`, `src/pages/`, `src/main.ts` | Website công khai | `shared`, `services`, `themes`, `site`, `admin/auth` |
+| `src/cv/`, `src/portfolio/`, `src/cover-letter/` | Renderer tài liệu và entry point tương ứng | `shared`, `services`, `themes`, `admin/auth` |
+| `src/themes/` | Engine theme tài liệu | `types` |
+| `src/admin/` | Admin CMS | mọi thứ phía trên |
 
-Public and document code imports from `src/admin/` only `auth.ts` (`getAdminAccess`, `requireAdminAccess`, for draft previews); never Admin UI modules, which would pull Admin code into public bundles. Move a helper to `src/shared/` when a second surface needs it. `src/shared/`, `src/themes/` and `src/types/` import nothing from `services`, `site` or `admin`.
+Code công khai và tài liệu chỉ import `auth.ts` (`getAdminAccess`, `requireAdminAccess`, dùng cho preview Draft) từ `src/admin/`; tuyệt đối không import module UI Admin vì sẽ kéo code Admin vào bundle công khai. Chuyển helper sang `src/shared/` khi bề mặt thứ hai cần dùng. `src/shared/`, `src/themes/` và `src/types/` không import gì từ `services`, `site` hoặc `admin`.
 
 ## 3. Style
 
-- `export const name = (…) => …` arrow functions; classes only for stateful utilities (`MemoryRequestCache`).
-- Double quotes, semicolons, two-space indent, trailing commas in multi-line literals.
-- File names: `camelCase.ts`; repositories end in `Repository`, workspaces in `Workspace`, tests are `<file>.test.ts` next to the source.
-- CSS files: `kebab-case.css` per surface (`home.css`, `cv-screen.css`, `cv-print.css`, `admin-*.css`). Class names are BEM-like: `.block`, `.block__element`, `.block--modifier`; Admin classes start with `admin-`.
-- Comments are rare and explain why, not what.
-- CSS specificity: page-level resets such as `.portfolio-page ol { padding: 0 }` (0,1,1) outrank a single class. When a layout rule must beat a reset or a later generic rule, prefix it with the page class (`.portfolio-page :is(...)`) instead of adding `!important` or reordering the file.
+- Dùng arrow function `export const name = (…) => …`; chỉ dùng class cho utility có trạng thái (`MemoryRequestCache`).
+- Dấu nháy kép, dấu chấm phẩy, thụt lề hai khoảng trắng, dấu phẩy cuối trong literal nhiều dòng.
+- Tên file: `camelCase.ts`; repository kết thúc bằng `Repository`, workspace bằng `Workspace`, test là `<file>.test.ts` đặt cạnh source.
+- File CSS: `kebab-case.css` theo từng bề mặt (`home.css`, `cv-screen.css`, `cv-print.css`, `admin-*.css`). Tên class theo kiểu BEM: `.block`, `.block__element`, `.block--modifier`; class Admin bắt đầu bằng `admin-`.
+- Ít dùng comment; comment giải thích lý do, không giải thích code đang làm gì.
+- Specificity CSS: reset cấp trang như `.portfolio-page ol { padding: 0 }` (0,1,1) ưu tiên hơn một class đơn. Khi quy tắc layout phải thắng reset hoặc quy tắc chung nằm sau, thêm tiền tố class trang (`.portfolio-page :is(...)`) thay vì thêm `!important` hoặc đổi thứ tự file.
 
-## 4. Rendering HTML
+## 4. Render HTML
 
-- Renderers return HTML strings and are inserted with `innerHTML`. Every dynamic value is escaped with `escapeHtml`, or `localize` for `LocalizedText` (which escapes). Never interpolate raw user, database or URL content.
-- Escape exactly once, at the point of output. Never wrap `localize(...)` in `escapeHtml` (that renders `&amp;` on the page). The Portfolio renderer's private `localized` returns raw text and its callers escape it.
-- Conditional fragments use `${cond ? `…` : ""}`; lists use `.map(...).join("")`.
-- Behavior is attached after insertion with `bind…(root)` functions (`bindAdminTablists`, `bindPreviewZoom`, `bindDocumentPrintButton`). Prefer `data-*` attributes over classes as JS hooks.
-- User-facing copy for UI chrome lives in a local `copy = { en: {...}, vi: {...} } as const` object.
+- Renderer trả về chuỗi HTML và được chèn bằng `innerHTML`. Mọi giá trị động đều được escape bằng `escapeHtml`, hoặc `localize` cho `LocalizedText` (`localize` có escape). Tuyệt đối không nội suy trực tiếp nội dung từ người dùng, cơ sở dữ liệu hoặc URL.
+- Escape đúng một lần tại điểm output. Không bọc `localize(...)` trong `escapeHtml` (sẽ render `&amp;` trên trang). Hàm riêng `localized` của renderer Portfolio trả về text thô và nơi gọi hàm phải escape.
+- Fragment có điều kiện dùng `${cond ? `…` : ""}`; danh sách dùng `.map(...).join("")`.
+- Gắn hành vi sau khi chèn bằng các hàm `bind…(root)` (`bindAdminTablists`, `bindPreviewZoom`, `bindDocumentPrintButton`). Ưu tiên thuộc tính `data-*` thay cho class khi làm hook JavaScript.
+- Nội dung hiển thị cho người dùng trong UI chrome nằm trong object cục bộ `copy = { en: {...}, vi: {...} } as const`.
 
-## 5. Data and Supabase
+## 5. Dữ liệu và Supabase
 
-- Repositories map rows to domain types with `…FromRow` / `toRow` functions; the rest of the app never sees column names.
-- Reads that several workspaces share use `MemoryRequestCache` (short TTL, request deduplication); every mutation calls `set` or invalidates the cache.
-- Multi-row writes (publish, reorder, draft + evidence) go through a database function so they are transactional.
-- Never store signed URLs or private file paths in caches, releases or `localStorage`.
-- Migration names: `YYYYMMDDNNNN_snake_case.sql`, never edit an applied migration, add a new one. Follow the `security definer` rules in `CLAUDE.md`.
+- Repository ánh xạ row thành domain type bằng các hàm `…FromRow` / `toRow`; phần còn lại của ứng dụng không bao giờ thấy tên cột.
+- Lượt đọc dùng chung cho nhiều workspace sử dụng `MemoryRequestCache` (TTL ngắn, khử trùng lặp request); mọi mutation gọi `set` hoặc vô hiệu hóa cache.
+- Thao tác ghi nhiều hàng (publish, sắp xếp lại, Draft + bằng chứng) đi qua hàm cơ sở dữ liệu để bảo đảm transaction.
+- Không bao giờ lưu URL ký hoặc đường dẫn file riêng tư trong cache, Release hoặc `localStorage`.
+- Tên migration: `YYYYMMDDNNNN_snake_case.sql`; tuyệt đối không sửa migration đã áp dụng, hãy thêm migration mới. Tuân theo quy tắc `security definer` trong `CLAUDE.md`.
 
-## 6. Tests
+## 6. Test
 
-- Vitest runs in the default Node environment (no DOM). Test pure functions and rendered strings: render the markup and assert on the HTML (see `ui.test.ts`), and keep DOM-dependent code thin.
-- Contract tests read source with `?raw` imports to lock invariants such as stylesheet order (`adminStyles.test.ts`) or the Portfolio chrome bands (`safeArea.test.ts`). Add one when a rule is easy to break silently. CSS `?raw` imports only work because `vite.config.ts` sets `test: { css: true }`. Without it Vitest returns an empty string and every `not.toContain` assertion passes vacuously, so keep that setting and prefer at least one positive `toContain` per CSS file you test.
-- Layout code that needs a browser keeps a pure core that can be tested in Node: `countSafeAreaViolations` takes plain boxes, and `findPortfolioLayoutIssues` only collects DOM rectangles and calls it.
-- Code that touches `localStorage` must fall back gracefully; tests assert the fallback (see `headerDensity.test.ts`).
-- Each bug fix adds a test that fails without the fix when the logic is testable without a browser.
+- Vitest chạy trong môi trường Node mặc định (không DOM). Test hàm thuần và chuỗi đã render: render markup rồi assert trên HTML (xem `ui.test.ts`), đồng thời giữ code phụ thuộc DOM thật mỏng.
+- Contract test đọc source bằng import `?raw` để khóa invariant như thứ tự stylesheet (`adminStyles.test.ts`) hoặc các dải chrome Portfolio (`safeArea.test.ts`). Thêm contract test khi một quy tắc dễ bị âm thầm phá vỡ. Import CSS `?raw` chỉ hoạt động vì `vite.config.ts` đặt `test: { css: true }`. Nếu thiếu, Vitest trả về chuỗi rỗng và mọi assert `not.toContain` đều đạt giả, vì vậy hãy giữ thiết lập đó và ưu tiên có ít nhất một `toContain` dương cho mỗi file CSS được test.
+- Code layout cần trình duyệt phải giữ một core thuần có thể test trong Node: `countSafeAreaViolations` nhận các box thuần, còn `findPortfolioLayoutIssues` chỉ thu thập hình chữ nhật DOM và gọi core đó.
+- Code chạm tới `localStorage` phải có phương án dự phòng an toàn; test assert phương án này (xem `headerDensity.test.ts`).
+- Mỗi lần sửa bug phải thêm test thất bại khi chưa có bản sửa nếu logic có thể test mà không cần trình duyệt.
 
-## 7. Commits
+## 7. Commit
 
-Conventional style used in history: `feat: …`, `feat(portfolio): …`, `fix: …`, `docs: …`, `refactor: …`. Mention bundle budget increases and new migrations in the message body.
+Dùng phong cách Conventional Commits như trong lịch sử: `feat: …`, `feat(portfolio): …`, `fix: …`, `docs: …`, `refactor: …`. Ghi mức tăng ngân sách bundle và migration mới trong phần thân commit.

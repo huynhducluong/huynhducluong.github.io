@@ -1,63 +1,63 @@
-# Admin operations
+# Vận hành Admin
 
-## Phase 4 activation
+## Kích hoạt Giai đoạn 4
 
-Apply the migrations in order through the Supabase SQL Editor or the normal migration workflow. Phase 4 requires the existing `202610050004` service-role grants and `202610050005` Cron schedule, followed by:
+Áp dụng các migration theo thứ tự qua Supabase SQL Editor hoặc quy trình migration thông thường. Giai đoạn 4 yêu cầu các grant service-role `202610050004` và lịch Cron `202610050005` hiện có, sau đó đến:
 
 ```text
 supabase/migrations/202610060001_admin_operational_health.sql
 ```
 
-The migration replaces `admin_schema_health()` with an admin-only, read-only health response. It does not expose the Edge Function secret, Vault data or service-role key.
+Migration thay thế `admin_schema_health()` bằng phản hồi health chỉ đọc, chỉ dành cho admin. Nó không làm lộ secret Edge Function, dữ liệu Vault hoặc service-role key.
 
-After applying it, sign in to `/admin/` and open Overview. `System health` should show `Healthy`, and the Operational health panel should show:
+Sau khi áp dụng, đăng nhập `/admin/` và mở Overview. `System health` phải hiển thị `Healthy`, và panel Operational health phải hiển thị:
 
 - Publishing database: Ready
 - Purge database access: Ready
 - Daily Trash cleanup: Active
-- Latest scheduled run: Passed, or Pending until the first 02:15 Asia/Bangkok run
+- Latest scheduled run: Passed, hoặc Pending cho đến lần chạy 02:15 Asia/Bangkok đầu tiên
 
-Refresh once after applying the migration so PostgREST and the Admin page both load the new schema response.
+Refresh một lần sau khi áp dụng migration để cả PostgREST và trang Admin tải phản hồi schema mới.
 
-## Credentials and private documents
+## Credential và tài liệu riêng tư
 
-Apply `supabase/migrations/202610060002_professional_credentials.sql` after the Phase 4 migration. It creates the credential library, private evidence metadata, transactional Professional Profile save function and the private `portfolio-private-documents` Storage bucket with admin-only policies.
+Áp dụng `supabase/migrations/202610060002_professional_credentials.sql` sau migration Giai đoạn 4. Migration này tạo thư viện Credential, metadata bằng chứng riêng tư, hàm lưu Professional Profile theo transaction và bucket Storage riêng tư `portfolio-private-documents` với policy chỉ dành cho admin.
 
-After applying it:
+Sau khi áp dụng:
 
-1. Reload Admin and open Professional Profile → Credentials.
-2. Create the credential details as Draft.
-3. Upload PDF, JPEG, PNG or WebP evidence up to 10 MB per file.
-4. Change the credential to Ready after it has evidence or an HTTPS verification URL.
-5. In a CV draft, use Sync latest to copy Ready credential metadata into the CV. Private files are never copied into the release.
+1. Tải lại Admin và mở Professional Profile → Credentials.
+2. Tạo thông tin Credential ở trạng thái Draft.
+3. Upload bằng chứng PDF, JPEG, PNG hoặc WebP, tối đa 10 MB mỗi file.
+4. Chuyển Credential thành Ready sau khi có bằng chứng hoặc URL xác minh HTTPS.
+5. Trong Draft CV, dùng **Sync latest** để sao chép metadata Credential Ready vào CV. File riêng tư không bao giờ được sao chép vào Release.
 
-Education and Language cards link to the same credential library. Save a newly created Education or Language entry before linking a credential to it.
+Card Education và Language liên kết tới cùng thư viện Credential. Lưu mục Education hoặc Language mới tạo trước khi liên kết Credential với mục đó.
 
-## Portfolio media crop profiles
+## Crop profile media Portfolio
 
-Apply `supabase/migrations/202610150001_portfolio_media_crop_profiles.sql` before deploying the matching frontend build. It creates reusable `wide`, `landscape` and `portrait` crops for both Project and Tool media. The previous Project cover-crop table remains intact so older releases and legacy portrait crops continue to render.
+Áp dụng `supabase/migrations/202610150001_portfolio_media_crop_profiles.sql` trước khi deploy bản frontend tương ứng. Migration tạo các crop `wide`, `landscape` và `portrait` dùng lại cho media của cả Project và Tool. Bảng crop cover Project trước đây vẫn nguyên vẹn để Release cũ và crop portrait kế thừa tiếp tục render.
 
-Redeploy `supabase/functions/purge-admin-trash` with the same release so scheduled permanent deletion also cleans the new Project and Tool crop assets.
+Redeploy `supabase/functions/purge-admin-trash` cùng Release đó để tác vụ xóa vĩnh viễn theo lịch cũng dọn các asset crop Project và Tool mới.
 
-After applying it, refresh Admin and verify that Media for both Projects and Automation Tools shows `Adjust crops`. A crop stays `Auto` until an editor changes that profile; only modified profiles are generated and stored. Returning a profile to automatic crop removes its editable crop row without removing any file referenced by a published release.
+Sau khi áp dụng, refresh Admin và kiểm tra Media của cả Projects và Automation Tools hiển thị **Adjust crops**. Một crop giữ trạng thái `Auto` cho đến khi người chỉnh sửa thay đổi profile đó; chỉ profile đã sửa mới được tạo và lưu. Đưa một profile về crop tự động sẽ xóa row crop có thể chỉnh sửa mà không xóa file nào đang được Release đã publish tham chiếu.
 
-## Project key facts and Tool workflow steps
+## Key fact Project và bước Workflow Tool
 
-Apply `supabase/migrations/202611010001_project_key_facts_tool_workflow_steps.sql` (after `202610270001`). It adds `projects.key_facts` and `automation_tools.workflow_steps` (`jsonb`, default `[]`, at most 3 items each, checked by constraints). It creates no function, so there is no EXECUTE grant to revoke. Existing rows keep printing what they printed before.
+Áp dụng `supabase/migrations/202611010001_project_key_facts_tool_workflow_steps.sql` (sau `202610270001`). Migration thêm `projects.key_facts` và `automation_tools.workflow_steps` (`jsonb`, mặc định `[]`, tối đa 3 mục mỗi trường, được constraint kiểm tra). Migration không tạo hàm nên không có grant EXECUTE cần thu hồi. Các row hiện có tiếp tục in nội dung như trước.
 
-Until it is applied, the Admin still saves Projects and Tools: `upsertWithOptionalColumns` retries without a column Supabase does not know yet, and stops with "Apply the latest database migration before saving key facts / workflow steps" only when the editor filled them in, so nothing typed is silently dropped. Refresh Admin once after applying it.
+Cho đến khi migration được áp dụng, Admin vẫn lưu Project và Tool: `upsertWithOptionalColumns` thử lại mà không có cột Supabase chưa biết, và chỉ dừng với thông báo "Apply the latest database migration before saving key facts / workflow steps" khi người chỉnh sửa đã điền các trường đó, nhờ vậy không có nội dung đã nhập nào âm thầm bị bỏ. Refresh Admin một lần sau khi áp dụng.
 
-## Credential evidence previews
+## Preview bằng chứng Credential
 
-Apply `supabase/migrations/202611010002_credential_portfolio_previews.sql` (after `202611010001`). It adds `credential_media_crops` (public WebP crops of evidence images, admin-only RLS, `anon` revoked) and three columns on `credential_assets`: `show_in_portfolio` (default off; images only; at most one per credential), `preview_rotation` (0–3 quarter turns) and `preview_profile` (landscape or portrait). It creates no function, so there is no EXECUTE grant to revoke. Crop files go to the existing public bucket under `portfolio-media-crops/credentials/`; the evidence originals stay in the private bucket and are never modified.
+Áp dụng `supabase/migrations/202611010002_credential_portfolio_previews.sql` (sau `202611010001`). Migration thêm `credential_media_crops` (crop WebP công khai của ảnh bằng chứng, RLS chỉ dành cho admin, thu hồi quyền `anon`) và ba cột trên `credential_assets`: `show_in_portfolio` (mặc định tắt; chỉ ảnh; tối đa một ảnh mỗi Credential), `preview_rotation` (0–3 phần tư vòng) và `preview_profile` (landscape hoặc portrait). Migration không tạo hàm nên không có grant EXECUTE cần thu hồi. File crop được đưa vào bucket công khai hiện có dưới `portfolio-media-crops/credentials/`; bản gốc bằng chứng nằm trong bucket riêng tư và không bao giờ bị sửa.
 
-Until it is applied, Credentials load without previews and saving a preview stops with "Apply the latest database migration before saving credential previews." Refresh Admin once after applying it, then use **Adjust crops** on an evidence image and turn on **Show in Portfolio**. Deleting an evidence file or a credential also removes its crop files unless a published release still references them.
+Cho đến khi migration được áp dụng, Credentials tải mà không có preview và thao tác lưu preview dừng với thông báo "Apply the latest database migration before saving credential previews." Refresh Admin một lần sau khi áp dụng, rồi dùng **Adjust crops** trên một ảnh bằng chứng và bật **Show in Portfolio**. Xóa file bằng chứng hoặc Credential cũng xóa các file crop của nó, trừ khi một Release đã publish vẫn tham chiếu chúng.
 
-## RPC execute privileges
+## Quyền EXECUTE của RPC
 
-Apply `supabase/migrations/202610270001_revoke_rpc_default_execute.sql` after `202610150002_professional_credential_order.sql`. Supabase grants EXECUTE on new public functions directly to `anon` and `authenticated`, so `revoke ... from public` alone does not remove them. The migration removes anon access to every Admin RPC and limits the internal cover-letter helper and the trash-purge secret/Cron checks to their trusted callers.
+Áp dụng `supabase/migrations/202610270001_revoke_rpc_default_execute.sql` sau `202610150002_professional_credential_order.sql`. Supabase cấp trực tiếp quyền EXECUTE trên hàm public mới cho `anon` và `authenticated`, vì vậy chỉ `revoke ... from public` không thu hồi các quyền đó. Migration xóa quyền truy cập của anon tới mọi RPC Admin và giới hạn helper Cover Letter nội bộ cùng các kiểm tra secret/Cron của trash-purge cho những nơi gọi đáng tin cậy.
 
-Verify the result in the SQL Editor; only `is_portfolio_admin` should allow anon:
+Kiểm tra kết quả trong SQL Editor; chỉ `is_portfolio_admin` được cho phép anon:
 
 ```sql
 select p.oid::regprocedure as function_name,
@@ -69,31 +69,31 @@ where n.nspname = 'public' and p.prosecdef
 order by 1;
 ```
 
-## Release quality gate
+## Cổng chất lượng Release
 
-Run the same command locally that GitHub Actions runs before deployment:
+Chạy tại máy cục bộ cùng lệnh GitHub Actions chạy trước khi deploy:
 
 ```powershell
 npm run verify:admin
 ```
 
-It performs TypeScript checking, the Vitest regression suite, the production Vite build and the Admin initial-bundle budget check. A failure in any step returns a non-zero exit code and prevents GitHub Pages deployment.
+Lệnh thực hiện kiểm tra TypeScript, bộ test hồi quy Vitest, production build Vite và kiểm tra ngân sách bundle ban đầu của Admin. Bất kỳ bước nào thất bại đều trả về exit code khác 0 và ngăn deploy GitHub Pages.
 
-The current initial budgets are 115 kB gzip for JavaScript and 27 kB gzip for CSS. CSS was raised from 26 kB on 2026-11-01 because the Cover Letter preview renders inline in the Admin and therefore needs `document-typography.css` (Be Vietnam Pro font faces and the document type tokens, about 0.6 kB gzip); a dead-CSS scan found nothing to remove first. Admin workspace CSS is loaded eagerly in a deterministic order so the final UI normalization layer cannot be reversed by route loading. Run only the bundle check after an existing production build with:
+Ngân sách ban đầu hiện tại là 115 kB gzip cho JavaScript và 27 kB gzip cho CSS. Ngân sách CSS được tăng từ 26 kB vào 2026-11-01 vì preview Cover Letter render inline trong Admin nên cần `document-typography.css` (các font face Be Vietnam Pro và token kiểu chữ tài liệu, khoảng 0,6 kB gzip); trước đó, quá trình quét CSS thừa không tìm thấy gì có thể bỏ. CSS workspace Admin được tải sớm theo thứ tự xác định để lớp chuẩn hóa UI cuối cùng không thể bị đảo ngược do tải theo route. Chỉ chạy kiểm tra bundle sau khi đã có production build hiện tại bằng:
 
 ```powershell
 npm run check:admin-bundle
 ```
 
-Website/Profile, CV/Portfolio, Cover Letter and Portfolio media-crop JavaScript modules load on demand. Workspace CSS is intentionally part of the initial Admin bundle to preserve deterministic layout and responsive behavior.
+Các module JavaScript Website/Profile, CV/Portfolio, Cover Letter và crop media Portfolio tải khi cần. CSS workspace chủ ý nằm trong bundle Admin ban đầu để giữ layout và hành vi responsive xác định.
 
-Use `npm run test:watch` while developing Admin behavior. Use `npm run test` for one deterministic CI-style run.
+Dùng `npm run test:watch` khi phát triển hành vi Admin. Dùng `npm run test` cho một lần chạy xác định theo kiểu CI.
 
-## When health needs attention
+## Khi health cần xử lý
 
-- `Update migration`: apply the latest migration and refresh Admin.
-- `Check grants`: reapply `202610050004_purge_admin_trash_service_role.sql`, then confirm the service-role health check can read Projects and Automation Tools.
-- `Check Cron`: verify that `purge-admin-trash-daily` is active with `15 19 * * *`, then reapply `202610050005_schedule_admin_trash_purge.sql` if required.
-- `Latest scheduled run: Review`: inspect the `purge-admin-trash` Edge Function logs and the latest `cron.job_run_details` entry. A manual POST success does not replace checking the failing scheduled request.
+- `Update migration`: áp dụng migration mới nhất và refresh Admin.
+- `Check grants`: áp dụng lại `202610050004_purge_admin_trash_service_role.sql`, rồi xác nhận kiểm tra health service-role có thể đọc Project và Automation Tool.
+- `Check Cron`: xác minh `purge-admin-trash-daily` đang active với `15 19 * * *`, rồi áp dụng lại `202610050005_schedule_admin_trash_purge.sql` nếu cần.
+- `Latest scheduled run: Review`: kiểm tra log Edge Function `purge-admin-trash` và mục `cron.job_run_details` mới nhất. Một lần POST thủ công thành công không thay thế việc kiểm tra request theo lịch đang thất bại.
 
-Do not put `ADMIN_TRASH_PURGE_SECRET`, a legacy service-role JWT or Vault values into frontend code, tests, logs, screenshots or Git.
+Không đưa `ADMIN_TRASH_PURGE_SECRET`, JWT service-role cũ hoặc giá trị Vault vào code frontend, test, log, ảnh chụp hoặc Git.

@@ -1,75 +1,75 @@
-# Portfolio platform architecture
+# Kiến trúc nền tảng portfolio
 
-## Routes
+## Các route
 
-- `/`: responsive portfolio website and professional overview.
-- `/projects/`, `/project/?id=slug`: published project listing and case study.
-- `/tools/`, `/tool/?id=slug`: published BIM automation tools.
-- `/cv/`: curated two-page A4 English CV.
-- `/portfolio/`: English A4 landscape Portfolio preview and print/PDF export.
-- `/admin/`: private Magic Link CMS.
+- `/`: website portfolio responsive và tổng quan nghề nghiệp.
+- `/projects/`, `/project/?id=slug`: danh sách project đã publish và bài phân tích tình huống.
+- `/tools/`, `/tool/?id=slug`: các công cụ tự động hóa BIM đã publish.
+- `/cv/`: CV tiếng Anh A4 hai trang đã tuyển chọn.
+- `/portfolio/`: bản xem trước Portfolio tiếng Anh A4 ngang và chức năng in/xuất PDF.
+- `/admin/`: CMS Magic Link riêng tư.
 
-## Data ownership
+## Quyền sở hữu dữ liệu
 
-Supabase is authoritative for shared website, CV, Portfolio, project, tool and media content. The bundled data files seed a new installation and remain a development fallback when the remote schema is unavailable. Public outputs read immutable releases; authenticated Admin previews read their current editable drafts.
+Supabase là nguồn chính thức cho nội dung dùng chung của Website, CV, Portfolio, Project, Tool và media. Các file dữ liệu đi kèm dùng để tạo dữ liệu ban đầu cho bản cài đặt mới và vẫn là phương án dự phòng khi phát triển nếu schema từ xa không dùng được. Các output công khai đọc Release bất biến; bản xem trước Admin đã xác thực đọc Draft hiện có thể chỉnh sửa.
 
-Projects and Automation Tools are master content libraries. Their editors own facts, descriptions, responsibilities, technologies and media, but do not own output placement. The backend `published` value is presented as **Ready** in Admin: it means the item may be selected by an output, not that changing the item immediately changes a public page.
+Project và Automation Tool là các thư viện nội dung chính. Trình chỉnh sửa của chúng sở hữu dữ kiện, mô tả, trách nhiệm, công nghệ và media, nhưng không sở hữu vị trí trên output. Giá trị backend `published` được trình bày là **Ready** trong Admin: nghĩa là mục đó có thể được một output chọn, không có nghĩa việc thay đổi mục sẽ lập tức thay đổi trang công khai.
 
-Each output owns its composition:
+Mỗi output sở hữu cấu trúc của mình:
 
-- Projects and Automation Tools own the canonical cross-channel `display_order`; the Admin master lists provide drag-and-drop plus keyboard/touch reorder controls.
-- Website draft content owns Website inclusion and Homepage highlighting in `website_content.content_selection`; its output follows the shared Project/Tool order.
-- Professional Profile owns the content and order of Experience, Education, Skill Groups and Languages (array order in `professional_profile`) and of Credentials (`display_order`). Outputs select from it; they never store their own order.
-- Each CV document draft owns its Background selection (which Profile entries appear), detailed/compact project selection, summary visibility, responsibility bullets and tool selection. Each Portfolio draft owns Credential selection, layout, Primary/Supporting media assignments, the Cover & closing image, Profile page choices, the responsibilities printed per project (`projectResponsibilities`, ids only; Projects owns their text and order) and whether Technical/Editorial pages print the summary or the project story (`projectText`). Key facts and Workflow steps are Project and Tool content (`key_facts`, `workflow_steps`), never Portfolio copies. Both consume the shared Project/Tool order and the Professional Profile order.
-- Cover Letters keep their independent evidence references.
+- Project và Automation Tool sở hữu `display_order` chuẩn dùng chung giữa các kênh; các danh sách chính trong Admin có điều khiển sắp xếp kéo thả cùng bàn phím/cảm ứng.
+- Draft nội dung Website sở hữu việc đưa nội dung vào Website và làm nổi bật trên Homepage trong `website_content.content_selection`; output này theo thứ tự Project/Tool dùng chung.
+- Professional Profile sở hữu nội dung và thứ tự của Experience, Education, Skill Group và Language (thứ tự mảng trong `professional_profile`) cùng Credential (`display_order`). Các output chọn từ đó; chúng không bao giờ lưu thứ tự riêng.
+- Mỗi Draft tài liệu CV sở hữu lựa chọn Background (các mục Profile xuất hiện), lựa chọn project chi tiết/thu gọn, trạng thái hiển thị summary, các gạch đầu dòng trách nhiệm và lựa chọn tool. Mỗi Draft Portfolio sở hữu lựa chọn Credential, layout, việc gán media Primary/Supporting, ảnh Cover & closing, lựa chọn trang Profile, các trách nhiệm in theo từng project (`projectResponsibilities`, chỉ id; Project sở hữu nội dung và thứ tự của chúng) và việc trang Technical/Editorial in summary hay câu chuyện project (`projectText`). Key fact và bước Workflow là nội dung Project và Tool (`key_facts`, `workflow_steps`), không bao giờ là bản sao trong Portfolio. Cả hai dùng thứ tự Project/Tool dùng chung và thứ tự Professional Profile.
+- Cover Letter giữ các tham chiếu bằng chứng độc lập.
 
-Legacy Project/Tool distribution columns remain readable for migration and old-release compatibility, but current Admin editors no longer write them. Existing published releases remain immutable snapshots.
+Các cột phân phối Project/Tool cũ vẫn đọc được để phục vụ migration và tương thích Release cũ, nhưng trình chỉnh sửa Admin hiện tại không còn ghi vào đó. Các Release đã publish hiện có vẫn là snapshot bất biến.
 
-## Publishing workflow
+## Quy trình publish
 
-1. Create/import shared Project or Tool content: status is `draft`.
-2. Edit text and upload sanitized public-ready images.
-3. Resolve the Admin Ready check, then mark the shared item **Ready**. Required English detail content, technologies, a cover image and cover alt text block Ready; Vietnamese completeness is a recommendation. Custom Portfolio crops remain optional because every media slot has an automatic fallback.
-4. Select Ready items per channel; change their shared order once in Projects or Automation Tools.
-5. Review that output's preview and publish its release.
+1. Tạo/import nội dung Project hoặc Tool dùng chung: trạng thái là `draft`.
+2. Chỉnh sửa văn bản và upload ảnh đã làm sạch, sẵn sàng công khai.
+3. Xử lý kiểm tra Ready trong Admin, rồi đánh dấu mục dùng chung là **Ready**. Nội dung chi tiết tiếng Anh bắt buộc, công nghệ, ảnh cover và alt text của cover sẽ chặn Ready nếu thiếu; độ đầy đủ tiếng Việt là khuyến nghị. Crop Portfolio tùy chỉnh vẫn là tùy chọn vì mọi vị trí media đều có phương án dự phòng tự động.
+4. Chọn các mục Ready cho từng kênh; chỉ đổi thứ tự dùng chung một lần trong Projects hoặc Automation Tools.
+5. Xem lại bản preview của output đó và publish Release.
 
-Returning a shared item to Draft prevents it from being selected in new output drafts. Already published releases remain unchanged until that output is published again.
+Chuyển một mục dùng chung về Draft sẽ ngăn mục đó được chọn vào Draft output mới. Release đã publish không đổi cho đến khi output đó được publish lại.
 
-Project/Tool content saves automatically return a Ready item to Draft when a required Ready check no longer passes. Website publishing runs its own preflight against Website/Profile fields and every selected Project/Tool. Website publish, master/media reorder and Cover Letter draft/evidence writes use database transactions so partial multi-row state cannot be committed.
+Khi lưu nội dung Project/Tool, một mục Ready tự động trở về Draft nếu không còn đạt kiểm tra Ready bắt buộc. Publish Website chạy preflight riêng đối với các trường Website/Profile và mọi Project/Tool đã chọn. Publish Website, sắp xếp lại danh sách chính/media và ghi Draft/bằng chứng Cover Letter dùng transaction cơ sở dữ liệu để không thể commit trạng thái nhiều hàng mới chỉ hoàn tất một phần.
 
-## Media lifecycle
+## Vòng đời media
 
-Release JSON stores immutable content plus versioned Storage paths. Removing media from a draft deletes its editable metadata, but the stored object is retained whenever any Website, CV or Portfolio release still references that path. Crop replacement and Trash purging use the same release-reference check. Unreferenced objects may be removed immediately; referenced objects remain available so historical and active releases never lose their images.
+JSON của Release lưu nội dung bất biến cùng đường dẫn Storage có phiên bản. Xóa media khỏi Draft sẽ xóa metadata có thể chỉnh sửa của nó, nhưng object đã lưu vẫn được giữ nếu bất kỳ Release Website, CV hoặc Portfolio nào còn tham chiếu đường dẫn đó. Thay crop và xóa vĩnh viễn khỏi Trash dùng cùng cơ chế kiểm tra tham chiếu Release. Object không được tham chiếu có thể bị xóa ngay; object được tham chiếu vẫn còn để Release lịch sử và đang hoạt động không bao giờ mất ảnh.
 
-Portfolio layouts request semantic media slots rather than layout-specific files. A draft assigns a Primary visual and, only where needed, a different Supporting visual. Each slot requests one of three reusable crop profiles: `wide` (21:9), `landscape` (4:3) or `portrait` (3:4). Both Projects and Tools use the same model. The renderer prefers a saved profile crop and otherwise uses the original image with the layout's `object-fit` behavior, so editors crop only images that need manual composition.
+Các layout Portfolio yêu cầu vị trí media theo ngữ nghĩa thay vì file riêng cho từng layout. Một Draft gán hình Primary và chỉ khi cần mới gán một hình Supporting khác. Mỗi vị trí yêu cầu một trong ba crop profile dùng lại: `wide` (21:9), `landscape` (4:3) hoặc `portrait` (3:4). Project và Tool dùng cùng mô hình. Renderer ưu tiên crop profile đã lưu, nếu không thì dùng ảnh gốc với hành vi `object-fit` của layout, vì vậy người chỉnh sửa chỉ crop những ảnh cần bố cục thủ công.
 
-Professional credentials are a normalized shared library. A credential may stand alone or link to an Education/Language entry; its evidence files live in the private `portfolio-private-documents` bucket. Original certificates, diplomas, transcripts and score reports are available only to authenticated Admin users through short-lived signed URLs. CV sync copies only Ready credential metadata into its draft and release—never private file paths or signed URLs. The only credential image that can become public is an editor-made crop: Adjust crops on an evidence image writes WebP crops to the public bucket (`credential_media_crops`), and the credential snapshot carries the crop of the shown file (`preview`) only after the editor turns on "Show in Portfolio" for it. Evidence rotation is stored (`preview_rotation`), never written into the private original. Project and Tool rotation, by contrast, replaces the original so the Website shows it upright; the previous file is removed only when no release references it.
+Professional Credential là một thư viện dùng chung đã chuẩn hóa. Một Credential có thể đứng độc lập hoặc liên kết với một mục Education/Language; các file bằng chứng nằm trong bucket riêng tư `portfolio-private-documents`. Chứng chỉ, bằng cấp, bảng điểm và phiếu điểm gốc chỉ dành cho người dùng Admin đã xác thực qua URL ký có thời hạn ngắn. Đồng bộ CV chỉ sao chép metadata Credential Ready vào Draft và Release — không bao giờ sao chép đường dẫn file riêng tư hoặc URL ký. Ảnh Credential duy nhất có thể công khai là crop do người chỉnh sửa tạo: **Adjust crops** trên ảnh bằng chứng ghi crop WebP vào bucket công khai (`credential_media_crops`), và snapshot Credential chỉ mang crop của file được hiển thị (`preview`) sau khi người chỉnh sửa bật **Show in Portfolio** cho file đó. Góc xoay bằng chứng được lưu (`preview_rotation`), không bao giờ ghi vào bản gốc riêng tư. Ngược lại, thao tác xoay Project và Tool thay thế bản gốc để Website hiển thị đúng chiều; file trước đó chỉ bị xóa khi không còn Release nào tham chiếu.
 
-## Admin preview contract
+## Hợp đồng preview Admin
 
-- Website, Project detail, Tool detail, CV and Portfolio previews exchange the latest unsaved form payload through a same-origin ready/rendered handshake. The iframe announces readiness after Admin authorization, so its first payload cannot be lost during asynchronous startup.
-- Professional Profile remains the shared data editor. CV and Portfolio drafts always inherit name, email, phone, photo and location from the saved Professional Profile, while each document owns its role-specific title and summary and can explicitly refresh those two fields from the shared profile. Portfolio cover and narrative copy uses the same EN/VI localized-text shape as Website content. CV and Portfolio drafts recompose Experience, Education, Credentials, Skill Groups and Languages from the current Professional Profile whenever their workspace loads, keeping only the saved selection; saving Professional Profile or changing a Credential reloads both workspaces. Entries added to the Profile after a draft was last saved are not selected automatically and are marked **New** in that draft's Background tab until the draft is saved. Website, CV, Portfolio and Cover Letter previews stay in their own workspaces, and published releases remain frozen.
-- Project and automation-tool changes mark dependent workspaces stale. They reload on the next visit without discarding edits in another open workspace.
-- CV and Portfolio drafts compose current shared Project/Tool records with their saved document settings. Published releases remain immutable snapshots.
-- Cover Letter drafts render directly from the current form. Final and archived letters retain their saved sender snapshot.
-- Website release versions are generated automatically at publish time. Release history remains available from the Homepage header without occupying the preview canvas.
+- Bản preview Website, chi tiết Project, chi tiết Tool, CV và Portfolio trao đổi payload form chưa lưu mới nhất qua quy trình bắt tay ready/rendered cùng origin. Iframe thông báo sẵn sàng sau khi Admin xác thực quyền, nhờ đó payload đầu tiên không thể bị mất trong lúc khởi động bất đồng bộ.
+- Professional Profile vẫn là trình chỉnh sửa dữ liệu dùng chung. Draft CV và Portfolio luôn kế thừa tên, email, điện thoại, ảnh và địa điểm từ Professional Profile đã lưu, còn mỗi tài liệu sở hữu title và summary riêng theo vai trò, đồng thời có thể chủ động làm mới hai trường đó từ Profile dùng chung. Nội dung cover và narrative của Portfolio dùng cùng dạng localized text EN/VI như nội dung Website. Draft CV và Portfolio tái cấu trúc Experience, Education, Credential, Skill Group và Language từ Professional Profile hiện tại mỗi khi workspace tải, chỉ giữ lại lựa chọn đã lưu; lưu Professional Profile hoặc thay đổi một Credential sẽ tải lại cả hai workspace. Mục được thêm vào Profile sau lần lưu Draft gần nhất không tự động được chọn và được đánh dấu **New** trong tab Background của Draft đó cho đến khi Draft được lưu. Bản preview Website, CV, Portfolio và Cover Letter nằm trong workspace riêng, còn Release đã publish vẫn đóng băng.
+- Thay đổi Project và automation tool đánh dấu các workspace phụ thuộc là cũ. Chúng tải lại ở lần truy cập kế tiếp mà không bỏ chỉnh sửa trong workspace khác đang mở.
+- Draft CV và Portfolio kết hợp record Project/Tool dùng chung hiện tại với thiết lập tài liệu đã lưu. Release đã publish vẫn là snapshot bất biến.
+- Draft Cover Letter render trực tiếp từ form hiện tại. Thư ở trạng thái Final và archived giữ snapshot người gửi đã lưu.
+- Phiên bản Release Website được tạo tự động lúc publish. Lịch sử Release vẫn truy cập được từ header Homepage mà không chiếm vùng preview.
 
-## Admin performance model
+## Mô hình hiệu năng Admin
 
-The Admin shell and workspace styles load eagerly in a deterministic cascade, with `admin-ui.css` remaining the final normalization layer. Website/Profile, CV/Portfolio, Cover Letter and Portfolio media-crop JavaScript remains route-loaded. Route initialization requests only the data required by the selected workspace; shared Profile, Credential, Profile Photo and health reads use short-lived in-memory request deduplication. Successful mutations replace or invalidate their cache entry, and private document files and signed URLs are never persisted in the cache.
+Admin shell và style workspace tải sớm theo thứ tự cascade xác định, trong đó `admin-ui.css` luôn là lớp chuẩn hóa cuối cùng. JavaScript của Website/Profile, CV/Portfolio, Cover Letter và crop media Portfolio vẫn tải theo route. Khởi tạo route chỉ yêu cầu dữ liệu cần cho workspace được chọn; các lượt đọc Profile, Credential, Profile Photo và health dùng chung được khử trùng lặp request trong bộ nhớ thời gian ngắn. Mutation thành công sẽ thay thế hoặc vô hiệu hóa mục cache tương ứng; file tài liệu riêng tư và URL ký không bao giờ được lưu lâu trong cache.
 
-Admin media outside the viewport uses native lazy image decoding. Interactive rows and cards do not use guessed intrinsic heights, avoiding scroll and layout shifts as content enters the viewport. CI measures the compressed JavaScript and CSS referenced by the built `/admin/` HTML so an accidental bundle increase cannot silently degrade startup performance.
+Media Admin ngoài viewport dùng cơ chế lazy decode ảnh có sẵn của trình duyệt. Hàng và card tương tác không dùng chiều cao nội tại ước đoán, tránh dịch chuyển scroll và layout khi nội dung đi vào viewport. CI đo JavaScript và CSS đã nén được HTML `/admin/` sau build tham chiếu để việc tăng bundle ngoài ý muốn không thể âm thầm làm giảm hiệu năng khởi động.
 
-## Security boundary
+## Ranh giới bảo mật
 
-The browser contains only a Supabase publishable key. Row Level Security and an immutable `auth.uid()` allowlist protect writes and draft reads. The service-role key must never be added to frontend code or the repository.
+Trình duyệt chỉ chứa Supabase publishable key. Row Level Security và allowlist `auth.uid()` bất biến bảo vệ thao tác ghi và đọc Draft. Service-role key tuyệt đối không được thêm vào code frontend hoặc repository.
 
-The Storage bucket is public because approved images must render on GitHub Pages. Therefore a leaked direct object URL can still be opened even while its database record is Draft. Only sanitized public-ready media belongs in this bucket.
+Bucket Storage là công khai vì ảnh đã duyệt phải render trên GitHub Pages. Do đó, URL object trực tiếp bị lộ vẫn có thể mở được ngay cả khi record cơ sở dữ liệu đang là Draft. Chỉ media đã làm sạch, sẵn sàng công khai mới được đưa vào bucket này.
 
-## Admin operational health and release gate
+## Health vận hành Admin và cổng Release
 
-The Admin Overview reads `admin_schema_health()` when the authenticated workspace starts. The response contains no credentials; it reports the current schema version, transactional publishing safeguards, release-aware media cleanup, least-privilege `service_role` grants, the daily Trash Cron schedule and the most recent scheduled-run status. A Cron job that has not reached its first scheduled run is shown as pending and does not by itself make the system unhealthy.
+Admin Overview đọc `admin_schema_health()` khi workspace đã xác thực khởi động. Phản hồi không chứa thông tin xác thực; nó báo phiên bản schema hiện tại, cơ chế bảo vệ publish bằng transaction, dọn media có xét Release, grant `service_role` theo nguyên tắc đặc quyền tối thiểu, lịch Trash Cron hằng ngày và trạng thái lần chạy theo lịch gần nhất. Cron job chưa đến lần chạy đầu tiên theo lịch được hiển thị là pending và riêng điều đó không làm hệ thống thành unhealthy.
 
-Every GitHub Pages deployment runs `npm run verify:admin`. The gate stops deployment when TypeScript checking, Admin regression tests or the production build fails. The regression suite protects deep-link normalization, shared dirty-state behavior, content readiness, Website draft persistence/publish payloads and operational-health parsing.
+Mọi lần deploy GitHub Pages đều chạy `npm run verify:admin`. Cổng này dừng deploy nếu kiểm tra TypeScript, test hồi quy Admin hoặc production build thất bại. Bộ test hồi quy bảo vệ chuẩn hóa deep link, hành vi dirty-state dùng chung, mức sẵn sàng nội dung, lưu Draft Website/payload publish và phân tích health vận hành.
 
-See `docs/admin-operations.md` for deployment and incident checks.
+Xem `docs/admin-operations.md` để biết cách kiểm tra deploy và sự cố.
