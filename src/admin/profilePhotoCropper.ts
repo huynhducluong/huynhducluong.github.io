@@ -4,7 +4,7 @@ import { createProfilePhoto } from "../services/profilePhotoRepository";
 import { automaticCrop, cropPreviewStyle, cropSourceRect, type CropState } from "./cropGeometry";
 import { bindCropStage, waitForCropImage, type CropStage } from "./cropStage";
 import { canvasToBlob, drawRotated, normalizeTurns, rotationLabel, type QuarterTurns } from "./imageRotation";
-import { renderAdminCropZoomControls, renderAdminDialogHeader, renderAdminFieldLabel, setAdminCropZoomValue, setButtonBusy } from "./ui";
+import { bindAdminDialogBackdropClose, renderAdminCropZoomControls, renderAdminDialogHeader, renderAdminFieldLabel, setAdminCropZoomValue, setButtonBusy } from "./ui";
 
 const acceptedTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/avif"]);
 const maxSourceBytes = 20 * 1024 * 1024;
@@ -189,9 +189,7 @@ export const bindProfilePhotoCropper = (root: ParentNode, callbacks: CropperCall
     event.preventDefault();
     close();
   });
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) close();
-  });
+  bindAdminDialogBackdropClose(dialog, close);
   dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-out]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() - 0.1));
   dialog.querySelector<HTMLButtonElement>("[data-profile-photo-zoom-in]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() + 0.1));
   zoom.addEventListener("input", () => cropStage?.setZoom(Number(zoom.value)));

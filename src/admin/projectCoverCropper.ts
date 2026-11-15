@@ -15,7 +15,7 @@ import { confirmAdmin } from "./confirmDialog";
 import { automaticCrop, clampCrop, cropPreviewStyle, cropSourceRect, type CropState } from "./cropGeometry";
 import { bindCropStage, waitForCropImage, type CropStage } from "./cropStage";
 import { canvasToBlob, drawRotated, normalizeTurns, rotatedOriginalType, rotationLabel, type QuarterTurns } from "./imageRotation";
-import { renderAdminCropZoomControls, renderAdminDialogHeader, setAdminCropZoomValue, setButtonBusy } from "./ui";
+import { bindAdminDialogBackdropClose, renderAdminCropZoomControls, renderAdminDialogHeader, setAdminCropZoomValue, setButtonBusy } from "./ui";
 
 interface CropLayoutConfig {
   id: MediaCropProfile;
@@ -336,7 +336,7 @@ export const bindPortfolioMediaCropper = (
 
   dialog.querySelectorAll<HTMLButtonElement>("[data-project-cover-crop-cancel]").forEach((button) => button.addEventListener("click", () => void requestClose()));
   dialog.addEventListener("cancel", (event) => { event.preventDefault(); void requestClose(); });
-  dialog.addEventListener("click", (event) => { if (event.target === dialog) void requestClose(); });
+  bindAdminDialogBackdropClose(dialog, () => void requestClose());
   dialog.querySelector<HTMLButtonElement>("[data-project-cover-zoom-out]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() - 0.1));
   dialog.querySelector<HTMLButtonElement>("[data-project-cover-zoom-in]")?.addEventListener("click", () => cropStage?.setZoom(cropStage.zoom() + 0.1));
   zoom.addEventListener("input", () => cropStage?.setZoom(Number(zoom.value)));

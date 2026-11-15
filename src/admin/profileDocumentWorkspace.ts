@@ -78,6 +78,7 @@ import {
   formatAdminDate,
   formatAdminDateTime,
   renderAdminDocumentHeader,
+  bindAdminDialogBackdropClose,
   renderAdminFieldLabel,
   renderAdminPreviewToolbar,
   renderAdminPreviewLanguageToggle,
@@ -1460,6 +1461,8 @@ export const bindProfileDocumentWorkspace = (root: ParentNode, kind: ProfileDocu
   root.querySelector<HTMLButtonElement>("[data-document-history-close]")?.addEventListener("click", () => historyDialog?.close());
   root.querySelector<HTMLButtonElement>("[data-document-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
   root.querySelector<HTMLButtonElement>("[data-document-validation-close]")?.addEventListener("click", () => validationDialog?.close());
+  if (historyDialog) bindAdminDialogBackdropClose(historyDialog, () => historyDialog.close());
+  if (validationDialog) bindAdminDialogBackdropClose(validationDialog, () => validationDialog.close());
   root.querySelector<HTMLButtonElement>("[data-profile-document-rename]")?.addEventListener("click", async () => {
     if (!activeDocument) return;
     if (state.dirty[kind]) return callbacks.notify("Save the document before renaming it.", "info");

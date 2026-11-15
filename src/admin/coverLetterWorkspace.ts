@@ -21,6 +21,7 @@ import { renderDocumentThemeFields } from "./documentThemeFields";
 import {
   formatAdminDate,
   renderAdminDocumentHeader,
+  bindAdminDialogBackdropClose,
   renderAdminFieldLabel,
   renderAdminPreviewToolbar,
   renderAdminSectionCard,
@@ -631,6 +632,7 @@ export const bindCoverLetterWorkspace = (root: HTMLElement, callbacks: Workspace
   const validationDialog = root.querySelector<HTMLDialogElement>("[data-cl-validation-dialog]");
   root.querySelector<HTMLButtonElement>("[data-cl-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
   root.querySelector<HTMLButtonElement>("[data-cl-validation-close]")?.addEventListener("click", () => validationDialog?.close());
+  if (validationDialog) bindAdminDialogBackdropClose(validationDialog, () => validationDialog.close());
 
   root.querySelector<HTMLButtonElement>("[data-cl-rename]")?.addEventListener("click", async () => {
     if (!record) return;

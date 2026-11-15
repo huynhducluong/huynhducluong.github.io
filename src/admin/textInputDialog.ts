@@ -1,3 +1,5 @@
+import { bindAdminDialogBackdropClose } from "./ui";
+
 export interface AdminTextInputOptions {
   title: string;
   label: string;
@@ -58,9 +60,7 @@ const ensureDialog = (): HTMLDialogElement => {
     event.preventDefault();
     finish(null);
   });
-  dialog.addEventListener("click", (event) => {
-    if (event.target === dialog) finish(null);
-  });
+  bindAdminDialogBackdropClose(dialog, () => finish(null));
   return dialog;
 };
 

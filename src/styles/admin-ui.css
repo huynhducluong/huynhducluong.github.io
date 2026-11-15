@@ -1424,13 +1424,10 @@ html.admin-app .admin-segmented__options input:focus-visible + span {
 }
 
 .admin-preview-toolbar__meta {
-  overflow: hidden;
   margin-top: .12rem;
   color: var(--admin-color-text-muted);
   font-size: var(--admin-text-2xs);
   line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .admin-preview-toolbar__meta span {

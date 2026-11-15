@@ -893,6 +893,23 @@
   padding: 0 .35rem;
 }
 
+/* UI-15: the state text is fixed copy, never clipped; only the location (user data, has a tooltip) shrinks. */
+.admin-cv-project__identity small {
+  display: flex;
+  align-items: baseline;
+}
+
+.admin-cv-project__identity small > [data-cv-project-state],
+.admin-cv-project__identity small > [data-portfolio-project-state] {
+  flex: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.admin-cv-project__identity small > span:first-child {
+  flex: 0 1 auto;
+}
+
 .admin-cv-project .is-warning {
   color: var(--admin-color-warning);
   font-weight: var(--admin-weight-semibold);
