@@ -98,7 +98,7 @@ Thuộc tính đi kèm: `[CẦN KIỂM THỬ]` — đã chốt thiết kế như
 5. **Review nhất quán:** checklist mục 7.
 6. **Commit:** mỗi quyết định một commit (mục 8), rồi viết đề bài nếu cần code.
 
-Mỗi đề xuất phải nêu: tác động tới Website / CV / Portfolio / Cover Letter / Admin / Supabase; phương án đã cân nhắc và lý do không chọn; **một khuyến nghị rõ ràng**; bằng chứng (ảnh, số đo, file và dòng cụ thể). Hỏi người vận hành theo mẫu: ví dụ cụ thể → các phương án → khuyến nghị → mẫu trả lời ngắn.
+Mỗi đề xuất phải nêu: tác động tới Website / CV / Portfolio / Cover Letter / Admin / Supabase; phương án đã cân nhắc và lý do không chọn; **một khuyến nghị rõ ràng**; bằng chứng (ảnh, số đo, file và dòng cụ thể). **Mọi câu hỏi gửi người vận hành** (kể cả câu hỏi ngắn cuối tin nhắn, câu hỏi trong báo cáo mục 5) theo mẫu: ví dụ cụ thể → các phương án → **khuyến nghị chọn phương án nào và vì sao** (lợi ích, rủi ro, cái giá của phương án bỏ) → mẫu trả lời ngắn. Không hỏi trống "bạn muốn A hay B?" (người vận hành nhắc 2026-11-15).
 
 ## 5. Quy tắc bắt buộc về code và UI/UX
 
