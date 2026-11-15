@@ -1,6 +1,6 @@
 # GD3-04 — Card Profile thu gọn, chống chữ dài tràn, việc nhỏ (nhóm N2)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/04-card-profile-thu-gon` (`git fetch; git switch -c gd3/04-card-profile-thu-gon origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Lớn (~9–11 file) · **Người đang code:** Claude — cửa sổ code (đã dùng 56 %)
+> **Trạng thái:** CHỜ REVIEW · **Nhánh:** `gd3/04-card-profile-thu-gon` (`git fetch; git switch -c gd3/04-card-profile-thu-gon origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Lớn (~9–11 file) · **Người đang code:** Claude — cửa sổ code (đã dùng 56 %)
 > **Gộp (ADR-018):** tự gộp được — chỉ Admin và script, không migration, không đổi trang công khai hay PDF, không phải đề bài cuối giai đoạn.
 
 ## 1. Mục tiêu
@@ -59,22 +59,39 @@
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- Số đo laptop (chiều cao card, bốn card vừa khung nhìn, FormData, thứ tự Tab):
-- Chứng minh bộ phát hiện (trước / sau `width: 100%`):
-- Danh sách `--stress` toàn Admin (chưa sửa):
-- Ghi chú vận hành cho docs:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3, 4, 5 (toàn bộ).
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: 56 % / không đo được trong phiên.
+- Nhánh, commit cuối: `gd3/04-card-profile-thu-gon` (commit cuối là `wip(GD3-04 bước 5)` có bản sửa `showRelatedEntry` và báo cáo này).
+- File đã đổi (**dùng chung** in đậm):
+  - Mới: `src/admin/profileEntrySummary.ts` (+ test), `src/admin/profileEntryCard.ts` (+ test).
+  - `src/admin/siteWorkspace.ts` (card Experience / Education, `state.expandedProfileEntries`, `showRelatedEntry`, tooltip Slug), `src/admin/coverLetterWorkspace.ts` (tooltip meta và nhãn bộ chọn), `src/services/credentialRepository.ts` (đổi tên `credentialSnapshotPreviews`), **`src/styles/admin-site.css`** (+27 dòng), **`scripts/admin-screenshots.mjs`** (overflow, `--stress`, `--viewport`). **`src/admin/ui.ts` không đổi** (helper nằm ở module riêng `profileEntryCard.ts`).
+- `verify:admin`: 211 / 211 test đạt; JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip.
+- Số đo laptop 1440 × 731 (Playwright, Admin thật, không lưu):
+  - Experience: 4 card đều cao 92 px; đáy card thứ tư ở 722 px (< 731), không cần cuộn. Education: 3 card × 92 px. Mặc định cả 4 đều thu gọn.
+  - Tab từ ↓: ⌄ rồi ⋯ rồi ↑ của card sau. Enter mở, Space đóng, `aria-expanded` đúng. Mở hai card cùng lúc được (2).
+  - Sửa Company + Position rồi thu gọn: `FormData` trả "ZZ Company"; tóm tắt đổi thành "ZZ Test Position · Vietnam · 02/2026 – Present".
+  - ↓ trên card đang mở: card vẫn mở ở vị trí mới. **+ Add company**: card mới ở đầu, mở, focus vào ô Company.
+  - `showRelatedEntry` (Credentials → Education): card mở; mép trên tiêu đề 270 px ≥ đáy thanh tab 225 px (trước khi sửa là 217 < 225 vì thanh tab dính che mất; đã bù chiều cao thanh tab vào `inset`).
+- Chứng minh bộ phát hiện: script tạm (đã xóa) bọc khối tên card vào `button.n2-identity` nhiều chữ `white-space: nowrap`: **không** `width: 100%` → báo `overflows its container → button.n2-identity` ở 1180 × 731 và 1440 × 731 (tab Experience, Education, Credentials, Languages); **có** `width: 100%` + `min-width: 0` + ellipsis → hết cảnh báo. Card thật sạch ở `--stress` cả hai cỡ.
+- Danh sách `--stress` toàn Admin (laptop, chưa sửa): **không có** dòng *overflows its container* nào. *NO TOOLTIP* còn lại (3 chỗ, đều ở thẻ chọn dự án / tool): `span "Summary · 3 of 3 responsibilities"` (cv-projects-tools), `span "Available once the project is Ready"` (cv-projects-tools, portfolio-projects-tools), `span "Technical · 3 of 3 responsibilities"` (portfolio-projects-tools). `shots` thường: hết NO TOOLTIP của UI-13, không uneven row, không cuộn ngang.
+- Ghi chú vận hành cho docs: `--stress` làm đổi DOM ngay trước khi chụp nên ảnh tạo ra có chữ giả (chỉ trong `tmp/`). Bộ phát hiện bỏ qua phần tử `position: absolute / fixed` và vùng cuộn ngang (`overflow-x: auto/scroll`). Trước đây không có đường nào cuộn tới card lỗi kiểm tra (lưu hồ sơ chỉ hiện toast), nên **không thêm** tự mở card lỗi.
+- Chỗ làm khác đề bài và lý do: (1) không dùng `::before` cho dấu `·` vì hàm tóm tắt đã ghép sẵn `·` trong chuỗi (một nguồn, và `title` có đủ dấu); (2) tiêu đề card chưa đổi theo khi gõ (hành vi cũ, ngoài đề bài); (3) tooltip Slug chỉ sửa ở `siteWorkspace.ts` (hai dòng); dòng cùng mẫu ở `profileDocumentWorkspace.ts:901` chưa sửa vì shots không báo.
+- Câu hỏi: Có nên cho thanh tab dính (`.admin-document-tabs`) vào `revealAdminElement` như tham số mặc định, vì mọi chỗ cuộn tới mục trong editor đều có thể bị che? Khuyến nghị: để Claude cân nhắc khi review; lợi là hết lỗi lặp lại, cái giá là đổi helper dùng chung ngoài phạm vi đề bài này.
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `c41c0ec` (worktree `D:\wt\pf-review`, `npm ci` sạch). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 34 file / 211 test; Admin JS 92,8 / 115, **CSS 26,6 / 27,0 kB gzip** (trong ngân sách). Diff 10 file, đúng phạm vi mục 3; không migration, không dependency, không đụng `docs/`, trang công khai, CV, Portfolio.
+  - Đo trên Admin thật (mở, không lưu), laptop 1440 × 731: mặc định cả 4 Experience và 3 Education **thu gọn**, mọi card cao **92 px**, cả 4 card Experience nằm trong khung nhìn; tóm tắt đúng dữ liệu thật (`BIM Coordinator · Vietnam · 02/2026 – Present`, `Transportation Engineering · 2016–2021 · 1 credential`); `aria-expanded`, `aria-controls` (vùng đích có thật và `hidden`), `aria-label` "Expand …" đúng; thứ tự Tab ↓ → ⌄ (↑ bị vô hiệu ở card đầu); hai card mở độc lập; sửa Position khi card đang mở rồi thu gọn: `FormData` trả giá trị mới và dòng tóm tắt đổi theo; bấm ↓ trên card đang mở thì card **vẫn mở** ở vị trí mới; **+ Add company** thêm card mở ở đầu và focus ô Company.
+  - `showRelatedEntry` từ liên kết Education ở tab Credentials: chuyển tab Education, mở đúng card, tiêu đề card ở 250 px, **dưới** mép thanh tab (225 px), focus nằm trong card, shell và window không cuộn.
+  - 1920 × 940, 2560 × 1300: card 92 px; khung hẹp 1180: card 148 px (nút xuống hàng dưới như mọi card hiện có); không phần tử nào vượt mép card ở cả bốn cỡ.
+  - **Bộ phát hiện (UI-14):** tự tái tạo lỗi kiểu B trong worktree tạm (khối tên `width: max-content`): `npm run shots -- --stress --views=profile` báo `overflows its container → div…` ở **cả 1440 và 1180**; khôi phục thì hết báo (đã `git checkout`, 0 file đổi). `--stress` toàn Admin ở laptop: **0** dòng *overflows*, còn đúng **3** dòng *NO TOOLTIP* như báo cáo (chữ cố định bị cắt khi tên dự án dài, ở thẻ chọn dự án CV / Portfolio): ghi [UI-15](../92-ui-rules.md#ui-15).
+  - UI-13 đã hết (Slug, meta Cover Letter, nhãn bộ chọn); `credentialPreviews` → `credentialSnapshotPreviews` đúng.
+- **Phải sửa:** không.
+- **Nên sửa:** không (các điểm dưới đây là việc kế tiếp, không thuộc đề bài này).
+- **Trả lời câu hỏi của người code:** *không* đổi mặc định của `revealAdminElement` trong đề bài này. Hướng đúng là để helper tự cộng chiều cao của phần tử `position: sticky` ở đầu vùng cuộn của nó, nhưng đó là thay đổi file dùng chung của mọi chỗ gọi (Cover Letter, CV, liên kết mở mục…), cần test và đo từng nơi: tách thành đề bài nhỏ riêng (MASTER_PLAN vấn đề mở #12). Cách bù `inset` tại chỗ trong `showRelatedEntry` là đúng và đã đo.
+- **Ghi nhận:** (1) dấu `·` nằm trong chuỗi tóm tắt thay vì `::before`: chấp nhận, một chuỗi, một `title`. (2) không thêm tự mở card lỗi: đúng điều kiện đề bài (chưa có đường cuộn tới card lỗi). (3) `summaryOf` đọc cả form (`readProfileForm`) mỗi lần gõ: ~25 ô nên chưa thành vấn đề, đo khi form lớn hơn. (4) Nhãn của bộ phát hiện chỉ có tên thẻ và lớp đầu (`→ div`): khó lần ra chỗ lỗi; thêm lớp của cha khi làm đề bài quét. (5) Cùng mẫu thiếu tooltip ở `profileDocumentWorkspace.ts:901` chưa được script báo: xét khi quét.
+- **Cần người vận hành chốt:** không.
+- Token: Claude — cửa sổ code 70 % → 76 % đã dùng (~6 %, Lớn).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 (chỉ Admin và script, không migration, không đổi trang công khai hay PDF): Claude gộp và push.

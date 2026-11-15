@@ -215,7 +215,7 @@ const recordList = (): string => {
       <li class="admin-content-item admin-content-item--document ${record?.id === item.id ? "is-selected" : ""}">
         <button class="admin-content-item__select" type="button" data-cl-select="${escapeHtml(item.id)}" aria-pressed="${record?.id === item.id}">
           <strong title="${escapeHtml(item.internalTitle)}">${escapeHtml(item.internalTitle)}</strong>
-        <small>${escapeHtml(item.positionTitle || "Position not set")} · ${escapeHtml(item.companyName || "Company not set")}</small>
+        <small title="${escapeHtml(`${item.positionTitle || "Position not set"} · ${item.companyName || "Company not set"}`)}">${escapeHtml(item.positionTitle || "Position not set")} · ${escapeHtml(item.companyName || "Company not set")}</small>
         <small>Updated ${formatAdminDate(item.updatedAt)}</small>
       </button>
       <div class="admin-content-item__meta"><span class="status status--${item.status}">${item.status}</span></div>
@@ -287,7 +287,7 @@ const editorView = (): string => {
       ${renderAdminDocumentHeader({
         eyebrow: "Applications",
         title: letter.internalTitle || "Untitled cover letter",
-        titleContent: `<button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true">${adminChevronIcon}</span></button>`,
+        titleContent: `<button class="admin-document-title-switcher" type="button" data-cl-library-open aria-haspopup="dialog" aria-controls="cover-letter-library" aria-expanded="false" aria-label="Switch cover letter. Current letter: ${escapeHtml(letter.internalTitle || "Untitled cover letter")}"><span class="admin-document-title-switcher__label" title="${escapeHtml(letter.internalTitle || "Untitled cover letter")}">${escapeHtml(letter.internalTitle || "Untitled cover letter")}</span><span class="admin-document-title-switcher__icon" aria-hidden="true">${adminChevronIcon}</span></button>`,
         meta: `<span class="status status--${status()}">${status()}</span><span class="admin-document-meta__detail">${record ? `Updated ${formatAdminDate(record.updatedAt)}` : "New application"}</span>`,
         saveState: `<span data-cl-dirty-state data-dirty="${dirty}" aria-live="polite">${dirty ? "Unsaved changes" : isLocked ? "Locked" : "Saved"}</span>`,
         moreActions: record ? `<details class="admin-document-more"><summary>More</summary><div><button type="button" data-cl-print>Print / PDF</button><button type="button" data-cl-rename>Rename</button>${record.status === "draft" ? '<button class="admin-danger" type="button" data-cl-delete>Delete draft</button>' : record.status === "final" ? '<button type="button" data-cl-archive>Archive</button>' : ""}</div></details>` : "",

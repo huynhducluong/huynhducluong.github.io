@@ -88,7 +88,7 @@ const assetFromRow = (row: CredentialAssetRow): CredentialAsset => ({
 });
 
 /** Every saved crop of the credential's shown image evidence; each layout picks the one that fits its frame. */
-export const credentialPreviews = (credential: ProfessionalCredential): CredentialSnapshot["previews"] | undefined => {
+export const credentialSnapshotPreviews = (credential: ProfessionalCredential): CredentialSnapshot["previews"] | undefined => {
   const asset = credential.assets.find((item) => item.showInPortfolio);
   const entries = (asset?.crops ?? []).map((crop): [CredentialPreviewProfile, CredentialPreview] => [crop.profile, { profile: crop.profile, storagePath: crop.storagePath, publicUrl: crop.publicUrl, width: crop.width, height: crop.height }]);
   return entries.length ? Object.fromEntries(entries) : undefined;
@@ -129,7 +129,7 @@ export const credentialSnapshot = (credential: ProfessionalCredential): Credenti
   verificationUrl: credential.verificationUrl,
   status: credential.status,
   displayOrder: credential.displayOrder,
-  ...(credentialPreviews(credential) ? { previews: credentialPreviews(credential) } : {}),
+  ...(credentialSnapshotPreviews(credential) ? { previews: credentialSnapshotPreviews(credential) } : {}),
 });
 
 const toRow = (input: ProfessionalCredentialInput) => ({

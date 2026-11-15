@@ -93,6 +93,33 @@
   text-transform: uppercase;
 }
 
+.admin-profile-entry-card.is-collapsed .admin-profile-entry-card__heading {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+
+.admin-profile-entry-card__summary {
+  display: block;
+  overflow: hidden;
+  min-width: 0;
+  max-width: 100%;
+  margin: .15rem 0 0;
+  color: var(--admin-color-text-muted);
+  font-size: var(--admin-text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-profile-entry-card__summary[hidden] { display: none; }
+
+.admin-profile-entry-card__toggle > svg { transition: transform 120ms ease; }
+
+.admin-profile-entry-card__toggle[aria-expanded="true"] > svg { transform: rotate(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-profile-entry-card__toggle > svg { transition: none; }
+}
+
 .admin-profile-entry-card__actions {
   display: flex;
   flex: 0 0 auto;
