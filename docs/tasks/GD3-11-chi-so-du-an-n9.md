@@ -1,6 +1,6 @@
 # GD3-11 — Chỉ số dự án: số lớn + đơn vị nhỏ (nhóm N9)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/11-chi-so-du-an-n9` (`git fetch; git switch -c gd3/11-chi-so-du-an-n9 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/11-chi-so-du-an-n9` (`git fetch; git switch -c gd3/11-chi-so-du-an-n9 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện PDF và bản web của Portfolio.
 
 ## 1. Mục tiêu
@@ -60,8 +60,15 @@ Chỉ số dự án (Project › Key facts) không còn xuống dòng chắp vá
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `4fa94b5` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập). Đo trên bản nháp Portfolio thật.
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 43 file / 306 test đạt; Admin JS 92,8 / 115,0, CSS 26,6 / 27,0 kB gzip (không đổi).
+  - **`node tools/portfolio-detail-check.mjs` (cả n9 và n11): All PASS** (mốc n9 trước sửa: 6 FAIL); `portfolio-video-link-check`: All PASS; `portfolio-print.css` không chứa lớp mới.
+  - **Phép thử thêm của tôi (không có trong công cụ):** (1) khoảng cách từ đáy băng chỉ số tới đường footer ở mọi dự án × Technical, Balanced, Editorial × EN, VI: nhỏ nhất **41 px** (Balanced, dự án 2, EN), không âm ở đâu; (2) **ép giá trị dài** ("≈17.95 km", "4 lanes", "VND 25.773 trillion" / "25.773 tỷ đồng") vào chỉ số của cả 9 dự án (27 chỉ số mỗi layout): **0 xuống dòng, 0 tràn ngang, 0 `findPortfolioLayoutIssues`**, khoảng cách tới footer nhỏ nhất 41 px (Balanced). Bản nháp hiện tại của bạn đã đổi giá trị thành "25.8 T VND" nên chính công cụ không còn thử trường hợp dài; phép thử ép này bù lại.
+  - Đọc diff: `factValueParts` thuần, giữ nguyên ký tự từng token; markup chỉ đổi khi có đơn vị (giá trị một token, trống, không chữ số in như cũ, snapshot chụp trên mã chưa sửa); escape một lần; CSS có tiền tố `.portfolio-page`, token `--document-*`, không `!important`; thẻ `<b>` tránh được bẫy `<span>`. Xem ảnh Balanced và Technical (số lớn, đơn vị nhỏ cùng hàng, cả trên cột xanh).
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận:** (1) bốn chỗ làm khác đề bài đều hợp lý và có số đo; đặc biệt bỏ nhánh "≥ 3 token" của demo (làm "4 làn xe" chiếm cả hàng) và quy tắc flex riêng cho băng Balanced (tránh đáy băng lấn footer). (2) Nhận xét đúng của người code: `findPortfolioLayoutIssues` chỉ đo phần tử chữ, không đo nền của băng chỉ số nên lỗi "băng lấn footer" không bị bắt; phép đo khoảng cách ở trên nên thành một dòng của `tools/portfolio-detail-check.mjs` (việc nhỏ của Claude, không cần đề bài). (3) "Phase 1" tách thành "Phase" + "1" đúng quy tắc đề bài.
+- **Cần người vận hành chốt:** không về thiết kế; chỉ cần **duyệt gộp** vì đổi giao diện PDF và bản web (ADR-018).
+- Token: Claude — cửa sổ code 12 % → 17 % đã dùng (~5 %, Nhỏ; vượt ước vì có snapshot và hai lượt sửa CSS).
+- Kết luận: **ĐẠT, CHỜ DUYỆT** — sạch về kỹ thuật; chờ người vận hành duyệt rồi Claude gộp và push.
