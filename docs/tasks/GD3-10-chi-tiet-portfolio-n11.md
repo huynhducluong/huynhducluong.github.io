@@ -1,6 +1,6 @@
 # GD3-10 — Chi tiết trình bày Portfolio (nhóm N11)
 
-> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/10-chi-tiet-portfolio-n11` (`git fetch; git switch -c gd3/10-chi-tiet-portfolio-n11 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** ĐẠT (gộp sau khi người vận hành duyệt, 2026-11-15) · **Nhánh:** `gd3/10-chi-tiet-portfolio-n11` (`git fetch; git switch -c gd3/10-chi-tiet-portfolio-n11 origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện PDF và bản web của Portfolio. Claude review xong thì chuyển `CHỜ DUYỆT`. **Làm xong rồi mới giao GD3-11** (cùng file `renderPortfolioV2.ts` và `portfolio-screen.css`).
 
 ## 1. Mục tiêu
