@@ -40,3 +40,13 @@ export const normalizeYouTubeUrl = (value: string): string | null => {
 
   return `https://www.youtube.com/watch?v=${videoId}`;
 };
+
+// Render-time guard: a stored value that is not a valid YouTube URL simply means "no video".
+export const safeYouTubeUrl = (value: string | null | undefined): string | null => {
+  if (!value) return null;
+  try {
+    return normalizeYouTubeUrl(value);
+  } catch {
+    return null;
+  }
+};

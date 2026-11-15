@@ -1,3 +1,4 @@
+import { safeYouTubeUrl } from "../shared/youtube";
 import { assetUrl, escapeHtml, profileName, type Language } from "../shared/format";
 import type { LocalizedText } from "../types/career";
 import type { CredentialKind } from "../types/credential";
@@ -29,7 +30,7 @@ const copy = {
     captionOverview: "Coordinated model overview", captionSupporting: "Supporting detail", captionEvidence: "Supporting evidence",
     captionToolOutput: "Tool workflow or output", captionToolInput: "Tool input or interface", captionToolGenerated: "Generated geometry or output",
     captionClosing: "Selected infrastructure BIM model",
-    builtWith: "Built with", workflow: "Workflow",
+    builtWith: "Built with", workflow: "Workflow", video: "Video", watchVideo: (name: string) => `Watch video: ${name}`,
     credentialKinds: {
       professional_certification: "Professional certification", academic_degree: "Academic degree", language_exam: "Language exam",
       license: "License", course: "Course", award: "Award", membership: "Membership", other: "Credential",
@@ -46,7 +47,7 @@ const copy = {
     captionOverview: "Tổng quan mô hình phối hợp", captionSupporting: "Chi tiết bổ trợ", captionEvidence: "Minh chứng bổ trợ",
     captionToolOutput: "Quy trình hoặc kết quả của công cụ", captionToolInput: "Dữ liệu đầu vào hoặc giao diện công cụ", captionToolGenerated: "Hình học hoặc kết quả được tạo",
     captionClosing: "Mô hình BIM hạ tầng tiêu biểu",
-    builtWith: "Công nghệ sử dụng", workflow: "Quy trình",
+    builtWith: "Công nghệ sử dụng", workflow: "Quy trình", video: "Video", watchVideo: (name: string) => `Xem video: ${name}`,
     credentialKinds: {
       professional_certification: "Chứng chỉ chuyên môn", academic_degree: "Bằng cấp", language_exam: "Chứng chỉ ngoại ngữ",
       license: "Giấy phép", course: "Khóa học", award: "Giải thưởng", membership: "Hội viên", other: "Chứng chỉ",
@@ -56,6 +57,13 @@ const copy = {
 
 // Returns raw text: every caller escapes once at the point of output.
 const localized = (value: LocalizedText | undefined, language: Language): string => value?.[language] || value?.en || "";
+// One component for every layout; a missing or invalid youtubeUrl prints nothing.
+const videoLink = (url: string | undefined, name: string, language: Language): string => {
+  const href = safeYouTubeUrl(url);
+  if (!href) return "";
+  const label = escapeHtml(copy[language].watchVideo(name));
+  return `<a class="portfolio-video-link" href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer" aria-label="${label}" title="${label}"><svg viewBox="0 0 10 10" width="8" height="8" aria-hidden="true" focusable="false"><path d="M2 1l7 4-7 4z" fill="currentColor"/></svg><span>${copy[language].video}</span></a>`;
+};
 const twoDigits = (value: number): string => String(value).padStart(2, "0");
 const numberedCaption = (index: number, label: string): string => `${twoDigits(index)} / ${label}`;
 // Sparse content stretches across the row instead of leaving half a page empty.
@@ -170,18 +178,23 @@ const renderProfile = (data: PortfolioRuntimeData, language: Language, selectedP
   return `<div class="portfolio-profile portfolio-profile--classic"><aside>${profilePhoto(data, displayName)}<h2>${escapeHtml(displayName)}</h2><p>${escapeHtml(localized(profile.professionalTitle, language))}</p><address><a href="mailto:${escapeHtml(profile.email)}">${escapeHtml(profile.email)}</a><span>${escapeHtml(profile.phone)}</span><span>${escapeHtml(localized(profile.location, language))}</span></address></aside><main><p class="portfolio-kicker">${escapeHtml(localized(content.aboutKicker, language))}</p><h2>${escapeHtml(localized(content.aboutHeading, language))}</h2><p class="portfolio-lead">${escapeHtml(localized(profile.summary, language))}</p><div class="portfolio-skill-grid">${skillGroups.map((group) => `<section><h3>${escapeHtml(localized(group.title, language))}</h3>${tagList(group.items.map((item) => localized(item.label, language)))}</section>`).join("")}</div></main></div>`;
 };
 
+const indexRow = (project: PortfolioProject, index: number, language: Language): string => {
+  const video = videoLink(project.youtubeUrl, localized(project.name, language), language);
+  return `<li${video ? ' class="has-video"' : ""}><span>${twoDigits(index + 1)}</span><div><strong>${escapeHtml(localized(project.name, language))}</strong><small>${escapeHtml(projectMeta(project, language))}</small></div>${video}</li>`;
+};
+
 const renderIndex = (data: PortfolioRuntimeData, language: Language, projects: PortfolioProject[]): string => {
   const title = `<p class="portfolio-kicker">${copy[language].selectedWork} / ${twoDigits(projects.length)} ${copy[language].projectsUnit}</p><h2 class="portfolio-title">${copy[language].projectIndex}</h2>`;
   if (!projects.length) return `<div class="portfolio-page__inner">${title}<p class="portfolio-empty">${copy[language].noProjects}</p></div>`;
   if (data.content.layouts.index === "index.visual") return `<div class="portfolio-page__inner portfolio-index-page portfolio-index-page--visual">${title}<div class="portfolio-index-visual${projects.length > 8 ? " is-dense" : ""}">${projects.map((project, index) => {
     const media = resolvePortfolioMedia(project.images, data.content.mediaAssignments.projects[project.id]).primary;
-    return `<article><div>${imageMarkup(media, project.name, language, "wide", "portfolio-index__image")}<span>${twoDigits(index + 1)}</span></div><h3>${escapeHtml(localized(project.name, language))}</h3><p>${escapeHtml(projectMeta(project, language))}</p></article>`;
+    return `<article><div>${imageMarkup(media, project.name, language, "wide", "portfolio-index__image")}<span>${twoDigits(index + 1)}</span>${videoLink(project.youtubeUrl, localized(project.name, language), language)}</div><h3>${escapeHtml(localized(project.name, language))}</h3><p>${escapeHtml(projectMeta(project, language))}</p></article>`;
   }).join("")}</div></div>`;
-  if (data.content.layouts.index === "index.editorial") return `<div class="portfolio-index-editorial"><aside><p class="portfolio-kicker">${copy[language].selectedWork}</p><h2>${copy[language].projectIndex}</h2><strong>${twoDigits(projects.length)}</strong><span>${copy[language].selectedProjects}</span></aside><ol>${projects.map((project, index) => `<li><span>${twoDigits(index + 1)}</span><div><strong>${escapeHtml(localized(project.name, language))}</strong><small>${escapeHtml(projectMeta(project, language))}</small></div></li>`).join("")}</ol></div>`;
-  return `<div class="portfolio-page__inner portfolio-index-page">${title}<ol class="portfolio-index">${projects.map((project, index) => `<li><span>${twoDigits(index + 1)}</span><div><strong>${escapeHtml(localized(project.name, language))}</strong><small>${escapeHtml(projectMeta(project, language))}</small></div></li>`).join("")}</ol></div>`;
+  if (data.content.layouts.index === "index.editorial") return `<div class="portfolio-index-editorial"><aside><p class="portfolio-kicker">${copy[language].selectedWork}</p><h2>${copy[language].projectIndex}</h2><strong>${twoDigits(projects.length)}</strong><span>${copy[language].selectedProjects}</span></aside><ol>${projects.map((project, index) => `${indexRow(project, index, language)}`).join("")}</ol></div>`;
+  return `<div class="portfolio-page__inner portfolio-index-page">${title}<ol class="portfolio-index">${projects.map((project, index) => `${indexRow(project, index, language)}`).join("")}</ol></div>`;
 };
 
-const projectHeading = (project: PortfolioProject, language: Language, index: number): string => `<div class="portfolio-project-heading"><p class="portfolio-kicker">${[twoDigits(index + 1), escapeHtml(localized(project.location, language))].filter(Boolean).join(" / ")}</p><h2>${escapeHtml(localized(project.name, language))}</h2>${project.role ? `<strong>${escapeHtml(localized(project.role, language))}</strong>` : ""}</div>`;
+const projectHeading = (project: PortfolioProject, language: Language, index: number): string => `<div class="portfolio-project-heading"><p class="portfolio-kicker">${[twoDigits(index + 1), escapeHtml(localized(project.location, language))].filter(Boolean).join(" / ")}</p><h2>${escapeHtml(localized(project.name, language))}</h2>${project.role ? `<strong>${escapeHtml(localized(project.role, language))}</strong>` : ""}${videoLink(project.youtubeUrl, localized(project.name, language), language)}</div>`;
 const renderProject = (data: PortfolioRuntimeData, project: PortfolioProject, language: Language, index: number): { html: string; layout: ProjectLayout } => {
   const layout = resolveProjectLayout(data, project.id, project.portfolioLayout);
   const text = copy[language];
@@ -210,14 +223,14 @@ const renderProject = (data: PortfolioRuntimeData, project: PortfolioProject, la
   return { layout, html: `<div class="portfolio-project portfolio-project--classic"><div class="portfolio-project__visual" data-pf-bleed>${imageMarkup(media.primary, project.name, language, "portrait")}</div><div class="portfolio-project__content">${projectHeading(project, language, index)}${summaryBlock("portfolio-project__summary")}${contributionItems(data, project, layout).length ? `<ul class="portfolio-responsibilities">${contributionItems(data, project, layout).map((point) => `<li>${escapeHtml(localized(point.text, language))}</li>`).join("")}</ul>` : ""}${projectTags}</div></div>` };
 };
 
-const renderClassicAutomation = (data: PortfolioRuntimeData, tools: PortfolioTool[], language: Language): string => `<div class="portfolio-page__inner portfolio-automation portfolio-automation--classic"><p class="portfolio-kicker">${copy[language].selectedAutomation}</p><h2 class="portfolio-title">${escapeHtml(localized(data.content.automationStatement, language))}</h2><div class="portfolio-tools${tools.length === 1 ? " is-single" : ""}" ${columnsStyle(tools.length, 3)}>${tools.map((tool, index) => `<article><span>${copy[language].automation} ${twoDigits(index + 1)}</span><h3>${escapeHtml(tool.name)}</h3><p><strong>${copy[language].problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${copy[language].solution}</strong>${escapeHtml(localized(tool.solution, language))}</p>${tagList(tool.technologies)}</article>`).join("")}</div></div>`;
+const renderClassicAutomation = (data: PortfolioRuntimeData, tools: PortfolioTool[], language: Language): string => `<div class="portfolio-page__inner portfolio-automation portfolio-automation--classic"><p class="portfolio-kicker">${copy[language].selectedAutomation}</p><h2 class="portfolio-title">${escapeHtml(localized(data.content.automationStatement, language))}</h2><div class="portfolio-tools${tools.length === 1 ? " is-single" : ""}" ${columnsStyle(tools.length, 3)}>${tools.map((tool, index) => `<article><span>${copy[language].automation} ${twoDigits(index + 1)}</span><h3>${escapeHtml(tool.name)}</h3><p><strong>${copy[language].problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${copy[language].solution}</strong>${escapeHtml(localized(tool.solution, language))}</p>${tagList(tool.technologies)}${videoLink(tool.youtubeUrl, tool.name, language)}</article>`).join("")}</div></div>`;
 const renderAutomation = (data: PortfolioRuntimeData, tool: PortfolioTool, layout: AutomationLayout, language: Language, index: number): string => {
   const text = copy[language];
   const benefit = tool.benefit ? localized(tool.benefit, language) : "";
   const media = resolvePortfolioMedia(tool.images, data.content.mediaAssignments.tools[tool.id]);
   const toolName: LocalizedText = { en: tool.name, vi: tool.name };
   const statement = escapeHtml(localized(data.content.automationStatement, language));
-  const heading = (): string => `<p class="portfolio-kicker">${text.selectedAutomation} / ${twoDigits(index + 1)}</p><h2>${escapeHtml(tool.name)}</h2>${statement ? `<p class="portfolio-automation__subtitle">${statement}</p>` : ""}`;
+  const heading = (): string => `<p class="portfolio-kicker">${text.selectedAutomation} / ${twoDigits(index + 1)}</p><h2>${escapeHtml(tool.name)}</h2>${statement ? `<p class="portfolio-automation__subtitle">${statement}</p>` : ""}${videoLink(tool.youtubeUrl, tool.name, language)}`;
   if (layout === "automation.input-geometry") {
     return `<div class="portfolio-automation portfolio-automation--geometry">${heading()}<div class="portfolio-automation__geometry-grid"><section><p class="portfolio-kicker">${text.builtWith}</p>${tagList(tool.technologies)}<div class="portfolio-automation__brief"><p><strong>${text.problem}</strong>${escapeHtml(localized(tool.problem, language))}</p><p><strong>${text.solution}</strong>${escapeHtml(localized(tool.solution, language))}</p></div></section><div class="portfolio-automation__media-pair"><figure>${imageMarkup(media.primary, toolName, language, "landscape", "portfolio-automation__image")}<figcaption>${mediaCaption(media.primary, language, numberedCaption(1, text.captionToolInput))}</figcaption></figure><figure>${imageMarkup(media.supporting, toolName, language, "landscape", "portfolio-automation__image")}<figcaption>${mediaCaption(media.supporting, language, numberedCaption(2, text.captionToolGenerated))}</figcaption></figure></div></div></div>`;
   }

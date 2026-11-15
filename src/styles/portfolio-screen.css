@@ -404,3 +404,14 @@ html, body { background: #dfe8ec; }
   .portfolio-preview-shell { padding: 1rem; }
   .portfolio-document { margin-inline: 0; }
 }
+
+/* Video link (ADR-029, GD3-07): solid pill so it is never mistaken for a technology tag. --------------- */
+.portfolio-page .portfolio-video-link { display: inline-flex; width: fit-content; max-width: 100%; align-items: center; gap: 1.2mm; align-self: flex-start; justify-self: start; margin-left: 3mm; padding: 1.1mm 2.4mm; border-radius: 3mm; background: var(--document-primary); color: var(--document-on-primary); font-size: var(--document-type-2xs); font-weight: var(--document-weight-bold); line-height: var(--document-leading-tight); vertical-align: middle; white-space: nowrap; }
+.portfolio-page .portfolio-video-link svg { flex: none; width: 2.2mm; height: 2.2mm; fill: currentColor; }
+.portfolio-page :is(.portfolio-index-editorial > aside, .portfolio-project--editorial > section, .portfolio-project--technical > aside) .portfolio-video-link { background: var(--document-on-primary); color: var(--document-primary-strong); }
+.portfolio-page .portfolio-project-heading > h2 + .portfolio-video-link { margin-top: 3mm; margin-left: 0; }
+.portfolio-page .portfolio-index li.has-video { grid-template-columns: 13mm 1fr auto; }
+.portfolio-page .portfolio-index-editorial li.has-video { grid-template-columns: 14mm 1fr auto; }
+.portfolio-page :is(.portfolio-index, .portfolio-index-editorial) li.has-video .portfolio-video-link { align-self: center; margin-left: 0; }
+.portfolio-page .portfolio-automation > .portfolio-video-link, .portfolio-page .portfolio-tools article > .portfolio-video-link { margin: 3mm 0 0; }
+.portfolio-page .portfolio-index-visual article > div > .portfolio-video-link { position: absolute; z-index: 2; top: 2mm; right: 2mm; margin: 0; }
