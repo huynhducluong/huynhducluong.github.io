@@ -1,6 +1,6 @@
 # GD3-09 — Bút chì "sửa ở đâu" trên preview Portfolio (nhóm N4a)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/09-but-chi-sua-tu-preview` (`git fetch; git switch -c gd3/09-but-chi-sua-tu-preview origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
+> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/09-but-chi-sua-tu-preview` (`git fetch; git switch -c gd3/09-but-chi-sua-tu-preview origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Vừa (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token)
 > **Gộp (ADR-018):** tự gộp được nếu review sạch **và** test chứng minh trang công khai, bản in và PDF không đổi (bút chì chỉ có trong preview nhúng của Admin).
 
 ## 1. Mục tiêu
@@ -87,8 +87,16 @@ W-06 (Sổ #6), ADR-030: người vận hành không biết chữ trên Portfoli
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
+- Ngày, commit đã review: 2026-11-15, `74d1316` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập). Đo trên Admin thật sau khi người vận hành đăng nhập lại.
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 41 file / 258 test đạt; Admin JS 92,8 / 115,0, CSS 26,6 / 27,0 kB gzip (không đổi). Đọc diff: chỉ nhánh `embeddedPreview` bật marker; origin / source kiểm hai chiều; lớp bút chì tách khỏi trang; `renderPortfolio` luôn reset trạng thái trong `finally`.
+  - **Đo trên Admin thật** (1024, 1440 × 731, 1920; công cụ mới `tools/portfolio-edit-markers-check.mjs`): công tắc mặc định tắt và nhớ sau khi tải lại; **bút chì đúng 22,0 px** ở Fit, Zoom in và Zoom out; **15 bút chì, bấm cả 15 đều nhảy đúng ô** (preview VI → ô `_vi`), nằm dưới thanh tab dính và trong khung nhìn; tắt công tắc thì không còn bút chì hay `data-edit-field`; bút chì còn sau khi gõ trong form; `/portfolio/` công khai và `/portfolio/?preview=1` không có bút chì hay `data-edit-field`. "1 issue" trên thanh preview có sẵn từ trước, không đổi khi bật bút chì.
 - **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+  1. **Bút chì chồng lên nhau** ở 1024 và 1440 (dữ liệu thật): "Edit highlight label" đè "Edit highlight lines", "Edit about kicker" đè "Edit about heading"; bút chì dưới bị che một phần, khó bấm đúng. (Ở 1920 không chồng chỉ vì trang rộng hơn.)
+  2. **Bút chì cách xa chữ của nó**: bút chì neo ở góc trên phải của **khối** (khối kéo hết bề ngang cột), nên kicker bìa cách cuối chữ 263 – 625 px (trên màn hình), tiêu đề tài liệu 176 – 387 px, chức danh 262 – 602 px, câu Automation 223 – 568 px: người dùng không biết bút chì nào của chữ nào, trái mục đích W-06.
+  - **Cách sửa (đã chốt theo đề bài, xem mục 3.4):** neo bút chì ở **cuối chữ của khối** (`Range` của nội dung khối, mép phải của dòng chữ, dòng đầu nếu nhiều dòng), cách nó một khoảng nhỏ; thêm một lượt tránh chồng (xếp theo từ trên xuống, bút chì nào chồng bút chì đã đặt thì dời xuống dưới một bước 22 px + 4 px, hoặc sang trái nếu hết chỗ). Vẫn `position: absolute` trong lớp riêng. Đo bằng `node tools/portfolio-edit-markers-check.mjs` phải **All PASS** (mốc hiện tại **10 FAIL**: 4 `no-overlap` ở 1024 / 1440 và 6 `near-text`; các dòng `default-off`, `size`, `jump`, `off-clean` đang PASS và phải còn PASS).
+- **Nên sửa:** `twoDigits =(value` thiếu dấu cách ở `renderPortfolioV2.ts` (làm cùng lượt sửa).
+- **Ghi nhận:** (1) chưa đo tài liệu `archived` (focus vào `label` vì ô bị disabled): không có tài liệu lưu trữ để thử trên dữ liệu thật; mã xử lý hợp lý (đặt `tabindex=-1` rồi focus). (2) Phép thử gõ vào form chỉ gõ rồi xóa, không Save; không ghi gì lên Supabase.
+- **Cần người vận hành chốt:** không.
+- Token: Claude — cửa sổ code 60 % → 66 % đã dùng (~6 %, Vừa; chưa tính lượt sửa).
+- Kết luận: **CẦN SỬA** (2 mục "Phải sửa", cùng một chỗ: vị trí bút chì). Người code sửa trên cùng nhánh rồi báo lại; Claude review lại (chủ yếu chạy lại công cụ đo) và gộp nếu sạch.
