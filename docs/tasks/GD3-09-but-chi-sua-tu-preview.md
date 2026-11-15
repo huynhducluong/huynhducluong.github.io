@@ -63,15 +63,27 @@ W-06 (Sổ #6), ADR-030: người vận hành không biết chữ trên Portfoli
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- Số đo (bút chì ở zoom Fit / 100 %, ô không bị header che ở 3 màn hình):
-- Cách kiểm trang công khai và PDF không đổi:
+- Đã xong bước: 1, 2, 3 (code + test). **Bước 4 làm dở:** `verify:admin` đạt; **kiểm thủ công ở Admin thật chưa làm được** (xem "Câu hỏi").
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: chưa ghi (không đọc được số token trong phiên)
+- Nhánh, commit cuối: `gd3/09-but-chi-sua-tu-preview`, commit cuối là `wip(GD3-09 bước 3)` (bước 4 chỉ thêm báo cáo này)
+- File đã đổi (**dùng chung** in đậm):
+  - **`src/portfolio/renderPortfolioV2.ts`** (tùy chọn `editMarkers`, hàm `mark`; hàm xuất `renderPortfolio` thêm đối số thứ ba, mặc định tắt)
+  - **`src/portfolio/main.ts`** (chỉ nhánh `embeddedPreview` bật marker; nhận tin `hdl:portfolio-edit-mode`)
+  - **`src/admin/profileDocumentWorkspace.ts`** (công tắc, gửi tin, nhận `hdl:portfolio-edit-target`, tách `selectDocumentTab` khỏi bộ nghe click tab)
+  - **`src/admin/ui.ts`** (chỉ `export` hàm `scrollParent` có sẵn để tính đúng vùng bị header dính che)
+  - **`src/styles/admin-documents.css`** (thêm `label.is-edit-target`)
+  - Mới: `src/portfolio/editMarkers.ts`, `editMarkerLayer.ts`, `src/styles/portfolio-edit-markers.css`, `src/admin/portfolioEditTarget.ts`; test: `src/portfolio/editMarkers.test.ts` (+ snapshot), `src/admin/portfolioEditTarget.test.ts`
+  - Không đổi `src/shared/previewProtocol.ts`, không migration, không dependency.
+- `verify:admin`: 258 / 258 test đạt (41 file); bundle Admin JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip (trong ngân sách). CSS bút chì chỉ vào bundle trang Portfolio, không vào CSS Admin ban đầu.
+- Số đo (bút chì ở zoom Fit / 100 %, ô không bị header che ở 3 màn hình): **chưa đo.** Phiên đăng nhập `.auth/admin.json` hết hạn (Admin trả form đăng nhập, request làm mới token lỗi 400), nên không mở được Admin thật. Đã viết sẵn kịch bản đo (1024, 1440 × 731, 1920; Fit và zoom; EN và VI; bàn phím; sống sót sau khi gõ) nhưng chưa chạy được. Cần người vận hành chạy `npm run shots:login`.
+- Cách kiểm trang công khai và PDF không đổi: test snapshot (`editMarkers.test.ts`) chụp markup `renderPortfolio` của 12 biến thể layout × EN / VI **trên code trước khi sửa**, rồi so từng byte sau khi sửa (24 snapshot). Thêm test: gỡ `data-edit-field` khỏi markup bật thì ra đúng markup tắt. Test nguồn `main.ts`: chỉ `embeddedPreview` có thể bật marker, tin nhắn kiểm origin / source / dạng dữ liệu.
 - Chỗ làm khác đề bài và lý do:
+  - Pencil nằm trong một lớp `.portfolio-edit-layer` riêng đặt cuối `.portfolio-preview-shell` (không nằm trong trang), vì nằm trong trang có thể làm `page.scrollWidth/scrollHeight` đổi và vào phép đo `findPortfolioLayoutIssues`. Vị trí tính bằng `getBoundingClientRect`, cập nhật khi font, ảnh, thay đổi kích thước.
+  - Nút làm sáng ô: giữ 1,2 giây bằng class tĩnh (không animation), nên không cần nhánh riêng cho `prefers-reduced-motion`.
+  - Ô của tài liệu `archived` bị `disabled` nên không focus được; thay vào đó focus vào `label` của ô (`tabindex=-1`). Chưa kiểm trên trình duyệt.
+  - `renderPortfolio` dùng trạng thái cấp module (đặt và luôn đặt lại bằng `try/finally`) thay vì truyền tham số qua mọi hàm con, để không đổi chữ ký của ~15 hàm dựng trang; render đồng bộ nên an toàn.
 - Câu hỏi:
+  - Phiên đăng nhập hết hạn nên chưa kiểm ở Admin thật. **Khuyến nghị:** người vận hành chạy `npm run shots:login`, rồi Claude review đo các mục "Số đo" ở trên trong worktree (Claude review vẫn phải đo ba màn hình theo mục 4). Cách còn lại là cho gộp theo test, nhưng bỏ qua kiểm giao diện; không khuyến nghị vì tiêu chí "ô không bị header che" và "≈ 22 px" chỉ đo được trên trình duyệt.
 
 ## 6. Review của Claude
 
