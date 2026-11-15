@@ -66,8 +66,17 @@
 - Câu hỏi: không.
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
-- **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+- Ngày, commit đã review: 2026-11-15, `e0cccac` (worktree `D:\wt\pf-review`, `npm ci` sạch). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 35 file / 214 test; Admin JS 92,9 / 115, **CSS 26,7 / 27,0 kB gzip**. Diff 16 file, đúng phạm vi mục 3; không migration, không dependency, không đụng trang công khai, CV, Portfolio, PDF.
+  - **`tools/dialog-backdrop-check.mjs` (chạy lại bằng công cụ trên `main`): All PASS, 21 phép đo** (mốc trước khi sửa: 10 FAIL), gồm: 8 hộp chỉ đọc / một ô ngắn đóng khi bấm ngoài và không đóng khi bấm trong; Add credential nguyên vẹn đóng thẳng; kéo chuột từ ô nhập ra ngoài **không** đóng; gõ dở rồi bấm ngoài thì hỏi; "Keep editing" giữ hộp mở; "Discard changes" đóng hết.
+  - Đọc mã: `bindAdminDialogBackdropClose` + hàm thuần `shouldCloseDialogOnBackdrop` (nhấn và thả đều phải trên nền); bốn dialog cũ dùng lại hàm chung; Add credential dùng bản chụp `FormData` (tính cả tên file đã chọn) và cùng `requestClose` cho Esc, Close, Cancel, bấm ngoài; test hợp đồng đếm `<dialog class="admin-dialog` so với số lần gắn trong từng file, có khẳng định dương (E-002); người code đã tự thử bỏ một lần gắn → test báo `3 dialog(s), 2 bind(s)`.
+  - `npm run shots -- --stress`: laptop mọi view và 1180 × 731 (profile, homepage, cv, portfolio, cover-letters, projects, tools): **0** *overflows*, **0** *NO TOOLTIP*; `npm run shots` ba màn hình cho homepage / cv / portfolio: sạch.
+  - UI-15: ảnh `portfolio-projects-tools.png` cho thấy "Ca Mau · Technical · 3 of 3 responsibilities" và "Thanh Hoa · Available once the project is Ready" hiện đủ chữ; chỉ phần địa điểm (dữ liệu người dùng) co lại.
+  - **Thanh preview (thay đổi dùng chung, người code đã tự báo):** đo bằng Playwright, trước và sau, 3 trang × 6 độ rộng: từ **1440 px trở lên giống hệt (52 px, một dòng)**; ở 1280 và 1180 px thanh Website cao **64 px thay vì 52 px** vì dòng "Live draft · Synced · 46 issues" nay xuống hàng thay vì **bị cắt mất chữ "46 issues"** (nút mở Pre-publish check); CV / Portfolio và 1024 px không đổi. Chấp nhận: không thuộc ba màn hình mục tiêu và hết chữ bị cắt.
+- **Phải sửa:** không.
+- **Nên sửa:** không.
+- **Ghi nhận:** (1) nhấn trên nền rồi thả trong hộp vẫn tính là bấm ngoài (trình duyệt gửi `click` tới `dialog` vì tổ tiên chung): bắt đầu bấm ở ngoài nên chấp nhận. (2) Mẫu thẻ tool ở `profileDocumentWorkspace.ts` không được `--stress` báo nên không sửa, đúng điều kiện đề bài. (3) % Claude "trước" 16 % thấp hơn "sau" 76 % của đề bài trước vì hạn mức tính chung cả tài khoản đã làm mới giữa hai đề bài.
+- **Cần người vận hành chốt:** không.
+- Token: Claude — cửa sổ code 16 % → 28 % đã dùng (~12 %, Vừa).
+- Kết luận: **ĐẠT** — đủ điều kiện ADR-018 (chỉ Admin và script, không migration, không đổi trang công khai hay PDF): Claude gộp và push.
