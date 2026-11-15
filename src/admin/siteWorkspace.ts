@@ -49,6 +49,7 @@ import {
   formatAdminDate,
   formatAdminDateTime,
   renderAdminDocumentHeader,
+  bindAdminDialogBackdropClose,
   renderAdminFieldLabel,
   renderAdminMoreMenu,
   revealAdminElement,
@@ -1514,6 +1515,7 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
     });
   }));
   renameDialog?.querySelector<HTMLButtonElement>("[data-profile-photo-rename-cancel]")?.addEventListener("click", closeRenameDialog);
+  if (renameDialog) bindAdminDialogBackdropClose(renameDialog, closeRenameDialog);
   renameDialog?.addEventListener("cancel", (event) => {
     event.preventDefault();
     closeRenameDialog();
@@ -1668,6 +1670,8 @@ export const bindSiteWorkspace = (root: ParentNode, _kind: SiteWorkspaceKind, ca
   root.querySelector<HTMLButtonElement>("[data-website-history-close]")?.addEventListener("click", () => releaseHistoryDialog?.close());
   root.querySelector<HTMLButtonElement>("[data-website-validation-open]")?.addEventListener("click", () => validationDialog?.showModal());
   root.querySelector<HTMLButtonElement>("[data-website-validation-close]")?.addEventListener("click", () => validationDialog?.close());
+  if (releaseHistoryDialog) bindAdminDialogBackdropClose(releaseHistoryDialog, () => releaseHistoryDialog.close());
+  if (validationDialog) bindAdminDialogBackdropClose(validationDialog, () => validationDialog.close());
   websiteForm?.addEventListener("submit", (event) => {
     event.preventDefault();
     const saveButton = root.querySelector<HTMLButtonElement>('[form="website-editor-form"].admin-action-save');

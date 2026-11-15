@@ -28,6 +28,7 @@ import {
   adminArrowUpIcon,
   adminChevronRightIcon,
   formatAdminDate,
+  bindAdminDialogBackdropClose,
   renderAdminDialogHeader,
   renderAdminFieldLabel,
   renderAdminMoreMenu,
@@ -326,6 +327,7 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
   dialog?.querySelectorAll<HTMLInputElement>("[data-credential-date]").forEach((input) => input.addEventListener("input", syncDateHints));
   let reorderBusy = false;
 
+  let openedSnapshot = "";
   const openEditor = (credential?: ProfessionalCredential, preset?: { type: CredentialRelationType; id: string }): void => {
     if (!dialog || !form) return;
     form.reset();
@@ -355,13 +357,27 @@ export const bindProfessionalCredentials = (root: ParentNode, callbacks: Credent
     if (noExpiry) noExpiry.checked = credential?.doesNotExpire ?? true;
     setExpiryState();
     if (title) title.textContent = credential ? "Edit credential" : "Add credential";
+    openedSnapshot = snapshot();
     dialog.showModal();
     requestAnimationFrame(() => form.querySelector<HTMLInputElement>('[name="credential_title_en"]')?.focus({ preventScroll: true }));
   };
 
   const closeEditor = (): void => dialog?.close();
-  dialog?.querySelectorAll<HTMLButtonElement>("[data-credential-cancel]").forEach((button) => button.addEventListener("click", closeEditor));
-  dialog?.addEventListener("cancel", (event) => { event.preventDefault(); closeEditor(); });
+  const snapshot = (): string => form ? JSON.stringify(Array.from(new FormData(form).entries(), ([key, value]) => [key, typeof value === "string" ? value : value.name])) : "";
+  const requestClose = async (): Promise<void> => {
+    if (snapshot() !== openedSnapshot && !(await confirmAdmin({
+      eyebrow: "Professional credential",
+      title: "Discard credential changes?",
+      message: "Unsaved edits to this credential will be lost.",
+      confirmLabel: "Discard changes",
+      cancelLabel: "Keep editing",
+      tone: "danger",
+    }))) return;
+    closeEditor();
+  };
+  dialog?.querySelectorAll<HTMLButtonElement>("[data-credential-cancel]").forEach((button) => button.addEventListener("click", () => void requestClose()));
+  dialog?.addEventListener("cancel", (event) => { event.preventDefault(); void requestClose(); });
+  if (dialog) bindAdminDialogBackdropClose(dialog, () => void requestClose());
   root.querySelector<HTMLButtonElement>("[data-credential-new]")?.addEventListener("click", () => openEditor());
   root.querySelectorAll<HTMLButtonElement>("[data-credential-move]").forEach((button) => button.addEventListener("click", () => {
     if (reorderBusy) return;

@@ -22,6 +22,7 @@ import {
   bindAdminYearPickers,
   formatAdminDateTime,
   renderAdminEditorHeader,
+  bindAdminDialogBackdropClose,
   renderAdminFieldLabel,
   renderAdminFilePicker,
   renderAdminSectionCard,
@@ -2065,6 +2066,7 @@ const bindDashboard = (): void => {
   });
   app.querySelector("[data-password-open]")?.addEventListener("click", () => passwordDialog?.showModal());
   app.querySelector("[data-password-close]")?.addEventListener("click", () => passwordDialog?.close());
+  if (passwordDialog) bindAdminDialogBackdropClose(passwordDialog, () => passwordDialog.close());
   app.querySelector<HTMLFormElement>("[data-password-update-form]")?.addEventListener("submit", async (event) => {
     event.preventDefault();
     const formElement = event.currentTarget as HTMLFormElement;
