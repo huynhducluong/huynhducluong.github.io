@@ -1,6 +1,6 @@
 # GD3-06 — Preview cập nhật ngay, không chờ ảnh tải lười (nhóm N7)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/06-preview-cap-nhat-ngay` (`git fetch; git switch -c gd3/06-preview-cap-nhat-ngay origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code
+> **Trạng thái:** CODE XONG, CHỜ REVIEW · **Nhánh:** `gd3/06-preview-cap-nhat-ngay` (`git fetch; git switch -c gd3/06-preview-cap-nhat-ngay origin/main`) · **Ngày giao:** 2026-11-15 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code
 > **Gộp (ADR-018):** tự gộp được — chỉ chế độ preview (`?preview=1&embedded=1`) và Admin; trang công khai không kích hoạt bộ nhận preview nên không đổi.
 
 ## 1. Mục tiêu
@@ -42,16 +42,17 @@ Sửa **độ trễ preview** người vận hành báo ở Sổ #11 (W-09): b�
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- `tools/preview-language-check.mjs` (số PASS / FAIL, ms của ca "two quick clicks"):
-- Độ trễ khi gõ trước / sau:
-- Ghi chú vận hành cho docs:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3 (cả ba).
+- Người code: Claude — cửa sổ code · token trước / sau: không đo được từ phiên này.
+- Nhánh, commit cuối: `gd3/06-preview-cap-nhat-ngay`; commit cuối xem `git log` (wip bước 1–2 + commit báo cáo).
+- File đã đổi (ghi rõ file dùng chung): `src/shared/previewProtocol.ts` (**dùng chung** mọi receiver preview; giao diện hàm và giao thức thông điệp giữ nguyên, thêm export `selectPreviewImagesToWait`), `src/shared/previewProtocol.test.ts` (mới), file đề bài này.
+- `verify:admin`: 218 / 218 test đạt (36 file); bundle JS 92,9 / 115,0 kB, CSS 26,7 / 27,0 kB gzip (không đổi).
+- `tools/preview-language-check.mjs`: All PASS, 0 FAIL; ca "two quick clicks": Website **6 ms** (trước 3.880 ms), CV 11 ms, Portfolio 33 ms.
+- Độ trễ khi gõ trước / sau: trang preview Projects, gõ vào `projects_page_kicker_en`: DOM preview đổi sau **~124–186 ms (trước)** / **~130–197 ms (sau)**. Không đổi vì bản vẽ chạy trước khi chờ ảnh; cái trễ trước đây là hàng đợi (lần cập nhật kế tiếp bị chặn 4 s), nay đã hết (xem ca "two quick clicks"). Đo gõ nhanh (80 ms/ký tự) chỉ đo tới ký tự cuối, cũng ≤ 200 ms. Cả hai đều ≤ 1 s.
+- Ghi chú vận hành cho docs: không có.
+- Chỗ làm khác đề bài và lý do: thêm `if (pending) continue;` trước khi chờ ảnh, để tin đến *trong lúc* `renderPreview` (trước khi đặt bộ ngắt) cũng vẽ ngay, không phải chờ. Không "Synced" sớm: chỉ gửi `preview-rendered` khi không còn `pending`.
+- Kiểm trang công khai không đổi: bộ nhận chỉ chạy khi `createPreviewReceiver` được kích hoạt ở chế độ preview; `npm run build` (trong verify) đạt. Chưa chụp màn hình ca "Synced" bằng tay (chỉ có logic + đo EN/VI).
+- Câu hỏi: không.
 
 ## 6. Review của Claude
 
