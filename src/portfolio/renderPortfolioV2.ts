@@ -132,14 +132,14 @@ export const factValueParts = (value: string): FactValuePart[] | null => {
   if (tokens.length < 2 || !tokens.some((token) => /\d/.test(token))) return null;
   return tokens.map((text) => ({ text, kind: /\d/.test(text) ? "num" : "unit" }));
 };
-/** A long value takes the whole row of the facts grid so it never wraps (14+ characters or 3+ tokens). */
-const isWideFact = (value: string, parts: FactValuePart[]): boolean => value.trim().replace(/\s+/g, " ").length >= 14 || parts.length >= 3;
+/** A long value (14+ characters once whitespace is normalised) takes the whole row of the facts grid so it never wraps. */
+const isWideFact = (value: string): boolean => value.trim().replace(/\s+/g, " ").length >= 14;
 const keyFactMarkup = (value: string, label: string): string => {
   const parts = factValueParts(value);
   const caption = `<span>${escapeHtml(label)}</span>`;
   if (!parts) return `<div><strong>${escapeHtml(value)}</strong>${caption}</div>`;
   const inner = parts.map((part) => `<b class="portfolio-fact__${part.kind}">${escapeHtml(part.text)}</b>`).join(" ");
-  return `<div${isWideFact(value, parts) ? ' class="is-wide"' : ""}><strong class="portfolio-fact__value">${inner}</strong>${caption}</div>`;
+  return `<div${isWideFact(value) ? ' class="is-wide"' : ""}><strong class="portfolio-fact__value">${inner}</strong>${caption}</div>`;
 };
 const projectMeta = (project: PortfolioProject, language: Language): string => [localized(project.location, language), project.role ? localized(project.role, language) : ""].filter(Boolean).join(" · ");
 // Unknown content is omitted (§8.4): a project without responsibilities prints no contribution block at all.

@@ -69,7 +69,11 @@ describe("GD3-11: fact markup", () => {
   });
   it("marks long values wide and short ones not", () => {
     expect(html("VND 25.773 trillion")).toContain('<div class="is-wide"><strong class="portfolio-fact__value">');
-    expect(html("18 km + 3 km")).toContain('<div class="is-wide">');
+    expect(html("18 km + 3 km + 2")).toContain('<div class="is-wide">');
+    // Few characters, many words: still a normal cell (only the length decides).
+    expect(html("4 làn xe")).toContain('<div><strong class="portfolio-fact__value">');
+    // Whitespace is normalised before measuring: 13 characters stay normal however wide the gaps are.
+    expect(html("18   km      +   3")).toContain('<div><strong class="portfolio-fact__value">');
     expect(html("4 lanes")).toContain('<div><strong class="portfolio-fact__value">');
     expect(html("2026")).not.toContain("portfolio-fact__");
   });
