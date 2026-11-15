@@ -85,6 +85,13 @@ W-06 (Sổ #6), ADR-030: người vận hành không biết chữ trên Portfoli
 - Câu hỏi:
   - Phiên đăng nhập hết hạn nên chưa kiểm ở Admin thật. **Khuyến nghị:** người vận hành chạy `npm run shots:login`, rồi Claude review đo các mục "Số đo" ở trên trong worktree (Claude review vẫn phải đo ba màn hình theo mục 4). Cách còn lại là cho gộp theo test, nhưng bỏ qua kiểm giao diện; không khuyến nghị vì tiêu chí "ô không bị header che" và "≈ 22 px" chỉ đo được trên trình duyệt.
 
+**Lượt sửa theo mục 6 (Claude — cửa sổ code):**
+- Đã sửa **Phải sửa 1 và 2**: `src/portfolio/editMarkerLayer.ts`, hàm `place`. Bút chì neo ở cuối **dòng chữ đầu** của khối (`Range` của nội dung khối), cách 4 px trên màn hình; xếp từ trên xuống, bút chì nào chồng bút chì đã đặt thì dời xuống một bước 22 px + 4 px. Kích thước, khoảng cách và bước đều chia cho zoom nên không đổi trên màn hình. Đổi zoom thì `setEditMarkerScale` báo lớp đặt lại vị trí. Chặn mép phải bằng kích thước bút chì; chưa cần nhánh "sang trái" vì công cụ đo không gặp trường hợp hết chỗ.
+- Đã sửa **Nên sửa**: `twoDigits = (value` ở `renderPortfolioV2.ts`.
+- `node tools/portfolio-edit-markers-check.mjs`: **All PASS** (24 dòng ở 1024, 1440 × 731, 1920: default-off, size 22,0 px ở Fit / Zoom in / Zoom out, no-overlap và near-text EN và VI, jump 15 / 15, off-clean).
+- `verify:admin` chạy lại: 258 / 258 test đạt; Admin JS 92,8 / 115,0 kB, CSS 26,6 / 27,0 kB gzip (không đổi).
+- Dev server cổng 5199 đã tắt.
+
 ## 6. Review của Claude
 
 - Ngày, commit đã review: 2026-11-15, `74d1316` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập). Đo trên Admin thật sau khi người vận hành đăng nhập lại.

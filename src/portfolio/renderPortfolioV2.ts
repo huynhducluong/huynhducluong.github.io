@@ -77,7 +77,7 @@ const mark = (field: PortfolioEditField, firstOnly = false): string => {
   }
   return ` data-edit-field="${field}"`;
 };
-const twoDigits =(value: number): string => String(value).padStart(2, "0");
+const twoDigits = (value: number): string => String(value).padStart(2, "0");
 const numberedCaption = (index: number, label: string): string => `${twoDigits(index)} / ${label}`;
 // Sparse content stretches across the row instead of leaving half a page empty.
 const columnsStyle = (count: number, max: number): string => `style="--pf-columns: ${Math.max(1, Math.min(max, count))}"`;

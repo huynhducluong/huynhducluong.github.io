@@ -18,6 +18,8 @@ export const clampEditScale = (value: unknown): number => {
 /** Tells the shared CSS how big one screen pixel is inside the zoomed preview. */
 export const setEditMarkerScale = (documentRoot: HTMLElement, scale: number): void => {
   documentRoot.style.setProperty("--edit-marker-scale", String(clampEditScale(scale)));
+  // Pencil positions depend on the zoom (their size and gap are screen pixels).
+  documentRoot.querySelectorAll(`.${LAYER_CLASS}`).forEach((layer) => layer.dispatchEvent(new Event("hdl-place")));
 };
 
 /** Removes the layer and any highlighted block; safe to call when nothing is mounted. */
@@ -56,20 +58,37 @@ export const mountEditMarkerLayer = (shell: HTMLElement, onPick: (field: Portfol
 
   const place = (): void => {
     const origin = shell.getBoundingClientRect();
-    for (const { block, button } of entries) {
+    const scale = clampEditScale(Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--edit-marker-scale")));
+    // Sizes below are screen pixels divided by the zoom, so the pencil, its gap and its step stay constant on screen.
+    const size = 22 / scale;
+    const gap = 4 / scale;
+    const placed: Array<{ left: number; top: number }> = [];
+    const hits = (left: number, top: number): boolean => placed.some((other) => Math.abs(other.left - left) < size + gap && Math.abs(other.top - top) < size + gap);
+    const measured = entries.map(({ block, button }) => {
       const box = block.getBoundingClientRect();
-      const visible = box.width > 0 && box.height > 0;
+      const range = document.createRange();
+      range.selectNodeContents(block);
+      // The pencil follows the end of the first line of text, not the (full-column) block box.
+      const line = [...range.getClientRects()].find((rect) => rect.width > 0 && rect.height > 0) ?? box;
+      return { button, visible: box.width > 0 && box.height > 0, line };
+    }).sort((first, second) => first.line.top - second.line.top || first.line.right - second.line.right);
+    for (const { button, visible, line } of measured) {
       button.hidden = !visible;
       if (!visible) continue;
-      // Centered on the block's top-right corner, in unscaled preview pixels (the CSS size compensates for zoom).
-      button.style.left = `${Math.max(0, box.right - origin.left)}px`;
-      button.style.top = `${Math.max(0, box.top - origin.top)}px`;
+      let left = Math.min(Math.max(size / 2, line.right - origin.left + gap + size / 2), Math.max(size / 2, origin.width - size / 2));
+      let top = Math.max(size / 2, line.top - origin.top + Math.min(line.height, size) / 2);
+      // Avoid collisions: step down one pencil at a time, then sideways to the left when the page edge is near.
+      for (let attempt = 0; attempt < 12 && hits(left, top); attempt += 1) top += size + gap;
+      placed.push({ left, top });
+      button.style.left = `${left}px`;
+      button.style.top = `${top}px`;
     }
   };
   place();
   requestAnimationFrame(place);
   void document.fonts?.ready.then(place).catch(() => undefined);
   shell.addEventListener("load", place, true);
+  layer.addEventListener("hdl-place", place);
   new ResizeObserver(place).observe(shell);
 };
 
