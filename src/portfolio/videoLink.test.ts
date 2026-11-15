@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import css from "../styles/portfolio-screen.css?raw";
 import { describe, expect, it } from "vitest";
 import { portfolioContentSeed, portfolioProjectSeed, portfolioToolSeed } from "../data/portfolioSeed";
 import type { PortfolioRuntimeData } from "../types/portfolio";
@@ -55,19 +55,18 @@ describe("Portfolio video link", () => {
 });
 
 describe("Portfolio video link CSS", () => {
-  const css = readFileSync("src/styles/portfolio-screen.css", "utf8");
-  const lines = css.split("\n").filter((line) => line.includes("portfolio-video-link"));
+  const lines = css.split("\n").filter((line: string) => line.includes("portfolio-video-link"));
   it("scopes every rule under .portfolio-page and avoids !important", () => {
     expect(lines.length).toBeGreaterThan(0);
     expect(css).toContain(".portfolio-page .portfolio-video-link");
-    lines.forEach((line) => {
+    lines.forEach((line: string) => {
       expect(line).toMatch(/\.portfolio-page/);
       expect(line).not.toContain("!important");
     });
   });
   it("inverts colors on the three blue backgrounds", () => {
     for (const host of [".portfolio-index-editorial > aside", ".portfolio-project--editorial > section", ".portfolio-project--technical > aside"]) {
-      expect(lines.some((line) => line.includes(host))).toBe(true);
+      expect(lines.some((line: string) => line.includes(host))).toBe(true);
     }
   });
 });

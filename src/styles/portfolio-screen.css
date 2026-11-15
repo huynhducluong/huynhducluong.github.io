@@ -410,10 +410,8 @@ html, body { background: #dfe8ec; }
 .portfolio-page .portfolio-video-link svg { flex: none; width: 2.2mm; height: 2.2mm; fill: currentColor; }
 .portfolio-page :is(.portfolio-index-editorial > aside, .portfolio-project--editorial > section, .portfolio-project--technical > aside) .portfolio-video-link { background: var(--document-on-primary); color: var(--document-primary-strong); }
 .portfolio-page .portfolio-project-heading > h2 + .portfolio-video-link { margin-top: 3mm; margin-left: 0; }
-.portfolio-page .portfolio-index__meta { display: flex; align-items: flex-end; justify-content: space-between; gap: 2mm; }
-.portfolio-page .portfolio-index__meta p { min-width: 0; }
 .portfolio-page .portfolio-index li.has-video { grid-template-columns: 13mm 1fr auto; }
 .portfolio-page .portfolio-index-editorial li.has-video { grid-template-columns: 14mm 1fr auto; }
 .portfolio-page :is(.portfolio-index, .portfolio-index-editorial) li.has-video .portfolio-video-link { align-self: center; margin-left: 0; }
-.portfolio-page .portfolio-index__meta .portfolio-video-link { margin-left: 0; }
 .portfolio-page .portfolio-automation > .portfolio-video-link, .portfolio-page .portfolio-tools article > .portfolio-video-link { margin: 3mm 0 0; }
+.portfolio-page .portfolio-index-visual article > div > .portfolio-video-link { position: absolute; z-index: 2; top: 2mm; right: 2mm; margin: 0; }

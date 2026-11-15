@@ -48,15 +48,15 @@ Thêm link "▶ Video" vào Portfolio (PDF và bản web) cho Project và Tool c
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- `tools/portfolio-video-link-check.mjs` (số PASS / FAIL):
-- `portfolio-print.css` có ghi đè không:
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3, 4 (xong cả đề bài)
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: không đo
+- Nhánh, commit cuối: `gd3/07-link-video-portfolio` (commit cuối xem `git log`)
+- File đã đổi (ghi rõ file dùng chung): **dùng chung:** `src/portfolio/renderPortfolioV2.ts` (copy `video` / `watchVideo`, `videoLink`, `indexRow`, `projectHeading`, `heading()` và Automation Classic), `src/styles/portfolio-screen.css` (khối "Video link" cuối file), `src/shared/youtube.ts` (`safeYouTubeUrl`). **Test mới:** `src/shared/youtube.test.ts`, `src/portfolio/videoLink.test.ts`.
+- `verify:admin`: 225 / 225 test đạt (38 file); bundle JS 93,1 / 115,0 kB, CSS 26,7 / 27,0 kB gzip
+- `tools/portfolio-video-link-check.mjs` (số PASS / FAIL): **121 PASS / 0 FAIL** (24 ca × 5 phép đo + dòng PDF; 9 `/URI` = 9 link)
+- `portfolio-print.css` có ghi đè không: không (grep `video-link` = 0 kết quả)
+- Chỗ làm khác đề bài và lý do: **Index lưới ảnh (`index.visual`): nút nằm ở góc trên bên phải của ảnh (cạnh số thứ tự), không ở dòng meta như §8.4.** Lý do: đặt nút cạnh dòng meta làm hẹp cột chữ, meta tiếng Việt của dự án 4 thành 3 dòng, hàng 1 cao thêm và trang index (9 dự án) lấn footer (đo được: FAIL `no-issue` VI). Đặt trên ảnh thì không đổi chiều cao hàng nào. Hai kiểu index danh sách và các họ trang khác đúng §8.4. Vì deviate, **cần Claude cập nhật `docs/ui-guidelines.md` §8.4 gạch "Index" nếu người vận hành chọn giữ.**
+- Câu hỏi: Giữ nút trên ảnh ở index lưới ảnh (khuyến nghị: giữ, vì là cách duy nhất vừa không đổi chiều cao hàng vừa không làm tràn khi meta dài; cái giá: khác vị trí đã chốt ở demo) hay muốn giữ đúng dòng meta và chấp nhận giảm chỗ ở chỗ khác (cần đề bài riêng)?
 
 ## 6. Review của Claude
 
