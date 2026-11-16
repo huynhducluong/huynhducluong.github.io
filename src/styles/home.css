@@ -1,7 +1,8 @@
 /* Trang chủ Blueprint (ADR-032/033/034): mobile-first; lưới liền ở nền body. */
 .home-page {
   --home-header-h: 8.25rem;
-  background-color: color-mix(in srgb, var(--color-primary) 4%, #fff);
+  --home-peek: 7rem;
+  background-color: color-mix(in srgb, var(--color-primary) 4%, var(--color-surface));
   background-image:
     linear-gradient(to right, color-mix(in srgb, var(--color-primary) var(--grid-alpha), transparent) 1px, transparent 1px),
     linear-gradient(to bottom, color-mix(in srgb, var(--color-primary) var(--grid-alpha), transparent) 1px, transparent 1px);
@@ -488,8 +489,8 @@ body.website-embedded {
 @media (min-width: 651px) {
   .hero {
     display: grid;
-    min-height: min(calc(100svh - 24px - var(--home-header-h)), 44rem);
-    max-height: calc(100svh - 24px - var(--home-header-h));
+    min-height: min(calc(100svh - 24px - var(--home-header-h) - var(--home-peek)), 44rem);
+    max-height: calc(100svh - 24px - var(--home-header-h) - var(--home-peek));
     align-items: center;
     padding-block: var(--space-4);
   }
@@ -497,6 +498,10 @@ body.website-embedded {
   .hero__layout {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
     gap: var(--space-8);
+  }
+
+  .hero + .section {
+    padding-top: var(--space-8);
   }
 
   .hero__name {
@@ -508,7 +513,7 @@ body.website-embedded {
   }
 
   .hero__viewport {
-    max-height: 42svh;
+    max-height: 36svh;
   }
 }
 
