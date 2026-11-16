@@ -54,7 +54,7 @@ Không làm ở đề bài này: thẻ dự án mới và chip lọc (GD3-13), �
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước: 1, 2, 3, 4 (bước 1–3 gộp một commit wip); **lượt sửa review 1 xong** (Phải sửa + Nên sửa)
+- Đã xong bước: 1, 2, 3, 4 (bước 1–3 gộp một commit wip); **lượt sửa review 1 và review 2 xong** (Phải sửa + Nên sửa)
 - Người code: Claude — cửa sổ code · đã dùng trước / sau: (không đo được)
 - Nhánh, commit cuối: `gd3/12-trang-chu-blueprint-nen-hero`, xem `git log` (commit `feat(GD3-12)` cuối cùng)
 - File đã đổi (ghi rõ file dùng chung): **dùng chung:** `src/styles/tokens.css` (thêm `--font-mono`, `--grid-size`, `--grid-alpha`, `--space-24`), `src/styles/home.css` (viết lại header + hero, responsive), `src/main.ts`. Mới: `src/site/homeHero.ts`, `src/site/homeHero.test.ts`. `global.css`, `shell.ts` không đổi (padding section chỉ đổi dưới `.home-page`, nên `/projects/`, `/tool/` không đổi).
@@ -62,6 +62,7 @@ Không làm ở đề bài này: thẻ dự án mới và chip lọc (GD3-13), �
 - `tools/home-viewport-check.mjs` (PASS / FAIL): **All PASS, 0 FAIL** sau lượt sửa (công cụ mới đo tiêu đề section kế tiếp; mốc trước lượt sửa: 3 FAIL ở 1440×731, preview 1440×900, preview 1280×800). Xem ảnh 320×568, 390×844, 1440×731, 1920×940 bằng mắt: đạt.
 - Chỗ làm khác đề bài và lý do: (1) nhãn bản vẽ và tagline nằm trong `heroCopy` của `homeHero.ts`, không trong `copy` của `main.ts`, để test được mà không import `main.ts` (chạy side effect). GD3-14 chuyển tagline sang Admin sẽ sửa một chỗ. (2) Hero hai cột từ 651 px (không phải 901 px) để preview 768×1024 lộ section kế tiếp. (3) Chưa đo preview Website trong Admin có đăng nhập (mục 4 dòng 6) và chưa mở `/projects/`, `/project/`, `/tool/` bằng tay: Claude đo khi review.
 - Lượt sửa review 1: (a) Phải sửa: thêm `--home-peek: 7rem` trừ vào chiều cao hero (`min-height` / `max-height`) từ 651 px, `.hero + .section` đệm trên `--space-8` (thay vì tới 7,5 rem), ảnh hồ sơ `max-height` 42svh → 36svh; tiêu đề Core expertise nay thấy được ở 1440×731, preview 1440×900, 1280×800; 1920×940 và 2560×1300 vẫn PASS, hero không bị nén (đã xem ảnh 1440×731 và 1920×940). (b) Nên sửa: `#fff` → `var(--color-surface)` ở nền `.home-page`. `verify:admin` 315/315, bundle Admin JS 115,0 / CSS 27,0 kB (không đổi).
+- Lượt sửa review 2: `.hero__photo { object-position: 50% 8% }` (một dòng trong `home.css`) để không cắt mất đầu ảnh vuông 1024×1024 trong khung rộng. Đã xem ảnh 1440×731, 1280×800, 1920×940, 390×844: thấy đủ đầu và mặt ở cả bốn. `home-viewport-check`: All PASS, 0 FAIL (phép `photo-focus` đạt ở mọi cỡ; tôi đếm được 92 dòng PASS, reviewer ghi kỳ vọng 93, không có FAIL nào nên có thể là lệch cách đếm). `verify:admin` 315/315, bundle Admin không đổi (JS 115,0 / CSS 27,0 kB).
 - Câu hỏi:
 
 ## 6. Review của Claude
