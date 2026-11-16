@@ -1,6 +1,6 @@
 # GD3-12 — Trang chủ Blueprint: nền lưới liền, hero BP2, tối ưu điện thoại (nhóm N12)
 
-> **Trạng thái:** CẦN SỬA (review 2) · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
+> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện trang công khai. Không có migration. **Làm xong rồi mới giao GD3-13 và GD3-14** (cùng `main.ts` và `home.css`).
 
 ## 1. Mục tiêu
@@ -93,3 +93,12 @@ Không làm ở đề bài này: thẻ dự án mới và chip lọc (GD3-13), �
 - **Cần người vận hành chốt:** không về thiết kế; sau lượt sửa cần **duyệt gộp** (đổi giao diện công khai, ADR-018).
 - Token: Claude — cửa sổ code 23 % → 23 % đã dùng cho lượt sửa review 1 (~0 %).
 - Kết luận: **CẦN SỬA** (1 mục "Phải sửa" nhỏ, một dòng CSS). Sửa xong báo lại; Claude chạy lại công cụ đo (kỳ vọng All PASS, 93 dòng) và xem ảnh đầu / mặt trước khi chuyển `CHỜ DUYỆT`.
+
+### Review 3 (2026-11-17, `fe32ccb`; worktree sạch, đã xóa)
+
+- Diff lượt sửa: một dòng `object-position: 50% 8%` cho `.hero__photo`. `verify:admin`: 44 file / 315 test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi).
+- `node tools/home-viewport-check.mjs`: **All PASS, 92 dòng PASS, 0 FAIL** (14 cỡ màn hình; mốc trước tôi ghi "93" là đếm cả dòng "All PASS": 78 + 14 = 92 dòng; không lệch). Ảnh cắt khung ảnh hồ sơ ở 1440×731, 1280×800 và 390×844: **thấy đủ đầu và mặt** ở cả ba.
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Cần người vận hành chốt:** không về thiết kế; chỉ cần **duyệt gộp** vì đổi giao diện công khai (ADR-018). Không có migration.
+- Token: Claude — cửa sổ code 26 % → 26 % cho lượt sửa; cả đề bài 16 % → 26 % (~10 %, Lớn).
+- Kết luận: **ĐẠT, CHỜ DUYỆT** — sạch về kỹ thuật; chờ người vận hành duyệt rồi Claude gộp và push.
