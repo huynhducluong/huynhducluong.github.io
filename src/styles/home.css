@@ -257,6 +257,7 @@ body.website-embedded {
 }
 
 .hero__cell dd {
+  margin: 0;
   color: var(--color-text);
   font-size: var(--font-size-sm);
   font-weight: 650;
@@ -519,6 +520,10 @@ body.website-embedded {
   .site-header__inner {
     flex-wrap: nowrap;
     gap: var(--space-6);
+  }
+
+  .site-logo {
+    order: 0;
   }
 
   .site-nav {

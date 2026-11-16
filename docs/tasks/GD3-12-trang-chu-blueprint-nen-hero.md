@@ -54,13 +54,13 @@ Không làm ở đề bài này: thẻ dự án mới và chip lọc (GD3-13), �
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng; bundle JS / CSS:
-- `tools/home-viewport-check.mjs` (PASS / FAIL):
-- Chỗ làm khác đề bài và lý do:
+- Đã xong bước: 1, 2, 3, 4 (bước 1–3 gộp một commit wip)
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: (không đo được)
+- Nhánh, commit cuối: `gd3/12-trang-chu-blueprint-nen-hero`, xem `git log` (commit `feat(GD3-12)` cuối cùng)
+- File đã đổi (ghi rõ file dùng chung): **dùng chung:** `src/styles/tokens.css` (thêm `--font-mono`, `--grid-size`, `--grid-alpha`, `--space-24`), `src/styles/home.css` (viết lại header + hero, responsive), `src/main.ts`. Mới: `src/site/homeHero.ts`, `src/site/homeHero.test.ts`. `global.css`, `shell.ts` không đổi (padding section chỉ đổi dưới `.home-page`, nên `/projects/`, `/tool/` không đổi).
+- `verify:admin`: số test đạt / tổng; bundle JS / CSS: 315 / 315 (44 file); Admin JS 92,8 / 115,0 kB, CSS 26,7 / 27,0 kB gzip
+- `tools/home-viewport-check.mjs` (PASS / FAIL): 78 PASS / 0 FAIL (All PASS; mốc trước: 23 FAIL). Xem ảnh 320×568, 390×844, 1440×731, 1920×940 bằng mắt: đạt.
+- Chỗ làm khác đề bài và lý do: (1) nhãn bản vẽ và tagline nằm trong `heroCopy` của `homeHero.ts`, không trong `copy` của `main.ts`, để test được mà không import `main.ts` (chạy side effect). GD3-14 chuyển tagline sang Admin sẽ sửa một chỗ. (2) Hero hai cột từ 651 px (không phải 901 px) để preview 768×1024 lộ section kế tiếp. (3) Chưa đo preview Website trong Admin có đăng nhập (mục 4 dòng 6) và chưa mở `/projects/`, `/project/`, `/tool/` bằng tay: Claude đo khi review.
 - Câu hỏi:
 
 ## 6. Review của Claude
