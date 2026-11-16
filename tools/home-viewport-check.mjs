@@ -11,7 +11,7 @@
 // Mỗi dòng in PASS / FAIL:
 //   no-hscroll   không cuộn ngang, không phần tử nào tràn mép phải (trừ vùng tự cuộn ngang)
 //   first-screen nút chính của hero (View projects) nằm trọn trong màn hình đầu tiên
-//   peek         (không phải điện thoại) phần đầu của section kế tiếp lộ ra ≥ 24 px ở đáy màn hình đầu: hero không che hết màn hình
+//   peek         (không phải điện thoại) **nội dung** đầu của section kế tiếp (kicker / tiêu đề) lộ ra ≥ 24 px ở đáy màn hình đầu: hero không che hết màn hình (Sổ #24)
 //   nav          (điện thoại, kể cả preview 390) có đường tới các mục (≥ 3 link điều hướng thấy được hoặc cuộn được)
 //   tap          (điện thoại, kể cả preview 390) link / nút trong header, hero, chip, nút ≥ 44 px mỗi chiều
 //   font         chữ nào cũng ≥ 12 px, đoạn văn (p) ≥ 14 px trên điện thoại
@@ -49,7 +49,8 @@ for (const kind of wanted) {
       const ctaBottom = cta ? Math.round(cta.getBoundingClientRect().bottom) : null;
       const sections = [...document.querySelectorAll("main > section")];
       const next = sections[1];
-      const nextTop = next ? Math.round(next.getBoundingClientRect().top) : null;
+      const nextHeading = next ? next.querySelector(".section-heading, .section-kicker, h2") : null;
+      const nextTop = nextHeading ? Math.round(nextHeading.getBoundingClientRect().top) : null;
       const navLinks = [...document.querySelectorAll(".site-nav__links a")].filter((a) => { const b = a.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(a).visibility !== "hidden"; }).length;
       const tapSelectors = ".site-header a, .site-header button, #top a, #top button, .chip, .button, .section-more, .text-link";
       const smallTargets = [...document.querySelectorAll(tapSelectors)].filter((el) => visible(el) && !inScroller(el) && (el.getBoundingClientRect().width < 44 || el.getBoundingClientRect().height < 44)).map((el) => `${(el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 14)} ${Math.round(el.getBoundingClientRect().width)}×${Math.round(el.getBoundingClientRect().height)}`).slice(0, 5);
@@ -60,7 +61,7 @@ for (const kind of wanted) {
     }, { phone: isPhone });
     report(!r.hscroll && r.overflow.length === 0, `${tag}  no-hscroll`, r.overflow.length ? `(${r.overflow.join(", ")})` : "");
     report(r.ctaBottom !== null && r.ctaBottom <= r.vh, `${tag}  first-screen`, `(nút chính kết thúc ở ${r.ctaBottom} px / ${r.vh} px)`);
-    if (!isPhone) report(r.nextTop !== null && r.nextTop <= r.vh - 24, `${tag}  peek`, `(section kế tiếp bắt đầu ở ${r.nextTop} px / ${r.vh} px)`);
+    if (!isPhone) report(r.nextTop !== null && r.nextTop <= r.vh - 24, `${tag}  peek`, `(tiêu đề section kế tiếp ở ${r.nextTop} px / ${r.vh} px)`);
     if (isPhone) {
       report(r.navLinks >= 3, `${tag}  nav`, `(${r.navLinks} link thấy được)`);
       report(r.smallTargets.length === 0, `${tag}  tap`, r.smallTargets.length ? `(${r.smallTargets.join("; ")})` : "");

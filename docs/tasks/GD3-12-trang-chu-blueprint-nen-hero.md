@@ -1,6 +1,6 @@
 # GD3-12 — Trang chủ Blueprint: nền lưới liền, hero BP2, tối ưu điện thoại (nhóm N12)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
+> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện trang công khai. Không có migration. **Làm xong rồi mới giao GD3-13 và GD3-14** (cùng `main.ts` và `home.css`).
 
 ## 1. Mục tiêu
@@ -65,8 +65,18 @@ Không làm ở đề bài này: thẻ dự án mới và chip lọc (GD3-13), �
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
+- Ngày, commit đã review: 2026-11-17, `3009736` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Người code là cửa sổ Claude code; người review là phiên thiết kế (độc lập). Đo trên bản đã publish (đọc công khai) và trên Admin thật.
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 44 file / 315 test đạt; Admin JS 92,8 / 115,0 kB, CSS **26,7 / 27,0 kB** gzip (tăng 0,1 kB do `tokens.css`; còn trống 0,3 kB).
+  - `node tools/home-viewport-check.mjs` (bản cũ, đo khung section): **All PASS**, 14 cỡ màn hình (mốc trước: 23 FAIL).
+  - Đọc diff: logic hero tách ra `src/site/homeHero.ts` có test (hợp lý, đúng lý do báo cáo); `renderHero` escape một lần (tên, ảnh, STACK, nhãn; `localize` đã escape); `home.css` không có `!important` mới, không hex mới ngoài một chỗ (xem "Nên sửa"); lưới liền trên `body.home-page`; token `--font-mono`, `--space-24`, `--grid-size`, `--grid-alpha` đúng đề bài.
+  - **Preview Website trong Admin** (phần người code chưa kiểm): hero mới hiển thị ở **cả bốn viewport** 1440, 1280, 768, 390, `body.home-page` bật, không cuộn ngang (bản nháp Theme Personal Blue, ảnh hồ sơ của bản nháp).
+  - Ảnh xem tay: 320×568 (tên, tagline, nút chính trong màn hình đầu, menu cuộn ngang), 390×844, 390 toàn trang, 1440×731, 1920×940, 2560×1300, tiếng Việt 390. Trang `/projects/` không đổi.
 - **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+  1. **Nội dung section kế tiếp bị hero che ở 1440×731, 1440×900 và 1280×800** (Sổ #24 / W-23: "hero lớn quá che phần bên dưới"). Đề bài ghi "lộ ≥ 24 px section kế tiếp" và người code đo đúng như vậy (khung section), nhưng section nền **trong suốt** nên khung lộ ra chỉ là lưới trống: tiêu đề "A practical combination…" của section Core expertise bắt đầu ở **815 px khi màn hình cao 731** (thấp hơn mép 84 px), 884 / 900 (cần ≤ 876), 879 / 800 (thấp hơn 79 px). Lỗi nằm ở **đặc tả của tôi** (đo khung thay vì nội dung); tôi đã sửa `docs/ui-guidelines.md` §2.1, §2.2, ADR-034 và `tools/home-viewport-check.mjs` (phép `peek` nay đo tiêu đề): mốc hiện tại **3 FAIL** (1440×731, preview 1440×900, preview 1280×800), 11 dòng còn lại PASS và phải còn PASS.
+  - **Cách sửa (gợi ý, người code chọn cách gọn):** giảm khoảng đệm dưới của hero và khoảng đệm trên của section đầu tiên sau hero ở máy tính (ví dụ `padding-block` của hero và của `#expertise` dùng `clamp` theo `svh`) cho tiêu đề section kế tiếp lên ≤ `100svh − 24 px` ở 1440×731, 1440×900 và 1280×800, mà ở 1920×940 và 2560×1300 vẫn PASS và hero không bị nén xấu. Có thể thu thấp ảnh hồ sơ thêm một chút ở các màn thấp.
+- **Nên sửa:** `color-mix(in srgb, var(--color-primary) 4%, #fff)` ở dòng 4 của `home.css` dùng `#fff` viết cứng: dùng `var(--color-surface)` (làm cùng lượt sửa).
+- **Ghi nhận:** (1) trang công khai đang hiện **màu nâu đỏ** vì bản Website **đã publish** còn theme cũ; Personal Blue chỉ có ở bản nháp (preview Admin). Lưới, nút và tiêu đề đổi theo theme đúng thiết kế, nên người vận hành cần **publish Website** sau khi chọn Personal Blue. (2) Hero mới **bỏ đoạn tóm tắt hồ sơ** (`profile.summary`) và dòng chức danh riêng (vai trò nằm trong ô ROLE); đúng theo demo đã chọn nhưng trang chủ không còn đoạn giới thiệu dài. (3) Bốn chuỗi nhãn và tagline nằm trong `heroCopy` của `homeHero.ts` thay vì `copy` của `main.ts` (có lý do: `main.ts` chạy tác dụng phụ khi import); GD3-14 sẽ thay tagline bằng dữ liệu Admin. (4) Hero hai cột từ 651 px thay vì 901 px, để preview 768 lộ được section kế tiếp: hợp lý.
+- **Cần người vận hành chốt:** không về thiết kế; sau lượt sửa sẽ cần **duyệt gộp** (đổi giao diện công khai, ADR-018).
+- Token: Claude — cửa sổ code 16 % → 19 % đã dùng (~3 %, Lớn; chưa tính lượt sửa).
+- Kết luận: **CẦN SỬA** (1 mục "Phải sửa" do đặc tả của tôi yếu, 1 mục "Nên sửa" nhỏ). Người code sửa trên cùng nhánh rồi báo lại; Claude chạy lại công cụ đo (kỳ vọng All PASS, 14 cỡ) và xem lại ảnh trước khi chuyển `CHỜ DUYỆT`.
