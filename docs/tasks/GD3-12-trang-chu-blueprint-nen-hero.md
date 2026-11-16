@@ -1,6 +1,6 @@
 # GD3-12 — Trang chủ Blueprint: nền lưới liền, hero BP2, tối ưu điện thoại (nhóm N12)
 
-> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
+> **Trạng thái:** CẦN SỬA (review 2) · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện trang công khai. Không có migration. **Làm xong rồi mới giao GD3-13 và GD3-14** (cùng `main.ts` và `home.css`).
 
 ## 1. Mục tiêu
@@ -81,3 +81,14 @@ Không làm ở đề bài này: thẻ dự án mới và chip lọc (GD3-13), �
 - **Cần người vận hành chốt:** không về thiết kế; sau lượt sửa sẽ cần **duyệt gộp** (đổi giao diện công khai, ADR-018).
 - Token: Claude — cửa sổ code 16 % → 19 % đã dùng (~3 %, Lớn; chưa tính lượt sửa).
 - Kết luận: **CẦN SỬA** (1 mục "Phải sửa" do đặc tả của tôi yếu, 1 mục "Nên sửa" nhỏ). Người code sửa trên cùng nhánh rồi báo lại; Claude chạy lại công cụ đo (kỳ vọng All PASS, 14 cỡ) và xem lại ảnh trước khi chuyển `CHỜ DUYỆT`.
+
+### Review 2 (2026-11-17, `8fddcee`; worktree sạch, đã xóa)
+
+- `verify:admin`: 44 file / 315 test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi). `node tools/home-viewport-check.mjs` (bản có phép `peek` đo tiêu đề): **All PASS, 79 dòng** (mốc review 1: 3 FAIL). Tiêu đề "Core expertise" nay thấy ở 1440×731 (615 / 731 px), 1920×940 (796 / 940), 1280×800 (684 / 800); preview Admin ở 1440, 1280, 768, 390 không cuộn ngang, hero hiển thị đúng.
+- **Phải sửa:** **ảnh hồ sơ bị cắt mất đầu** ở màn hình laptop. Ảnh hồ sơ là **vuông 1024 × 1024** nhưng khung ảnh của hero rộng (522 × 263 px ở 1440×731, tức 2:1), `object-fit: cover` mà `object-position` để mặc định **50 % 50 %** nên chỉ thấy phần thân giữa: ở 1440×731 và 1280×800 chỉ còn thấy cằm trở xuống; ở 1920×940 mất trán; trên điện thoại thấy mặt nhưng sát mép trên. Việc hạ ảnh xuống 36 % chiều cao màn hình (lượt sửa review 1) làm lỗi lộ rõ hơn. Lỗi này tôi cũng bỏ sót ở review 1 vì ảnh hồ sơ của bản nháp khi đó là ảnh khác (cũng bị cắt nhưng lộ ít hơn).
+  - **Cách sửa:** neo phần trên của ảnh: `.hero__photo { object-position: 50% 8% }` (hoặc giá trị tương đương ≤ 15 %); xem lại ảnh ở 1440×731, 1280×800, 1920×940, 390×844 để thấy **đủ đầu và mặt** ở cả bốn. Tôi đã thêm phép `photo-focus` vào `tools/home-viewport-check.mjs` (đo `object-position` dọc ≤ 15 %) và đặc tả `docs/ui-guidelines.md` §2.1: mốc hiện tại **14 FAIL** (mỗi cỡ màn hình một dòng), sau sửa phải **All PASS** (79 + 14 = 93 dòng).
+- **Nên sửa:** không. Dòng `#fff` → `var(--color-surface)` đã sửa đúng.
+- **Ghi nhận:** (1) trang công khai nay đã hiện **Personal Blue** và ảnh hồ sơ mới (bạn đã publish Website): lưới và nút đổi theo theme đúng thiết kế. (2) Lần đo đầu của cửa sổ code báo PASS do lệch CRLF / LF nhưng đã tự phát hiện và đo lại: ghi nhận cách làm tốt.
+- **Cần người vận hành chốt:** không về thiết kế; sau lượt sửa cần **duyệt gộp** (đổi giao diện công khai, ADR-018).
+- Token: Claude — cửa sổ code 23 % → 23 % đã dùng cho lượt sửa review 1 (~0 %).
+- Kết luận: **CẦN SỬA** (1 mục "Phải sửa" nhỏ, một dòng CSS). Sửa xong báo lại; Claude chạy lại công cụ đo (kỳ vọng All PASS, 93 dòng) và xem ảnh đầu / mặt trước khi chuyển `CHỜ DUYỆT`.
