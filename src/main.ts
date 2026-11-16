@@ -16,8 +16,10 @@ import {
   profileName,
   type Language,
 } from "./shared/format";
+import { heroStack, renderHero } from "./site/homeHero";
 import { readWebsiteLanguage, withWebsiteLanguage } from "./site/shell";
 
+document.body.classList.add("home-page");
 const app = document.querySelector<HTMLDivElement>("#app");
 
 if (!app) {
@@ -176,57 +178,25 @@ const renderPage = (language: Language): void => {
             ${language === "en" ? "VI" : "EN"}
           </button>
 
-          <a
-            class="admin-link"
-            href="${import.meta.env.BASE_URL}admin/"
-            aria-label="${text.adminLabel}"
-          >
-            <span class="admin-link__status" aria-hidden="true"></span>
-            Admin
-          </a>
         </nav>
       </div>
     </header>
 
     <main id="main-content">
-      <section id="top" class="hero">
-        <div class="container hero__layout">
-          <div>
-            <p class="hero__eyebrow">${text.eyebrow}</p>
-            <h1 class="hero__name">${escapeHtml(profileName(profile.name, language))}</h1>
-            <p class="hero__title">${localize(profile.professionalTitle, language)}</p>
-            <p class="hero__summary">${localize(profile.summary, language)}</p>
-
-            <div class="hero__actions">
-              <a class="button" href="#projects">${text.viewProjects}</a>
-              <a class="button button--secondary" href="${import.meta.env.BASE_URL}cv/">
-                ${text.viewCv}
-              </a>
-              <a class="button button--secondary" href="${import.meta.env.BASE_URL}portfolio/">
-                ${text.viewPortfolio}
-              </a>
-              <a class="button button--secondary" href="mailto:${escapeHtml(profile.email)}">
-                ${text.contact}
-              </a>
-            </div>
-          </div>
-
-          <aside class="hero__meta" aria-label="${text.professionalOverview}">
-            <div class="hero__meta-item">
-              <span class="hero__meta-label">${text.location}</span>
-              <span class="hero__meta-value">${localize(profile.location, language)}</span>
-            </div>
-            <div class="hero__meta-item">
-              <span class="hero__meta-label">${text.focus}</span>
-              <span class="hero__meta-value">${localize(content.focus, language)}</span>
-            </div>
-            <div class="hero__meta-item">
-              <span class="hero__meta-label">${text.specialization}</span>
-              <span class="hero__meta-value">${text.specializationValue}</span>
-            </div>
-          </aside>
-        </div>
-      </section>
+      ${renderHero({
+        language,
+        profile,
+        eyebrow: text.eyebrow,
+        overviewLabel: text.professionalOverview,
+        stack: heroStack([...sortedProjects, ...sortedTools].map((item) => item.technologies)),
+        actions: {
+          projects: "#projects",
+          cv: `${import.meta.env.BASE_URL}cv/`,
+          portfolio: `${import.meta.env.BASE_URL}portfolio/`,
+          contact: `mailto:${escapeHtml(profile.email)}`,
+        },
+        actionLabels: { projects: text.viewProjects, cv: text.viewCv, portfolio: text.viewPortfolio, contact: text.contact },
+      })}
 
       <section id="expertise" class="section"${content.sections.expertise ? "" : " hidden"}>
         <div class="container">
@@ -372,6 +342,7 @@ const renderPage = (language: Language): void => {
       <div class="container site-footer__inner">
         <p>© ${new Date().getFullYear()} ${escapeHtml(profileName(profile.name, language))}</p>
         <p>${text.footer}</p>
+        <a class="site-footer__admin" href="${import.meta.env.BASE_URL}admin/" aria-label="${text.adminLabel}">Admin</a>
       </div>
     </footer>
   `;
