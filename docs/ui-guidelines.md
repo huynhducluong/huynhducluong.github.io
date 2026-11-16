@@ -31,13 +31,23 @@ Khi một thay đổi buộc phải phá vỡ quy tắc, hãy cập nhật file 
 - **Một lớp lưới liền trên cả trang.** Lưới nằm ở nền `body` (hai `linear-gradient` 1 px, không gắn riêng cho hero hay một section). Token: `--grid-size: 4rem` (ô chuẩn), `--grid-alpha: 27%` (người vận hành chọn "rất đậm"). Màu đường = `color-mix(in srgb, var(--color-primary) var(--grid-alpha), transparent)`; màu giấy = `color-mix(in srgb, var(--color-primary) 4%, #fff)`. **Không viết cứng hex**: đổi Theme preset trong Admin thì lưới, nút, tiêu đề đổi theo ([§1](#1-ba-họ-token-không-bao-giờ-trộn-lẫn)).
 - **Section để lưới lộ ra:** `.section` nền trong suốt; `.section--muted` chỉ là một lớp `--color-primary` ~5 % trong suốt; phần liên hệ và chân trang nền `--color-dark` đặc. Không section nào được dùng nền đặc che lưới giữa hai khối nội dung.
 - **Hero kiểu bản vẽ (BP2):** cột trái là eyebrow, tên, tagline, các nút (View projects / CV / Portfolio); cột phải là **khung bản vẽ** viền 2 px `--color-primary`: ảnh hồ sơ tỉ lệ 16:11 (hai góc đánh dấu) và **bảng tên bản vẽ** hai cột (NAME, ROLE, BASED IN, STACK, SHEET 01 / 01) dùng chữ mono. Trên điện thoại cột phải xuống dưới cột trái.
+- **Hero nằm trọn màn hình đầu** (Sổ #24, ADR-034): chiều cao hero ≤ `100svh − 24 px` ở máy tính để lộ phần đầu section kế tiếp; khung bản vẽ co theo `svh` (ảnh có `max-height`, bảng tên bản vẽ chỉ bốn ô NAME / ROLE / BASED IN / STACK, bỏ ô SHEET khi thiếu chỗ). Trên điện thoại: tên, tagline và nút chính nằm trong màn hình đầu ở cả 320 × 568; ảnh và bảng tên xuống dưới.
 - **Không có công tắc sáng / tối** ([AGENTS §5.10](../AGENTS.md)).
 
-`[ĐỀ XUẤT]` (ADR-033, chờ xác nhận): ảnh hồ sơ trong hero; ô Hero tagline EN / VI trong Admin; nút Admin xuống chân trang; thẻ dự án "SHEET nn" có ảnh (ảnh trên, số SHEET và địa điểm bằng chữ mono, tên, vai trò, thẻ công nghệ) cùng chip lọc theo công nghệ (`aria-pressed`, thông báo số kết quả bằng `aria-live`); menu cuộn ngang trên điện thoại với mục cao ≥ 44 px; giữ phông tiêu đề hẹp.
+Đã chốt (ADR-033, 2026-11-17): ảnh hồ sơ trong hero; ô Hero tagline EN / VI trong Admin; nút Admin xuống chân trang; thẻ dự án "SHEET nn" có ảnh (ảnh trên, số SHEET và địa điểm bằng chữ mono, tên, vai trò, thẻ công nghệ) cùng chip lọc theo công nghệ (`aria-pressed`, thông báo số kết quả bằng `aria-live`); menu cuộn ngang trên điện thoại với mục cao ≥ 44 px; giữ phông tiêu đề hẹp.
 
-`[ĐỀ XUẤT] quy tắc mới` (cần xác nhận cùng ADR-033): token `--font-mono` (`ui-monospace, "Cascadia Code", Consolas, monospace`) cho nhãn kiểu bản vẽ; token `--grid-size`, `--grid-alpha`; thang khoảng cách thêm một bước lớn (khoảng 6 – 7,5 rem) cho khoảng thở giữa các section (hiện `--space-20` = 5 rem).
+`[ĐỀ XUẤT] quy tắc mới` (đi kèm đề bài GD3-12, chờ người vận hành xác nhận): token `--font-mono` (`ui-monospace, "Cascadia Code", Consolas, monospace`) cho nhãn kiểu bản vẽ; token `--grid-size`, `--grid-alpha`; thang khoảng cách thêm một bước lớn (khoảng 6 – 7,5 rem) cho khoảng thở giữa các section (hiện `--space-20` = 5 rem).
 
 **Truy cập (đã tính, chưa đo trên trang thật):** lưới chỉ là nền trang trí. Chữ chính (`--color-text`, `--color-dark`) vẫn trên 4,5:1 so với đường lưới. Chữ xám `--color-text-muted` đúng chỗ cắt đường lưới ở 27 % chỉ còn khoảng 3,9:1 (tính từ màu), nên **đoạn văn dài đặt trên nền đặc** (thẻ trắng, khung bản vẽ); tiêu đề lớn đặt thẳng trên lưới được chấp nhận (chữ lớn cần 3:1). Nếu thấy rối chữ trên trang thật, hạ `--grid-alpha` (token duy nhất).
+
+### 2.2 Ma trận màn hình của Website công khai (ADR-034)
+
+- **Ưu tiên số 1: điện thoại** (người xem chủ yếu dùng điện thoại). Trang chủ viết **mobile-first**: kiểu gốc là điện thoại, màn lớn thêm quy tắc. Phải đẹp nhất ở các cỡ dọc: **320×568, 360×640, 375×667, 390×844, 393×852, 412×915, 430×932** (CSS px). Màn ngang không bắt buộc đẹp nhưng không được vỡ.
+- **Máy tính: chỉ ba màn hình mục tiêu** ([admin-ui §11](admin-ui-guidelines.md)): **1440×731** (laptop), **1920×≈940**, **2560×≈1300**. Độ rộng trung gian (tablet, 1024…) không cần tối ưu riêng nhưng không được vỡ; dùng lại breakpoint 900 / 650 hiện có.
+- **Preview Website trong Admin:** bộ chọn viewport có 1440 (desktop), 1280 (laptop), 768 (tablet), 390 (mobile); preview phải hiển thị đúng như trang công khai ở độ rộng đó.
+- **Quy tắc điện thoại:** link và nút trong header, hero, chip, nút chính ≥ **44 × 44 px**; chữ ≥ 12 px, đoạn văn ≥ 14 px (khuyến nghị 16); **luôn có menu tới các mục** (không ẩn điều hướng); không cuộn ngang; ảnh có kích thước và `alt`; nội dung quan trọng đặt trong màn hình đầu.
+- **Quy tắc máy tính:** hero trọn màn hình đầu và lộ ≥ 24 px section kế tiếp (§2.1).
+- **Kiểm:** `node tools/home-viewport-check.mjs` (đo tất cả cỡ trên; mốc **23 FAIL** trên trang đang chạy trước GD3-12) cộng xem ảnh bằng mắt ở 320×568, 390×844 và 1440×731; trong Admin chọn từng viewport của preview Website.
 
 ## 3. Component Website
 
