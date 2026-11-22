@@ -1,6 +1,6 @@
 # GD3-12 — Trang chủ Blueprint: nền lưới liền, hero BP2, tối ưu điện thoại (nhóm N12)
 
-> **Trạng thái:** CẦN SỬA (review 4, theo Sổ #25 và #26) · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
+> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện trang công khai. Không có migration. **Làm xong rồi mới giao GD3-13 và GD3-14** (cùng `main.ts` và `home.css`).
 
 ## 1. Mục tiêu
@@ -117,3 +117,14 @@ Không phải lỗi của lượt trước: người vận hành xem bản thậ
 - **Công cụ đo:** phép `photo-focus` cũ nay thành **`photo-fit`** (tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08). Mốc hiện tại **14 FAIL** (mỗi cỡ màn hình một dòng); sau sửa **All PASS** (cả `peek`, `first-screen`, `tap`, `font`, `no-hscroll`, `images`).
 - **Nghiệm thu:** `node tools/home-viewport-check.mjs` All PASS; xem ảnh ở 1440×731, 1280×800, 1920×940, 390×844 (thấy nguyên ảnh, đủ đầu và vai; hero vẫn vừa màn hình đầu); `verify:admin` đạt; chụp lưới ở độ đậm mới thấy nhạt hơn nhưng vẫn rõ.
 - **Ghi nhận:** thẻ dự án trên trang chủ **vẫn là kiểu cũ** vì kiểu "SHEET" có ảnh và chip lọc thuộc **GD3-13** (đề bài riêng, chờ GD3-12). Hai đề bài nên gộp cùng một lúc để trang không nửa mới nửa cũ.
+
+### Review 5 (2026-11-22, `b62a107`; worktree sạch, đã xóa)
+
+- Diff lượt sửa: `--grid-alpha` 27 % → 14 % (`tokens.css`, test CSS khẳng định giá trị mới); khung ảnh `aspect-ratio: 1`, hero hai cột lệch `1.3fr / .7fr`, cỡ ảnh theo `--hero-photo-size` (tính từ `100svh`), bỏ `max-height` và `object-position`. Chỉ `home.css`, `tokens.css`, test.
+- `verify:admin`: 44 file / 315 test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi). `node tools/home-viewport-check.mjs`: **All PASS, 92 dòng PASS, 0 FAIL** (mốc trước: 14 FAIL của `photo-fit`). Đo thêm: ảnh vuông ở mọi cỡ (1440×731 → 311 × 311 px, 1280×800 → 380, 1920×940 và 2560×1300 → 405, 390 → 354, 320 → 284); tiêu đề section kế tiếp thấy được ở 1440×731 (615 / 731), 1280×800 (684 / 800), 1920×940 (796 / 940); `--grid-alpha` đo ra `14%` trên trang thật; preview Admin ở 1440, 1280, 768, 390 không cuộn ngang, ảnh vuông ở cả bốn.
+- Ảnh xem tay: 1440×731 (nguyên ảnh, thấy đủ đầu, vai và tay; lưới nhạt hơn nhưng vẫn rõ), 390×844 (ảnh vuông rộng bằng cột, dưới các nút).
+- **Phải sửa:** không.
+- **Nên sửa:** ở máy tính, đáy bảng tên bản vẽ còn **một dải trắng trống** (~16 px) vì ô SHEET bị ẩn mà viền ô vẫn còn; trông như ô chưa điền. Không chặn gộp; sửa cùng GD3-13 (cùng `home.css`) hoặc nếu người vận hành muốn sửa ngay thì thêm vào lượt này.
+- **Cần người vận hành chốt:** **duyệt gộp** (đổi giao diện công khai, ADR-018) **và cách gộp**: gộp GD3-12 ngay, hay giữ lại để gộp cùng GD3-13 một lần (xem tin nhắn review).
+- Token: Claude — cửa sổ code 29 % → 31 % cho lượt sửa review 4 (~2 %); cả đề bài 16 % → 31 % (~15 %, Lớn, gồm 4 lượt review).
+- Kết luận: **ĐẠT, CHỜ DUYỆT** — sạch về kỹ thuật.
