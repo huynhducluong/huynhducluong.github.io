@@ -22,21 +22,33 @@ Người vận hành mở sổ là thấy ngay **dòng nào đã sửa, đang l�
 
 ## Cài đặt (một lần, khoảng 5 phút, do người vận hành làm)
 
-1. Mở sổ (Google Doc). Menu **Tiện ích mở rộng → Apps Script**.
-2. Xóa mã mẫu, dán **toàn bộ** nội dung file [`tools/ui-feedback-bridge.gs`](../tools/ui-feedback-bridge.gs). Bấm **Lưu**.
-3. **Cài đặt dự án (bánh răng) → Thuộc tính tập lệnh → Thêm thuộc tính**, hai dòng:
+Tên nút dưới đây theo **giao diện tiếng Anh của Google** (tiếng Việt ghi trong ngoặc).
+
+1. Mở sổ (Google Doc). Menu **Extensions → Apps Script** (Tiện ích mở rộng → Apps Script).
+2. Xóa mã mẫu, dán **toàn bộ** nội dung file [`tools/ui-feedback-bridge.gs`](../tools/ui-feedback-bridge.gs) (gồm cả hàm `authorize` ở cuối). Bấm **Save project** (Lưu).
+3. Bên trái bấm **Project Settings** (biểu tượng bánh răng) → kéo xuống **Script Properties** → **Add script property**, hai dòng:
    - `DOC_ID` = mã tài liệu: đoạn giữa `/document/d/` và `/edit` trong link sổ.
-   - `TOKEN` = một chuỗi dài ngẫu nhiên do bạn tự đặt (ít nhất 32 ký tự chữ và số). **Không chia sẻ cho ai khác.**
-4. **Triển khai → Triển khai mới → Loại: Ứng dụng web.** "Thực thi bằng": **Tôi**. "Ai có quyền truy cập": **Bất kỳ ai**. Bấm Triển khai, đồng ý cấp quyền (Google sẽ cảnh báo "ứng dụng chưa xác minh": chọn Nâng cao → Tiếp tục, vì đây là script của chính bạn).
-5. Chép **URL ứng dụng web** (kết thúc bằng `/exec`).
-6. Mở file `project-links.local` ở gốc dự án (file này **không** vào Git) và thêm hai dòng:
+   - `TOKEN` = một chuỗi dài ngẫu nhiên (ít nhất 32 ký tự). Tạo ngay trên máy để không lộ trong chat: `node -e "console.log(require('crypto').randomBytes(24).toString('hex'))" | clip` rồi dán (Ctrl+V). **Không chia sẻ cho ai khác.** Bấm **Save script properties**.
+4. **Xin quyền Docs (bước hay bị bỏ sót):** ở ô chọn hàm (dropdown cạnh nút **Run**) chọn **`authorize`**, bấm **Run**. Khi hiện **Authorization required** → **Review permissions** → chọn tài khoản → **Advanced** → **Go to … (unsafe)** → **Allow**. Nhật ký **Execution log** phía dưới phải in **tên tài liệu sổ**. (Google cảnh báo "unverified app" vì đây là script của chính bạn.)
+5. **Deploy → New deployment** (Triển khai → Triển khai mới) → bánh răng cạnh "Select type" → **Web app**. **Execute as: Me** (Thực thi bằng: Tôi) và **Who has access: Anyone** (Ai có quyền truy cập: Bất kỳ ai) → **Deploy**.
+6. Chép **Web app URL** (kết thúc bằng `/exec`; link `/dev` là bản kiểm thử, không dùng được).
+7. Mở file `project-links.local` ở gốc dự án (**không** vào Git), thêm hai dòng:
 
 ```text
 UI_FEEDBACK_BRIDGE_URL=<URL /exec>
-UI_FEEDBACK_BRIDGE_TOKEN=<TOKEN đã đặt ở bước 3>
+UI_FEEDBACK_BRIDGE_TOKEN=<TOKEN ở bước 3>
 ```
 
-7. Nhắn Claude "đã cài cầu". Claude chạy `node tools/write-ui-feedback-status.mjs --list` để thử, rồi `--sync` để ghi trạng thái cho mọi dòng đã xử lý.
+8. Nhắn Claude "đã cài cầu". Claude chạy `node tools/write-ui-feedback-status.mjs --list` để thử, ghi thử một dòng, rồi `--sync` cho mọi dòng đã xử lý.
+
+### Nếu báo "Các quyền được chỉ định không đủ để gọi DocumentApp.openById"
+
+Cầu hoạt động (TOKEN đúng) nhưng bản triển khai chưa có quyền Docs. Kiểm theo thứ tự:
+
+1. **Deploy → Manage deployments** (Quản lý triển khai): bản đang bật phải là **Execute as: Me** và **Who has access: Anyone**. Nếu là "User accessing the web app" thì cầu chạy bằng quyền người gọi và sẽ luôn lỗi này: bấm bút chì (**Edit**) sửa lại.
+2. Chạy hàm `authorize` như bước 4 ở trên (chạy `doPost` không đủ vì nó trả "unauthorized" trước khi chạm tới Docs).
+3. **Deploy → Manage deployments → pencil (Edit) → Version: New version → Deploy.** Không chọn "New version" thì bản chạy thật vẫn là bản cũ với quyền cũ. URL không đổi.
+4. Vẫn lỗi: bật **Project Settings → Show "appsscript.json" manifest file in editor**, mở `appsscript.json`: nếu có `oauthScopes` thì phải có `https://www.googleapis.com/auth/documents`.
 
 ## Cách dùng sau khi cài
 

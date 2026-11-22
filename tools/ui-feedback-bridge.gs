@@ -77,3 +77,9 @@ function readRows_(doc) {
   }
   return rows;
 }
+
+/** Chạy hàm này MỘT LẦN trong trình soạn thảo (Run) để Google xin quyền Docs; log phải in tên tài liệu. */
+function authorize() {
+  var id = PropertiesService.getScriptProperties().getProperty("DOC_ID");
+  Logger.log(DocumentApp.openById(id).getName());
+}
