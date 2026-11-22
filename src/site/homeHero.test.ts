@@ -81,7 +81,7 @@ describe("home Blueprint CSS contract", () => {
   it("declares the new tokens", () => {
     expect(tokensCss).toContain("--font-mono:");
     expect(tokensCss).toContain("--grid-size: 4rem");
-    expect(tokensCss).toContain("--grid-alpha: 27%");
+    expect(tokensCss).toContain("--grid-alpha: 14%");
     expect(tokensCss).toContain("--space-24:");
   });
 
