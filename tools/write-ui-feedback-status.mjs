@@ -41,6 +41,14 @@ for (const line of read("../docs/93-workflow-friction.md").split("\n")) {
   if (/^W-\d+$/.test(cells[1] ?? "")) workflow.set(cells[1], statusOfWorkflowRow(cells[cells.length - 2] ?? ""));
 }
 
+// STT của dòng trong sổ, ghi trong docs/93 (W-xx) và docs/92 (UI-xx) dạng "(Sổ #n)": dự phòng khi mã dòng không khớp
+const logNumber = new Map();
+for (const line of [...read("../docs/93-workflow-friction.md").split("\n"), ...read("../docs/92-ui-rules.md").split("\n")]) {
+  const ref = line.match(/\b(W-\d+|UI-\d+)\b/)?.[1];
+  const number = line.match(/Sổ #(\d+)/)?.[1];
+  if (ref && number && !logNumber.has(ref)) logNumber.set(ref, number);
+}
+
 const seen = new Map();
 for (const line of read("./ui-feedback-seen.txt").split("\n")) {
   const match = line.match(/^([0-9a-f]{8}) (\S+)/);
@@ -50,12 +58,12 @@ for (const line of read("./ui-feedback-seen.txt").split("\n")) {
 const render = (level, note) => (note ? `${levels[level]}\n${note}` : levels[level]);
 const planned = [...seen].map(([id, ref]) => {
   const info = /^W-/.test(ref) ? workflow.get(ref) : { level: "done", note: ref };
-  return { id, ref, level: info?.level ?? "noted", note: [ref, info?.note].filter((part, index, all) => part && all.indexOf(part) === index).join(" · ") };
+  return { id, ref, no: logNumber.get(ref), level: info?.level ?? "noted", note: [ref, info?.note].filter((part, index, all) => part && all.indexOf(part) === index).join(" · ") };
 });
 
 const args = process.argv.slice(2);
 if (args.includes("--plan")) {
-  for (const row of planned) console.log(`${row.id}  ${render(row.level, row.note).replace("\n", "  |  ")}`);
+  for (const row of planned) console.log(`${row.id}  #${row.no ?? "?"}  ${render(row.level, row.note).replace("\n", "  |  ")}`);
   console.log(`\n${planned.length} dòng (chưa ghi gì).`);
   process.exit(0);
 }
@@ -79,13 +87,13 @@ if (args.includes("--list")) {
   const live = new Map(rows.map((row) => [row.id, row]));
   let written = 0;
   for (const row of planned) {
-    const current = live.get(row.id);
-    if (!current) continue; // dòng đã bị sửa nội dung hoặc xóa: bỏ qua
+    const current = live.get(row.id) ?? rows.find((item) => row.no && String(item.no) === String(row.no));
+    if (!current) continue; // dòng đã bị xóa khỏi sổ: bỏ qua
     const text = render(row.level, row.note);
     if (current.status.replace(/\s+/g, " ") === text.replace(/\s+/g, " ")) continue;
-    await call({ action: "set", id: row.id, status: text });
+    await call({ action: "set", id: current.id, status: text });
     written += 1;
-    console.log(`#${current.no} [${row.id}] → ${text.replace("\n", " | ")}`);
+    console.log(`#${current.no} [${current.id}] ${live.has(row.id) ? "" : "(khớp theo STT) "}→ ${text.replace("\n", " | ")}`);
   }
   console.log(`\nĐã ghi ${written} dòng (${planned.length - written} dòng giữ nguyên hoặc không còn trong sổ).`);
 } else {
