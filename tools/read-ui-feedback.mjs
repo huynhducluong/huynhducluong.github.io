@@ -57,8 +57,18 @@ console.log(`Đã tải: ${outDir}`);
 let shown = 0, skipped = 0;
 for (const table of xml.split("<w:tbl>").slice(1)) {
   const rows = table.split("</w:tbl>")[0].split("</w:tr>").filter((row) => row.includes("<w:tc"));
+  // Cột theo tên ở hàng tiêu đề (bảng có thể có hoặc không có cột "Màn hình"): STT · [Màn hình] · Hình ảnh · Nội dung · Trạng thái.
+  const heads = (rows[0] ?? "").split("</w:tc>").filter((cell) => cell.includes("<w:tc")).map((cell) => text(cell).toLowerCase());
+  const find = (word) => heads.findIndex((head) => head.includes(word));
+  const column = { no: Math.max(find("stt"), 0), screen: find("màn hình"), picture: find("hình ảnh"), content: find("nội dung"), status: find("trạng thái") };
+  if (column.content < 0) continue;
   for (const row of rows.slice(1)) {
-    const [no, screen = "", picture = "", content = "", status = ""] = row.split("</w:tc>").filter((cell) => cell.includes("<w:tc"));
+    const cells = row.split("</w:tc>").filter((cell) => cell.includes("<w:tc"));
+    const no = cells[column.no] ?? "";
+    const screen = column.screen >= 0 ? cells[column.screen] ?? "" : "";
+    const picture = cells[column.picture] ?? "";
+    const content = cells[column.content] ?? "";
+    const status = cells[column.status] ?? "";
     if (!text(content) && !images(picture).length) continue;
     const id = rowId(text(screen), text(content));
     if (onlyNew && seen.has(id)) { skipped++; continue; }
