@@ -28,6 +28,7 @@ const setting = (key) => links.match(new RegExp(`^${key}=(.+)$`, "m"))?.[1]?.tri
 const statusOfWorkflowRow = (cell) => {
   const ref = cell.match(/GD\d-\d+/)?.[0] ?? "";
   if (/rút lại|`GIỮ`/i.test(cell)) return { level: "no", note: "Không cần làm" };
+  if (/ĐANG BÀN/.test(cell)) return { level: "talking", note: ref };
   if (/ĐÃ XỬ LÝ/.test(cell)) return { level: "done", note: ref };
   if (/CHỜ DUYỆT/.test(cell)) return { level: "review", note: ref };
   if (/GIAO CODE/.test(cell)) return { level: "coding", note: ref };
