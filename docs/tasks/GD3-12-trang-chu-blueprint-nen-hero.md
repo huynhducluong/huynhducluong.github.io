@@ -1,6 +1,6 @@
 # GD3-12 — Trang chủ Blueprint: nền lưới liền, hero BP2, tối ưu điện thoại (nhóm N12)
 
-> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
+> **Trạng thái:** CẦN SỬA (review 4, theo Sổ #25 và #26) · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện trang công khai. Không có migration. **Làm xong rồi mới giao GD3-13 và GD3-14** (cùng `main.ts` và `home.css`).
 
 ## 1. Mục tiêu
@@ -102,3 +102,17 @@ Không làm ở đề bài này: thẻ dự án mới và chip lọc (GD3-13), �
 - **Cần người vận hành chốt:** không về thiết kế; chỉ cần **duyệt gộp** vì đổi giao diện công khai (ADR-018). Không có migration.
 - Token: Claude — cửa sổ code 26 % → 26 % cho lượt sửa; cả đề bài 16 % → 26 % (~10 %, Lớn).
 - Kết luận: **ĐẠT, CHỜ DUYỆT** — sạch về kỹ thuật; chờ người vận hành duyệt rồi Claude gộp và push.
+
+### Review 4 (2026-11-22): người vận hành xem trang thật và chốt hai chỉnh sửa (ADR-035)
+
+Không phải lỗi của lượt trước: người vận hành xem bản thật và ghi Sổ #25, #26 (W-24, W-25). Làm trên cùng nhánh trước khi gộp.
+
+- **Phải sửa 1 — lưới nhạt lại (Sổ #25):** `--grid-alpha` từ `27%` xuống **`14%`** (một token trong `tokens.css`; kiểm test CSS khẳng định giá trị mới). Không đổi `--grid-size` (4 rem).
+- **Phải sửa 2 — ảnh hồ sơ hiện nguyên ảnh vuông (Sổ #26):** ảnh hồ sơ là vuông 1024 × 1024 nhưng khung ảnh hero là 16:11 nên mất nửa dưới. Đổi thành **khung ảnh vuông**:
+  - Hero hai cột **lệch** từ 651 px trở lên: cột chữ rộng hơn (ví dụ `minmax(0, 1.3fr) / minmax(0, .7fr)`), cột ảnh hẹp hơn; cột ảnh gồm **ảnh vuông** (`aspect-ratio: 1`, giữ hai góc đánh dấu) và **bảng tên bản vẽ bốn ô** bên dưới.
+  - Kích thước ảnh theo chiều cao màn hình: bề rộng ảnh = `min(100%, <chiều cao còn lại của hero − chiều cao bảng tên>)` để hero **vẫn trọn màn hình đầu và lộ tiêu đề section kế tiếp** (11 dòng `peek` hiện đang PASS phải còn PASS ở 1440×731, 1440×900, 1280×800, 1920×940, 2560×1300).
+  - Trên điện thoại ảnh vuông rộng bằng cột nội dung, đặt **dưới** tên, tagline, nút (như hiện nay).
+  - Bỏ `object-position: 50% 8%` (ảnh vuông vào khung vuông không còn bị cắt); giữ `object-fit: cover` làm dự phòng; vẫn `fetchpriority="high"`, không `loading="lazy"`, có `width`, `height`, `alt`; ô chữ cái "HDL" khi không có ảnh cũng vuông.
+- **Công cụ đo:** phép `photo-focus` cũ nay thành **`photo-fit`** (tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08). Mốc hiện tại **14 FAIL** (mỗi cỡ màn hình một dòng); sau sửa **All PASS** (cả `peek`, `first-screen`, `tap`, `font`, `no-hscroll`, `images`).
+- **Nghiệm thu:** `node tools/home-viewport-check.mjs` All PASS; xem ảnh ở 1440×731, 1280×800, 1920×940, 390×844 (thấy nguyên ảnh, đủ đầu và vai; hero vẫn vừa màn hình đầu); `verify:admin` đạt; chụp lưới ở độ đậm mới thấy nhạt hơn nhưng vẫn rõ.
+- **Ghi nhận:** thẻ dự án trên trang chủ **vẫn là kiểu cũ** vì kiểu "SHEET" có ảnh và chip lọc thuộc **GD3-13** (đề bài riêng, chờ GD3-12). Hai đề bài nên gộp cùng một lúc để trang không nửa mới nửa cũ.
