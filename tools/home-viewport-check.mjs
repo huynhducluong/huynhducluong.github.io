@@ -18,6 +18,7 @@
 //   photo-fit    ảnh hồ sơ hiện nguyên: tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08 (ảnh vuông thì khung vuông; ADR-035)
 //   titleblock-fit khung bản vẽ của hero ôm sát nội dung: không dải trống dưới bảng tên (≤ 2 px) và không khe giữa ảnh và bảng tên (≤ 4 px)
 //   nav-fit      (điện thoại ≤ 650) menu **không cuộn ngang**, đủ 4 mục thấy hết trong khung, xếp 2 × 2 đều nhau (ADR-037 a, W-28)
+//   nav-cells    (điện thoại ≤ 650) mỗi ô menu **thấy được là một ô**: viền ≥ 1 px màu rõ (không trong suốt), nền không trong suốt, chữ canh trái; ô kề nhau dùng chung đường kẻ, không khe hở (ADR-038, W-30)
 //   buttons-equal (điện thoại ≤ 650) các nút hero cùng độ rộng, xếp 2 × 2 (ADR-037 c, W-28)
 //   grid-alpha   độ đậm lưới `--grid-alpha` ≤ 8 % khi màn ≤ 650 px, 14 % ở máy tính (ADR-037 b, W-28)
 //   cards-aligned (≥ 2 thẻ cùng hàng) tiêu đề, tóm tắt, thẻ công nghệ, link của các thẻ cùng hàng nằm đúng cùng một độ cao (subgrid; ADR-037, W-27, UI-08)
@@ -69,6 +70,9 @@ for (const kind of wanted) {
       const block = document.querySelector(".hero__titleblock");
       const stripGap = sheet && block ? Math.round(sheet.getBoundingClientRect().bottom - block.getBoundingClientRect().bottom) : null;
       const photoGapBelow = photoBox && block ? Math.round(block.getBoundingClientRect().top - photoBox.getBoundingClientRect().bottom) : null;
+      const navCellEls = [...document.querySelectorAll(".site-nav__links a")].filter(visible);
+      const bordered = (el) => { const s = getComputedStyle(el); return ["Top", "Right", "Bottom", "Left"].filter((side) => parseFloat(s["border" + side + "Width"]) >= 1 && s["border" + side + "Style"] !== "none" && !/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)|transparent/.test(s["border" + side + "Color"])).length; };
+      const navCells = { count: navCellEls.length, unbordered: navCellEls.filter((a) => bordered(a) + bordered(a.parentElement) < 2).length, transparentBg: navCellEls.filter((a) => /rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)|transparent/.test(getComputedStyle(a).backgroundColor) && /rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)|transparent/.test(getComputedStyle(a.parentElement).backgroundColor)).length, centered: navCellEls.filter((a) => ["center", "space-around", "space-evenly"].includes(getComputedStyle(a).justifyContent)).length, gaps: (() => { const bs = navCellEls.map((a) => a.parentElement.getBoundingClientRect()); const rows = [...new Set(bs.map((b) => Math.round(b.top)))]; let g = 0; for (let i = 0; i < bs.length; i += 1) for (let j = i + 1; j < bs.length; j += 1) { const a = bs[i], b = bs[j]; const hGap = Math.max(a.left - b.right, b.left - a.right); const vOverlap = Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top); const vGap = Math.max(a.top - b.bottom, b.top - a.bottom); const hOverlap = Math.min(a.right, b.right) - Math.max(a.left, b.left); if (vOverlap > 4 && hGap > 1) g += 1; if (hOverlap > 4 && vGap > 1) g += 1; } return g + (rows.length > 0 ? 0 : 0); })() };
       const navEls = [...document.querySelectorAll(".site-nav__links a")].filter(visible);
       const navBoxes = navEls.map((a) => a.getBoundingClientRect());
       const navList = document.querySelector(".site-nav__links");
@@ -93,7 +97,7 @@ for (const kind of wanted) {
         }
       }
       const broken = [...document.images].filter((i) => i.complete && i.naturalWidth === 0).length;
-      return { nav, buttons, gridAlpha, alphaRaw, cardSpread, cardRowsChecked, photoGapBelow, stripGap, photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
+      return { navCells, nav, buttons, gridAlpha, alphaRaw, cardSpread, cardRowsChecked, photoGapBelow, stripGap, photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
     }, { phone: isPhone });
     report(!r.hscroll && r.overflow.length === 0, `${tag}  no-hscroll`, r.overflow.length ? `(${r.overflow.join(", ")})` : "");
     report(r.ctaBottom !== null && r.ctaBottom <= r.vh, `${tag}  first-screen`, `(nút chính kết thúc ở ${r.ctaBottom} px / ${r.vh} px)`);
@@ -107,6 +111,7 @@ for (const kind of wanted) {
     if (r.stripGap !== null) report(r.stripGap <= 2 && r.photoGapBelow <= 4, `${tag}  titleblock-fit`, `(khung bản vẽ: dải trống ${r.stripGap} px dưới bảng tên, ${r.photoGapBelow} px giữa ảnh và bảng tên; phải ≤ 2 và ≤ 4)`);
     if (width <= 650) {
       report(r.nav.count >= 4 && !r.nav.scrolls && r.nav.outside === 0 && r.nav.rows === 2 && r.nav.widthSpread <= 2, `${tag}  nav-fit`, `(${r.nav.count} mục, ${r.nav.rows} hàng, ${r.nav.scrolls ? "còn cuộn ngang, " : ""}${r.nav.outside} mục ngoài khung, lệch độ rộng ${r.nav.widthSpread} px; phải 4 mục, 2 hàng, không cuộn, lệch ≤ 2)`);
+      report(r.navCells.count >= 4 && r.navCells.unbordered === 0 && r.navCells.transparentBg === 0 && r.navCells.centered === 0 && r.navCells.gaps === 0, `${tag}  nav-cells`, `(${r.navCells.count} ô; ${r.navCells.unbordered} ô thiếu viền, ${r.navCells.transparentBg} ô nền trong suốt, ${r.navCells.centered} ô canh giữa, ${r.navCells.gaps} cặp ô kề nhau còn khe; phải đủ viền, có nền, canh trái, không khe)`);
       if (r.buttons.count) report(r.buttons.count >= 4 ? r.buttons.rows === 2 && r.buttons.widthSpread <= 2 : r.buttons.widthSpread <= 2, `${tag}  buttons-equal`, `(${r.buttons.count} nút, ${r.buttons.rows} hàng, lệch độ rộng ${r.buttons.widthSpread} px; phải 2 × 2 và lệch ≤ 2)`);
     }
     report(width <= 650 ? r.gridAlpha <= 8 : r.gridAlpha === 14, `${tag}  grid-alpha`, `(--grid-alpha = ${r.alphaRaw}; phải ≤ 8 % khi ≤ 650 px, 14 % ở máy tính)`);
