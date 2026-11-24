@@ -1,6 +1,6 @@
 # GD3-19 — Trang chủ: menu điện thoại 2 × 2 có ô viền như bảng tên bản vẽ (nhóm N17)
 
-> **Trạng thái:** GIAO CODE (làm **sau** GD3-18, một thư mục làm việc) · **Nhánh:** `gd3/19-trang-chu-menu-dien-thoai-co-o` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/19-trang-chu-menu-dien-thoai-co-o` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
@@ -72,4 +72,13 @@ Sổ #31 / W-30 / [ADR-038](../../decisions/ADR-REGISTER.md) (phương án A): m
 
 ## 6. Review của Claude
 
-(chưa review)
+### Review 1 (2026-11-24, `d912d51`)
+
+- **Checklist giao diện (UI-16, UI-17):** §9 / `docs/92` §2 chạy lại từng mục. `verify:admin` 45 file / **339** test đạt, Admin CSS 27,0 / 27,0 kB (không đổi); `node tools/home-viewport-check.mjs` **All PASS, 150 dòng PASS, 0 FAIL**. Đo trên trình duyệt thật: 320, 360, 393 và 390 `?lang=vi`: bốn ô viền 1 px, nền trắng, chữ canh trái, cao 44 px, **cùng rộng** (145 / 165 / 181 / 180 px), khung liền, mép trái và phải thẳng với bốn nút hero (16 px), không cuộn ngang; chữ tiếng Việt ("Chuyên môn", "Tự động hóa") vừa ô. **Bàn phím:** Tab vào ô "Expertise", "Experience" có viền focus 3 px (offset 4 px) và nền nhạt, `:focus-visible` đúng (ảnh đã xem). Máy tính 1440 **không đổi** (ô không viền, nền trong suốt, chữ giữa).
+- Ảnh xem: 320 × 568 (khung 2 × 2 liền, thẳng cột với nút hero), 393 (trạng thái focus ô "Experience").
+- **Phải sửa:**
+  1. **Cùng lỗi "ô lơ lửng" còn ở tablet 651 – 900 px** (checklist §9 / docs/92 §2 mục 3 "kiểm mọi độ rộng nơi mẫu xuất hiện"). Menu là lưới 2 × 2 ở **mọi độ rộng ≤ 900 px** (`@media (min-width: 901px)` mới chuyển sang một hàng), nhưng ô viền chỉ áp dụng ở ≤ 650 px nên ở 651, 768 (preview tablet của Admin) và 900 menu vẫn là chữ canh giữa, **không viền, nền trong suốt** (đã đo: `border: 0px none`, `justify-content: center`). Đây là lỗi của **đề bài** (tôi ghi "≤ 650 px"); ADR-038 và `ui-guidelines` đã sửa thành **≤ 900 px** (commit `main`). Sửa: chuyển các quy tắc ô viền (`.site-nav__links` `gap: 0` + `padding`, `li` `margin`, `a` viền / nền / `justify-content: flex-start`, hover / focus-visible) từ `@media (max-width: 650px)` sang `@media (max-width: 900px)` (breakpoint có sẵn, **không tạo mới**); phần hero (`.hero__actions`, `--grid-alpha`) giữ ở ≤ 650. Ở ≥ 901 px không đổi. Cập nhật **phép `nav-cells`** của `tools/home-viewport-check.mjs` chạy ở mọi cỡ **≤ 900 px** (gồm preview 768 và 900 nếu có trong ma trận) thay vì ≤ 650; mốc: `nav-cells` FAIL ở 651, 768, 900 (đã đo bằng script). Cập nhật test CSS (`homeHero.test.ts`) theo breakpoint 900, và ghi bảng đo tablet vào mục 5.
+- **Nên sửa:** không.
+- **Cần người vận hành chốt:** không (sửa theo đúng ý ADR-038).
+- **Ghi nhận:** (1) lựa chọn bo góc 0 cho ô menu và thẻ viền 2 px khác nút hero, có chủ ý và có lý do (chung đường kẻ); chấp nhận. (2) Màu nền hover `color-mix` 8 % của `--color-primary` là cách đã dùng ở nơi khác của trang (không giá trị cứng mới). (3) Token: coder chưa ghi, để trống `docs/96`.
+- Kết luận: **PHẢI SỬA** (một mục: mở rộng ô viền tới ≤ 900 px).
