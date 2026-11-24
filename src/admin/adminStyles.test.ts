@@ -79,7 +79,10 @@ describe("Admin stylesheet contract", () => {
     const documents = Object.values(import.meta.glob<string>("../styles/admin-documents.css", { query: "?raw", import: "default", eager: true }))[0];
     expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__row \{[^}]*grid-template-areas:\s*"title include toggle"\s*"meta meta meta"/);
     expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__identity \{\s*display: contents/);
-    expect(documents).toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*width: 1\.5rem;[^}]*height: 1\.5rem/);
+    // UI-17: the box is the shared 1rem size (as CV / Background); the label's padding makes the ≥ 24 px target.
+    expect(documents).toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*width: 1rem;[^}]*height: 1rem/);
+    expect(documents).not.toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*1\.5rem/);
+    expect(documents).toMatch(/\.admin-portfolio-project__include \{[^}]*padding: \.25rem;/);
     expect(documents).toMatch(/\.admin-cv-project__options\[hidden\] \{\s*display: none/);
     const block = documents.slice(documents.indexOf(".admin-document-selection article.admin-portfolio-project {"), documents.indexOf("/* Same height with or without"));
     expect(block).not.toContain("!important");

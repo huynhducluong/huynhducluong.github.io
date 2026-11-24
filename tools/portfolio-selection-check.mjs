@@ -9,7 +9,8 @@
 //   one-line     ô "In Portfolio" nằm cùng hàng với tên (cùng dải dọc), không xuống dòng riêng
 //   no-overflow  không hàng nào tràn ngang; tên dài cắt gọn có tooltip (UI-14)
 //   name-width   cột hẹp (1024, 768, 390): tên dự án hiện ra ≥ 128 px, hàng ≤ 72 px, meta không bắt đầu bằng "·" (UI-16, §14 mục 4)
-//   target       công tắc và chevron cao ≥ 24 px (có tên truy cập)
+//   target       vùng bấm (hộp nhãn quanh ô chọn, và chevron) ≥ 24 × 24 px (UI-17)
+//   checkbox-size hộp chọn của hàng Portfolio bằng cỡ checkbox của hàng CV ± 1 px (UI-17)
 //   state-style  mọi hàng .is-unavailable (Draft / archived) viền nét đứt như hàng CV (UI-16)
 //   icon-square  nút chevron vuông: rộng = cao ± 1 px (UI-16)
 // Thoát mã 1 nếu có FAIL.
@@ -45,12 +46,14 @@ for (const [width, height] of [[1440, 731], [1920, 940], [2560, 1300]]) {
       return t.top > h.bottom - 2; // toggle sits below the title line
     }).length;
     const overflow = unique.filter((row) => row.scrollWidth > row.clientWidth + 1).length;
-    const smallTargets = unique.filter((row) => [...row.querySelectorAll("button, input[type=checkbox]")].some((el) => { const b = el.getBoundingClientRect(); return b.width > 0 && (b.height < 24 || b.width < 24); })).length;
+    const smallTargets = unique.filter((row) => [...row.querySelectorAll("button, .admin-portfolio-project__include")].some((el) => { const b = el.getBoundingClientRect(); return b.width > 0 && (b.height < 24 || b.width < 24); })).length;
     const unavailable = unique.filter((row) => row.classList.contains("is-unavailable"));
     const notDashed = unavailable.filter((row) => getComputedStyle(row).borderTopStyle !== "dashed").length;
     const toggles = unique.flatMap((row) => [...row.querySelectorAll(".admin-cv-project__toggle")]).filter((el) => el.getBoundingClientRect().width > 0);
     const notSquare = toggles.filter((el) => { const b = el.getBoundingClientRect(); return Math.abs(b.width - b.height) > 1; }).length;
-    return { unavailable: unavailable.length, notDashed, toggles: toggles.length, notSquare, n: unique.length, max: Math.max(0, ...heights), min: Math.min(...heights), stacked, overflow, smallTargets };
+    const box = document.querySelector(".admin-portfolio-project__include input[type=checkbox]")?.getBoundingClientRect();
+    const pfBox = box ? { w: Math.round(box.width), h: Math.round(box.height) } : null;
+    return { pfBox, unavailable: unavailable.length, notDashed, toggles: toggles.length, notSquare, n: unique.length, max: Math.max(0, ...heights), min: Math.min(...heights), stacked, overflow, smallTargets };
   });
   report(r.n > 0 && r.max <= 72, `${tag}  row-height`, `(${r.n} hàng, cao ${r.min} – ${r.max} px; phải ≤ 72)`);
   report(r.n > 0 && r.stacked === 0, `${tag}  one-line`, `(${r.stacked} hàng còn ô "In Portfolio" nằm riêng một dòng dưới tên)`);
@@ -58,6 +61,12 @@ for (const [width, height] of [[1440, 731], [1920, 940], [2560, 1300]]) {
   report(r.smallTargets === 0, `${tag}  target`, r.smallTargets ? `(${r.smallTargets} hàng có nút / công tắc < 24 px)` : "");
   report(r.unavailable > 0 && r.notDashed === 0, `${tag}  state-style`, `(${r.unavailable} hàng Draft / archived, ${r.notDashed} không viền nét đứt)`);
   report(r.toggles > 0 && r.notSquare === 0, `${tag}  icon-square`, `(${r.toggles} chevron, ${r.notSquare} không vuông)`);
+  await page.goto(`${origin}/admin/?view=cv`, { waitUntil: "networkidle" });
+  await page.waitForSelector('[data-document-tab="selection"]', { timeout: 30_000 });
+  await page.click('[data-document-tab="selection"]');
+  await page.waitForTimeout(1200);
+  const cvBox = await page.evaluate(() => { const b = [...document.querySelectorAll(".admin-cv-selection input[type=checkbox]")].map((el) => el.getBoundingClientRect()).find((box) => box.width > 0); return b ? { w: Math.round(b.width), h: Math.round(b.height) } : null; });
+  report(Boolean(r.pfBox && cvBox) && Math.abs(r.pfBox.w - cvBox.w) <= 1 && Math.abs(r.pfBox.h - cvBox.h) <= 1, `${tag}  checkbox-size`, `(Portfolio ${r.pfBox?.w}×${r.pfBox?.h}, CV ${cvBox?.w}×${cvBox?.h}; phải bằng nhau ± 1 px)`);
   await context.close();
 }
 for (const [width, height] of [[1024, 768], [768, 1024], [390, 844]]) {
@@ -73,9 +82,11 @@ for (const [width, height] of [[1024, 768], [768, 1024], [390, 844]]) {
     const names = rows.map((row) => Math.round(row.querySelector("strong").getBoundingClientRect().width));
     const heights = rows.map((row) => Math.round(row.getBoundingClientRect().height));
     const dot = rows.filter((row) => (row.querySelector("small")?.innerText ?? "").trim().startsWith("·")).length;
-    return { n: rows.length, minName: Math.min(...names), maxH: Math.max(...heights), dot, rowWidth: Math.round(rows[0]?.getBoundingClientRect().width ?? 0) };
+    const hits = rows.map((row) => row.querySelector(".admin-portfolio-project__include")?.getBoundingClientRect()).filter(Boolean);
+    const minHit = Math.round(Math.min(...hits.map((box) => Math.min(box.width, box.height))));
+    return { minHit, n: rows.length, minName: Math.min(...names), maxH: Math.max(...heights), dot, rowWidth: Math.round(rows[0]?.getBoundingClientRect().width ?? 0) };
   });
-  report(r.n > 0 && r.minName >= 128 && r.maxH <= 72 && r.dot === 0, `${tag}  name-width`, `(hàng rộng ${r.rowWidth} px; tên hẹp nhất ${r.minName} px, phải ≥ 128; hàng cao nhất ${r.maxH} px; ${r.dot} meta bắt đầu bằng "·")`);
+  report(r.n > 0 && r.minName >= 128 && r.maxH <= 72 && r.dot === 0 && r.minHit >= 24, `${tag}  name-width`, `(vùng bấm nhỏ nhất ${r.minHit} px, phải ≥ 24; hàng rộng ${r.rowWidth} px; tên hẹp nhất ${r.minName} px, phải ≥ 128; hàng cao nhất ${r.maxH} px; ${r.dot} meta bắt đầu bằng "·")`);
   await context.close();
 }
 await browser.close();
