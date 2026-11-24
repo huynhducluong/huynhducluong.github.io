@@ -1,6 +1,6 @@
 # GD3-15 — Trang chủ: thẻ dự án thẳng hàng (subgrid), menu 2 × 2, lưới nhạt và nút hero đều nhau trên điện thoại (nhóm N13)
 
-> **Trạng thái:** ĐẠT, CHỜ DUYỆT · **Nhánh:** `gd3/15-trang-chu-subgrid-menu-luoi` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (gộp `ceac688`, người vận hành duyệt 2026-11-24) · **Nhánh:** `gd3/15-trang-chu-subgrid-menu-luoi` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration. Làm **trước** GD3-16 (một thư mục làm việc).
 
 ## 1. Mục tiêu

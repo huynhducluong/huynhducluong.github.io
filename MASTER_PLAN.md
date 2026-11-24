@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.29.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.30.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -77,6 +77,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.30.0 | 2026-11-24 | GD3-15 (trang chủ: subgrid, menu 2 × 2, lưới 8 %, nút hero 2 × 2) và GD3-16 (Admin: hàng dự án / công cụ gọn 64 px) ĐẠT, **gộp** (`ceac688`, `986a87f`) và push một lần; `home-viewport-check` All PASS 142 dòng, `portfolio-selection-check` All PASS 12 / 12; Sổ #27 – #29 đã sửa; ngân sách CSS Admin còn dư 0,1 kB; còn lại GD3-14 (Hero tagline, migration), N10, #17 – #25 |
 | 1.29.0 | 2026-11-24 | Đọc sổ #27 – #29 → W-26, W-27, W-28; người vận hành chốt giữ hết khuyến nghị (ADR-037); giao [GD3-15](docs/tasks/GD3-15-trang-chu-subgrid-menu-luoi.md) (trang chủ: subgrid, menu 2 × 2, lưới 8 %, nút hero 2 × 2; mốc 29 FAIL) và [GD3-16](docs/tasks/GD3-16-admin-hang-du-an-portfolio-gon.md) (Admin: hàng dự án gọn; mốc 8 FAIL, công cụ `tools/portfolio-selection-check.mjs`); `home-viewport-check` thêm bốn phép |
 | 1.28.0 | 2026-11-24 | GD3-12 (trang chủ Blueprint) và GD3-13 (thẻ SHEET, chip lọc) ĐẠT, người vận hành duyệt, **gộp cùng lúc** (`042dde8`, `385e9a3`) và push một lần; W-23, W-24, W-25 đã sửa (ADR-032…036); `tools/home-viewport-check.mjs` All PASS 14 cỡ; còn lại GD3-14 (Hero tagline, migration), N10, #17 – #25 |
 | 1.27.0 | 2026-11-24 | Người vận hành chốt "gộp cùng lúc": GD3-12 (đã đạt review 5, ADR-035: lưới 14 %, ảnh hero vuông) **giữ lại chưa gộp**, giao GD3-13 (thẻ SHEET + chip lọc + khung bản vẽ ôm sát) trên nhánh tách từ GD3-12; gộp cả hai và push một lần; GD3-14 (Hero tagline, migration) sau; công cụ cầu ghi Trạng thái sổ đã chạy (Doc vẫn Viewer) |
