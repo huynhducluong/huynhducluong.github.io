@@ -5,6 +5,18 @@
 > **Hai hạn mức khác nhau, theo dõi riêng:** Codex hiện **% còn lại**, Claude hiện **% đã dùng**. Cột "Tốn" chỉ so được **trong cùng một bảng**.
 > **Mốc từ BCE** (cùng cách giảm token): đề bài Nhỏ ~5–15 %, Vừa ~25–35 %, Lớn ~30 % trở lên mỗi lượt. Đề bài Vừa nên giao Claude khi còn ≤ ~60 % đã dùng.
 
+## Dự báo token cho đề bài sắp giao (Claude ghi khi giao, đối chiếu khi người vận hành báo "xong")
+
+> Cách ước: lấy **trung vị theo cỡ** của các lượt Claude — cửa sổ code đã đo ở bảng dưới (Nhỏ ~1 – 5 %, trung vị ~4 %; Vừa ~4 – 12 %, trung vị ~9 %; Lớn ~6 – 15 %), cộng **~2 – 4 % cho mỗi lượt sửa** nếu review có "Phải sửa" (khoảng 1 trên 2 đề bài giao diện), và **cộng thêm khi đề bài có công cụ đo mới, nhiều màn hình hoặc nhiều ngôn ngữ**. Đây là **ước lượng**, không phải cam kết; dự báo của Claude (phiên review / thiết kế) **không đo được** từ phía Claude, người vận hành đọc % hạn mức trước / sau một lượt review nếu muốn biết.
+
+| Đề bài | Cỡ | Dự báo tốn (Claude — cửa sổ code) | Lượt sửa dự kiến | Vì sao |
+|---|---|---|---|---|
+| GD3-23 màu từ logo | Vừa | **~10 % (8 – 14 %)** | +3 % nếu có sửa | hàm trích màu + UI + công cụ đo + test; ràng buộc CSS không tăng có thể thêm việc |
+| GD3-24 meta hàng cắt gọn | Nhỏ | **~3 % (2 – 5 %)** | +2 % | một khối CSS + phép đo ở 6 độ rộng + `shots --stress` |
+| GD3-14 Hero tagline + migration | Vừa | **~9 % (7 – 12 %)** | +3 % | field Admin + migration + test; có bước tay của người vận hành (không tính token) |
+| N10 chữ bị cắt "…" (chưa có đề bài) | Vừa | **~8 – 10 %** | +3 % | phụ thuộc phương án (bộ đếm ký tự trong Admin) |
+| Thay email trong bootstrap-admin.sql (chưa giao) | Nhỏ | **~1 – 2 %** | 0 | một file SQL |
+
 ## Codex (% còn lại)
 
 | Ngày | Đề bài / lượt | Cỡ | Còn trước | Còn sau | Tốn | Ghi chú |

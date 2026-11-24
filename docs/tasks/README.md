@@ -141,6 +141,6 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-19](GD3-19-trang-chu-menu-dien-thoai-co-o.md) | Trang chủ: menu điện thoại 2 × 2 có ô viền như bảng tên bản vẽ (N17: W-30, ADR-038) | `ĐẠT` (gộp 2026-11-24) |
 | [GD3-20](GD3-20-trang-chu-menu-mot-hang-phang.md) | Trang chủ: menu ≤ 900 px một hàng phẳng không lướt ngang, vừa EN và VI ở 320 – 430 px (N18: W-32, ADR-039) | `ĐẠT` (gộp 2026-11-24) |
 | [GD3-21](GD3-21-admin-checkbox-16px-chung.md) | Admin: mọi checkbox 16 px bằng một quy tắc chung (gồm checkbox trách nhiệm 13 px), CSS không tăng (N19: W-31, UI-17) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |
-| [GD3-22](GD3-22-trang-chu-header-dinh-sheet.md) | Trang chủ: header dính ≤ 900 px, bỏ đường kẻ, ô SHEET cả VI (N21 + N22: W-34, W-35, ADR-040) | `ĐẠT, CHỜ DUYỆT` (review 1 sạch) |
+| [GD3-22](GD3-22-trang-chu-header-dinh-sheet.md) | Trang chủ: header dính ≤ 900 px, bỏ đường kẻ, ô SHEET cả VI (N21 + N22: W-34, W-35, ADR-040) | `ĐẠT` (gộp 2026-11-24) |
 | [GD3-24](GD3-24-admin-meta-hang-cat-gon.md) | Admin Portfolio: dòng meta của hàng cắt "…" có tooltip ở mọi độ rộng (stress UI-14; N23: UI-18) | `GIAO CODE` (Nhỏ; tự gộp được nếu review sạch) |
 | [GD3-23](GD3-23-admin-mau-tu-logo.md) | Admin: "Lấy màu từ logo" trong Appearance (N20: W-33, ADR-040) | `GIAO CODE` (Vừa; làm sau GD3-22; tự gộp được nếu review sạch) |
