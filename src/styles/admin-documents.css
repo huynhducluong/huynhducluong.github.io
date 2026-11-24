@@ -919,8 +919,18 @@
 .admin-document-selection article.admin-portfolio-project {
   display: block;
   padding: 0;
-  border: 1px solid var(--admin-color-border);
+  border-color: var(--admin-color-border);
   border-radius: var(--admin-radius-md);
+  background: var(--admin-color-surface);
+}
+
+.admin-document-selection article.admin-portfolio-project[data-display="excluded"] {
+  background: var(--admin-color-surface-subtle);
+}
+
+.admin-document-selection article.admin-portfolio-project.is-unavailable {
+  border-style: dashed;
+  background: var(--admin-color-surface-muted);
 }
 
 .admin-portfolio-project .admin-cv-project__row {
@@ -962,9 +972,12 @@
 
 .admin-portfolio-project .admin-cv-project__row > .admin-cv-project__toggle {
   grid-area: toggle;
+  display: inline-grid;
+  place-items: center;
   width: 1.5rem;
   height: 1.5rem;
   min-height: 1.5rem;
+  padding: 0;
   flex: none;
 }
 

@@ -40,14 +40,32 @@ Sửa hai chỗ lệch quy tắc của GD3-16 (Sổ #30, W-29, [UI-16](../92-ui-
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- Công cụ đo (mốc FAIL trước → sau):
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/17-admin-hang-portfolio-dung-quy-tac (commit feat(GD3-17))
+- File đã đổi (ghi rõ file dùng chung): src/styles/admin-documents.css (không phải admin-ui.css), src/admin/adminStyles.test.ts, tools/portfolio-selection-check.mjs
+- `verify:admin`: đạt; CSS Admin 26.9 / 27.0 kB gzip (không đổi so với GD3-16, nên không vượt).
+- Công cụ đo (mốc FAIL trước → sau): 6 FAIL (state-style 3, icon-square 3: 10 hàng Draft / archived đều viền liền, 3 chevron 30 × 24) → All PASS; hàng vẫn 64 px ở cả ba màn hình.
 - **Checklist giao diện từng mục (§14 × 16, docs/92 §2), so cạnh hàng CV:**
-- Chỗ làm khác đề bài và lý do:
+
+  Số đo 1440 × 731, `getComputedStyle`, hàng CV vs hàng Portfolio (cỡ chữ tiêu đề 14 px, meta 13 px ở cả hai):
+
+  | Trạng thái | CV | Portfolio |
+  |---|---|---|
+  | Bật, đóng | 112 px · viền liền 1 px · nền trắng · nút 40 × 40 | 64 px · viền liền 1 px · nền trắng · nút 24 × 24 |
+  | Tắt (excluded) | 112 px · liền · nền rgb(247,250,251) | 64 px · liền · cùng nền |
+  | Draft | 113 px · **nét đứt** 1 px · nền rgb(234,242,245) | 64 px · **nét đứt** 1 px · cùng nền |
+  | Mở (bật) | 309 px | 232 px |
+  | Đóng lại sau khi mở | 112 px | 64 px (trở về đúng) |
+
+  Khác có chủ ý: Portfolio gọn hơn (ADR-037) nên nút chevron 24 × 24 vuông, không 40 × 40.
+
+  §14: 1 đạt (`verify:admin`). 2 đạt (hàng Portfolio dùng chung khung `admin-cv-project` với CV). 3 **không kiểm** (chưa đổi mật độ header). 4 **chỉ kiểm desktop** 1440 / 1920 / 2560; chưa kiểm ~1180 px và < 900 px (còn `@container` đặt lại cột). 5 đạt về markup (`aria-label`, `aria-expanded`); chưa thử Tab thực trên trình duyệt. 6 không áp dụng. 7 không áp dụng. 8 không áp dụng. 9 **chưa kiểm** dữ liệu dài tối đa (`shots --stress` chưa chạy); `title` và `min-width: 0` có sẵn. 10 đạt (hàng Draft nét đứt, muted như CV). 11 không áp dụng. 12 đạt cho các trạng thái bật / tắt / Draft / mở / đóng ở bảng trên (hàng không nhảy; công cụ `one-line` PASS); `npm run shots` chưa chạy. 13 không áp dụng. 14 đạt (số đếm không đổi, tool vẫn `data-selection-count-item`). 15 không áp dụng. 16 không áp dụng.
+
+  docs/92 §2: 1 xem trên. 2 đã đọc UI-16 (nét đứt, nút vuông). 3 đạt cho bốn trạng thái (bảng). 4 **chưa thử** tên ~120 ký tự. 5 có số đo (bảng và công cụ). 6 file dùng chung: không có (chỉ `admin-documents.css`). 7 không thấy lỗi giao diện mới.
+
+  Không đạt / chưa kiểm ngoài phạm vi, ghi để Claude xử lý: §14 mục 3, 4 (≈1180 và < 900), 9 (dữ liệu dài / `--stress`), kiểm bàn phím thật.
+- Chỗ làm khác đề bài và lý do: quy tắc chung `.admin-document-selection article` đè luôn nền của hàng Tắt (excluded) nên thêm một quy tắc nền cho `[data-display="excluded"]` (cùng ý "đúng như CV"); không thêm file hay token. Đóng nhánh bằng một phép đo ngoài công cụ (file thăm dò tạm, đã xóa).
 - Câu hỏi:
 
 ## 6. Review của Claude

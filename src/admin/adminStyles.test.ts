@@ -81,8 +81,13 @@ describe("Admin stylesheet contract", () => {
     expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__identity \{\s*display: contents/);
     expect(documents).toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*width: 1\.5rem;[^}]*height: 1\.5rem/);
     expect(documents).toMatch(/\.admin-cv-project__options\[hidden\] \{\s*display: none/);
-    const block = documents.slice(documents.indexOf(".admin-portfolio-project .admin-cv-project__row"), documents.indexOf("/* Same height with or without"));
+    const block = documents.slice(documents.indexOf(".admin-document-selection article.admin-portfolio-project {"), documents.indexOf("/* Same height with or without"));
     expect(block).not.toContain("!important");
+    expect(block).not.toMatch(/is-unavailable[^{]*\{[^}]*border:\s*1px solid/);
+    expect(block).toMatch(/article\.admin-portfolio-project\.is-unavailable \{\s*border-style: dashed;\s*background: var\(--admin-color-surface-muted\)/);
+    const toggle = block.match(/\.admin-cv-project__row > \.admin-cv-project__toggle \{([^}]*)\}/)?.[1] ?? "";
+    expect(toggle).toMatch(/padding: 0;/);
+    expect(toggle).toMatch(/width: 1\.5rem;\s*height: 1\.5rem;/);
   });
 
   it("names the owner in the rail and never lets a long name widen it (§11)", () => {
