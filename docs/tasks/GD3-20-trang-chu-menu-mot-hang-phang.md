@@ -1,6 +1,6 @@
 # GD3-20 — Trang chủ: menu ≤ 900 px một hàng phẳng, không lướt ngang (nhóm N18)
 
-> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 1 sạch) · **Nhánh:** `gd3/20-trang-chu-menu-mot-hang-phang` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (gộp 2026-11-24, người vận hành duyệt) · **Nhánh:** `gd3/20-trang-chu-menu-mot-hang-phang` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
