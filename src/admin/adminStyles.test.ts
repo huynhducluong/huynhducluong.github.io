@@ -81,8 +81,19 @@ describe("Admin stylesheet contract", () => {
     expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__identity \{\s*display: contents/);
     expect(documents).toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*width: 1\.5rem;[^}]*height: 1\.5rem/);
     expect(documents).toMatch(/\.admin-cv-project__options\[hidden\] \{\s*display: none/);
-    const block = documents.slice(documents.indexOf(".admin-portfolio-project .admin-cv-project__row"), documents.indexOf("/* Same height with or without"));
+    const block = documents.slice(documents.indexOf(".admin-document-selection article.admin-portfolio-project {"), documents.indexOf("/* Same height with or without"));
     expect(block).not.toContain("!important");
+    expect(block).not.toMatch(/is-unavailable[^{]*\{[^}]*border:\s*1px solid/);
+    expect(block).toMatch(/article\.admin-portfolio-project\.is-unavailable \{\s*border-style: dashed;\s*background: var\(--admin-color-surface-muted\)/);
+    const toggle = block.match(/\.admin-cv-project__row > \.admin-cv-project__toggle \{([^}]*)\}/)?.[1] ?? "";
+    expect(toggle).toMatch(/padding: 0;/);
+    expect(toggle).toMatch(/width: 1\.5rem;\s*height: 1\.5rem;/);
+    // Narrow row (UI-16): container query of the row itself, label hidden (aria-label stays), chip moves to the meta line.
+    expect(block).toMatch(/container: pf-row \/ inline-size;/);
+    const narrow = block.slice(block.indexOf("@container pf-row (max-width: 22rem)"));
+    expect(narrow).toMatch(/grid-template-areas:\s*"title title include toggle"\s*"chip meta meta meta"/);
+    expect(narrow).toMatch(/\.admin-portfolio-project__include > span \{\s*position: absolute;[^}]*clip-path: inset\(50%\)/);
+    expect(narrow).toMatch(/small > span \+ span::before \{\s*content: none/);
   });
 
   it("names the owner in the rail and never lets a long name widen it (§11)", () => {

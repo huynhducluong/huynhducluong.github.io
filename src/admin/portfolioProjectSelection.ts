@@ -45,7 +45,7 @@ export const renderPortfolioProjectRow = ({ project, ready, layoutLabel, limit, 
     <div class="admin-cv-project__row">
       <div class="admin-cv-project__identity">
         <span class="admin-cv-project__title"><strong title="${escapeHtml(name)}">${escapeHtml(name)}</strong>${ready ? "" : `<span class="status status--${project.status === "archived" ? "archived" : "draft"}">${project.status === "archived" ? "Archived" : "Draft"}</span>`}</span>
-        <small><span title="${escapeHtml(project.location.en || "Location not set")}">${escapeHtml(project.location.en || "Location not set")}</span><span class="${state.warning ? "is-warning" : ""}" data-portfolio-project-state>${escapeHtml(state.text)}</span></small>
+        <small><span title="${escapeHtml(project.location.en || "Location not set")}">${escapeHtml(project.location.en || "Location not set")}</span><span class="${state.warning ? "is-warning" : ""}" title="${escapeHtml(state.text)}" data-portfolio-project-state>${escapeHtml(state.text)}</span></small>
       </div>
       <label class="admin-switch admin-portfolio-project__include"><input type="checkbox" role="switch" name="portfolio_project" value="${id}" aria-label="In Portfolio: ${escapeHtml(name)}" data-selection-primary data-portfolio-project-include${included ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span>In Portfolio</span></label>
       <button class="button button--secondary admin-icon-button admin-cv-project__toggle" type="button" aria-expanded="false" aria-controls="${optionsId}" aria-label="Responsibilities for ${escapeHtml(name)}" title="Responsibilities" data-portfolio-project-toggle${included ? "" : " hidden"}>${adminChevronIcon}</button>
@@ -99,6 +99,7 @@ export const syncPortfolioProjectRow = (card: HTMLElement): void => {
   const line = card.querySelector<HTMLElement>("[data-portfolio-project-state]");
   if (line) {
     line.textContent = state.text;
+    line.title = state.text;
     line.classList.toggle("is-warning", state.warning);
   }
   const count = card.querySelector<HTMLElement>("[data-portfolio-responsibility-count]");

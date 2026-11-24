@@ -744,10 +744,6 @@
   background: var(--admin-color-surface);
 }
 
-.admin-document-selection__item--tool {
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
 .admin-document-selection .admin-switch {
   display: flex;
   grid-template-columns: none;
@@ -767,22 +763,6 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-
-.admin-document-selection__identity {
-  display: grid;
-  min-width: 0;
-  gap: .15rem;
-}
-
-.admin-document-selection__identity strong,
-.admin-document-selection__identity small {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.admin-document-selection__identity strong { color: var(--color-text); }
-.admin-document-selection__identity small { color: var(--color-text-muted); font-size: var(--admin-text-xs); font-weight: var(--admin-weight-regular); }
 
 .admin-document-selection article > .admin-select-control {
   width: 100%;
@@ -917,10 +897,21 @@
 
 /* Portfolio project / tool rows (ADR-037, W-26): line 1 = name + include switch + chevron, line 2 = meta. Collapsed row ≤ 72 px. */
 .admin-document-selection article.admin-portfolio-project {
+  container: pf-row / inline-size;
   display: block;
   padding: 0;
-  border: 1px solid var(--admin-color-border);
+  border-color: var(--admin-color-border);
   border-radius: var(--admin-radius-md);
+  background: var(--admin-color-surface);
+}
+
+.admin-document-selection article.admin-portfolio-project[data-display="excluded"] {
+  background: var(--admin-color-surface-subtle);
+}
+
+.admin-document-selection article.admin-portfolio-project.is-unavailable {
+  border-style: dashed;
+  background: var(--admin-color-surface-muted);
 }
 
 .admin-portfolio-project .admin-cv-project__row {
@@ -962,9 +953,12 @@
 
 .admin-portfolio-project .admin-cv-project__row > .admin-cv-project__toggle {
   grid-area: toggle;
+  display: inline-grid;
+  place-items: center;
   width: 1.5rem;
   height: 1.5rem;
   min-height: 1.5rem;
+  padding: 0;
   flex: none;
 }
 
@@ -972,14 +966,54 @@
   display: none;
 }
 
-@container cv-selection (max-width: 44rem) {
+/* Narrow row (≤ 22rem, UI-16): the switch keeps its box and accessible name but drops the visible label, and the status
+   chip moves to the meta line, so the name always keeps ≥ 8rem. */
+@container pf-row (max-width: 22rem) {
   .admin-portfolio-project .admin-cv-project__row {
-    grid-template-columns: minmax(0, 1fr) auto 1.5rem;
+    grid-template-columns: auto minmax(0, 1fr) auto 1.5rem;
+    grid-template-areas:
+      "title title include toggle"
+      "meta meta meta meta";
   }
 
-  .admin-portfolio-project .admin-cv-project__identity,
-  .admin-portfolio-project .admin-cv-project__toggle {
-    grid-column: auto;
+  .admin-portfolio-project:has(.admin-cv-project__title > .status) .admin-cv-project__row {
+    grid-template-areas:
+      "title title include toggle"
+      "chip meta meta meta";
+  }
+
+  .admin-portfolio-project .admin-cv-project__title {
+    display: contents;
+  }
+
+  .admin-portfolio-project .admin-cv-project__title > strong {
+    grid-area: title;
+  }
+
+  .admin-portfolio-project .admin-cv-project__title > .status {
+    grid-area: chip;
+  }
+
+  .admin-portfolio-project__include > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .admin-portfolio-project .admin-cv-project__identity small > span:first-child:not(:last-child) {
+    display: none;
+  }
+
+  .admin-portfolio-project .admin-cv-project__identity small > span + span::before {
+    content: none;
+  }
+
+  .admin-portfolio-project .admin-cv-project__identity small > [data-portfolio-project-state] {
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
