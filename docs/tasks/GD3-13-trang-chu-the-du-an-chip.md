@@ -1,7 +1,7 @@
 # GD3-13 — Trang chủ: thẻ dự án "SHEET" có ảnh và chip lọc theo công nghệ (nhóm N12)
 
-> **Trạng thái:** CHỜ GD3-12 (giao sau khi GD3-12 gộp, cùng `main.ts` và `home.css`) · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` (`git fetch; git switch -c gd3/13-trang-chu-the-du-an-chip origin/main`) · **Ngày giao:** (chưa) · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
-> **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện trang công khai. Không có migration.
+> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` **tách từ nhánh GD3-12** (`git switch gd3/12-trang-chu-blueprint-nen-hero; git switch -c gd3/13-trang-chu-the-du-an-chip`), vì hai đề bài gộp cùng một lần · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Gộp (ADR-018):** người vận hành chốt "gộp cùng lúc" (2026-11-24): Claude review xong thì gộp `gd3/12` rồi `gd3/13` vào `main` và **push một lần** (một lần deploy); **cần người vận hành duyệt** (đổi giao diện công khai). Không có migration.
 
 ## 1. Mục tiêu
 
@@ -22,9 +22,10 @@ Phần dự án của trang chủ theo ADR-033 (d): **thẻ dự án kiểu "SHE
 1. **Thẻ dự án SHEET** thay `.project-card` của trang chủ: ảnh `project.images[0]` qua `renderMedia`, khung tỉ lệ cố định; **thiếu ảnh** dùng biến thể `.media-placeholder` không chữ, nền `--color-primary-light` có lưới nhẹ và số "SHEET nn" (decorative, `aria-hidden`); tên là link tới `projectUrl(slug, language)` (link ảnh chỉ để bấm, `tabindex="-1"` `aria-hidden="true"` để không đọc hai lần); tóm tắt `-webkit-line-clamp: 3` (không giấu bằng `…` giữa câu một cách vô tình: giữ như quy tắc hiện có, đây không phải N10); thẻ công nghệ tối đa 5; địa điểm và vai trò thiếu thì bỏ (không in "·" lẻ, không in "—").
 2. **Chip lọc:** dải chip trên lưới thẻ (`role="group"` `aria-label` qua `copy` EN / VI); "All" + tối đa 7 công nghệ phổ biến nhất (đếm trên các dự án nổi bật, sắp theo số lượng rồi theo tên); nút `aria-pressed`; bấm chip ẩn thẻ không khớp bằng `hidden`, **thông báo số dự án** trong vùng `aria-live="polite"` (`sr-only`); dùng được bằng bàn phím; ≥ 44 px chiều cao; trên điện thoại chip **xuống dòng** (không cuộn ngang) hoặc cuộn ngang có `scroll-snap`, nhưng không tràn trang.
 3. **Lưới thẻ theo màn hình:** điện thoại 1 cột, tablet 2 cột, máy tính 3 cột (`repeat(auto-fill, minmax(min(100%, 20rem), 1fr))`); không tạo breakpoint mới ngoài 900 / 650 hiện có.
-4. **Test:** hàm đếm và chọn công nghệ cho chip (thuần): thứ tự, giới hạn 7, trùng lặp, rỗng; markup thẻ có ảnh / không ảnh / thiếu tóm tắt / thiếu địa điểm; escape (`&`, `<` trong tên, tag); nhãn EN và VI; test CSS có khẳng định **dương** (E-002): khung ảnh tỉ lệ cố định, chip cao ≥ 44 px, thẻ 1 cột ở điện thoại; không `!important` trong khối mới.
+4. **Khung bản vẽ của hero ôm sát nội dung** (tồn đọng ở review 5 của GD3-12, cùng `home.css`): khung ảnh hồ sơ đang có **dải trống 18 px dưới bảng tên** (khung `.hero__sheet` cao hơn nội dung, trông như ô chưa điền) và **khe 16 px giữa ảnh và bảng tên** ở mọi cỡ màn hình. Sửa để khung ôm sát: ảnh, bảng tên bản vẽ liền nhau, đáy khung trùng đáy ô cuối; tìm nguyên nhân (nghi do `.hero__sheet` giãn theo chiều cao cột chữ, khoảng trắng dưới `<img>` hoặc đệm của `.hero__viewport`). Công cụ đo có phép `titleblock-fit` (mốc **14 FAIL**).
+5. **Test:** hàm đếm và chọn công nghệ cho chip (thuần): thứ tự, giới hạn 7, trùng lặp, rỗng; markup thẻ có ảnh / không ảnh / thiếu tóm tắt / thiếu địa điểm; escape (`&`, `<` trong tên, tag); nhãn EN và VI; test CSS có khẳng định **dương** (E-002): khung ảnh tỉ lệ cố định, chip cao ≥ 44 px, thẻ 1 cột ở điện thoại; không `!important` trong khối mới.
 
-**Không làm:** ô Hero tagline (GD3-14); trang `/projects/`; số liệu dự án (key facts, chưa có trong bản publish Website); tìm kiếm; phân trang; sắp xếp lại; migration; dependency mới.
+**Không làm:** ô Hero tagline và migration (GD3-14, làm sau khi gộp); trang `/projects/`; số liệu dự án (key facts, chưa có trong bản publish Website); tìm kiếm; phân trang; sắp xếp lại; migration; dependency mới.
 
 **Ràng buộc dùng chung:** `renderProjectCard` và `.listing-card` của trang `/projects/` không đổi; ngân sách bundle Admin.
 
@@ -37,7 +38,7 @@ Phần dự án của trang chủ theo ADR-033 (d): **thẻ dự án kiểu "SHE
 
 ## 4. Tiêu chí nghiệm thu
 
-- [ ] `node tools/home-viewport-check.mjs` **All PASS** (14 cỡ màn hình).
+- [ ] `node tools/home-viewport-check.mjs` **All PASS** (14 cỡ màn hình, gồm phép `titleblock-fit` mới: mốc 14 FAIL, sau sửa 0).
 - [ ] Dự án thiếu ảnh hiển thị ô SHEET có chủ ý, **không** chữ "Image will be added", không ảnh hỏng.
 - [ ] Bấm chip lọc đúng, "All" khôi phục đủ thẻ, `aria-pressed` và vùng `aria-live` đúng, dùng được bằng bàn phím.
 - [ ] Ở 320 px: thẻ một cột, chip xuống dòng hoặc cuộn ngang gọn, không cuộn ngang trang.

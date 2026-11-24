@@ -16,6 +16,7 @@
 //   tap          (điện thoại, kể cả preview 390) link / nút trong header, hero, chip, nút ≥ 44 px mỗi chiều
 //   font         chữ nào cũng ≥ 12 px, đoạn văn (p) ≥ 14 px trên điện thoại
 //   photo-fit    ảnh hồ sơ hiện nguyên: tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08 (ảnh vuông thì khung vuông; ADR-035)
+//   titleblock-fit khung bản vẽ của hero ôm sát nội dung: không dải trống dưới bảng tên (≤ 2 px) và không khe giữa ảnh và bảng tên (≤ 4 px)
 //   images       không ảnh hỏng
 // Thoát mã 1 nếu có FAIL.
 import { chromium } from "playwright";
@@ -59,8 +60,13 @@ for (const kind of wanted) {
       const smallParagraphs = phone ? [...document.querySelectorAll("p")].filter((el) => visible(el) && el.textContent.trim().length > 40 && parseFloat(getComputedStyle(el).fontSize) < 14).length : 0;
       const photo = document.querySelector("img.hero__photo");
       const photoGap = photo && photo.naturalWidth ? Math.round(Math.abs(photo.clientWidth / photo.clientHeight - photo.naturalWidth / photo.naturalHeight) * 100) / 100 : null;
+      const sheet = document.querySelector(".hero__sheet");
+      const photoBox = document.querySelector(".hero__viewport");
+      const block = document.querySelector(".hero__titleblock");
+      const stripGap = sheet && block ? Math.round(sheet.getBoundingClientRect().bottom - block.getBoundingClientRect().bottom) : null;
+      const photoGapBelow = photoBox && block ? Math.round(block.getBoundingClientRect().top - photoBox.getBoundingClientRect().bottom) : null;
       const broken = [...document.images].filter((i) => i.complete && i.naturalWidth === 0).length;
-      return { photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
+      return { photoGapBelow, stripGap, photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
     }, { phone: isPhone });
     report(!r.hscroll && r.overflow.length === 0, `${tag}  no-hscroll`, r.overflow.length ? `(${r.overflow.join(", ")})` : "");
     report(r.ctaBottom !== null && r.ctaBottom <= r.vh, `${tag}  first-screen`, `(nút chính kết thúc ở ${r.ctaBottom} px / ${r.vh} px)`);
@@ -71,6 +77,7 @@ for (const kind of wanted) {
     }
     report(r.tinyText.length === 0 && r.smallParagraphs === 0, `${tag}  font`, r.tinyText.length || r.smallParagraphs ? `(${[...r.tinyText, r.smallParagraphs ? `${r.smallParagraphs} đoạn văn < 14 px` : ""].filter(Boolean).join("; ")})` : "");
     if (r.photoGap !== null) report(r.photoGap <= 0.08, `${tag}  photo-fit`, `(tỉ lệ khung lệch tỉ lệ ảnh ${r.photoGap}; ảnh hồ sơ phải hiện nguyên, không bị cắt)`);
+    if (r.stripGap !== null) report(r.stripGap <= 2 && r.photoGapBelow <= 4, `${tag}  titleblock-fit`, `(khung bản vẽ: dải trống ${r.stripGap} px dưới bảng tên, ${r.photoGapBelow} px giữa ảnh và bảng tên; phải ≤ 2 và ≤ 4)`);
     report(r.broken === 0, `${tag}  images`, r.broken ? `(${r.broken} ảnh hỏng)` : "");
     await context.close();
   }
