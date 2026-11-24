@@ -1,6 +1,6 @@
 # GD3-17 — Admin › Portfolio › Projects & tools: sửa hàng cho đúng quy tắc (nhóm N15)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/17-admin-hang-portfolio-dung-quy-tac` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/17-admin-hang-portfolio-dung-quy-tac` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -70,4 +70,29 @@ Sửa hai chỗ lệch quy tắc của GD3-16 (Sổ #30, W-29, [UI-16](../92-ui-
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `a2aa2c3` (nhánh checkout trong thư mục chính vì coder đã xong; dev server cổng 5199; đã tắt).
+- **Checklist giao diện (UI-16), Claude chạy lại từng mục, gồm các mục coder chưa kiểm:**
+  - §14 mục 1 đạt: `verify:admin` 45 file / **338** test, Admin JS 92,8 / 115,0, CSS 26,9 / 27,0 kB gzip (không đổi).
+  - Mục 2 đạt (cùng khung `admin-cv-project` với hàng CV). Mục 3 không áp dụng (không đổi header).
+  - **Mục 4 KHÔNG ĐẠT** (xem Phải sửa 1). Đo 22 hàng ở 1440, 1180, 899, 768, 390: cao đúng 64 px, không chồng ô chọn xuống dưới tên; nhưng ở cột hẹp tên bị bóp (bảng dưới).
+  - Mục 5 đạt: Tab từ công tắc → chevron → công tắc kế, `:focus-visible` có viền 2 – 3 px ở cả ba; công tắc có `aria-label` nêu tên dự án.
+  - Mục 9 đạt: `npm run shots -- --stress` không còn *overflows* / *uneven* / *NO TOOLTIP* (hàng Portfolio ở laptop, monitor1, monitor2); tên 117 ký tự cắt gọn "…" có `title` ở mọi độ rộng, không tràn trang.
+  - Mục 10, 12, 16 đạt: hàng Draft / archived **nét đứt** và nền muted như hàng CV (công cụ: 10 hàng, 0 sai), hàng Tắt có nền subtle, chevron vuông 24 × 24 (3 chevron, 0 sai) ở cả ba màn hình mục tiêu. Mục 6, 7, 8, 11, 13, 14, 15 không áp dụng hoặc không đổi (số đếm "8 of 17" giữ đúng).
+  - `docs/92` §2 mục 3 đạt bốn trạng thái (bật, tắt, Draft, mở / đóng 232 → 64 px); mục 4 xem Phải sửa 1; mục 5 có số đo; mục 6 không đổi file dùng chung.
+- **Độ rộng tên dự án nhìn thấy** (`strong` ngắn nhất trong 22 hàng; cột form hẹp do preview chiếm chỗ):
+
+  | Màn hình Admin | Rộng hàng | Tên hiện ra | Hàng Draft (tên cạnh chip) |
+  |---|---|---|---|
+  | 2560 / 1920 / 1440 | 919 / 637 / 431 px | ≥ 58 px (mọi tên ngắn nhất) | ≥ 68 px |
+  | 1180 | 338 px | ≥ 58 px, tên dài còn ~15 ký tự | ≥ 68 px |
+  | 1024 | 269 px | **33 px** (≈ 3 ký tự) | **33 px** |
+  | 768 | 241 px | **5 px** (chỉ "C…" trước chip DRAFT) | **5 px** |
+  | 390 | 270 px | **34 px** | **35 px** |
+
+  (Sau GD3-16 công tắc có nhãn "In Portfolio" 68 px + ô 24 px + chevron 24 px + khoảng cách ≈ 140 px, nên rộng 240 – 270 px chỉ còn 30 px cho tên. Trước GD3-16 ô chọn nằm dưới tên nên tên có cả chiều rộng. Ảnh chụp 768 và 1180 đã xem; dòng meta còn dấu "·" đứng đầu vì địa điểm bị cắt hết.)
+- **Phải sửa:**
+  1. **Cột hẹp làm tên dự án gần như biến mất** (checklist §14 mục 4 "dưới 900 px", UI-16): ở rộng hàng ≤ ~22 rem (1024, 768, 390) tên chỉ còn 5 – 35 px, hàng Draft chỉ thấy chip. Sửa bằng container query của chính danh sách (`cv-selection` hoặc container mới, **không breakpoint mới theo viewport**): khi rộng hàng ≤ 22 rem (352 px) **ẩn chữ "In Portfolio" nhưng giữ `aria-label`** (hoặc `.sr-only`) để công tắc còn ô + nhãn truy cập, và để chip Draft / Archived **xuống dòng meta** thay vì chen cạnh tên. Mục tiêu đo: **tên hiện ra ≥ 8 rem (128 px) ở mọi rộng hàng ≥ 240 px**, hàng vẫn ≤ 72 px, không dấu "·" đứng đầu meta (bỏ phân cách khi địa điểm trống). Thêm phép `name-width` vào `tools/portfolio-selection-check.mjs` ở các độ rộng 1024, 768, 390 (đặt viewport rồi đo, có thể thêm vòng viewport phụ) và test CSS dương. Lỗi này **có từ GD3-16** (đã gộp): ghi nhận trong báo cáo.
+- **Nên sửa:** không.
+- **Cần người vận hành chốt:** không (không đổi hình thức ở màn lớn; ẩn chữ nhãn ở cột hẹp là quyết định kỹ thuật theo UI-16 / §14 mục 4, **Claude đề xuất và tự quyết**; nếu bạn muốn giữ chữ "In Portfolio" mọi lúc, cho tôi biết, phương án thay thế là xếp công tắc xuống dòng meta ở cột hẹp, hàng cao ~92 px).
+- **Ghi nhận:** hai việc đề bài giao (nét đứt, chevron vuông) **đã đúng**; coder báo trung thực các mục chưa kiểm (đúng quy trình mới). Token: Claude — cửa sổ code 43 % → 44 %.
+- Kết luận: **PHẢI SỬA** (một mục: cột hẹp, §14 mục 4).
