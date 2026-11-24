@@ -71,6 +71,13 @@
 - Chỗ làm khác đề bài và lý do: nhãn nút là "Pick colors from logo" (Admin chỉ tiếng Anh; đề bài ghi "Lấy màu từ logo" là tên tính năng). Gắn hành vi bằng **trình nghe `document` dùng chung** trong `documentThemeFields.ts` (một chỗ, không sửa ba workspace); sự kiện `input` / `change` của chính ô file bị chặn ở pha capture để không đánh dấu form bẩn (chỉ bấm cặp mới đánh dấu). Dòng tương phản đo `primary đã chỉnh` / `onPrimary` (chữ trên màu chính), vì đó là cặp thật sự in ra; hệ thống đã có quy tắc làm tối màu chính, nên thường là "passes" và chỉ ghi "Adjusted for contrast" khi màu chính bị đổi. Ô màu giữ mã gốc của logo, không thay bằng màu đã chỉnh.
 - Câu hỏi:
 
+### 5b. Sửa sau review 1 (Nên sửa 1, 2 và ngân sách ADR-041)
+
+- **Nên sửa 1 (gợi ý rác ở viền khử răng cưa):** `LOGO_MIN_ALPHA` 128 → **250** (bỏ điểm nửa trong suốt); gom màu xong, một màu **cùng họ sắc (< 30°) với màu lớn hơn và có diện tích < 50 % của nó** bị coi là viền (`LOGO_EDGE_SHARE`) và bỏ; logo **một họ sắc** trả đúng **2 cặp** (màu chính + biến thể nhạt, màu chính + biến thể đậm, `logoAccentVariant(rgb, opposite)`). Test mới: ảnh có lõi lục, viền pha trắng, viền pha đen và điểm nửa trong suốt → đúng 2 cặp, không có `#8ecfa7` / `#10552c`; và một logo hai sắc xanh thật (đậm + nhạt, diện tích gần nhau) vẫn giữ cả hai. Công cụ đo thêm logo hình tròn khử răng cưa trên nền trắng (`green-circle`) → đúng 2 cặp; logo lục ô vuông cũng đổi từ 1 → 2 cặp theo quy tắc mới.
+- **Nên sửa 2 (trạng thái cặp màu):** mỗi nút cặp có `aria-pressed` (true chỉ ở cặp vừa áp dụng, false ở cặp khác); chữ nhìn thấy ghi **cả hai mã** ("#0f766e + #f59e0b"), tên truy cập là chính chữ đó (bỏ `aria-label` "Use … and …" để tên khớp chữ nhìn thấy); trạng thái pressed có viền `--color-primary` và nền `--admin-color-selected`. Công cụ đo thêm phép `pressed`. Đã xem ảnh: cặp thứ hai bấm → viền xanh, nền nhạt, cặp thứ nhất không. Nếu người dùng chỉnh tay ô màu sau đó, `aria-pressed` vẫn giữ cặp cũ (chưa xử lý).
+- **Ngân sách (ADR-041):** `scripts/check-admin-bundle.mjs` CSS 27 → **28 kB** và dòng chú thích. CSS hiện **27,0 / 28,0 kB** (thêm quy tắc pressed ~ 0,1 kB).
+- Chạy lại: `theme-from-logo-check` **All PASS** (CV và Cover Letter, cả bốn logo + `pressed`), `admin-checkbox-size-check` **All PASS**, `verify:admin` đạt.
+
 ## 6. Review của Claude
 
 - Ngày, commit đã review: 2026-11-24, `d61d038` (đo trên dev server cổng 5173 của người vận hành, thư mục chính ở nhánh này; `.auth` chép sang 5173, tệp tạm đã xóa).

@@ -113,6 +113,7 @@ describe("Admin stylesheet contract", () => {
     const documents = Object.values(import.meta.glob<string>("../styles/admin-documents.css", { query: "?raw", import: "default", eager: true }))[0];
     expect(documents).toMatch(/\.admin-document-theme__logo \{\s*display: flex;\s*flex-wrap: wrap;/);
     expect(documents).toMatch(/\.admin-theme-pair__swatch \{[^}]*background: var\(--swatch\)/);
+    expect(documents).toMatch(/\.admin-theme-pair\[aria-pressed="true"\] \{\s*border-color: var\(--color-primary\);\s*background: var\(--admin-color-selected\)/);
     expect(documents).toMatch(/\.admin-document-theme__logo \.admin-field-hint \{\s*flex: 1 1 100%;/);
     expect(documents.slice(documents.indexOf(".admin-document-theme__logo {"), documents.indexOf(".admin-year-field {"))).not.toContain("!important");
   });

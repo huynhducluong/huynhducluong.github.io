@@ -42,16 +42,34 @@ describe("extractLogoPalette", () => {
 
   it("makes the Accent a variant of the one color of a mostly white logo", () => {
     const pairs = extractLogoPalette(pixels([GREEN, 200], [WHITE, 1800]));
-    expect(pairs).toHaveLength(1);
-    expect(pairs[0].primary).toBe("#1ea050");
+    expect(pairs).toHaveLength(2);
+    expect(pairs.map((pair) => pair.primary)).toEqual(["#1ea050", "#1ea050"]);
     expect(pairs[0].accent).toBe(logoAccentVariant([30, 160, 80]));
-    expect(pairs[0].accent).not.toBe(pairs[0].primary);
+    expect(pairs[1].accent).toBe(logoAccentVariant([30, 160, 80], true));
+    expect(pairs[0].accent).not.toBe(pairs[1].accent);
   });
 
   it("gives a lighter variant for dark colors and a darker one for light colors", () => {
     const luminance = (hex: string): number => 0.2126 * Number.parseInt(hex.slice(1, 3), 16) + 0.7152 * Number.parseInt(hex.slice(3, 5), 16) + 0.0722 * Number.parseInt(hex.slice(5, 7), 16);
     expect(luminance(logoAccentVariant([20, 40, 120]))).toBeGreaterThan(luminance("#142878"));
+    expect(luminance(logoAccentVariant([20, 40, 120], true))).toBeLessThan(luminance("#142878"));
     expect(luminance(logoAccentVariant([250, 220, 60]))).toBeLessThan(luminance("#fadc3c"));
+  });
+
+  it("drops anti-aliased edges: a one-color logo gives only its color and two variants", () => {
+    // Core ink, ink blended with white (opaque light edge), ink blended with black, and half-transparent edge pixels.
+    const edge = extractLogoPalette(pixels([GREEN, 400], [[142, 207, 167, 255], 90], [[16, 85, 44, 255], 50], [[30, 160, 80, 120], 200], [WHITE, 1500]));
+    expect(edge).toHaveLength(2);
+    expect(edge.every((pair) => pair.primary === "#1ea050")).toBe(true);
+    const all = edge.flatMap((pair) => [pair.primary, pair.accent]);
+    expect(all).not.toContain("#8ecfa7");
+    expect(all).not.toContain("#10552c");
+  });
+
+  it("keeps a second color of the same hue family when it is a real part of the logo", () => {
+    const pairs = extractLogoPalette(pixels([[20, 60, 160, 255], 500], [[90, 150, 235, 255], 400], [WHITE, 500]));
+    expect(pairs.length).toBeGreaterThanOrEqual(2);
+    expect(pairs.map((pair) => pair.primary)).toContain("#5a96eb");
   });
 
   it("returns nothing for black, white and gray logos", () => {

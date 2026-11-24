@@ -350,6 +350,11 @@
   margin: 0;
 }
 
+.admin-theme-pair[aria-pressed="true"] {
+  border-color: var(--color-primary);
+  background: var(--admin-color-selected);
+}
+
 .admin-theme-pair__swatch {
   width: 1rem;
   height: 1rem;

@@ -50,6 +50,9 @@ const applyPair = (block: HTMLElement, pair: LogoPalettePair): void => {
     input.dispatchEvent(new Event("input", { bubbles: true }));
     input.dispatchEvent(new Event("change", { bubbles: true }));
   }
+  block.querySelectorAll<HTMLButtonElement>("[data-pair]").forEach((button) => {
+    button.setAttribute("aria-pressed", String(button.dataset.primary === pair.primary && button.dataset.accent === pair.accent));
+  });
   const hint = block.querySelector<HTMLElement>("[data-theme-logo-hint]");
   if (hint) hint.textContent = themeContrastNote(pair);
 };
@@ -78,7 +81,7 @@ export const handleLogoFile = async (input: HTMLInputElement): Promise<void> => 
   }
   if (list) {
     list.innerHTML = pairs
-      .map((pair, index) => `<button type="button" class="button button--secondary admin-theme-pair" data-pair="${index}" aria-label="Use ${escapeHtml(pair.primary)} and ${escapeHtml(pair.accent)}">${swatch(pair.primary)}${swatch(pair.accent)}<span>${escapeHtml(pair.primary)}</span></button>`)
+      .map((pair, index) => `<button type="button" class="button button--secondary admin-theme-pair" data-pair="${index}" data-primary="${escapeHtml(pair.primary)}" data-accent="${escapeHtml(pair.accent)}" aria-pressed="false">${swatch(pair.primary)}${swatch(pair.accent)}<span>${escapeHtml(pair.primary)} + ${escapeHtml(pair.accent)}</span></button>`)
       .join("");
     list.querySelectorAll<HTMLButtonElement>("[data-pair]").forEach((button) => {
       button.addEventListener("click", () => applyPair(block, pairs[Number(button.dataset.pair)]));

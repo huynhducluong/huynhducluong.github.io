@@ -6,7 +6,8 @@
 // Cần phiên đăng nhập `.auth/admin.json` (npm run shots:login). Chỉ đọc: chọn logo tổng hợp vẽ bằng canvas (đỏ + xanh dương;
 // trắng + một màu lục; đen trắng), KHÔNG bấm Save. Với CV và Cover Letter:
 //   button       có nút "Pick colors from logo" và ô file ẩn (không file input nhìn thấy)
-//   pairs        đỏ + xanh → 2 – 3 cặp; trắng + lục → 1 cặp; đen trắng → 0 cặp và dòng "No prominent color"
+//   pairs        đỏ + xanh → 2 – 3 cặp; một màu lục (ô vuông, hình tròn khử răng cưa trên nền trắng) → đúng 2 cặp (không cặp xám xanh); đen trắng → 0 cặp và dòng "No prominent color"
+//   pressed      sau khi bấm cặp đầu: aria-pressed = true chỉ ở cặp đó
 //   apply        bấm cặp đầu: preset = Custom, hai ô màu đổi đúng mã của cặp, dòng tương phản ≥ 4,5 : 1
 //   no-network   chọn file không gửi request nào ra ngoài trang (logo không được tải lên đâu cả)
 // Thoát mã 1 nếu có FAIL.
@@ -23,7 +24,8 @@ const report = (ok, label, detail = "") => { if (!ok) failures += 1; console.log
 
 const logos = [
   { name: "red-blue", shapes: [["#d62828", 0, 0, 64, 128], ["#145ac8", 64, 0, 64, 128]], expectPairs: [2, 3] },
-  { name: "white-green", shapes: [["#ffffff", 0, 0, 128, 128], ["#1ea050", 40, 40, 48, 48]], expectPairs: [1, 1] },
+  { name: "white-green", shapes: [["#ffffff", 0, 0, 128, 128], ["#1ea050", 40, 40, 48, 48]], expectPairs: [2, 2] },
+  { name: "green-circle", shapes: [["#ffffff", 0, 0, 128, 128], ["circle", "#1ea050"]], expectPairs: [2, 2] },
   { name: "black-white", shapes: [["#ffffff", 0, 0, 128, 128], ["#000000", 30, 30, 68, 68]], expectPairs: [0, 0] },
 ];
 const screens = [
@@ -51,7 +53,10 @@ for (const screen of screens) {
       const canvas = document.createElement("canvas");
       canvas.width = 128; canvas.height = 128;
       const context = canvas.getContext("2d");
-      for (const [color, x, y, w, h] of shapes) { context.fillStyle = color; context.fillRect(x, y, w, h); }
+      for (const [color, x, y, w, h] of shapes) {
+        if (color === "circle") { context.fillStyle = x; context.beginPath(); context.arc(64, 64, 40, 0, Math.PI * 2); context.fill(); continue; }
+        context.fillStyle = color; context.fillRect(x, y, w, h);
+      }
       return canvas.toDataURL("image/png");
     }, logo);
     const buffer = Buffer.from(dataUrl.split(",")[1], "base64");
@@ -60,13 +65,13 @@ for (const screen of screens) {
     await page.waitForTimeout(700);
     const state = await page.evaluate(() => {
       const block = document.querySelector("[data-theme-logo]");
-      return { pairs: [...block.querySelectorAll("[data-pair]")].map((b) => b.getAttribute("aria-label")), hint: block.querySelector("[data-theme-logo-hint]").textContent, live: block.querySelector("[data-theme-logo-hint]").getAttribute("aria-live") };
+      return { pairs: [...block.querySelectorAll("[data-pair]")].map((b) => `${b.textContent.trim()}|${b.getAttribute("aria-pressed")}`), hint: block.querySelector("[data-theme-logo-hint]").textContent, live: block.querySelector("[data-theme-logo-hint]").getAttribute("aria-live") };
     });
     const [min, max] = logo.expectPairs;
     report(state.pairs.length >= min && state.pairs.length <= max && state.live === "polite" && (max > 0 || /No prominent color/.test(state.hint)), `${screen.name}  pairs  ${logo.name}`, `(${state.pairs.length} cặp; phải ${min === max ? min : `${min} – ${max}`}; hint "${state.hint}")`);
     report(requests.length === before, `${screen.name}  no-network  ${logo.name}`, `(${requests.length - before} request mới)`);
     if (!state.pairs.length || logo.name !== "red-blue") continue;
-    const [, primary, accent] = state.pairs[0].match(/Use (#[0-9a-f]{6}) and (#[0-9a-f]{6})/i);
+    const [, primary, accent] = state.pairs[0].match(/(#[0-9a-f]{6}) \+ (#[0-9a-f]{6})\|false/i);
     await page.locator("[data-pair]").first().click();
     await page.waitForTimeout(300);
     const after = await page.evaluate(() => {
@@ -75,6 +80,8 @@ for (const screen of screens) {
       return { preset: root.querySelector("select").value, primary: p.value, accent: a.value, hint: root.querySelector("[data-theme-logo-hint]").textContent };
     });
     const ratio = Number(after.hint.match(/Text on primary ([0-9.]+) : 1/)?.[1] ?? 0);
+    const pressed = await page.evaluate(() => [...document.querySelectorAll("[data-pair]")].map((b) => b.getAttribute("aria-pressed")).join(","));
+    report(pressed.startsWith("true") && !pressed.slice(4).includes("true"), `${screen.name}  pressed`, `(aria-pressed: ${pressed}; chỉ cặp vừa chọn là true)`);
     report(after.preset === "custom" && after.primary === primary.toLowerCase() && after.accent === accent.toLowerCase() && ratio >= 4.5, `${screen.name}  apply`, `(preset ${after.preset}, ${after.primary} / ${after.accent}, "${after.hint}")`);
   }
   await page.close();
