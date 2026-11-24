@@ -1,6 +1,6 @@
 # GD3-23 — Admin › Appearance: "Lấy màu từ logo" (nhóm N20)
 
-> **Trạng thái:** CẦN SỬA (review 1: 2 Nên sửa + nâng ngân sách CSS đã chốt) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CẦN SỬA (review 2: 1 Phải sửa, Sổ #38 cặp màu không thẳng hàng) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai hay PDF **hiện có** (chỉ thêm khả năng chọn màu) → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -108,3 +108,12 @@ Làm **ba** việc trên cùng nhánh rồi chạy lại `node tools/theme-from-
 2. **Nên sửa 2:** `aria-pressed` cho cặp màu đang dùng; nhãn nhìn thấy ghi cả hai mã hex (hoặc hai ô màu kèm chữ ẩn đủ).
 3. **Ngân sách:** đổi `scripts/check-admin-bundle.mjs` 27 → 28 kB (ADR-041).
 - **Dự báo token cho lượt sửa:** ~2 – 3 % (khoảng 2 – 4 %).
+
+### Review 2 (2026-11-24, `29947cc`)
+
+- **Token:** người vận hành quên ghi (lượt sửa 1); dự báo 2 – 3 %.
+- **Đã đạt (đo trên dev server 5173):** `verify:admin` 47 file / **357** test, Admin CSS **27,0 / 28,0** kB, JS 92,8 / 115,0 kB; hai Nên sửa của review 1 **đúng**: logo lục tròn khử răng cưa → 2 cặp (`#00843d + #59af81`, `#00843d + #005c2b`), không còn màu xám xanh; logo chữ đen + vạch cam → 2 cặp; logo hai màu → 2 cặp hoán đổi; `aria-pressed` `true` chỉ ở cặp vừa bấm (`true,false`), nhãn nhìn thấy ghi cả hai mã.
+- **Phải sửa 1 (Sổ #38 / W-37, người vận hành báo: "sắp xếp không ngay hàng thẳng lối"):** các nút cặp màu **không nằm trên lưới**: ở 1440 cặp 1 nằm **cạnh nút** "Pick colors from logo" (x = 467, y = 398) còn cặp 2 xuống hàng dưới ở x = 286 (y = 446); độ rộng khác nhau (197 / 204 / 199 / 187 px) tùy chữ. Ở 1180 và 768 (cột form 337 và 241 px) chúng xếp dọc, nhưng vẫn rộng khác nhau. Sai UI-17 / `admin-ui-guidelines` §6.3 (mọi hàng điều khiển theo lưới form). Sửa: nút "Pick colors from logo" ở **hàng riêng**; các cặp màu ở hàng bên dưới là **lưới `repeat(auto-fit, minmax(min(100%, 11.5rem), 1fr))`** (hoặc `repeat(3, minmax(0, 1fr))` khi đủ rộng, xuống 1 – 2 cột khi hẹp) có khoảng cách bằng khoảng cách của lưới form (`--admin-*`), nút cặp **rộng 100 % cột và cao bằng nhau**, mép trái / phải thẳng với khung Appearance; không `inline` tự xuống dòng; hàng gợi ý `aria-live` nằm dưới. Thêm phép **`pairs-aligned`** vào `tools/theme-from-logo-check.mjs` ở **1440, 1180, 768**: các nút cặp cùng độ rộng ±1 px trong cùng một hàng, mép trái thẳng theo cột, nằm trong khung thẻ, và nút "Pick colors from logo" không cùng hàng với cặp nào. **Mốc: FAIL** (đã đo: cặp 1 cạnh nút ở 1440). Giữ CSS Admin ≤ 28,0 kB (đang 27,0).
+- **Nên sửa:** không. **Cần người vận hành chốt:** không.
+- **Ghi nhận:** (1) chỉnh tay ô màu sau khi bấm một cặp thì `aria-pressed` vẫn giữ cặp cũ (coder đã ghi); chấp nhận, hoặc bỏ `pressed` khi ô màu đổi bằng tay nếu rẻ. (2) Token lượt sửa 2: dự báo **~2 %** (1 – 3 %).
+- Kết luận: **CẦN SỬA** (một mục: lưới cặp màu).
