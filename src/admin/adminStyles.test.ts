@@ -88,6 +88,12 @@ describe("Admin stylesheet contract", () => {
     const toggle = block.match(/\.admin-cv-project__row > \.admin-cv-project__toggle \{([^}]*)\}/)?.[1] ?? "";
     expect(toggle).toMatch(/padding: 0;/);
     expect(toggle).toMatch(/width: 1\.5rem;\s*height: 1\.5rem;/);
+    // Narrow row (UI-16): container query of the row itself, label hidden (aria-label stays), chip moves to the meta line.
+    expect(block).toMatch(/container: pf-row \/ inline-size;/);
+    const narrow = block.slice(block.indexOf("@container pf-row (max-width: 22rem)"));
+    expect(narrow).toMatch(/grid-template-areas:\s*"title title include toggle"\s*"chip meta meta meta"/);
+    expect(narrow).toMatch(/\.admin-portfolio-project__include > span \{\s*position: absolute;[^}]*clip-path: inset\(50%\)/);
+    expect(narrow).toMatch(/small > span \+ span::before \{\s*content: none/);
   });
 
   it("names the owner in the rail and never lets a long name widen it (§11)", () => {

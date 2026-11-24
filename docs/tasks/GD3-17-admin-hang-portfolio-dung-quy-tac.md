@@ -68,6 +68,13 @@ Sửa hai chỗ lệch quy tắc của GD3-16 (Sổ #30, W-29, [UI-16](../92-ui-
 - Chỗ làm khác đề bài và lý do: quy tắc chung `.admin-document-selection article` đè luôn nền của hàng Tắt (excluded) nên thêm một quy tắc nền cho `[data-display="excluded"]` (cùng ý "đúng như CV"); không thêm file hay token. Đóng nhánh bằng một phép đo ngoài công cụ (file thăm dò tạm, đã xóa).
 - Câu hỏi:
 
+### 5b. Sửa sau review (Phải sửa 1: cột hẹp)
+
+- Hàng Portfolio là container riêng (`container: pf-row / inline-size`), không breakpoint viewport mới. Khi rộng hàng ≤ 22 rem: chữ "In Portfolio" ẩn kiểu sr-only (ô chọn và `aria-label` giữ nguyên), chip Draft / Archived xuống dòng meta, địa điểm ẩn khi có dòng trạng thái (bỏ dấu "·" đứng đầu), dòng trạng thái cắt "…" và có `title` (cả khi đồng bộ lại sau đổi).
+- Công cụ: thêm phép `name-width` (1024, 768, 390): trước sửa theo số đo review tên chỉ 5 – 35 px; sau sửa tên hẹp nhất **176 / 148 / 177 px** (≥ 128), hàng cao nhất 66 px, 0 meta bắt đầu bằng "·". Toàn bộ công cụ **All PASS**. Phép `name-width` dùng `click()` trong trang vì ở 390 px preview che tab; chưa chạy công cụ trên mốc cũ nên không có số FAIL của chính phép này.
+- Ngân sách: bản đầu vượt (CSS 27,2 / 27,0 kB). Gỡ CSS chết trong `admin-documents.css` (`.admin-document-selection__item--tool`, `.admin-document-selection__identity` không còn markup nào dùng) và khối `@container cv-selection` thừa của GD3-16 → **27,0 / 27,0 kB** (đạt, hết dư địa). `verify:admin` đạt.
+- Đã xem ảnh chụp hàng Draft và hàng bật ở 768 px. Lỗi này có từ GD3-16.
+
 ## 6. Review của Claude
 
 - Ngày, commit đã review: 2026-11-24, `a2aa2c3` (nhánh checkout trong thư mục chính vì coder đã xong; dev server cổng 5199; đã tắt).
