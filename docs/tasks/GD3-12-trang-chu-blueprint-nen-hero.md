@@ -1,6 +1,6 @@
 # GD3-12 — Trang chủ Blueprint: nền lưới liền, hero BP2, tối ưu điện thoại (nhóm N12)
 
-> **Trạng thái:** CHỜ DUYỆT · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
+> **Trạng thái:** ĐẠT (gộp `042dde8` cùng GD3-13, người vận hành duyệt 2026-11-24) · **Nhánh:** `gd3/12-trang-chu-blueprint-nen-hero` (`git fetch; git switch -c gd3/12-trang-chu-blueprint-nen-hero origin/main`) · **Ngày giao:** 2026-11-17 · **Cỡ:** Lớn (~6 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex nếu còn token; Codex nên dùng khi còn ≥ 60 % token)
 > **Gộp (ADR-018):** **cần người vận hành duyệt** — đổi giao diện trang công khai. Không có migration. **Làm xong rồi mới giao GD3-13 và GD3-14** (cùng `main.ts` và `home.css`).
 
 ## 1. Mục tiêu
