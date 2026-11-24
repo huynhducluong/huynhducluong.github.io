@@ -71,3 +71,17 @@ Phần dự án của trang chủ theo ADR-033 (d): **thẻ dự án kiểu "SHE
 - **Ghi nhận:** (1) dữ liệu thật nay có **3** dự án nổi bật, đều có ảnh (bạn đã gán ảnh và publish), nên trang đẹp hơn nhiều so với 2 / 6 trước đây. (2) Cửa sổ code thêm `.sr-only` vào `home.css` vì trước chỉ có ở `admin.css`: hợp lý. (3) Tôi đã xóa ba ảnh chụp rời của cửa sổ code trong `tmp/` (không có trong commit).
 - Token: Claude — cửa sổ code 15 % → 17 % đã dùng (~2 %, Vừa).
 - Kết luận: **CẦN SỬA** (1 mục "Phải sửa": thoát chuỗi hai lần; 2 mục "Nên sửa" nhỏ). Sửa xong báo lại; Claude kiểm lại (test thoát chuỗi, ảnh ô thiếu ảnh) rồi chờ người vận hành chốt chip và duyệt gộp **cả GD3-12 và GD3-13**.
+
+### Review 1 — bổ sung sau khi người vận hành chốt chip (ADR-036, 2026-11-24)
+
+Sửa trên cùng nhánh `gd3/13-trang-chu-the-du-an-chip`. Làm cả ba mục của review 1 và mục mới dưới đây, rồi chạy `node tools/home-viewport-check.mjs` (All PASS) và `verify:admin`.
+
+- **Phải sửa 1 (thoát chuỗi hai lần ở địa điểm):** như mục 6 phía trên (bỏ `escapeHtml(part)` ở `kicker`; test địa điểm có `&`, `<`).
+- **Phải sửa 2 (mới, ADR-036 — chip chỉ hiện khi có tác dụng):**
+  - `projectChips` (hoặc bước dựng chip) **bỏ chip có số dự án bằng tổng số dự án** (bấm vào không loại thẻ nào) và vẫn giữ tối đa 7 chip còn lại theo số lượng rồi theo tên.
+  - Nếu **không còn chip nào**, `renderProjectFilter` trả về chuỗi rỗng: **không** hiện chip "All", không hiện vùng `aria-live`; `bindProjectFilter` chạy an toàn khi không có chip.
+  - Còn ít nhất một chip: giữ "All" (đang chọn) cùng các chip còn lại như hiện nay.
+  - **Test:** (a) tất cả dự án cùng công nghệ → không có chip, không có "All", không có `aria-live`; (b) hai dự án, một công nghệ chung và một công nghệ riêng → chỉ chip công nghệ riêng (số 1) cùng "All"; (c) một dự án duy nhất → không chip; (d) giới hạn 7 chip còn đúng sau khi lọc; (e) `bindProjectFilter` gán `data-tech` khác nhau, bấm chip: `hidden`, `aria-pressed`, văn bản `aria-live` đúng (đây cũng là test DOM của "Nên sửa 2").
+  - Với dữ liệu thật hiện nay (3 dự án cùng 5 công nghệ) trang chủ **không còn dải chip nào**: đó là kết quả đúng, ghi vào mục 5. Các phép đo `tap`, `font`, `no-hscroll` của công cụ đo không được xấu đi.
+- **Nên sửa 1:** `text-decoration: none` cho `.project-card__image--empty` (nhãn SHEET trong ô thiếu ảnh không gạch chân).
+- **Nghiệm thu bổ sung:** đọc `projectChips` bằng test với dữ liệu giả có công nghệ khác nhau; xem ảnh thẻ có ảnh ở 390 và 1440 (không dải chip) và ảnh một thẻ thiếu ảnh giả lập.
