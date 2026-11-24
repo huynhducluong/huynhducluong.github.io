@@ -136,4 +136,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-14](GD3-14-trang-chu-hero-tagline.md) | Ô Hero tagline EN / VI trong Admin, **có migration** (N12) | `CHỜ giao` (có migration; GD3-12 và GD3-13 đã gộp) |
 | [GD3-15](GD3-15-trang-chu-subgrid-menu-luoi.md) | Trang chủ: thẻ dự án subgrid, menu 2 × 2, lưới nhạt và nút hero đều nhau trên điện thoại (N13: W-27, W-28) | `ĐẠT` (gộp 2026-11-24) |
 | [GD3-16](GD3-16-admin-hang-du-an-portfolio-gon.md) | Admin Portfolio: hàng dự án / công cụ gọn, công tắc cùng hàng với tên (N14: W-26) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |
-| [GD3-17](GD3-17-admin-hang-portfolio-dung-quy-tac.md) | Admin Portfolio: hàng dự án / công cụ đúng quy tắc (Draft nét đứt, chevron vuông; N15: W-29, UI-16) | `CẦN SỬA` (review 1: cột hẹp, §14 mục 4) |
+| [GD3-17](GD3-17-admin-hang-portfolio-dung-quy-tac.md) | Admin Portfolio: hàng dự án / công cụ đúng quy tắc (Draft nét đứt, chevron vuông; N15: W-29, UI-16) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |

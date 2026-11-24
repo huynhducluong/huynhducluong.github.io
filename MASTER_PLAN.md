@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.31.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.32.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -77,6 +77,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.32.0 | 2026-11-24 | GD3-17 ĐẠT sau review 2, **gộp** và push: hàng Draft nét đứt, chevron vuông, hàng hẹp (container ≤ 22 rem) giữ tên ≥ 8 rem; `portfolio-selection-check` All PASS (21 phép); Sổ #30 / W-29 đã sửa; lỗi cột hẹp có từ GD3-16 được vá; **ngân sách CSS Admin hết dư địa (27,0 / 27,0 kB)** |
 | 1.31.0 | 2026-11-24 | Đọc sổ #30 → W-29, [UI-16](docs/92-ui-rules.md#ui-16): GD3-16 lệch quy tắc (Draft viền liền, chevron 30 × 24) vì review chỉ đo chiều cao mà không chạy checklist §14; sửa quy trình (AGENTS §1.1, mẫu báo cáo: checklist từng mục + so cạnh màn anh em) và giao [GD3-17](docs/tasks/GD3-17-admin-hang-portfolio-dung-quy-tac.md); sửa chỗ đặt nhầm đoạn "Hàng gọn" trong admin-ui-guidelines |
 | 1.30.0 | 2026-11-24 | GD3-15 (trang chủ: subgrid, menu 2 × 2, lưới 8 %, nút hero 2 × 2) và GD3-16 (Admin: hàng dự án / công cụ gọn 64 px) ĐẠT, **gộp** (`ceac688`, `986a87f`) và push một lần; `home-viewport-check` All PASS 142 dòng, `portfolio-selection-check` All PASS 12 / 12; Sổ #27 – #29 đã sửa; ngân sách CSS Admin còn dư 0,1 kB; còn lại GD3-14 (Hero tagline, migration), N10, #17 – #25 |
 | 1.29.0 | 2026-11-24 | Đọc sổ #27 – #29 → W-26, W-27, W-28; người vận hành chốt giữ hết khuyến nghị (ADR-037); giao [GD3-15](docs/tasks/GD3-15-trang-chu-subgrid-menu-luoi.md) (trang chủ: subgrid, menu 2 × 2, lưới 8 %, nút hero 2 × 2; mốc 29 FAIL) và [GD3-16](docs/tasks/GD3-16-admin-hang-du-an-portfolio-gon.md) (Admin: hàng dự án gọn; mốc 8 FAIL, công cụ `tools/portfolio-selection-check.mjs`); `home-viewport-check` thêm bốn phép |
