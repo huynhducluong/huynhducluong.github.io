@@ -70,6 +70,22 @@ Sổ #31 / W-30 / [ADR-038](../../decisions/ADR-REGISTER.md) (phương án A): m
 - Chỗ làm khác đề bài và lý do: viền chồng bằng `margin: 0 -1px -1px 0` trên `li` + `padding: 0 1px 1px 0` trên `ul` (đề bài cho phép); thêm `gap: 0` vì lưới cũ còn khe ngang. `:hover` / `:focus-visible` đổi nền nhạt `color-mix` 8 % từ `--color-primary` (cùng dạng đã dùng ở `home.css`).
 - Câu hỏi:
 
+### 5b. Sửa sau review 1 (Phải sửa 1: ô viền tới ≤ 900 px)
+
+- Quy tắc ô viền (`.site-nav__links` `gap: 0` + `padding`, `li` `margin`, `a` viền / nền / `justify-content: flex-start`, hover / focus-visible) chuyển từ `@media (max-width: 650px)` sang `@media (max-width: 900px)` (breakpoint có sẵn). `.hero__actions` và `--grid-alpha` vẫn ở ≤ 650. Từ 901 px không đổi.
+- Công cụ: `nav-cells` chạy ở mọi cỡ ≤ 900 px; ma trận preview thêm 900 × 800 và 651 × 900 (đã có 768 × 1024). Mốc trước khi sửa CSS: **3 FAIL** (651, 768, 900). Sau sửa: **All PASS**.
+- Số đo tablet (`getComputedStyle`, `getBoundingClientRect`):
+
+  | Rộng | Viền | Nền | Chữ | Rộng ô | Cao ô | Hàng | Cuộn ngang |
+  |---|---|---|---|---|---|---|---|
+  | 651 | 1 px liền | trắng | canh trái | 310 | 44 | 2 | không |
+  | 768 | 1 px liền | trắng | canh trái | 369 | 44 | 2 | không |
+  | 900 | 1 px liền | trắng | canh trái | 435 | 44 | 2 | không |
+  | 901 | 0, không viền | trong suốt | giữa, một hàng | 77 – 103 (tự nhiên) | 44 | 1 | không |
+  | 1440 | 0, không viền | trong suốt | giữa, một hàng | 77 – 103 | 44 | 1 | không |
+
+- Test `homeHero.test.ts` theo breakpoint 900 (ô viền nằm trong khối ≤ 900 px, không có viền ô từ khối ≥ 901). Đã xem ảnh 768 (khung 2 × 2 liền, chữ canh trái). `verify:admin` đạt, CSS Admin 27,0 / 27,0 kB.
+
 ## 6. Review của Claude
 
 ### Review 1 (2026-11-24, `d912d51`)
