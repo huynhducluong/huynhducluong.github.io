@@ -61,12 +61,14 @@
 - File đã đổi (ghi rõ file dùng chung):
 - `verify:admin`: số test đạt / tổng; bundle JS / CSS:
 - Giao diện đã chụp / đo (nếu có):
+- **Checklist giao diện (bắt buộc khi đổi giao diện, UI-16):** từng mục của guideline (Admin §14 / Website §9) và `docs/92` §2 là đạt / không áp dụng / không đạt, kèm số đo **so cạnh màn anh em** (ví dụ hàng Portfolio so với hàng CV) cho mọi trạng thái (bật / tắt, Draft, mở / đóng):
 - Ghi chú vận hành cho docs (migration, ngân sách, quy tắc mới) — Claude chuyển vào docs:
 - Chỗ làm khác đề bài và lý do:
 - Câu hỏi cần người vận hành / Claude trả lời:
 
 ## 6. Review của Claude
 - Ngày, commit đã review:
+- **Checklist giao diện (UI-16):** Claude chạy lại **từng mục** guideline §14 / §9 và `docs/92` §2, ghi đạt / không đạt, so cạnh màn anh em:
 - **Phải sửa:** …
 - **Nên sửa:** …
 - **Cần người vận hành chốt:** …
@@ -134,3 +136,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-14](GD3-14-trang-chu-hero-tagline.md) | Ô Hero tagline EN / VI trong Admin, **có migration** (N12) | `CHỜ giao` (có migration; GD3-12 và GD3-13 đã gộp) |
 | [GD3-15](GD3-15-trang-chu-subgrid-menu-luoi.md) | Trang chủ: thẻ dự án subgrid, menu 2 × 2, lưới nhạt và nút hero đều nhau trên điện thoại (N13: W-27, W-28) | `ĐẠT` (gộp 2026-11-24) |
 | [GD3-16](GD3-16-admin-hang-du-an-portfolio-gon.md) | Admin Portfolio: hàng dự án / công cụ gọn, công tắc cùng hàng với tên (N14: W-26) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |
+| [GD3-17](GD3-17-admin-hang-portfolio-dung-quy-tac.md) | Admin Portfolio: hàng dự án / công cụ đúng quy tắc (Draft nét đứt, chevron vuông; N15: W-29, UI-16) | `GIAO CODE` (Nhỏ; tự gộp được nếu review sạch) |
