@@ -561,7 +561,6 @@ input:focus, textarea:focus, select:focus { border-color: var(--color-primary); 
 textarea { line-height: 1.5; }
 
 .admin-switch { display: flex; align-items: center; gap: .5rem; color: var(--color-text); }
-.admin-switch input { width: auto; }
 
 .admin-media-panel { display: grid; gap: 1rem; padding: 1.4rem; }
 .admin-media-panel .admin-upload { max-width: none; margin: 0; padding: 1rem; border-radius: .6rem; box-shadow: none; }

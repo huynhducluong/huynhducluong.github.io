@@ -79,8 +79,7 @@ describe("Admin stylesheet contract", () => {
     const documents = Object.values(import.meta.glob<string>("../styles/admin-documents.css", { query: "?raw", import: "default", eager: true }))[0];
     expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__row \{[^}]*grid-template-areas:\s*"title include toggle"\s*"meta meta meta"/);
     expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__identity \{\s*display: contents/);
-    // UI-17: the box is the shared 1rem size (as CV / Background); the label's padding makes the ≥ 24 px target.
-    expect(documents).toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*width: 1rem;[^}]*height: 1rem/);
+    // UI-17: the box size comes from the shared admin-ui.css rule (GD3-21); the label's padding makes the ≥ 24 px target.
     expect(documents).not.toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*1\.5rem/);
     expect(documents).toMatch(/\.admin-portfolio-project__include \{[^}]*padding: \.25rem;/);
     expect(documents).toMatch(/\.admin-cv-project__options\[hidden\] \{\s*display: none/);
@@ -97,6 +96,17 @@ describe("Admin stylesheet contract", () => {
     expect(narrow).toMatch(/grid-template-areas:\s*"title title include toggle"\s*"chip meta meta meta"/);
     expect(narrow).toMatch(/\.admin-portfolio-project__include > span \{\s*position: absolute;[^}]*clip-path: inset\(50%\)/);
     expect(narrow).toMatch(/small > span \+ span::before \{\s*content: none/);
+  });
+
+  it("sizes every Admin checkbox with one shared 1rem rule and no per-row width (UI-17)", () => {
+    const css = (name: string) => Object.values(import.meta.glob<string>("../styles/admin*.css", { query: "?raw", import: "default", eager: true })).find((text) => text.includes(name)) ?? "";
+    const ui = css("UI-17: one box size");
+    expect(ui).toMatch(/\.admin-shell :where\(input\[type="checkbox"\]\) \{\s*width: 1rem;\s*height: 1rem;/);
+    const documents = css(".admin-cv-project__responsibilities input");
+    expect(documents).toMatch(/\.admin-cv-project__responsibilities input \{\s*margin-top: \.1rem;\s*\}/);
+    expect(documents).not.toMatch(/\.admin-(cv|document)-selection \.admin-switch input \{\s*width/);
+    expect(documents).not.toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*(width|height)/);
+    expect(ui).not.toMatch(/\.admin-selection-card :is\(\[data-selection-primary\][^{]*\{[^}]*(width|!important)/);
   });
 
   it("names the owner in the rail and never lets a long name widen it (§11)", () => {

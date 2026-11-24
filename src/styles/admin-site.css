@@ -1198,10 +1198,6 @@ button.admin-profile-photo-control {
   white-space: nowrap;
 }
 
-.admin-site-content-selection__toggle input {
-  width: auto !important;
-}
-
 .admin-site-content-selection__checks {
   display: grid;
   justify-items: start;
