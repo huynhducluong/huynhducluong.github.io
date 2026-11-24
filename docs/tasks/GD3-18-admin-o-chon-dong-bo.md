@@ -1,6 +1,6 @@
 # GD3-18 — Admin › Portfolio › Projects & tools: ô chọn "In Portfolio" đồng bộ với cả Admin (nhóm N16)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/18-admin-o-chon-dong-bo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (review 1 sạch; gộp 2026-11-24) · **Nhánh:** `gd3/18-admin-o-chon-dong-bo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -70,4 +70,15 @@ Sửa Sổ #32 / W-31 / [UI-17](../92-ui-rules.md#ui-17): ô tick "In Portfolio"
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `f50aaf0` (worktree `npm ci` sạch, đã xóa; phiên `.auth` chép sang cổng 5198 vì cổng 5199 đang do coder GD3-19 giữ).
+- **Checklist giao diện (UI-16, UI-17), Claude chạy lại từng mục, gồm các mục coder chưa kiểm:**
+  - §14 mục 1 đạt: `verify:admin` 45 file / **338** test, Admin JS 92,8 / 115,0, CSS **27,0 / 27,0** kB gzip (không tăng).
+  - Mục 2 đạt: `portfolio-selection-check` All PASS, `checkbox-size` Portfolio 16 × 16 = CV 16 × 16 ở 1440, 1920, 2560.
+  - **Mục 4 đạt:** đo thêm **1180** (22 hàng cao 64 px, vùng bấm nhỏ nhất 24 px, không tràn) và 1024 / 768 / 390 (`name-width` đạt, vùng bấm 24 px, tên ≥ 148 px).
+  - **Mục 5 đạt trên trình duyệt thật:** Tab đi công tắc (16 × 16, viền focus 3 px, `:focus-visible`) → chevron (24 × 24, viền 2 px) → ô trách nhiệm; bấm vào **đệm của nhãn** (góc, giữa, chữ "In Portfolio") đều bật / tắt ô (3 / 3).
+  - **Mục 9 đạt (thay `shots --stress`, cổng 5199 đang bận):** tên 117 ký tự ở 1440 và 1180: 22 hàng không tràn ngang, không tràn trang, cắt "…" có `title`.
+  - Mục 10, 12, 16 đạt: viền nét đứt Draft, chevron vuông, hàng 64 – 67 px (≤ 72), một dòng. Ảnh hàng đang mở ở 1440: ô tick hàng 16 px, ô trách nhiệm 13 px bên dưới.
+  - `docs/92` §2 mục 3, 5 đạt; mục 4 (tên dài) đạt như trên; mục 6 không file dùng chung. **Kiểm kê điều khiển (UI-17 điều 2):** bảng của coder đúng với số đo của tôi (checkbox 16 ở CV, Background, Homepage, Appearance; chevron 24 / 40 có chủ ý).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** (1) hàng cao 67 px ở 1440 / 1920 / 2560 (nhãn có đệm .25rem) nhưng 64 px ở cột hẹp; cả hai ≤ 72, chấp nhận. (2) **Checkbox trách nhiệm còn 13 × 13** (mặc định trình duyệt) ở CV và Portfolio, nằm ngay dưới ô 16 px của hàng: là chỗ lệch cuối cùng của UI-17. Sửa bằng **một quy tắc chung** `.admin-shell input[type="checkbox"] { width: 1rem; height: 1rem }` và bỏ các quy tắc kích thước riêng trùng (để CSS Admin **không tăng**, ngân sách 27,0 / 27,0): giao thành đề bài riêng sau (W-31, ghi trong docs/93). (3) Token: Claude — cửa sổ code chưa ghi, để trống `docs/96`.
+- Kết luận: **ĐẠT**; Admin-only, không migration, không đổi giao diện công khai → **tự gộp (ADR-018)**.
