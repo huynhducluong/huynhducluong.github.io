@@ -1,6 +1,6 @@
 # GD3-19 — Trang chủ: menu điện thoại 2 × 2 có ô viền như bảng tên bản vẽ (nhóm N17)
 
-> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 2 sạch) · **Nhánh:** `gd3/19-trang-chu-menu-dien-thoai-co-o` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (gộp 2026-11-24, người vận hành duyệt) · **Nhánh:** `gd3/19-trang-chu-menu-dien-thoai-co-o` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
