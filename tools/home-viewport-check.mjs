@@ -18,7 +18,7 @@
 //   photo-fit    ảnh hồ sơ hiện nguyên: tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08 (ảnh vuông thì khung vuông; ADR-035)
 //   titleblock-fit khung bản vẽ của hero ôm sát nội dung: không dải trống dưới bảng tên (≤ 2 px) và không khe giữa ảnh và bảng tên (≤ 4 px)
 //   nav-fit      (điện thoại ≤ 650) menu **không cuộn ngang**, đủ 4 mục thấy hết trong khung, xếp 2 × 2 đều nhau (ADR-037 a, W-28)
-//   nav-cells    (điện thoại ≤ 650) mỗi ô menu **thấy được là một ô**: viền ≥ 1 px màu rõ (không trong suốt), nền không trong suốt, chữ canh trái; ô kề nhau dùng chung đường kẻ, không khe hở (ADR-038, W-30)
+//   nav-cells    (≤ 900, lưới 2 × 2: điện thoại và tablet) mỗi ô menu **thấy được là một ô**: viền ≥ 1 px màu rõ (không trong suốt), nền không trong suốt, chữ canh trái; ô kề nhau dùng chung đường kẻ, không khe hở (ADR-038, W-30)
 //   buttons-equal (điện thoại ≤ 650) các nút hero cùng độ rộng, xếp 2 × 2 (ADR-037 c, W-28)
 //   grid-alpha   độ đậm lưới `--grid-alpha` ≤ 8 % khi màn ≤ 650 px, 14 % ở máy tính (ADR-037 b, W-28)
 //   cards-aligned (≥ 2 thẻ cùng hàng) tiêu đề, tóm tắt, thẻ công nghệ, link của các thẻ cùng hàng nằm đúng cùng một độ cao (subgrid; ADR-037, W-27, UI-08)
@@ -31,7 +31,7 @@ const origin = process.env.PF_ORIGIN ?? "http://localhost:5199";
 const sets = {
   phone: [[320, 568], [360, 640], [375, 667], [390, 844], [393, 852], [412, 915], [430, 932]],
   desktop: [[1440, 731], [1920, 940], [2560, 1300]],
-  preview: [[1440, 900], [1280, 800], [768, 1024], [390, 844]],
+  preview: [[1440, 900], [1280, 800], [900, 800], [768, 1024], [651, 900], [390, 844]],
 };
 const wanted = section === "all" ? Object.keys(sets) : [section];
 
@@ -111,9 +111,9 @@ for (const kind of wanted) {
     if (r.stripGap !== null) report(r.stripGap <= 2 && r.photoGapBelow <= 4, `${tag}  titleblock-fit`, `(khung bản vẽ: dải trống ${r.stripGap} px dưới bảng tên, ${r.photoGapBelow} px giữa ảnh và bảng tên; phải ≤ 2 và ≤ 4)`);
     if (width <= 650) {
       report(r.nav.count >= 4 && !r.nav.scrolls && r.nav.outside === 0 && r.nav.rows === 2 && r.nav.widthSpread <= 2, `${tag}  nav-fit`, `(${r.nav.count} mục, ${r.nav.rows} hàng, ${r.nav.scrolls ? "còn cuộn ngang, " : ""}${r.nav.outside} mục ngoài khung, lệch độ rộng ${r.nav.widthSpread} px; phải 4 mục, 2 hàng, không cuộn, lệch ≤ 2)`);
-      report(r.navCells.count >= 4 && r.navCells.unbordered === 0 && r.navCells.transparentBg === 0 && r.navCells.centered === 0 && r.navCells.gaps === 0, `${tag}  nav-cells`, `(${r.navCells.count} ô; ${r.navCells.unbordered} ô thiếu viền, ${r.navCells.transparentBg} ô nền trong suốt, ${r.navCells.centered} ô canh giữa, ${r.navCells.gaps} cặp ô kề nhau còn khe; phải đủ viền, có nền, canh trái, không khe)`);
       if (r.buttons.count) report(r.buttons.count >= 4 ? r.buttons.rows === 2 && r.buttons.widthSpread <= 2 : r.buttons.widthSpread <= 2, `${tag}  buttons-equal`, `(${r.buttons.count} nút, ${r.buttons.rows} hàng, lệch độ rộng ${r.buttons.widthSpread} px; phải 2 × 2 và lệch ≤ 2)`);
     }
+    if (width <= 900) report(r.navCells.count >= 4 && r.navCells.unbordered === 0 && r.navCells.transparentBg === 0 && r.navCells.centered === 0 && r.navCells.gaps === 0, `${tag}  nav-cells`, `(${r.navCells.count} ô; ${r.navCells.unbordered} ô thiếu viền, ${r.navCells.transparentBg} ô nền trong suốt, ${r.navCells.centered} ô canh giữa, ${r.navCells.gaps} cặp ô kề nhau còn khe; phải đủ viền, có nền, canh trái, không khe)`);
     report(width <= 650 ? r.gridAlpha <= 8 : r.gridAlpha === 14, `${tag}  grid-alpha`, `(--grid-alpha = ${r.alphaRaw}; phải ≤ 8 % khi ≤ 650 px, 14 % ở máy tính)`);
     if (r.cardRowsChecked) report(r.cardSpread <= 1, `${tag}  cards-aligned`, `(${r.cardRowsChecked} hàng thẻ; lệch cao nhất ${r.cardSpread} px giữa các thẻ cùng hàng; phải ≤ 1)`);
     report(r.broken === 0, `${tag}  images`, r.broken ? `(${r.broken} ảnh hỏng)` : "");

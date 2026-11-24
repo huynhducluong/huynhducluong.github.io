@@ -78,6 +78,16 @@ describe("renderHero", () => {
 });
 
 describe("home Blueprint CSS contract", () => {
+  it("draws the 2 × 2 menu (≤ 900 px) as four bordered cells sharing their rules (ADR-038)", () => {
+    const tablet = homeCss.slice(homeCss.indexOf("@media (max-width: 900px)"), homeCss.indexOf("@media (min-width: 651px)"));
+    expect(tablet).toMatch(/\.site-nav__links a \{[^}]*justify-content: flex-start;[^}]*border: 1px solid var\(--color-primary\);[^}]*background: var\(--color-surface\)/);
+    expect(tablet).toMatch(/\.site-nav__links \{[^}]*gap: 0;[^}]*padding: 0 1px 1px 0/);
+    expect(tablet).toMatch(/\.site-nav__links li \{[^}]*margin: 0 -1px -1px 0/);
+    // From 901 px the menu is one row again: no cell border there.
+    expect(homeCss.slice(homeCss.indexOf("@media (min-width: 901px)"), homeCss.indexOf("@media (max-width: 650px)"))).not.toMatch(/\.site-nav__links a \{[^}]*border/);
+    expect(tablet).not.toContain("!important");
+  });
+
   it("declares the new tokens", () => {
     expect(tokensCss).toContain("--font-mono:");
     expect(tokensCss).toContain("--grid-size: 4rem");
