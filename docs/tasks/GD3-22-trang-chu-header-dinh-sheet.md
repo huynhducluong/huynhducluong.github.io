@@ -42,15 +42,32 @@
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 22 FAIL):
-- **Bảng chiều cao header / tỉ lệ màn hình:**
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/22-trang-chu-header-dinh-sheet (commit feat(GD3-22))
+- File đã đổi (ghi rõ file dùng chung): src/styles/home.css, src/site/homeHero.ts, src/site/homeHero.test.ts. Không file dùng chung.
+- `verify:admin`: đạt (CSS Admin 27,0 / 27,0 kB, trang chủ không nằm trong ngân sách này).
+- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 22 FAIL): **All PASS** ngay lần chạy sau khi sửa (gồm `nav-line`, `header-sticky`, `anchor-clear` ở mọi cỡ ≤ 900). Mốc 22 FAIL lấy từ đề bài, tôi không chạy lại.
+- **Bảng chiều cao header / tỉ lệ màn hình** (`.site-header` hai hàng, `getBoundingClientRect`; sau khi cuộn 700 px đỉnh header = 0 ở mọi cỡ):
+
+  | Màn hình | Header cao | Tỉ lệ viewport | position |
+  |---|---|---|---|
+  | 320 × 568 | 108 px | **19,0 %** | sticky |
+  | 360 × 800 (EN và VI) | 108 px | 13,5 % | sticky |
+  | 390 × 844 | 108 px | 12,8 % | sticky |
+  | 1440 × 731 | 60 px | 8,2 % | **relative** (không dính, đỉnh −700 sau khi cuộn: không đổi) |
+
+  Rủi ro: ở 320 × 568 header dính chiếm 19 % (cao hơn ước tính 17 % của đề bài vì header cao 108, không 96 px) còn ~460 px cho nội dung khi cuộn; chấp nhận được nhưng nên để người vận hành thấy trên máy nhỏ. Đề bài cấm ẩn header khi cuộn nên không xử lý thêm.
 - **Checklist giao diện từng mục (ui-guidelines §9, docs/92 §2):**
-- Chỗ làm khác đề bài và lý do:
+
+  §9: 1 đạt. 2 đã đo EN ở mọi cỡ ≤ 900 (`home-viewport-check`), VI ở 360 × 800 (header dính, 108 px) và 390 × 900 (ô SHEET); ~900 px nằm trong ma trận; **chưa thử chỉ bằng bàn phím** (Tab tới menu khi header dính). 3 đạt: `no-hscroll` PASS. 4 – 10 không áp dụng.
+
+  docs/92 §2: 2 đã áp UI-16, UI-17. 3 trạng thái: chưa cuộn / đã cuộn (đã đo); link nhảy: `anchor-clear` PASS với bốn mục menu (`scroll-margin-top: var(--home-header-h)` = 8,25 rem trên `.section` ở ≤ 900; còn dư ~24 px so với header 108 px). 4 dữ liệu dài không áp dụng. 5 có số đo (bảng). 6 không file dùng chung. 7 không lỗi UI mới.
+
+  **Chưa kiểm:** (a) header dính trong **khung preview Website của Admin** (390, 768; `body.website-embedded` có `overflow: hidden`, tôi chưa mở Admin để xem) , đề bài yêu cầu, cần Claude kiểm khi review; (b) bóng nhẹ khi cuộn: **không thêm** (đề bài cho phép, không bắt buộc), nền đặc `--color-surface` đủ che chữ phía dưới (đã xem ảnh 360 × 800 sau khi cuộn: chữ không lọt qua header).
+
+  Ảnh đã xem: 360 × 800 EN sau khi cuộn 700 px (HDL, VI, menu một hàng trên cùng, không đường kẻ); ô SHEET ở `?lang=vi` 390 × 900 ("SHEET 01 / 01"). Ảnh 320 × 568, 390 × 844 và 360 × 800 VI chụp ra nhưng **chưa xem lại**; số đo thay thế. Ô SHEET chỉ hiện khi màn cao ≥ 821 px (quy tắc có sẵn), nên không có ở 360 × 800.
+- Chỗ làm khác đề bài và lý do: nhãn VI đổi thành "Sheet" (CSS `text-transform: uppercase` có sẵn in thành "SHEET", giống thẻ dự án), không viết hoa cứng trong chuỗi. `scroll-margin-top` đặt trên `.section` (thay 5rem có sẵn ở ≤ 900) thay vì `scroll-padding-top` trên `html`, để không cộng dồn với `scroll-margin-top` cũ. Xóa luôn dòng `border-bottom: 0` ở khối ≥ 901 (không còn gì để đặt lại).
 - Câu hỏi:
 
 ## 6. Review của Claude
