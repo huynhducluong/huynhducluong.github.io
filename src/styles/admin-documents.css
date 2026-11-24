@@ -752,10 +752,6 @@
   min-width: 0;
 }
 
-.admin-document-selection .admin-switch input {
-  width: auto;
-}
-
 .admin-document-selection .admin-switch span {
   min-width: 0;
   overflow: hidden;
@@ -946,10 +942,7 @@
 }
 
 .admin-portfolio-project__include input[type="checkbox"] {
-  width: 1rem;
-  height: 1rem;
   margin: 0;
-  accent-color: var(--color-primary);
 }
 
 .admin-portfolio-project .admin-cv-project__row > .admin-cv-project__toggle {
@@ -1088,7 +1081,6 @@
 }
 
 .admin-cv-project__responsibilities input {
-  width: auto;
   margin-top: .1rem;
 }
 
@@ -1132,10 +1124,6 @@
 
 .admin-cv-selection .admin-switch > span {
   min-width: 0;
-}
-
-.admin-cv-selection .admin-switch input {
-  width: auto;
 }
 
 .admin-cv-selection input:disabled,
@@ -1218,7 +1206,7 @@
 .admin-cv-background__item:hover { border-color: var(--admin-color-border-strong); }
 .admin-cv-background__item.is-selected { border-color: color-mix(in srgb, var(--color-primary) 28%, var(--admin-color-border)); background: var(--admin-color-selected); }
 .admin-cv-background__item:focus-within { border-color: var(--color-primary); box-shadow: 0 0 0 2px rgb(8 127 182 / 12%); }
-.admin-cv-background__item > input { width: auto; margin: 0; accent-color: var(--color-primary); }
+.admin-cv-background__item > input { margin: 0; accent-color: var(--color-primary); }
 .admin-cv-background__item:has(input:not(:checked)) .admin-cv-background__identity { opacity: .62; }
 .admin-cv-background__item:has(input:disabled) { cursor: default; }
 /* A choice that is not available yet (for example a fourth capability card) reads muted through color, never opacity. */
@@ -1290,7 +1278,7 @@
 .admin-layout-option__copy small { color: var(--admin-color-text-muted); font-size: var(--admin-text-2xs); font-weight: var(--admin-weight-regular); line-height: 1.35; }
 .admin-layout-picker__optional-header { display: grid; min-height: 4rem; grid-template-columns: auto minmax(0, 1fr); align-items: stretch; }
 .admin-layout-picker__optional-toggle { display: grid; place-items: center; padding: .75rem .15rem .75rem .85rem; cursor: pointer; }
-.admin-layout-picker__optional-toggle input { width: auto; margin: 0; }
+.admin-layout-picker__optional-toggle input { margin: 0; }
 .admin-layout-picker__optional-disclosure { display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto 1rem; align-items: center; gap: 1rem; padding: .75rem .85rem .75rem .65rem; border: 0; background: transparent; color: inherit; text-align: left; cursor: pointer; }
 .admin-layout-picker__optional-disclosure:focus-visible { outline: 2px solid var(--admin-color-focus-ring); outline-offset: -3px; }
 .admin-layout-picker__optional-copy { display: grid; min-width: 0; gap: .12rem; }

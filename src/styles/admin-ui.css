@@ -226,6 +226,12 @@ html.admin-app :where(.admin-login, .admin-shell) :focus-visible {
 .admin-shell :where(input[type="checkbox"], input[type="radio"]) {
   accent-color: var(--color-primary);
 }
+
+/* UI-17: one box size for every Admin checkbox; hit area comes from the label's padding, never from a bigger box. */
+.admin-shell :where(input[type="checkbox"]) {
+  width: 1rem;
+  height: 1rem;
+}
 .admin-shell .admin-action-new { min-width: 4.5rem; }
 .admin-shell .admin-action-save { min-width: 7rem; }
 .admin-shell .admin-action-publish { min-width: 8rem; }
@@ -675,9 +681,7 @@ html.admin-app .admin-inline-check {
 
 /* The negative block margin keeps the 1rem box from making the row taller than the label text beside it. */
 html.admin-app .admin-inline-check input {
-  width: 1rem;
   min-width: 1rem;
-  height: 1rem;
   min-height: 0;
   flex: 0 0 auto;
   margin: -.25rem 0;
@@ -2181,11 +2185,8 @@ html.admin-app .admin-segmented__options input:focus-visible + span {
 
 .admin-selection-card :is([data-selection-primary], [data-selection-secondary]) {
   flex: 0 0 auto;
-  width: 1rem !important;
-  height: 1rem;
   margin: 0;
   padding: 0;
-  accent-color: var(--color-primary);
 }
 
 .admin-selection-card--single:not(:has([data-selection-primary]:checked)) [data-selection-content],
