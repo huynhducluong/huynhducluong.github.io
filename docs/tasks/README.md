@@ -130,5 +130,5 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-10](GD3-10-chi-tiet-portfolio-n11.md) | Chi tiết trình bày Portfolio: nút Video, số đóng góp, khung ảnh Automation, meta index, thẻ công nghệ (N11: W-12, 14, 15, 16, 20, 21) | `ĐẠT` (gộp 2026-11-15, người vận hành duyệt) |
 | [GD3-11](GD3-11-chi-so-du-an-n9.md) | Chỉ số dự án: số lớn + đơn vị nhỏ (N9: W-13, 14, 17, 18) | `ĐẠT` (gộp 2026-11-15, người vận hành duyệt) |
 | [GD3-12](GD3-12-trang-chu-blueprint-nen-hero.md) | Trang chủ Blueprint: nền lưới liền, hero BP2 vừa màn hình đầu, tối ưu điện thoại (N12: W-23) | `GIAO CODE` (Claude — cửa sổ code) |
-| [GD3-13](GD3-13-trang-chu-the-du-an-chip.md) | Trang chủ: thẻ dự án SHEET có ảnh + chip lọc (N12) | `CHỜ GD3-12` |
+| [GD3-13](GD3-13-trang-chu-the-du-an-chip.md) | Trang chủ: thẻ dự án SHEET có ảnh + chip lọc (N12) | `GIAO CODE` (nhánh tách từ GD3-12; gộp cùng GD3-12) |
 | [GD3-14](GD3-14-trang-chu-hero-tagline.md) | Ô Hero tagline EN / VI trong Admin, **có migration** (N12) | `CHỜ GD3-12` |

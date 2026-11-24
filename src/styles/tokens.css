@@ -12,6 +12,7 @@
   --color-border: #d7e1e5;
   --color-dark: #102d3b;
   --font-heading: "Arial Narrow", "Roboto Condensed", Arial, sans-serif;
+  --font-mono: ui-monospace, "Cascadia Code", Consolas, monospace;
   --font-body: Inter, Aptos, "Segoe UI", Arial, sans-serif;
   --font-size-xs: 0.75rem;
   --font-size-sm: 0.875rem;
@@ -31,6 +32,9 @@
   --space-12: 3rem;
   --space-16: 4rem;
   --space-20: 5rem;
+  --space-24: 7.5rem;
+  --grid-size: 4rem;
+  --grid-alpha: 14%;
   --content-max-width: 1200px;
   --radius-sm: 0.35rem;
   --radius-md: 0.75rem;

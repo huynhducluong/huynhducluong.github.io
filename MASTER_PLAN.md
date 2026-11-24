@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.26.0 · **Cập nhật:** 2026-11-22 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.27.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -77,6 +77,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.27.0 | 2026-11-24 | Người vận hành chốt "gộp cùng lúc": GD3-12 (đã đạt review 5, ADR-035: lưới 14 %, ảnh hero vuông) **giữ lại chưa gộp**, giao GD3-13 (thẻ SHEET + chip lọc + khung bản vẽ ôm sát) trên nhánh tách từ GD3-12; gộp cả hai và push một lần; GD3-14 (Hero tagline, migration) sau; công cụ cầu ghi Trạng thái sổ đã chạy (Doc vẫn Viewer) |
 | 1.26.0 | 2026-11-22 | `[ĐỀ XUẤT]` cầu Apps Script để Claude ghi cột Trạng thái của sổ lỗi UI/UX (Doc vẫn "Viewer"): `tools/ui-feedback-bridge.gs`, `tools/write-ui-feedback-status.mjs`, `docs/ui-feedback-bridge.md`; chờ người vận hành cài đặt |
 | 1.25.0 | 2026-11-17 | Người vận hành chốt ADR-033 (sáu điểm trang chủ) và ADR-034 (ưu tiên điện thoại, ma trận màn hình, hero vừa màn hình đầu); đọc sổ #24 → W-23; công cụ `tools/home-viewport-check.mjs`; giao GD3-12, soạn GD3-13 và GD3-14 (làm tuần tự) |
 | 1.24.0 | 2026-11-17 | Người vận hành chốt giao diện trang chủ Blueprint (ADR-032: BP2, lưới liền toàn trang 27 % / 4 rem, màu theo Theme Admin); ADR-033 `[ĐỀ XUẤT]` các điểm còn lại; đặc tả `docs/ui-guidelines.md` §2.1; #15 cập nhật |
