@@ -1,6 +1,6 @@
 # GD3-13 — Trang chủ: thẻ dự án "SHEET" có ảnh và chip lọc theo công nghệ (nhóm N12)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` **tách từ nhánh GD3-12** (`git switch gd3/12-trang-chu-blueprint-nen-hero; git switch -c gd3/13-trang-chu-the-du-an-chip`), vì hai đề bài gộp cùng một lần · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` **tách từ nhánh GD3-12** (`git switch gd3/12-trang-chu-blueprint-nen-hero; git switch -c gd3/13-trang-chu-the-du-an-chip`), vì hai đề bài gộp cùng một lần · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** người vận hành chốt "gộp cùng lúc" (2026-11-24): Claude review xong thì gộp `gd3/12` rồi `gd3/13` vào `main` và **push một lần** (một lần deploy); **cần người vận hành duyệt** (đổi giao diện công khai). Không có migration.
 
 ## 1. Mục tiêu
@@ -57,8 +57,17 @@ Phần dự án của trang chủ theo ADR-033 (d): **thẻ dự án kiểu "SHE
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
+- Ngày, commit đã review: 2026-11-24, `84e2f55` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Nhánh tách từ `gd3/12` nên diff gồm cả GD3-12 (đã review ĐẠT, review 5). Đo trên bản đã publish và trên Admin thật.
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 45 file / **327** test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi).
+  - `node tools/home-viewport-check.mjs`: **All PASS, 106 dòng PASS, 0 FAIL** (14 cỡ màn hình, gồm `titleblock-fit`: mốc 14 FAIL → 0; nguyên nhân đúng như báo cáo: `<dl>` bảng tên còn lề mặc định 16 px).
+  - **Chip lọc trên DOM thật** (phần người code chưa kiểm được): dữ liệu thật hiện có 3 dự án nổi bật **đều có ảnh** và cùng 5 công nghệ, nên tôi gán lại `data-tech` khác nhau cho từng thẻ để thử: bấm Revit → 2/3 thẻ hiện (cả `hidden` lẫn `display` tính ra), Dynamo → 2/3, All → đủ 3; `aria-pressed` đúng một chip; vùng `aria-live` đọc "Showing 2 of 3 projects"; Enter trên chip hoạt động; tiếng Việt: nhãn nhóm "Lọc dự án theo công nghệ", chip "Tất cả 3", "Hiển thị tất cả 3 dự án", link "Xem dự án →".
+  - Ảnh xem: Projects ở 1440 (ba thẻ SHEET có ảnh, chip một hàng) và 390 (chip xuống dòng, thẻ một cột; cao chip 44 px ở cả 390 và 320; không cuộn ngang). Thẻ thiếu ảnh (giả lập thay ảnh bằng ô trống): ô lưới nhẹ có "SHEET 01", đúng ý đồ, **không** chữ "Image will be added".
+  - Preview Website trong Admin ở 1440, 1280, 768, 390: không cuộn ngang, 3 thẻ và 8 chip ở cả bốn.
 - **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+  1. **Thoát chuỗi hai lần ở dòng "SHEET nn · địa điểm" của thẻ dự án** (E-003, [AGENTS §5.3](../../AGENTS.md)). `localize()` đã escape; `renderProjectSheet` lại bọc `escapeHtml(part)` lần nữa khi dựng `kicker`. **Đã tái hiện:** địa điểm "Ho Chi Minh & Binh Duong" ra `Ho Chi Minh &amp;amp; Binh Duong`, trang hiện chữ "&amp;" thay vì "&". Tên và vai trò thì đúng (một lần). Test hiện có chỉ dùng địa điểm "Hanoi" nên không bắt được. **Sửa:** bỏ `escapeHtml` ở `kicker` (chỉ giữ `number` thuần); **thêm test** địa điểm có `&` và `<`: HTML phải chứa `&amp;` / `&lt;` đúng một lần và không chứa `&amp;amp;`.
+- **Nên sửa:** (1) nhãn "SHEET nn" trong ô thiếu ảnh bị **gạch chân** (kế thừa `text-decoration` của link bao quanh): thêm `text-decoration: none` cho `.project-card__image--empty`. (2) Thêm một test DOM nhỏ cho `bindProjectFilter` (hiện chỉ kiểm bằng đọc code): gán `data-tech` khác nhau, bấm chip, kiểm `hidden`, `aria-pressed`, văn bản `aria-live`.
+- **Cần người vận hành chốt:** **chip lọc chưa có tác dụng với dữ liệu hiện tại.** Bản đã publish có 3 dự án nổi bật cùng chia sẻ cả 5 công nghệ, nên mọi chip đều ghi "3" và bấm vào vẫn hiện đủ 3 thẻ. Phương án: **(a)** giữ nguyên (chip sẽ có ích khi dự án có công nghệ khác nhau); **(b) khuyến nghị:** **ẩn chip mà lọc không loại thẻ nào** (số bằng tổng), và ẩn cả hàng khi không còn chip nào; hiện chip tự xuất hiện khi dữ liệu khác nhau; **(c)** lọc theo tiêu chí khác (địa điểm, vai trò). Khuyến nghị (b): người xem không thấy chip "vô dụng" lúc này nhưng vẫn có lọc về sau; cái giá: hôm nay trang chủ không thấy dải chip nào, và cần thêm một dòng logic và một test.
+- **Ghi nhận:** (1) dữ liệu thật nay có **3** dự án nổi bật, đều có ảnh (bạn đã gán ảnh và publish), nên trang đẹp hơn nhiều so với 2 / 6 trước đây. (2) Cửa sổ code thêm `.sr-only` vào `home.css` vì trước chỉ có ở `admin.css`: hợp lý. (3) Tôi đã xóa ba ảnh chụp rời của cửa sổ code trong `tmp/` (không có trong commit).
+- Token: Claude — cửa sổ code 15 % → 17 % đã dùng (~2 %, Vừa).
+- Kết luận: **CẦN SỬA** (1 mục "Phải sửa": thoát chuỗi hai lần; 2 mục "Nên sửa" nhỏ). Sửa xong báo lại; Claude kiểm lại (test thoát chuỗi, ảnh ô thiếu ảnh) rồi chờ người vận hành chốt chip và duyệt gộp **cả GD3-12 và GD3-13**.
