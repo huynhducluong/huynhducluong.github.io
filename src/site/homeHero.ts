@@ -17,7 +17,7 @@ export const heroCopy = {
     sheetRole: "Vai trò",
     sheetBasedIn: "Địa điểm",
     sheetStack: "Công nghệ",
-    sheetNumber: "Bản vẽ",
+    sheetNumber: "Sheet",
     sheetValue: "01 / 01",
   },
 } as const;

@@ -75,9 +75,28 @@ describe("renderHero", () => {
     expect(html).toContain("Revit · Dynamo");
     expect(html).toContain("01 / 01");
   });
+
+  it("labels the drawing cell SHEET in both languages (ADR-040)", () => {
+    for (const language of ["en", "vi"] as const) {
+      const html = renderHero(input({ language }));
+      expect(html).toContain("<dt>Sheet</dt><dd>01 / 01</dd>");
+    }
+    expect(renderHero(input({ language: "vi" }))).not.toContain("Bản vẽ</dt>");
+  });
 });
 
 describe("home Blueprint CSS contract", () => {
+  it("keeps the header on top up to 900 px, without a rule under the menu, and clears anchors (ADR-040)", () => {
+    const tablet = homeCss.slice(homeCss.indexOf("@media (max-width: 900px)"), homeCss.indexOf("@media (min-width: 651px)"));
+    expect(tablet).toMatch(/\.site-header \{[^}]*position: sticky;[^}]*top: 0;[^}]*background: var\(--color-surface\)/);
+    expect(tablet).toMatch(/\.section \{[^}]*scroll-margin-top: var\(--home-header-h\)/);
+    const menu = homeCss.slice(homeCss.indexOf(".site-nav__links {"), homeCss.indexOf(".hero {"));
+    expect(menu).not.toContain("border-bottom");
+    // Desktop header stays in the flow.
+    expect(homeCss).toMatch(/\.site-header \{\s*position: relative;/);
+    expect(tablet).not.toContain("!important");
+  });
+
   it("lays the menu out as one flat row up to 900 px, then back to the desktop row (ADR-039)", () => {
     const base = homeCss.slice(homeCss.indexOf(".site-nav__links {"), homeCss.indexOf(".hero {"));
     expect(base).toMatch(/\.site-nav__links \{[^}]*flex-wrap: nowrap;[^}]*justify-content: space-between/);
@@ -87,7 +106,7 @@ describe("home Blueprint CSS contract", () => {
     expect(homeCss).not.toMatch(/margin: 0 -1px -1px 0/);
     // From 901 px: left-aligned row, no rule under it, the original padding and size.
     const desktop = homeCss.slice(homeCss.indexOf("@media (min-width: 901px)"), homeCss.indexOf("@media (max-width: 650px)"));
-    expect(desktop).toMatch(/\.site-nav__links \{[^}]*justify-content: flex-start;[^}]*border-bottom: 0/);
+    expect(desktop).toMatch(/\.site-nav__links \{[^}]*justify-content: flex-start/);
     expect(desktop).toMatch(/\.site-nav__links a \{[^}]*padding-inline: var\(--space-3\);[^}]*font-size: var\(--font-size-sm\)/);
     expect(base + desktop).not.toContain("!important");
   });

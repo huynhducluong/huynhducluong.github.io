@@ -1,6 +1,6 @@
 # GD3-22 — Trang chủ: header dính ≤ 900 px, bỏ đường kẻ dưới menu, ô SHEET cả tiếng Việt (nhóm N21 + N22)
 
-> **Trạng thái:** GIAO CODE (làm **sau** GD3-21, một thư mục làm việc) · **Nhánh:** `gd3/22-trang-chu-header-dinh-sheet` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 1 sạch) · **Nhánh:** `gd3/22-trang-chu-header-dinh-sheet` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
@@ -42,17 +42,45 @@
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 22 FAIL):
-- **Bảng chiều cao header / tỉ lệ màn hình:**
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/22-trang-chu-header-dinh-sheet (commit feat(GD3-22))
+- File đã đổi (ghi rõ file dùng chung): src/styles/home.css, src/site/homeHero.ts, src/site/homeHero.test.ts. Không file dùng chung.
+- `verify:admin`: đạt (CSS Admin 27,0 / 27,0 kB, trang chủ không nằm trong ngân sách này).
+- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 22 FAIL): **All PASS** ngay lần chạy sau khi sửa (gồm `nav-line`, `header-sticky`, `anchor-clear` ở mọi cỡ ≤ 900). Mốc 22 FAIL lấy từ đề bài, tôi không chạy lại.
+- **Bảng chiều cao header / tỉ lệ màn hình** (`.site-header` hai hàng, `getBoundingClientRect`; sau khi cuộn 700 px đỉnh header = 0 ở mọi cỡ):
+
+  | Màn hình | Header cao | Tỉ lệ viewport | position |
+  |---|---|---|---|
+  | 320 × 568 | 108 px | **19,0 %** | sticky |
+  | 360 × 800 (EN và VI) | 108 px | 13,5 % | sticky |
+  | 390 × 844 | 108 px | 12,8 % | sticky |
+  | 1440 × 731 | 60 px | 8,2 % | **relative** (không dính, đỉnh −700 sau khi cuộn: không đổi) |
+
+  Rủi ro: ở 320 × 568 header dính chiếm 19 % (cao hơn ước tính 17 % của đề bài vì header cao 108, không 96 px) còn ~460 px cho nội dung khi cuộn; chấp nhận được nhưng nên để người vận hành thấy trên máy nhỏ. Đề bài cấm ẩn header khi cuộn nên không xử lý thêm.
 - **Checklist giao diện từng mục (ui-guidelines §9, docs/92 §2):**
-- Chỗ làm khác đề bài và lý do:
+
+  §9: 1 đạt. 2 đã đo EN ở mọi cỡ ≤ 900 (`home-viewport-check`), VI ở 360 × 800 (header dính, 108 px) và 390 × 900 (ô SHEET); ~900 px nằm trong ma trận; **chưa thử chỉ bằng bàn phím** (Tab tới menu khi header dính). 3 đạt: `no-hscroll` PASS. 4 – 10 không áp dụng.
+
+  docs/92 §2: 2 đã áp UI-16, UI-17. 3 trạng thái: chưa cuộn / đã cuộn (đã đo); link nhảy: `anchor-clear` PASS với bốn mục menu (`scroll-margin-top: var(--home-header-h)` = 8,25 rem trên `.section` ở ≤ 900; còn dư ~24 px so với header 108 px). 4 dữ liệu dài không áp dụng. 5 có số đo (bảng). 6 không file dùng chung. 7 không lỗi UI mới.
+
+  **Chưa kiểm:** (a) header dính trong **khung preview Website của Admin** (390, 768; `body.website-embedded` có `overflow: hidden`, tôi chưa mở Admin để xem) , đề bài yêu cầu, cần Claude kiểm khi review; (b) bóng nhẹ khi cuộn: **không thêm** (đề bài cho phép, không bắt buộc), nền đặc `--color-surface` đủ che chữ phía dưới (đã xem ảnh 360 × 800 sau khi cuộn: chữ không lọt qua header).
+
+  Ảnh đã xem: 360 × 800 EN sau khi cuộn 700 px (HDL, VI, menu một hàng trên cùng, không đường kẻ); ô SHEET ở `?lang=vi` 390 × 900 ("SHEET 01 / 01"). Ảnh 320 × 568, 390 × 844 và 360 × 800 VI chụp ra nhưng **chưa xem lại**; số đo thay thế. Ô SHEET chỉ hiện khi màn cao ≥ 821 px (quy tắc có sẵn), nên không có ở 360 × 800.
+- Chỗ làm khác đề bài và lý do: nhãn VI đổi thành "Sheet" (CSS `text-transform: uppercase` có sẵn in thành "SHEET", giống thẻ dự án), không viết hoa cứng trong chuỗi. `scroll-margin-top` đặt trên `.section` (thay 5rem có sẵn ở ≤ 900) thay vì `scroll-padding-top` trên `html`, để không cộng dồn với `scroll-margin-top` cũ. Xóa luôn dòng `border-bottom: 0` ở khối ≥ 901 (không còn gì để đặt lại).
 - Câu hỏi:
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `822f44b` (đo trên dev server cổng 5173 của người vận hành, thư mục chính đang ở nhánh này; Admin đo bằng phiên `.auth` chép sang cổng 5173).
+- **Checklist giao diện (UI-16, UI-17), Claude chạy lại từng mục, gồm các mục coder chưa làm:**
+  - §9 / `docs/92` §2 mục 1: `verify:admin` 45 file / **341** test, Admin JS 92,8 / 115,0, CSS **27,0 / 27,0** kB gzip (`home.css` được nhúng vào preview Admin nên ngân sách CSS lại hết dư địa); `node tools/home-viewport-check.mjs` **All PASS, 212 dòng PASS, 0 FAIL** (gồm `nav-line`, `header-sticky`, `anchor-clear` ở mọi cỡ ≤ 900).
+  - **Preview Website trong Admin** (coder chưa kiểm): chọn Website viewport Laptop (1280): header `position: relative`, 60 px, không đổi; Tablet (768) và Mobile (390): `position: sticky`, nền trắng đặc, cao 108 px, menu một hàng, không đường kẻ, không cuộn ngang, hiển thị đúng. Lưu ý: khung preview cao đúng bằng cả trang (iframe không tự cuộn) nên **trong preview header không "dính" khi cuộn** (nó cuộn theo khung ngoài); đây là hành vi của preview, không phải lỗi: hành vi dính đo trên trang thật ở 320 – 900 px bằng `header-sticky`.
+  - **Bàn phím** (coder chưa thử): Tab 40 lần ở 360 × 800: không phần tử nào bị header che (ngoại lệ duy nhất: "Skip to content" hiện **trên** header có chủ ý, `position: fixed; z-index: 100` > header 10, đã xác nhận bằng CSS) nên **Focus Not Obscured** đạt.
+  - **Tablet:** 768 trong preview và các cỡ 651 / 768 / 900 của công cụ: sticky đúng; **máy tính** 901 và 1440 không đổi (header `position: relative`).
+  - Ảnh xem: preview Mobile (khung bản vẽ hero có ô "SHEET 01 / 01", tiêu đề section kế tiếp lộ ra dưới khung), phép đo header sau khi cuộn 700 px ở mọi cỡ ≤ 900.
+- **Kiểm kê (UI-17 điều 2):** bảng chiều cao header của coder (108 px: 19,0 % ở 320 × 568, 13,5 % ở 360 × 800, 12,8 % ở 390 × 844) khớp số đo của tôi (108 px trong preview 768 và 390).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** (1) rủi ro "header chiếm 19 % màn 320 × 568" đã nêu và chấp nhận (đề bài cấm ẩn header); nếu sau này bạn thấy chiếm chỗ, phương án C của sổ #35 (ẩn khi cuộn xuống) vẫn còn. (2) Ngân sách CSS Admin lại 27,0 / 27,0 vì `home.css` nằm trong gói: GD3-23 (màu từ logo) và GD3-24 đã có ràng buộc "không tăng CSS" / "dừng và báo". (3) Token: coder chưa ghi, để trống `docs/96`.
+- **Cần người vận hành chốt:** **duyệt gộp** (đổi giao diện công khai, ADR-018). Không migration. Bạn xem trực tiếp trên localhost:5173 (đang ở nhánh `gd3/22`): cuộn xuống ở khung 360 × 800 và bấm các mục menu.
+- Kết luận: **ĐẠT, CHỜ DUYỆT**.

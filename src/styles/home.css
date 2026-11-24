@@ -102,7 +102,6 @@ body.website-embedded {
   justify-content: space-between;
   order: 3;
   list-style: none;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .site-nav__links li {
@@ -679,6 +678,17 @@ body.website-embedded {
 }
 
 @media (max-width: 900px) {
+  /* ADR-040: the two-row header stays on top while scrolling; anchors clear it. */
+  .site-header {
+    position: sticky;
+    top: 0;
+    background: var(--color-surface);
+  }
+
+  .section {
+    scroll-margin-top: var(--home-header-h);
+  }
+
   .contact__inner {
     grid-template-columns: 1fr;
   }
@@ -741,7 +751,6 @@ body.website-embedded {
     order: 0;
     justify-content: flex-start;
     gap: var(--space-2);
-    border-bottom: 0;
   }
 
   .site-nav__links a {
