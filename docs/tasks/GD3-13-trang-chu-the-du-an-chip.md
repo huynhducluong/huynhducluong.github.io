@@ -46,14 +46,14 @@ Phần dự án của trang chủ theo ADR-033 (d): **thẻ dự án kiểu "SHE
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng:
-- `tools/home-viewport-check.mjs` (PASS / FAIL):
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3, 4 (làm một lượt, một commit)
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: không đo
+- Nhánh, commit cuối: `gd3/13-trang-chu-the-du-an-chip` (tách từ gd3/12), xem `git log`
+- File đã đổi (ghi rõ file dùng chung): `src/site/homeProjects.ts` (mới: `projectChips`, `renderProjectSheet`, `renderProjectFilter`, `bindProjectFilter`), `src/site/homeProjects.test.ts` (mới, 14 test), `src/main.ts` (mục #projects dùng hàm mới), `src/styles/home.css` (thẻ SHEET, chip, `.sr-only`, lưới auto-fill, `margin: 0` cho `.hero__titleblock`). Không đổi `renderers.ts`, `/projects/`.
+- `verify:admin`: đạt (typecheck, test, build, ngân sách bundle: JS 92,8 / 115,0 kB, CSS 26,7 / 27,0 kB gzip)
+- `tools/home-viewport-check.mjs` (PASS / FAIL): All PASS (14 cỡ màn hình; `titleblock-fit` từ 14 FAIL xuống 0)
+- Chỗ làm khác đề bài và lý do: (1) nguyên nhân `titleblock-fit`: `<dl>` bảng tên còn lề mặc định 1em (16 px trên, 16 px dưới) — sửa `margin: 0`. (2) `.sr-only` chưa có ngoài admin.css nên thêm vào home.css. (3) Dữ liệu dev hiện chỉ có 2 dự án cùng công nghệ nên chưa thấy chip ẩn thẻ trên trình duyệt; logic lọc xem bằng đọc code, chưa có test DOM. (4) Dự án không ảnh: ô decorative không chữ; link ảnh `aria-hidden` + `tabindex="-1"`. Chưa chụp 1440×731 của phần Projects để so (có chụp 320/390/1440 vào `tmp/`, không commit).
+- Câu hỏi: không
 
 ## 6. Review của Claude
 

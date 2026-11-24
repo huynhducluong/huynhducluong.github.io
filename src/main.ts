@@ -17,6 +17,7 @@ import {
   type Language,
 } from "./shared/format";
 import { heroStack, renderHero } from "./site/homeHero";
+import { bindProjectFilter, projectChips, renderProjectFilter, renderProjectSheet } from "./site/homeProjects";
 import { readWebsiteLanguage, withWebsiteLanguage } from "./site/shell";
 
 document.body.classList.add("home-page");
@@ -266,26 +267,9 @@ const renderPage = (language: Language): void => {
             <h2 class="section-title">${text.projectsTitle}</h2>
           </div>
 
+          ${renderProjectFilter(projectChips(sortedProjects.map((project) => project.technologies)), language, sortedProjects.length)}
           <div class="project-grid">
-            ${sortedProjects
-              .map(
-                (project, index) => `
-                  <article class="project-card">
-                    <span class="project-card__index">
-                      ${text.project} ${String(index + 1).padStart(2, "0")}
-                    </span>
-                    <h3 class="project-card__title">${localize(project.name, language)}</h3>
-                    <p class="project-card__meta">
-                      ${project.role ? localize(project.role, language) : ""} · ${localize(project.location, language)}
-                    </p>
-                    ${project.summary ? `<p class="project-card__summary">${localize(project.summary, language)}</p>` : ""}
-                    <ul class="tag-list" aria-label="${text.technologies}">
-                      ${renderTags(project.technologies)}
-                    </ul>
-                  </article>
-                `,
-              )
-              .join("")}
+            ${sortedProjects.map((project, index) => renderProjectSheet(project, index, language)).join("")}
           </div>
           <a class="section-more" href="${withWebsiteLanguage(`${import.meta.env.BASE_URL}projects/`, language)}">${text.allProjects} →</a>
         </div>
@@ -346,6 +330,8 @@ const renderPage = (language: Language): void => {
       </div>
     </footer>
   `;
+
+  bindProjectFilter(app, language);
 
   app.querySelector<HTMLButtonElement>("[data-language-toggle]")?.addEventListener(
     "click",
