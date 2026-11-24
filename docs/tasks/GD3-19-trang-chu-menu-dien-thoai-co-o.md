@@ -1,6 +1,6 @@
 # GD3-19 — Trang chủ: menu điện thoại 2 × 2 có ô viền như bảng tên bản vẽ (nhóm N17)
 
-> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/19-trang-chu-menu-dien-thoai-co-o` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 2 sạch) · **Nhánh:** `gd3/19-trang-chu-menu-dien-thoai-co-o` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
@@ -98,3 +98,11 @@ Sổ #31 / W-30 / [ADR-038](../../decisions/ADR-REGISTER.md) (phương án A): m
 - **Cần người vận hành chốt:** không (sửa theo đúng ý ADR-038).
 - **Ghi nhận:** (1) lựa chọn bo góc 0 cho ô menu và thẻ viền 2 px khác nút hero, có chủ ý và có lý do (chung đường kẻ); chấp nhận. (2) Màu nền hover `color-mix` 8 % của `--color-primary` là cách đã dùng ở nơi khác của trang (không giá trị cứng mới). (3) Token: coder chưa ghi, để trống `docs/96`.
 - Kết luận: **PHẢI SỬA** (một mục: mở rộng ô viền tới ≤ 900 px).
+
+### Review 2 (2026-11-24, `e47cf32`; đo trên dev server cổng 5173 của người vận hành)
+
+- **Checklist giao diện (UI-16, UI-17) cho phần sửa:** `verify:admin` 45 file / **339** test đạt, CSS Admin 27,0 / 27,0 kB (không đổi); `node tools/home-viewport-check.mjs` **All PASS, 170 dòng PASS, 0 FAIL** (ma trận thêm 651 × 900 và 900 × 800; `nav-cells` chạy ở mọi cỡ ≤ 900).
+- **Đo trên trình duyệt thật:** 650, 651, 768, 900: bốn ô viền 1 px, nền trắng, chữ canh trái, hai hàng, rộng bằng nhau (310 / 310 / 369 / 435 px), không cuộn ngang; **901 và 1440 không đổi** (không viền, nền trong suốt, chữ giữa, một hàng). Ảnh 768 đã xem: khung 2 × 2 liền, chữ canh trái.
+- Phần ≤ 650 (nút hero, `--grid-alpha` 8 %) vẫn ở khối ≤ 650 như đề bài; test CSS theo breakpoint 900.
+- **Phải sửa:** không. **Nên sửa:** không. **Cần người vận hành chốt:** **duyệt gộp** (đổi giao diện công khai, ADR-018). Không migration.
+- Kết luận: **ĐẠT, CHỜ DUYỆT**.
