@@ -39,13 +39,13 @@ Hàng dự án và công cụ trong tab Projects & tools của Portfolio gọn l
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- `tools/portfolio-selection-check.mjs` (PASS / FAIL, mốc 8 FAIL):
-- Chỗ làm khác đề bài và lý do:
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/16-admin-hang-du-an-portfolio-gon (commit feat(GD3-16))
+- File đã đổi (ghi rõ file dùng chung): src/admin/portfolioProjectSelection.ts (thêm renderPortfolioToolRow), src/admin/profileDocumentWorkspace.ts, src/styles/admin-documents.css, hai file test (portfolioProjectSelection.test.ts, adminStyles.test.ts). Không file dùng chung ngoài admin-documents.css.
+- `verify:admin`: đạt. Ngân sách bundle Admin: JS 92.8 / 115.0 kB gzip, CSS 26.9 / 27.0 kB gzip (CSS tăng 0.2 kB, còn 0.1 kB dư địa: lần sau thêm CSS Admin phải gọn lại hoặc nâng ngân sách).
+- `tools/portfolio-selection-check.mjs` (PASS / FAIL, mốc 8 FAIL): All PASS (22 hàng cao 64 px ở cả ba màn hình).
+- Chỗ làm khác đề bài và lý do: hàng công cụ viết lại bằng renderPortfolioToolRow (cùng khung `admin-cv-project`), bỏ lớp `admin-selection-card` của hàng công cụ cũ. Chevron của hàng này thu còn 24 px (đề bài cho ≥ 24 px) để hàng ≤ 72 px. Phát hiện `.admin-cv-project__options` có `display: grid` đè thuộc tính `hidden` → thêm quy tắc `[hidden] { display: none }`; quy tắc `.admin-document-selection article` (đệm, viền hex cứng) đè thẻ hàng nên đã ghi đè bằng `article.admin-portfolio-project` dùng token. Chưa chụp màn hình bằng mắt, chưa thử tab bằng bàn phím trên trình duyệt (mới đo bằng công cụ): cần Claude review kiểm.
 - Câu hỏi:
 
 ## 6. Review của Claude

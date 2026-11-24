@@ -75,6 +75,16 @@ describe("Admin stylesheet contract", () => {
     expect(portfolio).toMatch(/\.document-preview-scroll \.portfolio-preview-shell \{[^}]*padding-bottom: calc\(1\.25rem \/ var\(--embedded-preview-scale, 1\)\);/);
   });
 
+  it("keeps Portfolio project and tool rows on one title line (ADR-037, W-26)", () => {
+    const documents = Object.values(import.meta.glob<string>("../styles/admin-documents.css", { query: "?raw", import: "default", eager: true }))[0];
+    expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__row \{[^}]*grid-template-areas:\s*"title include toggle"\s*"meta meta meta"/);
+    expect(documents).toMatch(/\.admin-portfolio-project \.admin-cv-project__identity \{\s*display: contents/);
+    expect(documents).toMatch(/\.admin-portfolio-project__include input\[type="checkbox"\] \{[^}]*width: 1\.5rem;[^}]*height: 1\.5rem/);
+    expect(documents).toMatch(/\.admin-cv-project__options\[hidden\] \{\s*display: none/);
+    const block = documents.slice(documents.indexOf(".admin-portfolio-project .admin-cv-project__row"), documents.indexOf("/* Same height with or without"));
+    expect(block).not.toContain("!important");
+  });
+
   it("names the owner in the rail and never lets a long name widen it (§11)", () => {
     const admin = Object.values(import.meta.glob<string>("../styles/admin.css", { query: "?raw", import: "default", eager: true }))[0];
     const main = Object.values(import.meta.glob<string>("./main.ts", { query: "?raw", import: "default", eager: true }))[0];
