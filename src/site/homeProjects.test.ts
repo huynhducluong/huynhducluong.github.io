@@ -169,6 +169,16 @@ describe("home project CSS", () => {
     expect(homeCss).toMatch(/\.project-grid \{[^}]*repeat\(auto-fill, minmax\(min\(100%, 20rem\), 1fr\)\)/);
     expect(homeCss).toMatch(/\.hero__titleblock \{[^}]*margin: 0/);
   });
+  it("aligns card rows with subgrid, 2 x 2 phone menu and buttons, 8 % phone grid", () => {
+    expect(homeCss).toMatch(/\.project-card \{[^}]*grid-template-rows: subgrid/);
+    expect(homeCss).toMatch(/\.project-card \{[^}]*grid-row: span 7/);
+    expect(homeCss).toMatch(/\.project-card__body \{\s*display: contents/);
+    expect(homeCss).toMatch(/\.site-nav__links \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+    const phone = homeCss.slice(homeCss.indexOf("@media (max-width: 650px)"));
+    expect(phone).toMatch(/--grid-alpha: 8%/);
+    expect(phone).toMatch(/\.hero__actions \{[^}]*grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+    expect(homeCss).not.toMatch(/scroll-snap/);
+  });
   it("has no !important in the project block", () => {
     const block = homeCss.slice(homeCss.indexOf(".chip-row"), homeCss.indexOf(".project-card__link:hover"));
     expect(block).not.toContain("!important");

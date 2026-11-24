@@ -41,13 +41,13 @@ Ba quyết định của ADR-037 (Sổ #28, #29; W-27, W-28) cho trang chủ cô
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 29 FAIL):
-- Chỗ làm khác đề bài và lý do:
+- Đã xong bước: 1 – 4
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/15-trang-chu-subgrid-menu-luoi (commit feat(GD3-15))
+- File đã đổi (ghi rõ file dùng chung): src/styles/home.css, src/site/homeProjects.test.ts (không đổi markup, không file dùng chung)
+- `verify:admin`: đạt (bundle Admin 92.8 / 115.0 kB gzip JS, 26.7 / 27.0 kB CSS)
+- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 29 FAIL): All PASS (0 FAIL)
+- Chỗ làm khác đề bài và lý do: không đổi markup; `.project-card__body` thành `display: contents`, bảy hàng chung (ảnh, kicker, tiêu đề, vai trò, tóm tắt, công nghệ, link) đặt bằng `grid-row` rõ ràng để thẻ thiếu phần vẫn giữ hàng. `.project-grid` đặt `row-gap: 0` và mỗi thẻ `margin-bottom` (gap hàng của lưới cha sẽ cộng vào mọi hàng subgrid). Nút hero không đổi nhãn (vừa 2 cột ở 320). Chưa thử thẻ dữ liệu giả tên dài 2 dòng và chưa xem ảnh bằng mắt: cần Claude review kiểm.
 - Câu hỏi:
 
 ## 6. Review của Claude
