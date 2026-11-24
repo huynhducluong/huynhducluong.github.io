@@ -1,6 +1,6 @@
 # GD3-21 — Admin: mọi checkbox 16 px bằng một quy tắc chung (nhóm N19)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/21-admin-checkbox-16px-chung` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (review 1 sạch; gộp 2026-11-24) · **Nhánh:** `gd3/21-admin-checkbox-16px-chung` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -75,4 +75,13 @@ Việc còn lại của Sổ #32 / W-31 / [UI-17](../92-ui-rules.md#ui-17): chec
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `7aa7706` (worktree `npm ci` sạch, đã xóa; dev server riêng cổng 5198 vì cổng 5199 / 5173 đang do coder GD3-22 giữ; `.auth` chép sang 5198).
+- **Checklist giao diện (UI-16, UI-17), Claude chạy lại từng mục:**
+  - §14 mục 1 đạt: `verify:admin` 45 file / **340** test, Admin JS 92,8 / 115,0, CSS **26,9 / 27,0** kB gzip (giảm 0,1 kB, có dư địa trở lại).
+  - Mục 2 đạt: `node tools/admin-checkbox-size-check.mjs --all-widths` **All PASS** ở 1440, 1180, 768, 390 (Homepage 44 ô, CV 7 + 15, Portfolio 25 + 5 + 1, Cover letters 22: tất cả **16 × 16**); `portfolio-selection-check` **All PASS** (22 hàng, **67 px** ở ba màn hình mục tiêu, không đổi so với GD3-18).
+  - **Quét thêm của Claude (ngoài công cụ):** mười màn Admin (Overview, Homepage, Projects, Tools, Profile, CV, Portfolio, Cover letters, Trash, Security) và mọi tab của chúng ở 1440 × 900: mọi checkbox nhìn thấy **16 × 16** (Homepage 44, CV 18, Portfolio 28, Cover letters 22); không ô nào 13 × 13 hay 24 × 24; các màn khác không có checkbox.
+  - Mục 4, 9, 10, 12, 16 không đổi bố cục hàng (67 px) và không đổi trạng thái disabled / Draft; `docs/92` §2 mục 6: file dùng chung đã đổi `admin-ui.css` (một quy tắc chung) và năm file CSS xóa quy tắc kích thước trùng (liệt kê đầy đủ ở mục 5); độ ưu tiên `:where` = 0 nên ô ẩn thị giác 1 × 1 không bị đè (đã xác nhận bằng công cụ: ô ẩn không nằm trong danh sách).
+- **`shots --stress` của coder:** tôi **tái hiện được lỗi** bằng cách thay nhãn dòng meta của 3 hàng Portfolio bằng chuỗi ~130 ký tự: ở **1440 và 1920** phần tử `<span data-portfolio-project-state>` (dòng trạng thái) tràn ra ngoài hàng (mép phải 1066 px so với hàng 717 px; `text-overflow: clip`, `overflow: visible`); ở 2560, 1180, 768, 390 không tràn (cột đủ rộng hoặc quy tắc cột hẹp `pf-row` của GD3-17 đã cắt "…"). **Không do GD3-21** (đã có từ GD3-16 / GD3-17: quy tắc cắt chỉ nằm trong `@container pf-row (max-width: 22rem)`, không áp dụng ở hàng rộng); với dữ liệu thật hiện nay chuỗi trạng thái ngắn nên không thấy, nhưng vi phạm UI-14 (tên dài phải cắt "…" có tooltip). Ghi UI-18, sửa ở [GD3-24](GD3-24-admin-meta-hang-cat-gon.md).
+- **Phải sửa:** không. **Nên sửa:** không (lỗi stress là việc có sẵn, giao đề bài riêng). **Cần người vận hành chốt:** không.
+- **Ghi nhận:** (1) đúng khi **xóa** quy tắc `width: auto` / `!important` thay vì đè bằng `!important`. (2) Token: coder chưa ghi, để trống `docs/96`.
+- Kết luận: **ĐẠT**; Admin-only, không migration, không đổi giao diện công khai → **tự gộp (ADR-018)**.
