@@ -1,6 +1,6 @@
 # GD3-13 — Trang chủ: thẻ dự án "SHEET" có ảnh và chip lọc theo công nghệ (nhóm N12)
 
-> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` **tách từ nhánh GD3-12** (`git switch gd3/12-trang-chu-blueprint-nen-hero; git switch -c gd3/13-trang-chu-the-du-an-chip`), vì hai đề bài gộp cùng một lần · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CHỜ DUYỆT (gộp cùng GD3-12) · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` **tách từ nhánh GD3-12** (`git switch gd3/12-trang-chu-blueprint-nen-hero; git switch -c gd3/13-trang-chu-the-du-an-chip`), vì hai đề bài gộp cùng một lần · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** người vận hành chốt "gộp cùng lúc" (2026-11-24): Claude review xong thì gộp `gd3/12` rồi `gd3/13` vào `main` và **push một lần** (một lần deploy); **cần người vận hành duyệt** (đổi giao diện công khai). Không có migration.
 
 ## 1. Mục tiêu
@@ -87,3 +87,13 @@ Sửa trên cùng nhánh `gd3/13-trang-chu-the-du-an-chip`. Làm cả ba mục c
   - Với dữ liệu thật hiện nay (3 dự án cùng 5 công nghệ) trang chủ **không còn dải chip nào**: đó là kết quả đúng, ghi vào mục 5. Các phép đo `tap`, `font`, `no-hscroll` của công cụ đo không được xấu đi.
 - **Nên sửa 1:** `text-decoration: none` cho `.project-card__image--empty` (nhãn SHEET trong ô thiếu ảnh không gạch chân).
 - **Nghiệm thu bổ sung:** đọc `projectChips` bằng test với dữ liệu giả có công nghệ khác nhau; xem ảnh thẻ có ảnh ở 390 và 1440 (không dải chip) và ảnh một thẻ thiếu ảnh giả lập.
+
+### Review 2 (2026-11-24, `2db9b7d`; worktree sạch, đã xóa)
+
+- `verify:admin`: 45 file / **334** test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi). `node tools/home-viewport-check.mjs`: **All PASS, 106 dòng PASS, 0 FAIL** (đã đếm lại).
+- **Đã đo trên trình duyệt thật:** (1) thoát chuỗi: kicker ra `SHEET 01 · Ho Chi Minh &amp; Binh Duong` (một lần, hiện đúng chữ "&"); (2) chip: với dữ liệu giả có công nghệ khác nhau (Revit chung, Dynamo, Python, C# riêng) `projectChips` ra Dynamo 2, C# 1, Python 1 (Revit bị bỏ vì ở cả ba dự án), bấm Dynamo → 2/3 thẻ, Python → 1/3, All → 3/3, `aria-pressed` và `aria-live` đúng; (3) **dữ liệu thật** (3 dự án cùng 5 công nghệ): không có chip, không có "All", không có vùng `aria-live`; (4) ô thiếu ảnh: `text-decoration` = none. Ảnh phần Projects ở 1440 (ba thẻ SHEET có ảnh, không dải chip, lưới liền).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** người code chạy lại `verify:admin` từ PowerShell `D:\` sau khi thấy lỗi E-006 từ shell Bash: đúng cách.
+- **Cần người vận hành chốt:** **duyệt gộp** (đổi giao diện công khai, ADR-018): gộp `gd3/12` rồi `gd3/13` và push **một lần**.
+- Token: Claude — cửa sổ code 22 % → 24 % cho lượt sửa (~2 %); cả đề bài 15 % → 24 % (~9 %).
+- Kết luận: **ĐẠT, CHỜ DUYỆT** — sạch về kỹ thuật.
