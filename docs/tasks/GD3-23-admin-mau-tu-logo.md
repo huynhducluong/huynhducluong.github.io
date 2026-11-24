@@ -1,6 +1,6 @@
 # GD3-23 — Admin › Appearance: "Lấy màu từ logo" (nhóm N20)
 
-> **Trạng thái:** GIAO CODE (làm **sau** GD3-22, một thư mục làm việc) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CẦN SỬA (review 1: 2 mục Nên sửa + 1 mục chờ người vận hành chốt) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai hay PDF **hiện có** (chỉ thêm khả năng chọn màu) → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -73,4 +73,21 @@
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `d61d038` (đo trên dev server cổng 5173 của người vận hành, thư mục chính ở nhánh này; `.auth` chép sang 5173, tệp tạm đã xóa).
+- **Dự báo token đối chiếu:** dự báo 10 % (8 – 14 %); người vận hành báo **80 % → 84 % = ~4 %** (thấp hơn dự báo).
+- **Checklist giao diện (UI-16, UI-17, §14 × 16), Claude chạy lại từng mục, gồm các mục coder chưa làm:**
+  - §14 mục 1 đạt: `verify:admin` 47 file / **355** test; Admin JS 92,8 / 115,0 kB (chunk nạp lười), CSS **27 647 / 27 648 byte** gzip: **dư đúng 1 byte**.
+  - **Bốn nơi dùng chung đều có nút** (coder chỉ đo CV và Cover Letter): CV, Portfolio, Homepage, Cover letters ở Appearance; chọn logo hai màu cho đúng 2 cặp ở cả bốn.
+  - **Bảy logo tổng hợp qua giao diện thật** (CV): hai màu đỏ + xanh → 2 cặp (`#0033a0 + #c8102e`, hoán đổi); chữ đen + vạch cam → 3 cặp, đầu `#ff6a00 + #b34a00`; nền trong suốt hai màu → 2 cặp đúng; nền vàng nhạt → 1 cặp, dòng "Adjusted for contrast"; gradient tím – ngọc → 3 cặp; **logo đen trắng → 0 cặp, "No prominent color found in this logo."**; logo xanh lục một màu → 3 cặp (xem Nên sửa 1).
+  - **Bấm một cặp:** preset → Custom, hai ô màu đổi đúng, bản xem CV đổi màu ngay (ảnh đã xem: sọc tím / vàng), trạng thái "Unsaved" bật, dòng `aria-live` ghi "Text on primary 9.4 : 1, passes." (các bộ có điều chỉnh ghi thêm "Adjusted for contrast", tương phản 5,2 – 5,4 : 1).
+  - **Lỗi (coder chưa thử):** file .txt → toast "Choose an image file…"; ảnh > 5 MB → toast "That logo is larger than 5 MB…"; **SVG** đọc được (2 cặp đúng `#6a1b9a` / `#f9a825`).
+  - **Bàn phím (coder chưa thử):** Tab / Enter trên nút cặp màu áp dụng đúng (`custom`, hiện tương phản); viền focus rõ; nút "Pick colors from logo" 173 × 40, chữ 14 px như nút phụ khác.
+  - **Logo không rời máy (mục 4 của tiêu chí):** trong lúc chọn logo và bấm cặp chỉ có đúng một request `blob:` cục bộ, **không** request mạng nào mang ảnh (đã đo bằng trình nghe `request`); không có chunk nạp lười nào gửi dữ liệu.
+  - **Chưa kiểm được:** lưu rồi tải lại giữ màu (không bấm Save để khỏi ghi dữ liệu thật; đường lưu là `readTheme` đọc hai ô `theme_primary` / `theme_accent` có tên không đổi, nên giữ được theo thiết kế); trạng thái disabled của bản đã phát hành (có test markup).
+- **Phải sửa:** không.
+- **Nên sửa:**
+  1. **Gợi ý rác ở logo gần một màu:** logo xanh lục một màu cho cặp 2 và 3 là `#339c63 + #236d45` và `#94cbad + #688e79`: màu pha ở **viền khử răng cưa** (xám xanh), người dùng chọn nhầm sẽ ra màu bẩn. Sửa: bỏ điểm ảnh có độ trong suốt từng phần hoặc pha lẫn (chỉ giữ điểm có alpha ≥ 250 và nằm trong cụm màu chủ đạo), và **nếu chỉ còn một sắc thì trả tối đa 2 cặp** (màu chính + một biến thể đậm / nhạt), không phải 3; thêm test với ảnh có viền khử răng cưa.
+  2. **Cặp đang dùng không có trạng thái:** sau khi bấm, nút cặp không đánh dấu nào là đang chọn (AGENTS §5.6: toggle phải có `aria-pressed`). Sửa: `aria-pressed` true cho cặp vừa áp dụng, false cho các cặp khác, và nhãn nhìn thấy ghi cả hai mã hex (hoặc hai ô màu có chữ ẩn đủ), vì hiện nhãn chỉ ghi mã Primary.
+- **Cần người vận hành chốt (ngân sách CSS Admin):** CSS Admin còn dư **1 byte** (27 647 / 27 648). Khuyến nghị **nâng 27 → 28 kB gzip**: cái giá chỉ thêm ≤ 1 kB tải ban đầu cho Admin (gói JS 92,8 / 115 vẫn dư 22 kB), lợi ích là các đề bài Admin tiếp theo (GD3-24, N10, GD3-14) không phải dừng giữa chừng; phương án thay thế là một đề bài riêng gỡ CSS chết / tách CSS preview Cover Letter, mất nhiều token hơn và vẫn chỉ hoãn được vài lần. Nếu bạn đồng ý, Claude đổi `docs/admin-operations.md` (ADR mới) và coder đổi `scripts/check-admin-bundle.mjs` ở lượt sửa.
+- Kết luận: **CẦN SỬA** (không có lỗi chặn; hai mục Nên sửa phải làm trước khi tự gộp theo ADR-018; chờ quyết định ngân sách).
+- **Dự báo token cho lượt sửa:** ~2 – 3 % (hai chỗ nhỏ trong `logoPalette.ts`, `themeFromLogo.ts` + test; thêm 1 dòng ngân sách nếu bạn đồng ý).
