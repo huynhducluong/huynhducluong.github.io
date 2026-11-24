@@ -17,6 +17,10 @@
 //   font         chữ nào cũng ≥ 12 px, đoạn văn (p) ≥ 14 px trên điện thoại
 //   photo-fit    ảnh hồ sơ hiện nguyên: tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08 (ảnh vuông thì khung vuông; ADR-035)
 //   titleblock-fit khung bản vẽ của hero ôm sát nội dung: không dải trống dưới bảng tên (≤ 2 px) và không khe giữa ảnh và bảng tên (≤ 4 px)
+//   nav-fit      (điện thoại ≤ 650) menu **không cuộn ngang**, đủ 4 mục thấy hết trong khung, xếp 2 × 2 đều nhau (ADR-037 a, W-28)
+//   buttons-equal (điện thoại ≤ 650) các nút hero cùng độ rộng, xếp 2 × 2 (ADR-037 c, W-28)
+//   grid-alpha   độ đậm lưới `--grid-alpha` ≤ 8 % khi màn ≤ 650 px, 14 % ở máy tính (ADR-037 b, W-28)
+//   cards-aligned (≥ 2 thẻ cùng hàng) tiêu đề, tóm tắt, thẻ công nghệ, link của các thẻ cùng hàng nằm đúng cùng một độ cao (subgrid; ADR-037, W-27, UI-08)
 //   images       không ảnh hỏng
 // Thoát mã 1 nếu có FAIL.
 import { chromium } from "playwright";
@@ -65,8 +69,31 @@ for (const kind of wanted) {
       const block = document.querySelector(".hero__titleblock");
       const stripGap = sheet && block ? Math.round(sheet.getBoundingClientRect().bottom - block.getBoundingClientRect().bottom) : null;
       const photoGapBelow = photoBox && block ? Math.round(block.getBoundingClientRect().top - photoBox.getBoundingClientRect().bottom) : null;
+      const navEls = [...document.querySelectorAll(".site-nav__links a")].filter(visible);
+      const navBoxes = navEls.map((a) => a.getBoundingClientRect());
+      const navList = document.querySelector(".site-nav__links");
+      const navTops = [...new Set(navBoxes.map((b) => Math.round(b.top)))];
+      const navWidths = navBoxes.map((b) => Math.round(b.width));
+      const nav = { count: navEls.length, scrolls: navList ? navList.scrollWidth > navList.clientWidth + 1 : false, rows: navTops.length, widthSpread: navWidths.length ? Math.max(...navWidths) - Math.min(...navWidths) : 0, outside: navBoxes.filter((b) => b.right > innerWidth + 1 || b.left < -1).length };
+      const btnBoxes = [...document.querySelectorAll(".hero__actions .button, .hero__actions a, .hero__actions button")].filter(visible).map((el) => el.getBoundingClientRect());
+      const btnTops = [...new Set(btnBoxes.map((b) => Math.round(b.top)))];
+      const btnWidths = btnBoxes.map((b) => Math.round(b.width));
+      const buttons = { count: btnBoxes.length, rows: btnTops.length, widthSpread: btnWidths.length ? Math.max(...btnWidths) - Math.min(...btnWidths) : 0 };
+      const alphaRaw = getComputedStyle(document.documentElement).getPropertyValue("--grid-alpha").trim() || getComputedStyle(document.body).getPropertyValue("--grid-alpha").trim();
+      const gridAlpha = parseFloat(alphaRaw);
+      const cards = [...document.querySelectorAll(".project-card")].filter(visible);
+      const cardRows = new Map();
+      for (const c of cards) { const k = Math.round(c.getBoundingClientRect().top); (cardRows.get(k) ?? cardRows.set(k, []).get(k)).push(c); }
+      let cardSpread = 0; let cardRowsChecked = 0;
+      for (const row of cardRows.values()) {
+        if (row.length < 2) continue; cardRowsChecked += 1;
+        for (const sel of [".project-card__title", ".project-card__meta", ".project-card__summary", ".tag-list", ".project-card__link"]) {
+          const tops = row.map((c) => { const e = c.querySelector(sel); return e ? Math.round(e.getBoundingClientRect().top) : null; }).filter((v) => v !== null);
+          if (tops.length > 1) cardSpread = Math.max(cardSpread, Math.max(...tops) - Math.min(...tops));
+        }
+      }
       const broken = [...document.images].filter((i) => i.complete && i.naturalWidth === 0).length;
-      return { photoGapBelow, stripGap, photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
+      return { nav, buttons, gridAlpha, alphaRaw, cardSpread, cardRowsChecked, photoGapBelow, stripGap, photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
     }, { phone: isPhone });
     report(!r.hscroll && r.overflow.length === 0, `${tag}  no-hscroll`, r.overflow.length ? `(${r.overflow.join(", ")})` : "");
     report(r.ctaBottom !== null && r.ctaBottom <= r.vh, `${tag}  first-screen`, `(nút chính kết thúc ở ${r.ctaBottom} px / ${r.vh} px)`);
@@ -78,6 +105,12 @@ for (const kind of wanted) {
     report(r.tinyText.length === 0 && r.smallParagraphs === 0, `${tag}  font`, r.tinyText.length || r.smallParagraphs ? `(${[...r.tinyText, r.smallParagraphs ? `${r.smallParagraphs} đoạn văn < 14 px` : ""].filter(Boolean).join("; ")})` : "");
     if (r.photoGap !== null) report(r.photoGap <= 0.08, `${tag}  photo-fit`, `(tỉ lệ khung lệch tỉ lệ ảnh ${r.photoGap}; ảnh hồ sơ phải hiện nguyên, không bị cắt)`);
     if (r.stripGap !== null) report(r.stripGap <= 2 && r.photoGapBelow <= 4, `${tag}  titleblock-fit`, `(khung bản vẽ: dải trống ${r.stripGap} px dưới bảng tên, ${r.photoGapBelow} px giữa ảnh và bảng tên; phải ≤ 2 và ≤ 4)`);
+    if (width <= 650) {
+      report(r.nav.count >= 4 && !r.nav.scrolls && r.nav.outside === 0 && r.nav.rows === 2 && r.nav.widthSpread <= 2, `${tag}  nav-fit`, `(${r.nav.count} mục, ${r.nav.rows} hàng, ${r.nav.scrolls ? "còn cuộn ngang, " : ""}${r.nav.outside} mục ngoài khung, lệch độ rộng ${r.nav.widthSpread} px; phải 4 mục, 2 hàng, không cuộn, lệch ≤ 2)`);
+      if (r.buttons.count) report(r.buttons.count >= 4 ? r.buttons.rows === 2 && r.buttons.widthSpread <= 2 : r.buttons.widthSpread <= 2, `${tag}  buttons-equal`, `(${r.buttons.count} nút, ${r.buttons.rows} hàng, lệch độ rộng ${r.buttons.widthSpread} px; phải 2 × 2 và lệch ≤ 2)`);
+    }
+    report(width <= 650 ? r.gridAlpha <= 8 : r.gridAlpha === 14, `${tag}  grid-alpha`, `(--grid-alpha = ${r.alphaRaw}; phải ≤ 8 % khi ≤ 650 px, 14 % ở máy tính)`);
+    if (r.cardRowsChecked) report(r.cardSpread <= 1, `${tag}  cards-aligned`, `(${r.cardRowsChecked} hàng thẻ; lệch cao nhất ${r.cardSpread} px giữa các thẻ cùng hàng; phải ≤ 1)`);
     report(r.broken === 0, `${tag}  images`, r.broken ? `(${r.broken} ảnh hỏng)` : "");
     await context.close();
   }

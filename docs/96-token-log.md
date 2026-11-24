@@ -28,4 +28,6 @@
 | 2026-11-15 | GD3-11 | Nhỏ | 12 % | 17 % | **~5 %** | N9: chỉ số dự án (số lớn + đơn vị nhỏ) |
 | 2026-11-17 | GD3-12 | Lớn | 16 % | 31 % | **~15 %** | N12: trang chủ Blueprint (nền, hero, điện thoại); đo bằng tools/home-viewport-check.mjs |
 | 2026-11-17 | GD3-13 | Vừa | 15 % | 24 % | **~9 %** | N12: thẻ dự án SHEET + chip lọc |
+| 2026-11-24 | GD3-15 | Vừa | | | |
+| 2026-11-24 | GD3-16 | Nhỏ | | | |
 | 2026-11-17 | GD3-14 | Vừa | | | | N12: ô Hero tagline Admin + migration |

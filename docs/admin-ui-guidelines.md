@@ -239,6 +239,7 @@ Primary visual *                 Supporting visual *
 [Cover · Image 01          ⌄]   [Gallery · Image 02          ⌄]
 ```
 
+- **Hàng gọn (ADR-037, W-26).** Hàng dự án / công cụ đã thu gọn cao **≤ 72 px** ở ba màn hình mục tiêu: dòng 1 là tên (cắt gọn có `title`), **công tắc "In Portfolio" nhỏ bên phải cùng hàng với tên**, cạnh chevron; dòng 2 là "địa điểm · trạng thái" (meta). Công tắc và chevron cao ≥ 24 px, có tên truy cập (`aria-label` nêu tên dự án). Đo bằng `node tools/portfolio-selection-check.mjs`.
 - **Dùng hàng, không dùng box.** Các hàng được nhóm trong disclosure group Projects và Automation tools (số đếm = mục đã chọn) và phân tách bằng divider (§6.4).
 - **Preview là hình Primary đã chọn** và theo select trực tiếp (`syncPortfolioMediaPreview`); mục không có ảnh hiển thị "No image", không bao giờ hiển thị ảnh hỏng.
 - **Dòng meta giải thích vì sao trường có hình thức đó:** tên layout (từ override hoặc mặc định), yêu cầu của nó (`mediaRequirementLabel`) và, bằng `--admin-color-warning`, "Only N images in Media" khi mục có ít ảnh hơn layout yêu cầu. `portfolioMediaRowState` là nơi duy nhất viết dòng này.
