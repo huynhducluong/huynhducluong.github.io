@@ -47,7 +47,7 @@ export const renderPortfolioProjectRow = ({ project, ready, layoutLabel, limit, 
         <span class="admin-cv-project__title"><strong title="${escapeHtml(name)}">${escapeHtml(name)}</strong>${ready ? "" : `<span class="status status--${project.status === "archived" ? "archived" : "draft"}">${project.status === "archived" ? "Archived" : "Draft"}</span>`}</span>
         <small><span title="${escapeHtml(project.location.en || "Location not set")}">${escapeHtml(project.location.en || "Location not set")}</span><span class="${state.warning ? "is-warning" : ""}" data-portfolio-project-state>${escapeHtml(state.text)}</span></small>
       </div>
-      <label class="admin-switch admin-portfolio-project__include"><input type="checkbox" name="portfolio_project" value="${id}" data-selection-primary data-portfolio-project-include${included ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span>In Portfolio</span></label>
+      <label class="admin-switch admin-portfolio-project__include"><input type="checkbox" role="switch" name="portfolio_project" value="${id}" aria-label="In Portfolio: ${escapeHtml(name)}" data-selection-primary data-portfolio-project-include${included ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span>In Portfolio</span></label>
       <button class="button button--secondary admin-icon-button admin-cv-project__toggle" type="button" aria-expanded="false" aria-controls="${optionsId}" aria-label="Responsibilities for ${escapeHtml(name)}" title="Responsibilities" data-portfolio-project-toggle${included ? "" : " hidden"}>${adminChevronIcon}</button>
     </div>
     <div class="admin-cv-project__options" id="${optionsId}" data-portfolio-project-options hidden>
@@ -58,6 +58,32 @@ export const renderPortfolioProjectRow = ({ project, ready, layoutLabel, limit, 
           ? available.map((point) => `<label><input type="checkbox" name="portfolio_responsibility_${id}" value="${escapeHtml(point.id)}" data-portfolio-project-responsibility${chosen.has(point.id) ? " checked" : ""}${disabled}><span>${escapeHtml(point.text.en)}</span></label>`).join("")
           : '<p class="admin-empty">No responsibilities saved. Add them in Projects.</p>'}
       </fieldset>
+    </div>
+  </article>`;
+};
+
+/**
+ * A Portfolio tool row: same one-line anatomy as the project row (name, include switch), without a disclosure.
+ * The status chip stays beside the name; a tool that is not Ready cannot be chosen and is not counted.
+ */
+export const renderPortfolioToolRow = ({ id, name, slug, status, ready, included }: {
+  id: string;
+  name: string;
+  slug: string;
+  status: "draft" | "published" | "archived";
+  ready: boolean;
+  included: boolean;
+}): string => {
+  const label = name || "Untitled tool";
+  const chip = ready ? "Ready" : status === "archived" ? "Archived" : "Draft";
+  const slugText = slug ? `Slug: ${slug}` : "Slug not set";
+  return `<article class="admin-cv-project admin-portfolio-project admin-portfolio-tool${ready ? "" : " is-unavailable"}" data-display="${included ? "included" : "excluded"}">
+    <div class="admin-cv-project__row">
+      <div class="admin-cv-project__identity">
+        <span class="admin-cv-project__title"><strong title="${escapeHtml(label)}">${escapeHtml(label)}</strong><span class="status status--${ready ? "published" : status === "archived" ? "archived" : "draft"}">${chip}</span></span>
+        <small><span title="${escapeHtml(slugText)}">${escapeHtml(slugText)}</span></small>
+      </div>
+      <label class="admin-switch admin-portfolio-project__include"><input type="checkbox" role="switch" name="portfolio_tool" value="${escapeHtml(id)}" aria-label="In Portfolio: ${escapeHtml(label)}" data-selection-primary${ready && included ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span>In Portfolio</span></label>
     </div>
   </article>`;
 };

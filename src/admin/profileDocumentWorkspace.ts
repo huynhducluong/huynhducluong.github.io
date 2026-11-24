@@ -63,7 +63,7 @@ import { portfolioEditFieldName, type PortfolioEditModeMessage, type PortfolioEd
 import { focusPortfolioEditControl, readEditMarkersPreference, renderEditMarkersToggle, syncEditMarkersToggle, writeEditMarkersPreference } from "./portfolioEditTarget";
 import { bindCvProjectRows, renderCvProjectRow } from "./cvProjectSelection";
 import { portfolioLayoutLabel, renderPortfolioFeatureRow, renderPortfolioMediaRow, syncPortfolioFeatureRow, syncPortfolioMediaPreview, syncPortfolioMediaRow } from "./portfolioMediaSelection";
-import { bindPortfolioProjectRows, renderPortfolioProjectRow, syncPortfolioProjectRow } from "./portfolioProjectSelection";
+import { bindPortfolioProjectRows, renderPortfolioProjectRow, renderPortfolioToolRow, syncPortfolioProjectRow } from "./portfolioProjectSelection";
 import { renderDocumentThemeFields } from "./documentThemeFields";
 import { bindEmbeddedPreview, type EmbeddedPreviewController } from "./embeddedPreview";
 import { confirmAdmin } from "./confirmDialog";
@@ -907,10 +907,7 @@ const portfolioSelectionPanel = (runtime: PortfolioRuntimeData): string => rende
     }).join("")}</div>
     </section>
     <section data-selection-group data-selection-mode="selected">${renderAdminSelectionHeading({ title: "Automation tools", mode: "selected", selected: runtime.tools.filter((item) => item.status === "published" && item.includeInPortfolio).length, total: runtime.tools.filter((item) => item.status === "published").length })}
-    ${runtime.tools.map((item) => {
-      const ready = item.status === "published";
-      return `<article class="admin-document-selection__item admin-document-selection__item--tool admin-selection-card admin-selection-card--single"><label class="admin-switch"><input type="checkbox" name="portfolio_tool" value="${escapeHtml(item.id)}" data-selection-primary${ready && item.includeInPortfolio ? " checked" : ""}${ready ? " data-selection-count-item" : " disabled"}><span class="admin-document-selection__identity" data-selection-content><strong title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</strong><small title="${escapeHtml(item.slug || "Slug not set")}">${item.slug ? `Slug: ${escapeHtml(item.slug)}` : "Slug not set"}</small></span></label><span class="status status--${item.status}">${ready ? "Ready" : item.status === "archived" ? "Archived" : "Draft"}</span></article>`;
-    }).join("")}
+    <div class="admin-cv-selection__list">${runtime.tools.map((item) => renderPortfolioToolRow({ id: item.id, name: item.name, slug: item.slug, status: item.status, ready: item.status === "published", included: Boolean(item.includeInPortfolio) })).join("")}</div>
     </section>
   </div>`,
 });
