@@ -940,13 +940,14 @@
 .admin-portfolio-project__include {
   grid-area: include;
   gap: .4rem;
+  padding: .25rem;
   font-size: var(--admin-text-xs);
   white-space: nowrap;
 }
 
 .admin-portfolio-project__include input[type="checkbox"] {
-  width: 1.5rem;
-  height: 1.5rem;
+  width: 1rem;
+  height: 1rem;
   margin: 0;
   accent-color: var(--color-primary);
 }
