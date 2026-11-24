@@ -21,6 +21,7 @@
 //   header-sticky (≤ 900) header **dính trên cùng** khi cuộn: sau khi cuộn 700 px, đỉnh header = 0, nền không trong suốt, vẫn thấy menu (ADR-040, W-34)
 //   nav-line     (≤ 900) menu **không đường kẻ** dưới cả hàng (border-bottom = 0; ADR-040)
 //   anchor-clear (≤ 900) bấm một mục menu: tiêu đề section đích nằm **dưới** header dính, không bị che (ADR-040)
+//   sheet-cell   (điện thoại ≤ 650, một cột) ô "SHEET 01 / 01" của khung bản vẽ **luôn hiện**, mọi chiều cao màn hình, cả EN và VI (Sổ #37, ADR-040; chỉ máy tính hai cột ≥ 651 px mới ẩn khi thấp hơn 821 px)
 //   nav-flat     (≤ 900) menu **phẳng** như hình 2 của Sổ #33: mục không viền, nền trong suốt (chỉ được có một đường kẻ dưới cả hàng); mỗi mục cao ≥ 44 px, rộng ≥ 44 px, chữ ≥ 12 px (ADR-039)
 //   buttons-equal (điện thoại ≤ 650) các nút hero cùng độ rộng, xếp 2 × 2 (ADR-037 c, W-28)
 //   grid-alpha   độ đậm lưới `--grid-alpha` ≤ 8 % khi màn ≤ 650 px, 14 % ở máy tính (ADR-037 b, W-28)
@@ -32,7 +33,7 @@ import { chromium } from "playwright";
 const section = (process.argv.find((arg) => arg.startsWith("--section=")) ?? "--section=all").split("=")[1];
 const origin = process.env.PF_ORIGIN ?? "http://localhost:5199";
 const sets = {
-  phone: [[320, 568], [360, 640], [375, 667], [390, 844], [393, 852], [412, 915], [430, 932]],
+  phone: [[320, 568], [360, 640], [360, 800], [375, 667], [390, 844], [393, 852], [412, 915], [430, 932]],
   desktop: [[1440, 731], [1920, 940], [2560, 1300]],
   preview: [[1440, 900], [1280, 800], [900, 800], [768, 1024], [651, 900], [390, 844]],
 };
@@ -99,8 +100,10 @@ for (const kind of wanted) {
           if (tops.length > 1) cardSpread = Math.max(cardSpread, Math.max(...tops) - Math.min(...tops));
         }
       }
+      const sheetEl = document.querySelector(".hero__cell--sheet");
+      const sheetShown = sheetEl ? getComputedStyle(sheetEl).display !== "none" && sheetEl.getBoundingClientRect().height > 0 : null;
       const broken = [...document.images].filter((i) => i.complete && i.naturalWidth === 0).length;
-      return { navFlat, nav, buttons, gridAlpha, alphaRaw, cardSpread, cardRowsChecked, photoGapBelow, stripGap, photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
+      return { sheetShown, navFlat, nav, buttons, gridAlpha, alphaRaw, cardSpread, cardRowsChecked, photoGapBelow, stripGap, photoGap, hscroll: document.documentElement.scrollWidth > innerWidth + 1, overflow, ctaBottom, nextTop, navLinks, smallTargets, tinyText, smallParagraphs, broken, vh: innerHeight };
     }, { phone: isPhone });
     report(!r.hscroll && r.overflow.length === 0, `${tag}  no-hscroll`, r.overflow.length ? `(${r.overflow.join(", ")})` : "");
     report(r.ctaBottom !== null && r.ctaBottom <= r.vh, `${tag}  first-screen`, `(nút chính kết thúc ở ${r.ctaBottom} px / ${r.vh} px)`);
@@ -121,6 +124,7 @@ for (const kind of wanted) {
     if (width <= 900) report(r.navFlat.count >= 4 && r.navFlat.bordered === 0 && r.navFlat.filled === 0 && r.navFlat.small === 0, `${tag}  nav-flat`, `(${r.navFlat.count} mục; ${r.navFlat.bordered} mục còn viền, ${r.navFlat.filled} mục có nền, ${r.navFlat.small} mục nhỏ hơn 44 px; phải phẳng, không viền, không nền, ≥ 44 × 44)`);
     report(width <= 650 ? r.gridAlpha <= 8 : r.gridAlpha === 14, `${tag}  grid-alpha`, `(--grid-alpha = ${r.alphaRaw}; phải ≤ 8 % khi ≤ 650 px, 14 % ở máy tính)`);
     if (r.cardRowsChecked) report(r.cardSpread <= 1, `${tag}  cards-aligned`, `(${r.cardRowsChecked} hàng thẻ; lệch cao nhất ${r.cardSpread} px giữa các thẻ cùng hàng; phải ≤ 1)`);
+    if (width <= 650 && r.sheetShown !== null) report(r.sheetShown, `${tag}  sheet-cell`, `(ô SHEET 01 / 01 ${r.sheetShown ? "hiện" : "bị ẩn"} ở ${width} × ${height}; phải luôn hiện ở ≤ 650 px)`);
     report(r.broken === 0, `${tag}  images`, r.broken ? `(${r.broken} ảnh hỏng)` : "");
     if (width <= 900) {
       await page.evaluate(() => window.scrollTo(0, 0));

@@ -12,6 +12,7 @@
 | Đề bài | Cỡ | Dự báo tốn (Claude — cửa sổ code) | Lượt sửa dự kiến | Vì sao |
 |---|---|---|---|---|
 | GD3-23 màu từ logo | Vừa | **~10 % (8 – 14 %)** | +3 % nếu có sửa | hàm trích màu + UI + công cụ đo + test; ràng buộc CSS không tăng có thể thêm việc |
+| GD3-25 ô SHEET hiện trên điện thoại | Nhỏ | **~2 % (1 – 3 %)** | +1 % | một khối CSS trong `home.css` + test + một phép đo có sẵn |
 | GD3-24 meta hàng cắt gọn | Nhỏ | **~3 % (2 – 5 %)** | +2 % | một khối CSS + phép đo ở 6 độ rộng + `shots --stress` |
 | GD3-14 Hero tagline + migration | Vừa | **~9 % (7 – 12 %)** | +3 % | field Admin + migration + test; có bước tay của người vận hành (không tính token) |
 | N10 chữ bị cắt "…" (chưa có đề bài) | Vừa | **~8 – 10 %** | +3 % | phụ thuộc phương án (bộ đếm ký tự trong Admin) |
@@ -50,4 +51,5 @@
 | 2026-11-24 | GD3-22 | Nhỏ | | | |
 | 2026-11-24 | GD3-23 | Vừa | | | |
 | 2026-11-24 | GD3-24 | Nhỏ | | | |
+| 2026-11-24 | GD3-25 | Nhỏ | | | |
 | 2026-11-17 | GD3-14 | Vừa | | | | N12: ô Hero tagline Admin + migration |

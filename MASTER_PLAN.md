@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.42.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.43.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -77,6 +77,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.43.0 | 2026-11-24 | Đọc sổ #37, #38 → W-36 (ô SHEET mất ở điện thoại cao < 821 px: lỗi của quy tắc GD3-12, giao [GD3-25](docs/tasks/GD3-25-trang-chu-sheet-hien-tren-dien-thoai.md); `home-viewport-check` thêm `sheet-cell` và cỡ 360 × 800, mốc 4 FAIL), W-37 (cặp màu của GD3-23 không thẳng hàng: gộp vào vòng sửa GD3-23) |
 | 1.42.0 | 2026-11-24 | Review GD3-23 (màu từ logo): chạy đúng ở bốn nơi, logo không rời máy, 2 Nên sửa; người vận hành chốt **nâng ngân sách CSS Admin 27 → 28 kB** ([ADR-041](decisions/ADR-REGISTER.md)) và gửi lại GD3-23 sửa (lưu ý token: dự báo 10 %, thực tế ~4 %) |
 | 1.41.0 | 2026-11-24 | GD3-22 ĐẠT, người vận hành duyệt, **gộp** (`d9770e4`) và push: header trang chủ dính ở ≤ 900 px (nền đặc, không đường kẻ, link nhảy không bị che), ô khung bản vẽ ghi "SHEET" cả tiếng Việt (ADR-040); `home-viewport-check` All PASS 212 dòng; Sổ #35, #36 / W-34, W-35 đã sửa; còn lại GD3-23 (màu từ logo), GD3-24 (meta hàng), GD3-14, N10; thêm mục **dự báo token** vào `docs/96` |
 | 1.40.0 | 2026-11-24 | GD3-21 ĐẠT, **gộp** và push: mọi checkbox Admin 16 × 16 bằng một quy tắc chung (CSS Admin 26,9 / 27,0 kB, giảm 0,1 kB); Sổ #32 / W-31 hoàn tất; tìm thấy lỗi có sẵn (dòng meta hàng Portfolio tràn ở 1440 / 1920 với chuỗi dài, UI-18) → giao [GD3-24](docs/tasks/GD3-24-admin-meta-hang-cat-gon.md); GD3-22 đang code |
