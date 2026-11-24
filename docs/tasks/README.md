@@ -137,3 +137,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-15](GD3-15-trang-chu-subgrid-menu-luoi.md) | Trang chủ: thẻ dự án subgrid, menu 2 × 2, lưới nhạt và nút hero đều nhau trên điện thoại (N13: W-27, W-28) | `ĐẠT` (gộp 2026-11-24) |
 | [GD3-16](GD3-16-admin-hang-du-an-portfolio-gon.md) | Admin Portfolio: hàng dự án / công cụ gọn, công tắc cùng hàng với tên (N14: W-26) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |
 | [GD3-17](GD3-17-admin-hang-portfolio-dung-quy-tac.md) | Admin Portfolio: hàng dự án / công cụ đúng quy tắc (Draft nét đứt, chevron vuông; N15: W-29, UI-16) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |
+| [GD3-18](GD3-18-admin-o-chon-dong-bo.md) | Admin Portfolio: ô chọn "In Portfolio" 16 px đồng bộ với cả Admin, vùng bấm 24 px bằng đệm (N16: W-31, UI-17) | `GIAO CODE` (Nhỏ; tự gộp được nếu review sạch) |
