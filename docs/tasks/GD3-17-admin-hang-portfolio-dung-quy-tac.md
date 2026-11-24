@@ -1,6 +1,6 @@
 # GD3-17 — Admin › Portfolio › Projects & tools: sửa hàng cho đúng quy tắc (nhóm N15)
 
-> **Trạng thái:** CẦN SỬA (review 1) · **Nhánh:** `gd3/17-admin-hang-portfolio-dung-quy-tac` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (review 2 sạch; gộp 2026-11-24) · **Nhánh:** `gd3/17-admin-hang-portfolio-dung-quy-tac` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -103,3 +103,12 @@ Sửa hai chỗ lệch quy tắc của GD3-16 (Sổ #30, W-29, [UI-16](../92-ui-
 - **Cần người vận hành chốt:** không (không đổi hình thức ở màn lớn; ẩn chữ nhãn ở cột hẹp là quyết định kỹ thuật theo UI-16 / §14 mục 4, **Claude đề xuất và tự quyết**; nếu bạn muốn giữ chữ "In Portfolio" mọi lúc, cho tôi biết, phương án thay thế là xếp công tắc xuống dòng meta ở cột hẹp, hàng cao ~92 px).
 - **Ghi nhận:** hai việc đề bài giao (nét đứt, chevron vuông) **đã đúng**; coder báo trung thực các mục chưa kiểm (đúng quy trình mới). Token: Claude — cửa sổ code 43 % → 44 %.
 - Kết luận: **PHẢI SỬA** (một mục: cột hẹp, §14 mục 4).
+
+### Review 2 (2026-11-24, `6919009`)
+
+- **Checklist giao diện (UI-16) chạy lại cho phần sửa:** §14 mục 1 đạt (`verify:admin` 45 file / 338 test; Admin JS 92,8 / 115,0, CSS **27,0 / 27,0** kB gzip: vừa đủ, không dư); mục 4 **đạt** (1024, 768, 390: tên hẹp nhất 176 / 148 / 177 px ≥ 128, hàng 64 px; `name-width` PASS); mục 5 đạt (công tắc 24 × 24, nhãn chữ ẩn kiểu sr-only nhưng `aria-label` "In Portfolio: <tên>" còn nguyên, đo trên trình duyệt thật ở 768 và 390); mục 9: tên dài vẫn "…" có `title`, dòng trạng thái cắt có `title`; mục 10, 12, 16 vẫn đạt (nét đứt, chevron vuông, 3 màn hình mục tiêu All PASS 18 phép + 3 phép `name-width`).
+- Ảnh xem: 768 (hàng Tắt, Draft, Bật; Draft chip xuống dòng meta, không còn dấu "·" đứng đầu).
+- CSS gỡ ra là **chết thật** (đã grep: `.admin-document-selection__item--tool`, `.admin-document-selection__identity` không còn trong `src`).
+- **Phải sửa:** không. **Nên sửa:** không. **Cần người vận hành chốt:** không.
+- **Ghi nhận:** (1) ở cột hẹp địa điểm bị ẩn khi hàng có dòng trạng thái (chỉ còn trạng thái); chấp nhận vì địa điểm vẫn nằm ở hàng rộng và trong tooltip tên. (2) **Ngân sách CSS Admin đã hết dư địa (27,0 / 27,0)**: đề bài Admin kế tiếp phải bớt CSS hoặc xin nâng ngân sách ([docs/admin-operations.md](../admin-operations.md)). (3) Token: Claude — cửa sổ code 43 % → 47 % (~4 % cả hai lượt).
+- Kết luận: **ĐẠT**; Admin-only, không migration, không đổi giao diện công khai → **tự gộp (ADR-018)**.
