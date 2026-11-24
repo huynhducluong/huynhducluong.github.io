@@ -43,15 +43,32 @@
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin` (CSS / JS gzip trước / sau):
-- `tools/theme-from-logo-check.mjs` (mốc FAIL → sau):
-- **Bảng kiểm kê điều khiển:**
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/23-admin-mau-tu-logo (commit feat(GD3-23))
+- File đã đổi (ghi rõ file dùng chung): mới: src/shared/logoPalette.ts (+ test), src/admin/themeFromLogo.ts (nạp lười), src/admin/documentThemeFields.test.ts, tools/theme-from-logo-check.mjs. Sửa: **src/admin/documentThemeFields.ts (dùng chung: CV, Portfolio, Cover Letter, Homepage)**, src/styles/admin-documents.css, src/admin/adminStyles.test.ts. Không đổi `buildDocumentThemeTokens`, workspace nào, hay dữ liệu.
+- `verify:admin` (CSS / JS gzip trước / sau): đạt. **CSS 27 638 → 27 647 byte gzip, ngân sách 27 648: còn dư đúng 1 byte** (GD3-21 đã đưa CSS xuống 26,9 kB trước; ~0,3 kB thêm cho khối nút / cặp màu, tôi gọn thêm bằng cách bỏ `gap` / `border-radius` của ô màu). JS khởi đầu **92,8 → 92,8 kB** (phần trích màu và đọc ảnh là chunk nạp lười `themeFromLogo`, không vào ngân sách đầu). Lần thêm CSS Admin sau chắc chắn vượt: cần nâng ngân sách hoặc gỡ CSS chết.
+- `tools/theme-from-logo-check.mjs` (mốc FAIL → sau): mốc **2 FAIL** (chạy thật trên `main`: nút chưa có ở CV và Cover Letter; các phép còn lại bị bỏ qua) → **All PASS** (16 dòng: nút, số cặp, không request mạng, bấm cặp đầu → Custom, hai màu đúng, "Text on primary 6.3 : 1, passes", cho cả CV và Cover Letter). Phép `no-network` chỉ đếm request không phải script / stylesheet / font (chunk nạp lười của Vite là script, không phải logo).
+- **Bảng kiểm kê điều khiển** (1440, 1180, 768, 390 đều đo, kết quả giống nhau: cột form hẹp nên bố cục không đổi theo viewport):
+
+  | Điều khiển | Kích thước | So với có sẵn |
+  |---|---|---|
+  | Nút "Pick colors from logo" (`button--secondary`) | 173 × 40 | cùng cao 40 với nút Save / More (112 × 40) |
+  | Nút cặp màu (hai ô 16 × 16 + mã hex) | 120 – 123 × 40 | cùng kiểu `button--secondary`, cao 40 |
+  | Ô màu `type="color"` có sẵn | không đổi | |
+  | Ô file ẩn | không nhìn thấy (hidden) | không có file input native nhìn thấy (§6.5) |
+
+  Logo thử: chữ "ACME" xanh ngọc trên nền trong suốt + ô vuông cam → 2 cặp (#0e766e / #f59e0b và đảo lại), không cuộn ngang ở cả bốn độ rộng. Tôi thấy ảnh khối theme ở 1440 (nút, hai cặp, dòng gợi ý); ảnh 390 chụp lệch khung (đã xem, không đọc được khối theme) nên **chưa có ảnh 390 dùng được**, chỉ có số đo.
+
+  Thuật toán (ngưỡng ghi trong `logoPalette.ts`): bỏ điểm alpha < 128, bão hòa HSV < 0,2, độ sáng < 0,2; gom 5 bit mỗi kênh rồi hợp màu cách nhau < 64 (khoảng cách RGB); xếp theo diện tích × (0,5 + bão hòa); Accent = màu kế tiếp lệch sắc ≥ 30°, nếu không có thì biến thể sáng (màu tối) hoặc tối (màu sáng) 30 – 35 %; tối đa 3 cặp (Primary lần lượt là ba màu nổi nhất).
 - **Checklist giao diện từng mục (§14 × 16, docs/92 §2):**
-- Chỗ làm khác đề bài và lý do:
+
+  §14: 1 đạt. 2 đạt về dùng chung (một renderer cho mọi nơi có theme) nhưng **chỉ đo CV và Cover Letter**; Portfolio dùng cùng `themeFields` của CV; **Homepage (siteWorkspace) chưa đo**. 3 không kiểm. 4 đã đo ở 1440 / 1180 / 768 / 390 (số). 5 đạt về markup: nút có chữ, cặp màu có `aria-label` "Use #… and #…", dòng gợi ý `aria-live="polite"`; **chưa thử Tab / Enter thật**. 6 – 9, 11, 13 – 16 không áp dụng (9: tên cặp màu cố định). 10 đạt (không đổi card). 12 không áp dụng.
+
+  Kiểm theo tiêu chí nghiệm thu: bấm cặp → Custom, hai màu đổi, tương phản ≥ 4,5 (đã đo). **Chưa kiểm:** preview đổi màu và dirty-state bật (tôi phát `input` và `change` trên hai ô màu như người dùng đổi tay nên các trình nghe có sẵn chạy, nhưng không đo từng cái); **tải lại sau Save draft vẫn giữ màu** (không bấm Save để khỏi ghi dữ liệu thật); logo SVG và logo thật của công ty; trạng thái `disabled` (tài liệu khóa) trong trình duyệt (chỉ có test markup); file không phải ảnh / > 5 MB trong trình duyệt (có mã và toast, chưa thử).
+
+  docs/92 §2: 2 đã áp UI-17 (nút cao 40 như nút Admin khác). 3 mọi trạng thái nút: chưa chọn, có cặp, rỗng ("No prominent color found in this logo."). 4 không dữ liệu dài. 5 có số đo. 6 file dùng chung: `documentThemeFields.ts`. 7 không UI mới.
+- Chỗ làm khác đề bài và lý do: nhãn nút là "Pick colors from logo" (Admin chỉ tiếng Anh; đề bài ghi "Lấy màu từ logo" là tên tính năng). Gắn hành vi bằng **trình nghe `document` dùng chung** trong `documentThemeFields.ts` (một chỗ, không sửa ba workspace); sự kiện `input` / `change` của chính ô file bị chặn ở pha capture để không đánh dấu form bẩn (chỉ bấm cặp mới đánh dấu). Dòng tương phản đo `primary đã chỉnh` / `onPrimary` (chữ trên màu chính), vì đó là cặp thật sự in ra; hệ thống đã có quy tắc làm tối màu chính, nên thường là "passes" và chỉ ghi "Adjusted for contrast" khi màu chính bị đổi. Ô màu giữ mã gốc của logo, không thay bằng màu đã chỉnh.
 - Câu hỏi:
 
 ## 6. Review của Claude

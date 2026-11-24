@@ -333,6 +333,30 @@
   min-width: 0;
 }
 
+.admin-document-theme__logo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .5rem;
+  margin-top: .75rem;
+}
+
+.admin-document-theme__pairs {
+  display: contents;
+}
+
+.admin-document-theme__logo .admin-field-hint {
+  flex: 1 1 100%;
+  margin: 0;
+}
+
+.admin-theme-pair__swatch {
+  width: 1rem;
+  height: 1rem;
+  border: 1px solid var(--admin-color-border);
+  background: var(--swatch);
+}
+
 .admin-year-field {
   display: grid;
   min-width: 0;

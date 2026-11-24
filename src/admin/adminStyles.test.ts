@@ -109,6 +109,14 @@ describe("Admin stylesheet contract", () => {
     expect(ui).not.toMatch(/\.admin-selection-card :is\(\[data-selection-primary\][^{]*\{[^}]*(width|!important)/);
   });
 
+  it("lays the logo color pairs out under the theme fields without new tokens (ADR-040)", () => {
+    const documents = Object.values(import.meta.glob<string>("../styles/admin-documents.css", { query: "?raw", import: "default", eager: true }))[0];
+    expect(documents).toMatch(/\.admin-document-theme__logo \{\s*display: flex;\s*flex-wrap: wrap;/);
+    expect(documents).toMatch(/\.admin-theme-pair__swatch \{[^}]*background: var\(--swatch\)/);
+    expect(documents).toMatch(/\.admin-document-theme__logo \.admin-field-hint \{\s*flex: 1 1 100%;/);
+    expect(documents.slice(documents.indexOf(".admin-document-theme__logo {"), documents.indexOf(".admin-year-field {"))).not.toContain("!important");
+  });
+
   it("names the owner in the rail and never lets a long name widen it (§11)", () => {
     const admin = Object.values(import.meta.glob<string>("../styles/admin.css", { query: "?raw", import: "default", eager: true }))[0];
     const main = Object.values(import.meta.glob<string>("./main.ts", { query: "?raw", import: "default", eager: true }))[0];
