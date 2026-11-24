@@ -18,6 +18,9 @@
 //   photo-fit    ảnh hồ sơ hiện nguyên: tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08 (ảnh vuông thì khung vuông; ADR-035)
 //   titleblock-fit khung bản vẽ của hero ôm sát nội dung: không dải trống dưới bảng tên (≤ 2 px) và không khe giữa ảnh và bảng tên (≤ 4 px)
 //   nav-fit      (≤ 900) menu **một hàng**: đủ 4 mục, **không cuộn ngang**, không mục nào ngoài khung (ADR-039, W-32; thay 2 × 2 của ADR-037 a / ADR-038)
+//   header-sticky (≤ 900) header **dính trên cùng** khi cuộn: sau khi cuộn 700 px, đỉnh header = 0, nền không trong suốt, vẫn thấy menu (ADR-040, W-34)
+//   nav-line     (≤ 900) menu **không đường kẻ** dưới cả hàng (border-bottom = 0; ADR-040)
+//   anchor-clear (≤ 900) bấm một mục menu: tiêu đề section đích nằm **dưới** header dính, không bị che (ADR-040)
 //   nav-flat     (≤ 900) menu **phẳng** như hình 2 của Sổ #33: mục không viền, nền trong suốt (chỉ được có một đường kẻ dưới cả hàng); mỗi mục cao ≥ 44 px, rộng ≥ 44 px, chữ ≥ 12 px (ADR-039)
 //   buttons-equal (điện thoại ≤ 650) các nút hero cùng độ rộng, xếp 2 × 2 (ADR-037 c, W-28)
 //   grid-alpha   độ đậm lưới `--grid-alpha` ≤ 8 % khi màn ≤ 650 px, 14 % ở máy tính (ADR-037 b, W-28)
@@ -119,6 +122,25 @@ for (const kind of wanted) {
     report(width <= 650 ? r.gridAlpha <= 8 : r.gridAlpha === 14, `${tag}  grid-alpha`, `(--grid-alpha = ${r.alphaRaw}; phải ≤ 8 % khi ≤ 650 px, 14 % ở máy tính)`);
     if (r.cardRowsChecked) report(r.cardSpread <= 1, `${tag}  cards-aligned`, `(${r.cardRowsChecked} hàng thẻ; lệch cao nhất ${r.cardSpread} px giữa các thẻ cùng hàng; phải ≤ 1)`);
     report(r.broken === 0, `${tag}  images`, r.broken ? `(${r.broken} ảnh hỏng)` : "");
+    if (width <= 900) {
+      await page.evaluate(() => window.scrollTo(0, 0));
+      const line = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector(".site-nav__links")).borderBottomWidth));
+      report(line === 0, `${tag}  nav-line`, `(border-bottom của menu = ${line} px; phải 0)`);
+      await page.evaluate(() => window.scrollTo(0, 700)); await page.waitForTimeout(300);
+      const st = await page.evaluate(() => { const h = document.querySelector(".site-header"); const r = h.getBoundingClientRect(); const s = getComputedStyle(h); const links = [...h.querySelectorAll(".site-nav__links a")].filter((a) => a.getBoundingClientRect().height > 0 && a.getBoundingClientRect().bottom > 0).length; return { top: Math.round(r.top), bottom: Math.round(r.bottom), bg: s.backgroundColor, links }; });
+      const opaque = !/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)|transparent/.test(st.bg);
+      report(st.top === 0 && opaque && st.links >= 4, `${tag}  header-sticky`, `(sau khi cuộn 700 px: đỉnh header ${st.top} px, nền ${opaque ? "đặc" : "trong suốt"}, ${st.links} mục menu thấy được; phải 0, đặc, 4)`);
+      const hrefs = await page.evaluate(() => [...document.querySelectorAll(".site-nav__links a")].map((a) => a.getAttribute("href")).filter((h) => h && h.startsWith("#")));
+      let covered = 0;
+      for (const href of hrefs) {
+        await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(150);
+        await page.evaluate((h) => { location.hash = ""; document.querySelector(`.site-nav__links a[href="${h}"]`).click(); }, href);
+        await page.waitForTimeout(500);
+        const gap = await page.evaluate((h) => { const sec = document.querySelector(h); const head = sec.querySelector(".section-heading, .section-kicker, h2") ?? sec; const hb = document.querySelector(".site-header").getBoundingClientRect().bottom; return Math.round(head.getBoundingClientRect().top - hb); }, href);
+        if (gap < 0) covered += 1;
+      }
+      report(hrefs.length >= 4 && covered === 0, `${tag}  anchor-clear`, `(${hrefs.length} link, ${covered} tiêu đề section bị header che; phải 0)`);
+    }
     await context.close();
   }
 }

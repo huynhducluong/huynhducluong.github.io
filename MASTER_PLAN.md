@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.38.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.39.0 · **Cập nhật:** 2026-11-24 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -77,6 +77,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.39.0 | 2026-11-24 | Đọc sổ #34 – #36; người vận hành chốt cả ba phương án A ([ADR-040](decisions/ADR-REGISTER.md): màu từ logo, header dính ≤ 900 px bỏ đường kẻ, ô SHEET cả VI); giao [GD3-22](docs/tasks/GD3-22-trang-chu-header-dinh-sheet.md) (Nhỏ, cần duyệt gộp; `home-viewport-check` thêm `header-sticky`, `nav-line`, `anchor-clear`, mốc 22 FAIL) và [GD3-23](docs/tasks/GD3-23-admin-mau-tu-logo.md) (Vừa, Admin) |
 | 1.38.0 | 2026-11-24 | GD3-20 ĐẠT, người vận hành duyệt, **gộp** (`e498e9a`) và push: menu ≤ 900 px một hàng phẳng không lướt ngang, vừa EN và VI ở 320 – 430 px (ADR-039); `home-viewport-check` All PASS 179 dòng; Sổ #33 / W-32 đã sửa; #18 chuyển sang hoãn theo quyết định của người vận hành; giao [GD3-21](docs/tasks/GD3-21-admin-checkbox-16px-chung.md) (checkbox 16 px chung) |
 | 1.37.0 | 2026-11-24 | Đọc sổ #33 → W-32; người vận hành chốt phương án A (ADR-039: menu ≤ 900 px một hàng phẳng không lướt ngang, thay ADR-038); giao [GD3-20](docs/tasks/GD3-20-trang-chu-menu-mot-hang-phang.md); `home-viewport-check` đổi phép `nav-fit` (một hàng) và `nav-flat`, mốc 22 FAIL |
 | 1.36.0 | 2026-11-24 | GD3-19 ĐẠT sau review 2, người vận hành duyệt, **gộp** (`bd99251`) và push: menu trang chủ ≤ 900 px là bốn ô viền chung đường kẻ, chữ canh trái (ADR-038); `home-viewport-check` All PASS 170 dòng; Sổ #31 / W-30 đã sửa; còn lại GD3-14 (Hero tagline, migration), N10, checkbox trách nhiệm 13 px, #17 – #25 |
