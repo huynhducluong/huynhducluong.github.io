@@ -1,6 +1,6 @@
 # GD3-13 — Trang chủ: thẻ dự án "SHEET" có ảnh và chip lọc theo công nghệ (nhóm N12)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` **tách từ nhánh GD3-12** (`git switch gd3/12-trang-chu-blueprint-nen-hero; git switch -c gd3/13-trang-chu-the-du-an-chip`), vì hai đề bài gộp cùng một lần · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CHỜ DUYỆT (gộp cùng GD3-12) · **Nhánh:** `gd3/13-trang-chu-the-du-an-chip` **tách từ nhánh GD3-12** (`git switch gd3/12-trang-chu-blueprint-nen-hero; git switch -c gd3/13-trang-chu-the-du-an-chip`), vì hai đề bài gộp cùng một lần · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** người vận hành chốt "gộp cùng lúc" (2026-11-24): Claude review xong thì gộp `gd3/12` rồi `gd3/13` vào `main` và **push một lần** (một lần deploy); **cần người vận hành duyệt** (đổi giao diện công khai). Không có migration.
 
 ## 1. Mục tiêu
@@ -46,19 +46,54 @@ Phần dự án của trang chủ theo ADR-033 (d): **thẻ dự án kiểu "SHE
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code: · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`: số test đạt / tổng:
-- `tools/home-viewport-check.mjs` (PASS / FAIL):
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+- Đã xong bước: 1, 2, 3, 4 (làm một lượt, một commit)
+- Người code: Claude — cửa sổ code · đã dùng trước / sau: không đo
+- Nhánh, commit cuối: `gd3/13-trang-chu-the-du-an-chip` (tách từ gd3/12), xem `git log`
+- File đã đổi (ghi rõ file dùng chung): `src/site/homeProjects.ts` (mới: `projectChips`, `renderProjectSheet`, `renderProjectFilter`, `bindProjectFilter`), `src/site/homeProjects.test.ts` (mới, 14 test), `src/main.ts` (mục #projects dùng hàm mới), `src/styles/home.css` (thẻ SHEET, chip, `.sr-only`, lưới auto-fill, `margin: 0` cho `.hero__titleblock`). Không đổi `renderers.ts`, `/projects/`.
+- `verify:admin`: đạt (typecheck, test, build, ngân sách bundle: JS 92,8 / 115,0 kB, CSS 26,7 / 27,0 kB gzip)
+- `tools/home-viewport-check.mjs` (PASS / FAIL): All PASS (14 cỡ màn hình; `titleblock-fit` từ 14 FAIL xuống 0)
+- Chỗ làm khác đề bài và lý do: (1) nguyên nhân `titleblock-fit`: `<dl>` bảng tên còn lề mặc định 1em (16 px trên, 16 px dưới) — sửa `margin: 0`. (2) `.sr-only` chưa có ngoài admin.css nên thêm vào home.css. (3) Dữ liệu dev hiện chỉ có 2 dự án cùng công nghệ nên chưa thấy chip ẩn thẻ trên trình duyệt; logic lọc xem bằng đọc code, chưa có test DOM. (4) Dự án không ảnh: ô decorative không chữ; link ảnh `aria-hidden` + `tabindex="-1"`. Chưa chụp 1440×731 của phần Projects để so (có chụp 320/390/1440 vào `tmp/`, không commit).
+- **Sửa review 1 (ADR-036):** (1) bỏ `escapeHtml` thừa ở dòng "SHEET nn · địa điểm", thêm test địa điểm có `&`, `<` (một lần `&amp;` / `&lt;`, không `&amp;amp;`). (2) `projectChips` bỏ chip có số bằng tổng số dự án (`count < technologyLists.length`); không còn chip thì `renderProjectFilter` trả "" (không "All", không `aria-live`); test (a)–(d). (3) test DOM giả cho `bindProjectFilter` (`hidden`, `aria-pressed`, `aria-live`, an toàn khi không có chip). (4) `text-decoration: none` cho `.project-card__image--empty` + test CSS. File: `homeProjects.ts`, `homeProjects.test.ts`, `home.css`.
+- Kết quả sau sửa: `home-viewport-check` **All PASS** (`titleblock-fit` vẫn đạt); `verify:admin` đạt (Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip, không đổi); `homeProjects.test.ts` 19 test đạt. Với dữ liệu thật (3 dự án cùng 5 công nghệ) trang chủ **không còn dải chip**: đúng ADR-036. Chưa chụp ảnh thẻ ở 390 / 1440 và thẻ thiếu ảnh giả lập (để Claude chụp khi review).
+- Câu hỏi: không
 
 ## 6. Review của Claude
 
-- Ngày, commit đã review:
+- Ngày, commit đã review: 2026-11-24, `84e2f55` (worktree `D:\wt\pf-review`, `npm ci` sạch; đã xóa). Nhánh tách từ `gd3/12` nên diff gồm cả GD3-12 (đã review ĐẠT, review 5). Đo trên bản đã publish và trên Admin thật.
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 45 file / **327** test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi).
+  - `node tools/home-viewport-check.mjs`: **All PASS, 106 dòng PASS, 0 FAIL** (14 cỡ màn hình, gồm `titleblock-fit`: mốc 14 FAIL → 0; nguyên nhân đúng như báo cáo: `<dl>` bảng tên còn lề mặc định 16 px).
+  - **Chip lọc trên DOM thật** (phần người code chưa kiểm được): dữ liệu thật hiện có 3 dự án nổi bật **đều có ảnh** và cùng 5 công nghệ, nên tôi gán lại `data-tech` khác nhau cho từng thẻ để thử: bấm Revit → 2/3 thẻ hiện (cả `hidden` lẫn `display` tính ra), Dynamo → 2/3, All → đủ 3; `aria-pressed` đúng một chip; vùng `aria-live` đọc "Showing 2 of 3 projects"; Enter trên chip hoạt động; tiếng Việt: nhãn nhóm "Lọc dự án theo công nghệ", chip "Tất cả 3", "Hiển thị tất cả 3 dự án", link "Xem dự án →".
+  - Ảnh xem: Projects ở 1440 (ba thẻ SHEET có ảnh, chip một hàng) và 390 (chip xuống dòng, thẻ một cột; cao chip 44 px ở cả 390 và 320; không cuộn ngang). Thẻ thiếu ảnh (giả lập thay ảnh bằng ô trống): ô lưới nhẹ có "SHEET 01", đúng ý đồ, **không** chữ "Image will be added".
+  - Preview Website trong Admin ở 1440, 1280, 768, 390: không cuộn ngang, 3 thẻ và 8 chip ở cả bốn.
 - **Phải sửa:**
-- **Nên sửa:**
-- **Cần người vận hành chốt:**
-- Kết luận:
+  1. **Thoát chuỗi hai lần ở dòng "SHEET nn · địa điểm" của thẻ dự án** (E-003, [AGENTS §5.3](../../AGENTS.md)). `localize()` đã escape; `renderProjectSheet` lại bọc `escapeHtml(part)` lần nữa khi dựng `kicker`. **Đã tái hiện:** địa điểm "Ho Chi Minh & Binh Duong" ra `Ho Chi Minh &amp;amp; Binh Duong`, trang hiện chữ "&amp;" thay vì "&". Tên và vai trò thì đúng (một lần). Test hiện có chỉ dùng địa điểm "Hanoi" nên không bắt được. **Sửa:** bỏ `escapeHtml` ở `kicker` (chỉ giữ `number` thuần); **thêm test** địa điểm có `&` và `<`: HTML phải chứa `&amp;` / `&lt;` đúng một lần và không chứa `&amp;amp;`.
+- **Nên sửa:** (1) nhãn "SHEET nn" trong ô thiếu ảnh bị **gạch chân** (kế thừa `text-decoration` của link bao quanh): thêm `text-decoration: none` cho `.project-card__image--empty`. (2) Thêm một test DOM nhỏ cho `bindProjectFilter` (hiện chỉ kiểm bằng đọc code): gán `data-tech` khác nhau, bấm chip, kiểm `hidden`, `aria-pressed`, văn bản `aria-live`.
+- **Cần người vận hành chốt:** **chip lọc chưa có tác dụng với dữ liệu hiện tại.** Bản đã publish có 3 dự án nổi bật cùng chia sẻ cả 5 công nghệ, nên mọi chip đều ghi "3" và bấm vào vẫn hiện đủ 3 thẻ. Phương án: **(a)** giữ nguyên (chip sẽ có ích khi dự án có công nghệ khác nhau); **(b) khuyến nghị:** **ẩn chip mà lọc không loại thẻ nào** (số bằng tổng), và ẩn cả hàng khi không còn chip nào; hiện chip tự xuất hiện khi dữ liệu khác nhau; **(c)** lọc theo tiêu chí khác (địa điểm, vai trò). Khuyến nghị (b): người xem không thấy chip "vô dụng" lúc này nhưng vẫn có lọc về sau; cái giá: hôm nay trang chủ không thấy dải chip nào, và cần thêm một dòng logic và một test.
+- **Ghi nhận:** (1) dữ liệu thật nay có **3** dự án nổi bật, đều có ảnh (bạn đã gán ảnh và publish), nên trang đẹp hơn nhiều so với 2 / 6 trước đây. (2) Cửa sổ code thêm `.sr-only` vào `home.css` vì trước chỉ có ở `admin.css`: hợp lý. (3) Tôi đã xóa ba ảnh chụp rời của cửa sổ code trong `tmp/` (không có trong commit).
+- Token: Claude — cửa sổ code 15 % → 17 % đã dùng (~2 %, Vừa).
+- Kết luận: **CẦN SỬA** (1 mục "Phải sửa": thoát chuỗi hai lần; 2 mục "Nên sửa" nhỏ). Sửa xong báo lại; Claude kiểm lại (test thoát chuỗi, ảnh ô thiếu ảnh) rồi chờ người vận hành chốt chip và duyệt gộp **cả GD3-12 và GD3-13**.
+
+### Review 1 — bổ sung sau khi người vận hành chốt chip (ADR-036, 2026-11-24)
+
+Sửa trên cùng nhánh `gd3/13-trang-chu-the-du-an-chip`. Làm cả ba mục của review 1 và mục mới dưới đây, rồi chạy `node tools/home-viewport-check.mjs` (All PASS) và `verify:admin`.
+
+- **Phải sửa 1 (thoát chuỗi hai lần ở địa điểm):** như mục 6 phía trên (bỏ `escapeHtml(part)` ở `kicker`; test địa điểm có `&`, `<`).
+- **Phải sửa 2 (mới, ADR-036 — chip chỉ hiện khi có tác dụng):**
+  - `projectChips` (hoặc bước dựng chip) **bỏ chip có số dự án bằng tổng số dự án** (bấm vào không loại thẻ nào) và vẫn giữ tối đa 7 chip còn lại theo số lượng rồi theo tên.
+  - Nếu **không còn chip nào**, `renderProjectFilter` trả về chuỗi rỗng: **không** hiện chip "All", không hiện vùng `aria-live`; `bindProjectFilter` chạy an toàn khi không có chip.
+  - Còn ít nhất một chip: giữ "All" (đang chọn) cùng các chip còn lại như hiện nay.
+  - **Test:** (a) tất cả dự án cùng công nghệ → không có chip, không có "All", không có `aria-live`; (b) hai dự án, một công nghệ chung và một công nghệ riêng → chỉ chip công nghệ riêng (số 1) cùng "All"; (c) một dự án duy nhất → không chip; (d) giới hạn 7 chip còn đúng sau khi lọc; (e) `bindProjectFilter` gán `data-tech` khác nhau, bấm chip: `hidden`, `aria-pressed`, văn bản `aria-live` đúng (đây cũng là test DOM của "Nên sửa 2").
+  - Với dữ liệu thật hiện nay (3 dự án cùng 5 công nghệ) trang chủ **không còn dải chip nào**: đó là kết quả đúng, ghi vào mục 5. Các phép đo `tap`, `font`, `no-hscroll` của công cụ đo không được xấu đi.
+- **Nên sửa 1:** `text-decoration: none` cho `.project-card__image--empty` (nhãn SHEET trong ô thiếu ảnh không gạch chân).
+- **Nghiệm thu bổ sung:** đọc `projectChips` bằng test với dữ liệu giả có công nghệ khác nhau; xem ảnh thẻ có ảnh ở 390 và 1440 (không dải chip) và ảnh một thẻ thiếu ảnh giả lập.
+
+### Review 2 (2026-11-24, `2db9b7d`; worktree sạch, đã xóa)
+
+- `verify:admin`: 45 file / **334** test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi). `node tools/home-viewport-check.mjs`: **All PASS, 106 dòng PASS, 0 FAIL** (đã đếm lại).
+- **Đã đo trên trình duyệt thật:** (1) thoát chuỗi: kicker ra `SHEET 01 · Ho Chi Minh &amp; Binh Duong` (một lần, hiện đúng chữ "&"); (2) chip: với dữ liệu giả có công nghệ khác nhau (Revit chung, Dynamo, Python, C# riêng) `projectChips` ra Dynamo 2, C# 1, Python 1 (Revit bị bỏ vì ở cả ba dự án), bấm Dynamo → 2/3 thẻ, Python → 1/3, All → 3/3, `aria-pressed` và `aria-live` đúng; (3) **dữ liệu thật** (3 dự án cùng 5 công nghệ): không có chip, không có "All", không có vùng `aria-live`; (4) ô thiếu ảnh: `text-decoration` = none. Ảnh phần Projects ở 1440 (ba thẻ SHEET có ảnh, không dải chip, lưới liền).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** người code chạy lại `verify:admin` từ PowerShell `D:\` sau khi thấy lỗi E-006 từ shell Bash: đúng cách.
+- **Cần người vận hành chốt:** **duyệt gộp** (đổi giao diện công khai, ADR-018): gộp `gd3/12` rồi `gd3/13` và push **một lần**.
+- Token: Claude — cửa sổ code 22 % → 24 % cho lượt sửa (~2 %); cả đề bài 15 % → 24 % (~9 %).
+- Kết luận: **ĐẠT, CHỜ DUYỆT** — sạch về kỹ thuật.
