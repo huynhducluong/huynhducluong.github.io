@@ -1,6 +1,6 @@
 # GD3-20 — Trang chủ: menu ≤ 900 px một hàng phẳng, không lướt ngang (nhóm N18)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/20-trang-chu-menu-mot-hang-phang` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 1 sạch) · **Nhánh:** `gd3/20-trang-chu-menu-mot-hang-phang` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Nhỏ (~3 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
@@ -73,4 +73,15 @@ Sổ #33 / W-32 / [ADR-039](../../decisions/ADR-REGISTER.md) (phương án A): m
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `3b4316f` (đo trên dev server cổng 5173 của người vận hành, thư mục chính đang ở nhánh này).
+- **Checklist giao diện (UI-16, UI-17), Claude chạy lại từng mục, gồm các mục coder chưa xem:**
+  - §9 / `docs/92` §2 mục 1: `verify:admin` 45 file / **339** test, Admin CSS 27,0 / 27,0 kB (không đổi); `node tools/home-viewport-check.mjs` **All PASS, 179 dòng PASS, 0 FAIL** (gồm `nav-fit`, `nav-flat` EN và sáu phép VI).
+  - **Một hàng, không lướt ngang, đo trên trình duyệt thật (EN và VI):** 320 (12 px; EN 60/69/53/76, VI 79/80/**44**/80), 360 (12,96 px; EN 64/74/57/81, VI 85/86/45/86), 375 VI (13,5 px), 412 và 430 VI (14 px): mọi cỡ **một hàng**, mép phải ≤ khung (320 → 304, 360 → 344), không cuộn ngang, cao 44 px, rộng ≥ 44 px, không viền, không nền, một đường kẻ dưới cả hàng. `first-screen` đạt (320 × 568: nút chính ở 413 – 440 px).
+  - **Tablet và máy tính:** 651, 768 (VI), 900: một hàng dàn đều, phẳng; **901 và 1440 không đổi** (85 / 95 / 77 / 103 px, không đường kẻ dưới).
+  - **Bàn phím:** Tab tới "Experience": viền focus 3 px, chữ đổi màu và gạch chân, `:focus-visible` đúng (ảnh đã xem).
+  - Ảnh xem: 360 EN (khung một hàng như hình 2 của sổ #33), 320 VI (đủ bốn mục), trạng thái focus.
+- **Kiểm kê (UI-17 điều 2):** bảng của coder khớp số đo của tôi (link menu, nút hero, công tắc ngôn ngữ).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** (1) "Dự án" tiếng Việt ở 320 rộng **44 px**, đúng sàn ≥ 44, không dư; chấp nhận, nhưng đừng đổi nhãn VI dài hơn. (2) `clamp(var(--font-size-xs), 3.6vw, var(--font-size-sm))` thay tầng 340 px nên không thêm breakpoint: tốt. (3) Token: coder chưa ghi, để trống `docs/96`.
+- **Cần người vận hành chốt:** **duyệt gộp** (đổi giao diện công khai, ADR-018). Không migration. Bạn xem trực tiếp trên localhost:5173 (đang ở nhánh `gd3/20`).
+- Kết luận: **ĐẠT, CHỜ DUYỆT**.

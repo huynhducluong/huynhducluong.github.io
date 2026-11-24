@@ -139,4 +139,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-17](GD3-17-admin-hang-portfolio-dung-quy-tac.md) | Admin Portfolio: hàng dự án / công cụ đúng quy tắc (Draft nét đứt, chevron vuông; N15: W-29, UI-16) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |
 | [GD3-18](GD3-18-admin-o-chon-dong-bo.md) | Admin Portfolio: ô chọn "In Portfolio" 16 px đồng bộ với cả Admin, vùng bấm 24 px bằng đệm (N16: W-31, UI-17) | `ĐẠT` (gộp 2026-11-24, tự gộp theo ADR-018) |
 | [GD3-19](GD3-19-trang-chu-menu-dien-thoai-co-o.md) | Trang chủ: menu điện thoại 2 × 2 có ô viền như bảng tên bản vẽ (N17: W-30, ADR-038) | `ĐẠT` (gộp 2026-11-24) |
-| [GD3-20](GD3-20-trang-chu-menu-mot-hang-phang.md) | Trang chủ: menu ≤ 900 px một hàng phẳng không lướt ngang, vừa EN và VI ở 320 – 430 px (N18: W-32, ADR-039) | `GIAO CODE` (Nhỏ; cần người vận hành duyệt gộp) |
+| [GD3-20](GD3-20-trang-chu-menu-mot-hang-phang.md) | Trang chủ: menu ≤ 900 px một hàng phẳng không lướt ngang, vừa EN và VI ở 320 – 430 px (N18: W-32, ADR-039) | `ĐẠT, CHỜ DUYỆT` (review 1 sạch) |
