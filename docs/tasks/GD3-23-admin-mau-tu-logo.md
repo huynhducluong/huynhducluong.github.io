@@ -1,6 +1,6 @@
 # GD3-23 — Admin › Appearance: "Lấy màu từ logo" (nhóm N20)
 
-> **Trạng thái:** CẦN SỬA (review 1: 2 mục Nên sửa + 1 mục chờ người vận hành chốt) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CẦN SỬA (review 1: 2 Nên sửa + nâng ngân sách CSS đã chốt) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai hay PDF **hiện có** (chỉ thêm khả năng chọn màu) → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -88,6 +88,16 @@
 - **Nên sửa:**
   1. **Gợi ý rác ở logo gần một màu:** logo xanh lục một màu cho cặp 2 và 3 là `#339c63 + #236d45` và `#94cbad + #688e79`: màu pha ở **viền khử răng cưa** (xám xanh), người dùng chọn nhầm sẽ ra màu bẩn. Sửa: bỏ điểm ảnh có độ trong suốt từng phần hoặc pha lẫn (chỉ giữ điểm có alpha ≥ 250 và nằm trong cụm màu chủ đạo), và **nếu chỉ còn một sắc thì trả tối đa 2 cặp** (màu chính + một biến thể đậm / nhạt), không phải 3; thêm test với ảnh có viền khử răng cưa.
   2. **Cặp đang dùng không có trạng thái:** sau khi bấm, nút cặp không đánh dấu nào là đang chọn (AGENTS §5.6: toggle phải có `aria-pressed`). Sửa: `aria-pressed` true cho cặp vừa áp dụng, false cho các cặp khác, và nhãn nhìn thấy ghi cả hai mã hex (hoặc hai ô màu có chữ ẩn đủ), vì hiện nhãn chỉ ghi mã Primary.
+- **Đã chốt (2026-11-24, ADR-041, "nâng 28"):** nâng ngân sách CSS Admin **27 → 28 kB gzip**. Việc của lượt sửa: **đổi `scripts/check-admin-bundle.mjs`** (`css: 27 * 1024` → `28 * 1024`) và dòng chú thích; docs đã cập nhật (`admin-operations.md`, `admin-ui-guidelines.md` §14). **Không** dùng phần nâng cho việc khác; vẫn không thêm CSS thừa. Văn bản gốc của mục chờ chốt:
 - **Cần người vận hành chốt (ngân sách CSS Admin):** CSS Admin còn dư **1 byte** (27 647 / 27 648). Khuyến nghị **nâng 27 → 28 kB gzip**: cái giá chỉ thêm ≤ 1 kB tải ban đầu cho Admin (gói JS 92,8 / 115 vẫn dư 22 kB), lợi ích là các đề bài Admin tiếp theo (GD3-24, N10, GD3-14) không phải dừng giữa chừng; phương án thay thế là một đề bài riêng gỡ CSS chết / tách CSS preview Cover Letter, mất nhiều token hơn và vẫn chỉ hoãn được vài lần. Nếu bạn đồng ý, Claude đổi `docs/admin-operations.md` (ADR mới) và coder đổi `scripts/check-admin-bundle.mjs` ở lượt sửa.
 - Kết luận: **CẦN SỬA** (không có lỗi chặn; hai mục Nên sửa phải làm trước khi tự gộp theo ADR-018; chờ quyết định ngân sách).
 - **Dự báo token cho lượt sửa:** ~2 – 3 % (hai chỗ nhỏ trong `logoPalette.ts`, `themeFromLogo.ts` + test; thêm 1 dòng ngân sách nếu bạn đồng ý).
+
+### Chỉ thị sửa (review 1, sau khi người vận hành chốt)
+
+Làm **ba** việc trên cùng nhánh rồi chạy lại `node tools/theme-from-logo-check.mjs`, `node tools/admin-checkbox-size-check.mjs` và `verify:admin` (CSS ≤ 28 kB):
+
+1. **Nên sửa 1:** bỏ điểm ảnh khử răng cưa / pha lẫn khi trích màu; logo một sắc trả tối đa 2 cặp; thêm test ảnh có viền khử răng cưa (logo lục một màu không còn cặp xám xanh).
+2. **Nên sửa 2:** `aria-pressed` cho cặp màu đang dùng; nhãn nhìn thấy ghi cả hai mã hex (hoặc hai ô màu kèm chữ ẩn đủ).
+3. **Ngân sách:** đổi `scripts/check-admin-bundle.mjs` 27 → 28 kB (ADR-041).
+- **Dự báo token cho lượt sửa:** ~2 – 3 % (khoảng 2 – 4 %).
