@@ -1,6 +1,6 @@
 # GD3-15 — Trang chủ: thẻ dự án thẳng hàng (subgrid), menu 2 × 2, lưới nhạt và nút hero đều nhau trên điện thoại (nhóm N13)
 
-> **Trạng thái:** GIAO CODE · **Nhánh:** `gd3/15-trang-chu-subgrid-menu-luoi` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT, CHỜ DUYỆT · **Nhánh:** `gd3/15-trang-chu-subgrid-menu-luoi` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~4 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi giao diện công khai → **cần người vận hành duyệt** trước khi gộp. Không có migration. Làm **trước** GD3-16 (một thư mục làm việc).
 
 ## 1. Mục tiêu
@@ -52,4 +52,13 @@ Ba quyết định của ADR-037 (Sổ #28, #29; W-27, W-28) cho trang chủ cô
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `3edac6e` (worktree `D:wtpf-review`, `npm ci` sạch; đã xóa; dev server riêng cổng 5198).
+- Đã kiểm (không dựa vào báo cáo):
+  - `verify:admin`: 45 file / **335** test đạt; Admin JS 92,8 / 115,0, CSS 26,7 / 27,0 kB gzip (không đổi).
+  - `node tools/home-viewport-check.mjs`: **All PASS, 142 dòng PASS, 0 FAIL** (mốc trước 29 FAIL; các phép cũ không xấu đi).
+  - **Subgrid trên trình duyệt thật (1440):** tiêu đề, vai trò, tóm tắt, thẻ công nghệ, link lệch **0 px** giữa ba thẻ. **Thử tên dài** (sửa DOM thẻ 1 thành tên 4 dòng): cả ba thẻ vẫn lệch 0 px, cả hàng cao thêm (627 → 694 px), thẻ 2 và 3 chừa khoảng trống dưới tên đúng như thiết kế.
+  - Ảnh xem: Projects ở 1440 (bình thường và tên dài), 320 (thẻ một cột, nút "View project" đủ), đầu trang ở 320 × 568 và 390 × 844 (menu 2 × 2, bốn nút hero 2 × 2 đều nhau, nút chính trong màn hình đầu).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** (1) đúng khi bỏ `gap` hàng của lưới cha và dùng `margin-bottom` (khoảng cách hàng cộng vào mọi hàng subgrid); `display: contents` cho `.project-card__body` ổn vì tên vẫn là link, thứ tự đọc không đổi. (2) Hai việc người code chưa làm (thẻ tên dài, ảnh bằng mắt) **đã được Claude làm khi review**, kết quả như trên. (3) Chữ trong ô menu canh giữa, ô không có viền nên "đều nhau" chỉ thấy qua chữ; đúng ADR-037, không đổi. (4) Người code chưa ghi token: để trống ở `docs/96`.
+- **Cần người vận hành chốt:** **duyệt gộp** (đổi giao diện công khai, ADR-018). Không migration.
+- Kết luận: **ĐẠT, CHỜ DUYỆT**: sạch về kỹ thuật.
