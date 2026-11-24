@@ -122,6 +122,36 @@ for (const kind of wanted) {
     await context.close();
   }
 }
+// Menu in Vietnamese (ADR-039): the longest labels must fit one row too (nav-fit, nav-flat).
+if (wanted.includes("phone")) {
+  for (const [width, height] of [[320, 568], [360, 800], [390, 844]]) {
+    const tag = `phone ${width}×${height} vi`;
+    const context = await browser.newContext({ viewport: { width, height }, reducedMotion: "reduce", hasTouch: true, isMobile: true });
+    const page = await context.newPage();
+    await page.goto(`${origin}/?lang=vi`, { waitUntil: "networkidle", timeout: 60_000 });
+    await page.waitForSelector(".hero, #top", { timeout: 30_000 });
+    await page.waitForTimeout(1500);
+    const r = await page.evaluate(() => {
+      const links = [...document.querySelectorAll(".site-nav__links a")].filter((a) => a.getBoundingClientRect().width > 0);
+      const list = document.querySelector(".site-nav__links");
+      const boxes = links.map((a) => a.getBoundingClientRect());
+      const side = (el) => ["Top", "Right", "Bottom", "Left"].some((x) => parseFloat(getComputedStyle(el)["border" + x + "Width"]) >= 1 && getComputedStyle(el)["border" + x + "Style"] !== "none");
+      return {
+        count: links.length,
+        rows: new Set(boxes.map((b) => Math.round(b.top))).size,
+        scrolls: list.scrollWidth > list.clientWidth + 1,
+        outside: boxes.filter((b) => b.left < -0.5 || b.right > innerWidth + 0.5).length,
+        textFit: links.filter((a) => a.scrollWidth > a.clientWidth + 1).length,
+        bordered: links.filter(side).length,
+        small: boxes.filter((b) => b.width < 44 || b.height < 44).length,
+        font: getComputedStyle(links[0]).fontSize,
+      };
+    });
+    report(r.count >= 4 && r.rows === 1 && !r.scrolls && r.outside === 0 && r.textFit === 0, `${tag}  nav-fit`, `(${r.count} mục, ${r.rows} hàng, ${r.scrolls ? "còn cuộn ngang, " : ""}${r.outside} mục ngoài khung, ${r.textFit} chữ bị cắt, chữ ${r.font})`);
+    report(r.bordered === 0 && r.small === 0, `${tag}  nav-flat`, `(${r.bordered} mục còn viền, ${r.small} mục < 44 px)`);
+    await context.close();
+  }
+}
 await browser.close();
 console.log(failures ? `\n${failures} FAIL` : "\nAll PASS");
 process.exit(failures ? 1 : 0);

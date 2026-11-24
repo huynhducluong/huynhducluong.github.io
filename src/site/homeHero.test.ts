@@ -78,14 +78,18 @@ describe("renderHero", () => {
 });
 
 describe("home Blueprint CSS contract", () => {
-  it("draws the 2 × 2 menu (≤ 900 px) as four bordered cells sharing their rules (ADR-038)", () => {
-    const tablet = homeCss.slice(homeCss.indexOf("@media (max-width: 900px)"), homeCss.indexOf("@media (min-width: 651px)"));
-    expect(tablet).toMatch(/\.site-nav__links a \{[^}]*justify-content: flex-start;[^}]*border: 1px solid var\(--color-primary\);[^}]*background: var\(--color-surface\)/);
-    expect(tablet).toMatch(/\.site-nav__links \{[^}]*gap: 0;[^}]*padding: 0 1px 1px 0/);
-    expect(tablet).toMatch(/\.site-nav__links li \{[^}]*margin: 0 -1px -1px 0/);
-    // From 901 px the menu is one row again: no cell border there.
-    expect(homeCss.slice(homeCss.indexOf("@media (min-width: 901px)"), homeCss.indexOf("@media (max-width: 650px)"))).not.toMatch(/\.site-nav__links a \{[^}]*border/);
-    expect(tablet).not.toContain("!important");
+  it("lays the menu out as one flat row up to 900 px, then back to the desktop row (ADR-039)", () => {
+    const base = homeCss.slice(homeCss.indexOf(".site-nav__links {"), homeCss.indexOf(".hero {"));
+    expect(base).toMatch(/\.site-nav__links \{[^}]*flex-wrap: nowrap;[^}]*justify-content: space-between/);
+    expect(base).toMatch(/\.site-nav__links a \{[^}]*min-height: 44px;[^}]*font-size: clamp\(var\(--font-size-xs\), 3\.6vw, var\(--font-size-sm\)\)/);
+    expect(base).not.toMatch(/\.site-nav__links a \{[^}]*border:/);
+    expect(base).not.toContain("grid-template-columns");
+    expect(homeCss).not.toMatch(/margin: 0 -1px -1px 0/);
+    // From 901 px: left-aligned row, no rule under it, the original padding and size.
+    const desktop = homeCss.slice(homeCss.indexOf("@media (min-width: 901px)"), homeCss.indexOf("@media (max-width: 650px)"));
+    expect(desktop).toMatch(/\.site-nav__links \{[^}]*justify-content: flex-start;[^}]*border-bottom: 0/);
+    expect(desktop).toMatch(/\.site-nav__links a \{[^}]*padding-inline: var\(--space-3\);[^}]*font-size: var\(--font-size-sm\)/);
+    expect(base + desktop).not.toContain("!important");
   });
 
   it("declares the new tokens", () => {
