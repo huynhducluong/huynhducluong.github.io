@@ -42,15 +42,33 @@ Sổ #33 / W-32 / [ADR-039](../../decisions/ADR-REGISTER.md) (phương án A): m
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 22 FAIL):
-- **Bảng kiểm kê điều khiển (EN và VI):**
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/20-trang-chu-menu-mot-hang-phang (commit feat(GD3-20))
+- File đã đổi (ghi rõ file dùng chung): src/styles/home.css, src/site/homeHero.test.ts, src/site/homeProjects.test.ts (bỏ khẳng định menu lưới 2 × 2 của GD3-15 vì ADR-039 thay thế), tools/home-viewport-check.mjs. Không file dùng chung.
+- `verify:admin`: đạt (CSS Admin 27,0 / 27,0 kB, không liên quan trang chủ).
+- `tools/home-viewport-check.mjs` (PASS / FAIL, mốc 22 FAIL): **All PASS** (gồm `first-screen` 320 × 568 và sáu phép VI mới ở 320 / 360 / 390). Mốc 22 FAIL lấy từ đề bài, tôi không chạy lại; phần VI mới tôi thêm sau khi sửa CSS nên **không có số FAIL mốc** cho nó.
+- **Bảng kiểm kê điều khiển (EN và VI)** (`getComputedStyle` / `getBoundingClientRect`):
+
+  | Rộng | Ngôn ngữ | Link menu: chữ · rộng × cao · nền · viền | Nút hero phụ | Công tắc ngôn ngữ |
+  |---|---|---|---|---|
+  | 320 | EN | 12 px · 53 – 76 × 44 · trong suốt · 0 | 16 px · 140 × 52 · 1 px | 12 px · 44 × 44 · 1 px |
+  | 360 | EN | 12,96 px · 57 – 81 × 44 · trong suốt · 0 | 16 px · 160 × 52 | 12 px · 44 × 44 |
+  | 390 | EN | 14 px · 61 – 87 × 44 · trong suốt · 0 | 16 px · 175 × 52 | 12 px · 44 × 44 |
+  | 320 | VI | 12 px · 44 – 80 × 44 · trong suốt · 0 | 16 px · 140 × 52 | 12 px · 44 × 44 |
+  | 360 | VI | 12,96 px · 45 – 86 × 44 · trong suốt · 0 | 16 px · 160 × 52 | 12 px · 44 × 44 |
+  | 390 | VI | 14 px · 48 – 92 × 44 · trong suốt · 0 | 16 px · 175 × 52 | 12 px · 44 × 44 |
+  | 1440 (không đổi) | EN | 14 px · 77 – 103 × 44 (85 / 95 / 77 / 103) · trong suốt · 0 | 16 px · 158 × 52 | 12 px · 44 × 44 |
+
+  Lệch có chủ ý: chữ menu (12 – 14 px, theo `clamp(--font-size-xs, 3.6vw, --font-size-sm)`) nhỏ hơn nút hero (16 px) để vừa một hàng cho cả EN và VI; mục "Dự án" tiếng Việt rộng đúng 44 – 48 px (chạm sàn 44). Link menu không viền, nút hero có viền 1 px: menu là hàng chữ phẳng theo ADR-039. Cỡ chữ không dưới 12 px; không thêm breakpoint (dùng `vw` trong `clamp`, nên không cần mốc 340).
 - **Checklist giao diện từng mục (ui-guidelines §9, docs/92 §2):**
-- Chỗ làm khác đề bài và lý do:
+
+  §9: 1 đạt. 2 đã đo EN và `?lang=vi` ở 320 / 360 / 390 (và EN ở mọi cỡ ≤ 900 trong `home-viewport-check`); **chưa thử chỉ bằng bàn phím**. 3 đạt: `no-hscroll` PASS, không đổi alt / link. 4 – 10 không áp dụng.
+
+  docs/92 §2: 2 đã áp UI-16, UI-17 (bảng kiểm kê ở trên, đo cạnh nút hero và công tắc ngôn ngữ). 3 trạng thái: thường đã đo; hover / `:focus-visible` đổi màu `--color-primary` + gạch chân (không làm lệch hàng), **chưa chụp ảnh trạng thái focus**. 4 dữ liệu dài: nhãn menu cố định, không áp dụng. 5 có số đo (bảng, `nav-fit`, `nav-flat`). 6 không file dùng chung. 7 không lỗi UI mới.
+
+  Ảnh đã xem: 360 × 800 EN (một hàng, đường kẻ dưới cả hàng) và 320 × 568 VI (cả bốn mục "Chuyên môn / Kinh nghiệm / Dự án / Tự động hóa" vừa một hàng). Ảnh 320 × 568 EN, 390 × 844 EN và 360 × 800 VI đã chụp ra nhưng **chưa xem lại từng ảnh**; số đo thay thế. Máy tính 1440 không đổi (độ rộng bốn mục 85 / 95 / 77 / 103 như trước).
+- Chỗ làm khác đề bài và lý do: đưa kiểu một hàng vào quy tắc **nền** của `.site-nav__links` (bỏ lưới 2 × 2 nền và khối ô viền của GD3-19), rồi đặt lại `justify-content`, `border-bottom`, đệm và cỡ chữ trong khối ≥ 901 px để máy tính giống hệt (đã đo 1440). Cỡ chữ dùng `clamp()` theo `vw` thay vì ba bậc 14 / 13 / 12 với breakpoint 340. Đường kẻ dưới cả hàng dùng `--color-border`.
 - Câu hỏi:
 
 ## 6. Review của Claude
