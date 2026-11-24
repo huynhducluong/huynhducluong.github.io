@@ -390,7 +390,7 @@ Collection list cạnh editor (Content, thư viện CV/Portfolio, Cover Letter) 
 - Thứ tự tải stylesheet được `adminStyles.test.ts` khóa; `admin-ui.css` là lớp chuẩn hóa cuối cùng và chứa chrome dùng chung.
 - Style riêng workspace nằm trong stylesheet của workspace đó; mẫu dùng chung nằm trong `admin-ui.css`.
 - **Scroll và frame layout.** Frame shell, workspace và layout hai cột dùng `overflow: clip`, không dùng `hidden`. Frame `hidden` vẫn có thể bị script scroll, nên `element.scrollIntoView()` (hoặc `focus()` vào trường ở xa) có thể scroll toàn bộ workspace lên và để lại dải trống phía dưới (lỗi link "Language: English"). Chỉ pane editor, preview và list được scroll (`overflow-y: auto`). Để đưa thứ gì đó vào vùng nhìn thấy, gọi `revealAdminElement(element, { align })`. Hàm chỉ scroll container thật gần nhất. Sau khi chuyển tab hoặc panel, chờ một animation frame trước khi reveal, và focus với `{ preventScroll: true }`. Không bao giờ gọi `scrollIntoView` trong Admin; `adminStyles.test.ts` bắt buộc điều này.
-- `npm run check:admin-bundle` bắt buộc ngân sách Admin ban đầu (JS 115 kB, CSS 27 kB gzip). Xóa CSS thừa trước khi tăng ngân sách và giải thích mọi mức tăng trong commit message.
+- `npm run check:admin-bundle` bắt buộc ngân sách Admin ban đầu (JS 115 kB, CSS 28 kB gzip, ADR-041). Xóa CSS thừa trước khi tăng ngân sách và giải thích mọi mức tăng trong commit message.
 
 ## 13. Preference UI được lưu lâu dài
 

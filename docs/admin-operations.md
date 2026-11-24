@@ -79,7 +79,7 @@ npm run verify:admin
 
 Lệnh thực hiện kiểm tra TypeScript, bộ test hồi quy Vitest, production build Vite và kiểm tra ngân sách bundle ban đầu của Admin. Bất kỳ bước nào thất bại đều trả về exit code khác 0 và ngăn deploy GitHub Pages.
 
-Ngân sách ban đầu hiện tại là 115 kB gzip cho JavaScript và 27 kB gzip cho CSS (sau GD3-16 CSS đã dùng 26,9 kB: **sau GD3-17 đã hết dư địa: 27,0 / 27,0 kB**, đề bài Admin kế tiếp phải làm gọn CSS hoặc xin nâng ngân sách). Ngân sách CSS được tăng từ 26 kB vào 2026-11-01 vì preview Cover Letter render inline trong Admin nên cần `document-typography.css` (các font face Be Vietnam Pro và token kiểu chữ tài liệu, khoảng 0,6 kB gzip); trước đó, quá trình quét CSS thừa không tìm thấy gì có thể bỏ. CSS workspace Admin được tải sớm theo thứ tự xác định để lớp chuẩn hóa UI cuối cùng không thể bị đảo ngược do tải theo route. Chỉ chạy kiểm tra bundle sau khi đã có production build hiện tại bằng:
+Ngân sách ban đầu hiện tại là 115 kB gzip cho JavaScript và **28 kB gzip cho CSS** (nâng từ 27 kB ngày 2026-11-24, [ADR-041](../decisions/ADR-REGISTER.md): CSS đã dùng 27 647 / 27 648 byte sau GD3-23). Vẫn xóa CSS chết trước khi dùng phần nâng. Ngân sách CSS được tăng từ 26 kB vào 2026-11-01 vì preview Cover Letter render inline trong Admin nên cần `document-typography.css` (các font face Be Vietnam Pro và token kiểu chữ tài liệu, khoảng 0,6 kB gzip); trước đó, quá trình quét CSS thừa không tìm thấy gì có thể bỏ. CSS workspace Admin được tải sớm theo thứ tự xác định để lớp chuẩn hóa UI cuối cùng không thể bị đảo ngược do tải theo route. Chỉ chạy kiểm tra bundle sau khi đã có production build hiện tại bằng:
 
 ```powershell
 npm run check:admin-bundle
