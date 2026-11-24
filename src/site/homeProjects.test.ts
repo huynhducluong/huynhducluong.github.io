@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from "vitest";
 import homeCss from "../styles/home.css?raw";
 import type { PortfolioProject } from "../types/portfolio";
-import { projectChips, renderProjectFilter, renderProjectSheet } from "./homeProjects";
+import { bindProjectFilter, projectChips, renderProjectFilter, renderProjectSheet } from "./homeProjects";
 
 beforeAll(() => {
   vi.stubGlobal("window", { location: { origin: "http://localhost", href: "http://localhost/" } });
@@ -30,6 +30,7 @@ describe("projectChips", () => {
       ["Revit", "Dynamo", "Python"],
       ["revit", "Navisworks", "Python"],
       ["Revit", "A1", "B1", "C1", "D1", "E1"],
+      ["Z9"],
     ]);
     expect(chips.slice(0, 3).map((c) => c.label)).toEqual(["Revit", "Python", "A1"]);
     expect(chips[0].count).toBe(3);
@@ -40,6 +41,19 @@ describe("projectChips", () => {
   });
   it("is empty for no data", () => {
     expect(projectChips([])).toEqual([]);
+  });
+  it("has no chips when every project shares the same technologies", () => {
+    expect(projectChips([["Revit", "Dynamo"], ["Dynamo", "Revit"], ["revit", "dynamo"]])).toEqual([]);
+  });
+  it("has no chips for a single project", () => {
+    expect(projectChips([["Revit", "Dynamo"]])).toEqual([]);
+  });
+  it("keeps only the technology that tells projects apart", () => {
+    expect(projectChips([["Revit", "Dynamo"], ["Revit"]])).toEqual([{ label: "Dynamo", count: 1 }]);
+  });
+  it("still caps at 7 chips after dropping shared ones", () => {
+    const own = ["A", "B", "C", "D", "E", "F", "G", "H", "I"];
+    expect(projectChips([["Shared", ...own], ["Shared"]])).toHaveLength(7);
   });
 });
 
@@ -77,6 +91,12 @@ describe("renderProjectSheet", () => {
     expect(html).toContain("Tunnel &amp; &lt;Station&gt;");
     expect(html).not.toContain("<Station>");
   });
+  it("escapes the location in the kicker exactly once", () => {
+    const html = renderProjectSheet(project({ location: { en: "Ho Chi Minh & Binh Duong <x>", vi: "" } }), 0, "en");
+    expect(html).toContain("SHEET 01 · Ho Chi Minh &amp; Binh Duong &lt;x&gt;");
+    expect(html).not.toContain("&amp;amp;");
+    expect(html).not.toContain("&amp;lt;");
+  });
   it("localizes labels", () => {
     expect(renderProjectSheet(project(), 0, "vi")).toContain("Xem dự án →");
     expect(renderProjectSheet(project(), 0, "en")).toContain("View project →");
@@ -92,8 +112,53 @@ describe("renderProjectFilter", () => {
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain("Hiển thị tất cả 3 dự án");
   });
-  it("renders nothing without chips", () => {
-    expect(renderProjectFilter([], "en", 0)).toBe("");
+  it("renders nothing without chips: no All, no live region", () => {
+    const html = renderProjectFilter([], "en", 3);
+    expect(html).toBe("");
+    expect(html).not.toContain("aria-live");
+  });
+});
+
+describe("bindProjectFilter", () => {
+  const makeEl = (dataset: Record<string, string>) => {
+    const attrs: Record<string, string> = {};
+    const listeners: Array<() => void> = [];
+    return {
+      dataset,
+      hidden: false,
+      textContent: "",
+      attrs,
+      setAttribute: (name: string, value: string) => void (attrs[name] = value),
+      addEventListener: (_: string, fn: () => void) => void listeners.push(fn),
+      click: () => listeners.forEach((fn) => fn()),
+    };
+  };
+  const setup = () => {
+    const chips = [makeEl({ filter: "" }), makeEl({ filter: "revit" }), makeEl({ filter: "dynamo" })];
+    const cards = [makeEl({ tech: "revit|dynamo" }), makeEl({ tech: "revit" }), makeEl({ tech: "python" })];
+    const status = makeEl({});
+    const root = {
+      querySelectorAll: (selector: string) => (selector.startsWith(".chip") ? chips : cards),
+      querySelector: () => status,
+    };
+    bindProjectFilter(root as never, "en");
+    return { chips, cards, status };
+  };
+  it("hides non-matching cards, sets aria-pressed and announces the count", () => {
+    const { chips, cards, status } = setup();
+    chips[1].click();
+    expect(cards.map((c) => c.hidden)).toEqual([false, false, true]);
+    expect(chips.map((c) => c.attrs["aria-pressed"])).toEqual(["false", "true", "false"]);
+    expect(status.textContent).toBe("Showing 2 of 3 projects");
+    chips[2].click();
+    expect(cards.map((c) => c.hidden)).toEqual([false, true, true]);
+    chips[0].click();
+    expect(cards.map((c) => c.hidden)).toEqual([false, false, false]);
+    expect(status.textContent).toBe("Showing all 3 projects");
+  });
+  it("is safe without chips", () => {
+    const root = { querySelectorAll: () => [], querySelector: () => null };
+    expect(() => bindProjectFilter(root as never, "en")).not.toThrow();
   });
 });
 

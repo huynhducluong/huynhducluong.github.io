@@ -29,7 +29,10 @@ export interface ProjectChip {
   count: number;
 }
 
-/** Up to `limit` most common technologies: by count, then by name; case-insensitive, blanks dropped. */
+/**
+ * Up to `limit` most common technologies: by count, then by name; case-insensitive, blanks dropped.
+ * Technologies shared by every project are skipped: a chip that hides no card does nothing (ADR-036).
+ */
 export const projectChips = (technologyLists: string[][], limit = 7): ProjectChip[] => {
   const counts = new Map<string, ProjectChip>();
   for (const list of technologyLists) {
@@ -45,6 +48,7 @@ export const projectChips = (technologyLists: string[][], limit = 7): ProjectChi
     }
   }
   return [...counts.values()]
+    .filter((entry) => entry.count < technologyLists.length)
     .sort((first, second) => second.count - first.count || first.label.localeCompare(second.label))
     .slice(0, limit);
 };
@@ -61,7 +65,7 @@ export const renderProjectSheet = (project: PortfolioProject, index: number, lan
   const media = hasImage
     ? renderMedia(project.images[0], language, "project-card__image")
     : `<div class="project-card__image project-card__image--empty" aria-hidden="true"><span>${number}</span></div>`;
-  const kicker = [number, location].filter(Boolean).map((part) => (part === number ? number : escapeHtml(part))).join(" · ");
+  const kicker = [number, location].filter(Boolean).join(" · ");
   const technologies = project.technologies.map((item) => item.trim()).filter(Boolean);
   const keys = technologies.map((item) => item.toLowerCase()).join("|");
   return `
