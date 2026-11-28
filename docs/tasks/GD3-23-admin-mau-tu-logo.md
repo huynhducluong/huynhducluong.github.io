@@ -1,6 +1,6 @@
 # GD3-23 — Admin › Appearance: "Lấy màu từ logo" (nhóm N20)
 
-> **Trạng thái:** CẦN SỬA (review 2: 1 Phải sửa, Sổ #38 cặp màu không thẳng hàng) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** CHỜ REVIEW (đã sửa Phải sửa 1 của review 2) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai hay PDF **hiện có** (chỉ thêm khả năng chọn màu) → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
