@@ -1,6 +1,6 @@
 # GD3-23 — Admin › Appearance: "Lấy màu từ logo" (nhóm N20)
 
-> **Trạng thái:** CHỜ REVIEW (đã sửa Phải sửa 1 của review 2) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (review 3 sạch; gộp 2026-11-28) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai hay PDF **hiện có** (chỉ thêm khả năng chọn màu) → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -127,3 +127,13 @@ Làm **ba** việc trên cùng nhánh rồi chạy lại `node tools/theme-from-
 - **Nên sửa:** không. **Cần người vận hành chốt:** không.
 - **Ghi nhận:** (1) chỉnh tay ô màu sau khi bấm một cặp thì `aria-pressed` vẫn giữ cặp cũ (coder đã ghi); chấp nhận, hoặc bỏ `pressed` khi ô màu đổi bằng tay nếu rẻ. (2) Token lượt sửa 2: dự báo **~2 %** (1 – 3 %).
 - Kết luận: **CẦN SỬA** (một mục: lưới cặp màu).
+
+### Review 3 (2026-11-28, `6a3506c`; đo trên dev server cổng 5199)
+
+- **Checklist giao diện (UI-16, UI-17, §14) cho phần sửa:** mục 1 đạt: `verify:admin` 47 file / **357** test, CSS Admin 27,0 / 28,0 kB, JS 92,8 / 115,0 kB. Mục 2, 4, 12 đạt: `theme-from-logo-check` All PASS, gồm `pairs-aligned` ở CV và Cover Letter tại 1440 (lưới 2 cột, nút 209 – 212 × 40), 1180 và 768 (1 cột, rộng bằng khung), nút "Pick colors from logo" ở hàng riêng, không nút nào tràn chữ. Mục 5 đạt: `aria-pressed` đúng ở cặp vừa bấm. Ảnh 1440 đã xem: cặp màu thẳng cột, mép khớp lưới theme. Mục 10, 16 không đổi.
+- **Checkbox 16 px:** `admin-checkbox-size-check --all-widths` **All PASS, 28 / 28** (coder chưa chạy được: Portfolio nay có 19 dự án / 25 trang nên lần tải thứ hai quá 30 s; Claude chạy với thời gian chờ 120 s và sửa công cụ).
+- **`portfolio-selection-check`:** chỉ FAIL phép `state-style` vì dữ liệu thật hiện **không còn dự án Draft nào** (phép đòi > 0 hàng); không phải hồi quy; Claude sửa công cụ để báo "không có hàng Draft" thay vì FAIL.
+- **390 px (ghi nhận, có sẵn, không do GD3-23):** Admin tài liệu ở 390 px có header dính và khung preview chồng lên cột form nên Playwright không bấm được nút cặp màu (người dùng cuộn tay vẫn bấm được); đây là hành vi layout có từ trước, ngoài ba màn hình mục tiêu.
+- **Token:** dự báo lượt sửa 2 là ~2 % (1 – 3 %); người vận hành báo **4 % → 9 % = ~5 %** (cao hơn dự báo).
+- **Phải sửa:** không. **Nên sửa:** không. **Cần người vận hành chốt:** không.
+- Kết luận: **ĐẠT**; chỉ Admin, không migration, không đổi giao diện công khai → **tự gộp (ADR-018)**.
