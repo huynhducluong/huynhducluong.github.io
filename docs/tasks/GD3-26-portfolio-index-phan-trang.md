@@ -1,6 +1,6 @@
 # GD3-26 — Portfolio: trang Project index tự thêm trang khi nhiều dự án (nhóm N26)
 
-> **Trạng thái:** CHỜ REVIEW (làm **trước** GD3-25) · **Nhánh:** `gd3/26-portfolio-index-phan-trang` từ `main` · **Ngày giao:** 2026-11-28 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 1 sạch) · **Nhánh:** `gd3/26-portfolio-index-phan-trang` từ `main` · **Ngày giao:** 2026-11-28 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi đầu ra PDF Portfolio → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
@@ -62,4 +62,14 @@
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-28, `9056058` (đo trên dev server cổng 5199 từ thư mục chính đang ở nhánh này).
+- **Token:** dự báo ~10 % (7 – 13 %); người vận hành báo **13 % → 18 % = ~5 %**.
+- **Checklist (UI-16; ui-guidelines §9, docs/92 §2), Claude chạy lại:**
+  - §9 mục 1 đạt: `verify:admin` 48 file / **389** test; Admin JS 92,8 / 115,0 kB, CSS 27,0 / 28,0 kB.
+  - Mục 4, 7, 10 đạt: `portfolio-index-check` **All PASS**; `portfolio-video-link-check` All PASS; `portfolio-edit-markers-check` All PASS; `portfolio-detail-check` còn đúng **5 FAIL `[N9] facts`** ở trang dự án (diff chỉ đổi trang index, không chạm trang dự án → lỗi có sẵn; ghi W-42).
+  - **Dữ liệu thật** (Admin preview, 1920 × 940): 26 trang, index ở trang 3 và 4, tiêu đề "Project index (1/2)" / "(2/2)", 12 + 7 mục = 19, số 01 – 19 liên tục, 0 trang tràn, "Ready"; header, footer, số trang `03 / 26`, `04 / 26` đúng. Ảnh hai trang đã xem: không lấn footer.
+  - Mục 2, 3 không áp dụng; mục 5, 6, 8, 9 không đổi (không đụng theme, chrome, overlay).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** (1) trang 1 (12 thẻ) ảnh thấp hơn trang 2 (7 thẻ) do `is-dense` theo số thẻ của trang, đúng đề bài. (2) Chưa mở Print preview Chrome bằng tay (đã đếm trang bằng `page.pdf` của coder).
+- **Cần người vận hành chốt:** (a) **duyệt gộp** (đổi PDF, ADR-018); (b) tiêu đề trang đầu: **A** giữ "(1/2)" (khuyến nghị: người đọc biết còn trang sau) rồi Claude sửa câu ở `ui-guidelines` §8.4, hoặc **B** trang đầu không số.
+- Kết luận: **ĐẠT, CHỜ DUYỆT**.
