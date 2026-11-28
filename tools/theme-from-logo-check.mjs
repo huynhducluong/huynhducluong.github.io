@@ -10,6 +10,8 @@
 //   pressed      sau khi bấm cặp đầu: aria-pressed = true chỉ ở cặp đó
 //   apply        bấm cặp đầu: preset = Custom, hai ô màu đổi đúng mã của cặp, dòng tương phản ≥ 4,5 : 1
 //   no-network   chọn file không gửi request nào ra ngoài trang (logo không được tải lên đâu cả)
+//   pairs-aligned ở 1440, 1180, 768 (logo ba màu): nút chọn logo ở hàng riêng; các cặp rộng và cao bằng nhau (±1 px), thẳng cột,
+//                nằm trong khung theme, mép trái / phải khớp lưới theme, chữ không tràn
 // Thoát mã 1 nếu có FAIL.
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
@@ -39,6 +41,7 @@ for (const screen of screens) {
   const page = await context.newPage();
   const requests = [];
   page.on("request", (request) => { if (!/^(data|blob):/.test(request.url()) && !["script", "stylesheet", "font"].includes(request.resourceType())) requests.push(request.url()); });
+  await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(screen.url, { waitUntil: "networkidle" });
   await page.waitForTimeout(800);
   await page.evaluate((tab) => [...document.querySelectorAll("[role=tab]")].find((el) => (el.getAttribute("data-document-tab") || el.textContent.trim()) === tab)?.click(), screen.tab);
@@ -83,6 +86,32 @@ for (const screen of screens) {
     const pressed = await page.evaluate(() => [...document.querySelectorAll("[data-pair]")].map((b) => b.getAttribute("aria-pressed")).join(","));
     report(pressed.startsWith("true") && !pressed.slice(4).includes("true"), `${screen.name}  pressed`, `(aria-pressed: ${pressed}; chỉ cặp vừa chọn là true)`);
     report(after.preset === "custom" && after.primary === primary.toLowerCase() && after.accent === accent.toLowerCase() && ratio >= 4.5, `${screen.name}  apply`, `(preset ${after.preset}, ${after.primary} / ${after.accent}, "${after.hint}")`);
+  }
+  const threeColors = await page.evaluate(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 128; canvas.height = 128;
+    const context = canvas.getContext("2d");
+    for (const [color, x, w] of [["#d62828", 0, 64], ["#145ac8", 64, 40], ["#1ea050", 104, 24]]) { context.fillStyle = color; context.fillRect(x, 0, w, 128); }
+    return canvas.toDataURL("image/png");
+  });
+  await page.locator("[data-theme-logo-input]").first().setInputFiles({ name: "three-colors.png", mimeType: "image/png", buffer: Buffer.from(threeColors.split(",")[1], "base64") });
+  await page.waitForTimeout(700);
+  for (const width of [1440, 1180, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.waitForTimeout(400);
+    const { grid, button, pairs, clipped } = await page.evaluate(() => {
+      const root = document.querySelector(".admin-document-theme-field");
+      const rect = (el) => { const r = el.getBoundingClientRect(); return { left: r.left, right: r.right, top: r.top, bottom: r.bottom, width: r.width, height: r.height }; };
+      const buttons = [...root.querySelectorAll("[data-pair]")];
+      return { grid: rect(root.querySelector(".admin-document-theme")), button: rect(root.querySelector("[data-theme-logo-trigger]")), pairs: buttons.map(rect), clipped: buttons.filter((b) => b.scrollWidth > b.clientWidth + 1 || b.querySelector("span:last-child").getClientRects().length > 1).length };
+    });
+    const near = (a, b) => Math.abs(a - b) <= 1;
+    const columns = pairs.filter((p) => near(p.top, pairs[0]?.top)).length;
+    const ok = pairs.length === 3
+      && pairs.every((p, i) => near(p.width, pairs[0].width) && near(p.height, pairs[0].height) && near(p.left, pairs[i % columns].left))
+      && pairs.every((p) => p.top >= button.bottom && p.left >= grid.left - 1 && p.right <= grid.right + 1)
+      && near(pairs[0].left, grid.left) && near(pairs[columns - 1].right, grid.right) && clipped === 0;
+    report(ok, `${screen.name}  pairs-aligned  ${width}`, `(khung ${Math.round(grid.width)} px, ${columns} cột; x/y/rộng/cao: ${pairs.map((p) => [p.left, p.top, p.width, p.height].map(Math.round).join("/")).join(" · ")}; nút chọn logo đáy ${Math.round(button.bottom)}; ${clipped} nút tràn chữ)`);
   }
   await page.close();
 }

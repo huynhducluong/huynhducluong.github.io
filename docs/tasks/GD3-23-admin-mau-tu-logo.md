@@ -78,6 +78,16 @@
 - **Ngân sách (ADR-041):** `scripts/check-admin-bundle.mjs` CSS 27 → **28 kB** và dòng chú thích. CSS hiện **27,0 / 28,0 kB** (thêm quy tắc pressed ~ 0,1 kB).
 - Chạy lại: `theme-from-logo-check` **All PASS** (CV và Cover Letter, cả bốn logo + `pressed`), `admin-checkbox-size-check` **All PASS**, `verify:admin` đạt.
 
+### 5c. Sửa sau review 2 (Phải sửa 1: cặp màu thẳng hàng, Sổ #38)
+
+- **Đã sửa (`admin-documents.css`, chỉ CSS):** khối logo là lưới một cột; nút "Pick colors from logo" ở hàng riêng (`justify-self: start`); các cặp màu là lưới `repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr))`, `grid-auto-rows: 1fr`, gap `.75rem` như lưới theme; danh sách rỗng thì ẩn; dòng `aria-live` ở dưới. Test CSS trong `adminStyles.test.ts` đổi theo.
+- **Làm khác gợi ý:** cột tối thiểu **12,5rem** thay vì 11,5rem, vì nút rộng tự nhiên 199 px (> 184 px) nên ở khung 380 – 410 px chữ sẽ bị ép.
+- **`pairs-aligned` (mới trong `theme-from-logo-check`, logo ba màu, CV và Cover Letter):** mốc **6 FAIL** → **All PASS**. 1440: 2 cột 209 – 212 × 40 (cặp thứ ba ở hàng hai, cùng cột trái); 1180: 1 cột 338 – 342 × 40; 768: 1 cột 241 – 245 × 40; không nút nào tràn chữ. Đo thêm ở 390 (CV): 1 cột 270 × 40, không tràn.
+- **Ảnh:** đã xem khối theme ở 1440 (thẳng hàng). Ảnh 390 vẫn chụp lệch sang bản xem trước, **chỉ có số đo**; không xem ảnh 1180 / 768.
+- **`verify:admin`:** đạt; Admin CSS 27,0 / 28,0 kB, JS 92,8 / 115,0 kB.
+- **`admin-checkbox-size-check`:** bản gốc **không chạy hết**: `page.goto` quá 30 s khi chờ `networkidle` ở `?view=portfolio` (hai lần). Chạy bản tạm (chờ `load` + 4 s): 6 PASS, 1 FAIL "không có checkbox" ở Homepage › Content selection (1440×731), màn này đạt (42 ô) ở lần chạy bản gốc; bản tạm dừng ở độ rộng đầu. Vậy **chưa có lượt All PASS** cho công cụ này, cần Claude chạy lại khi review.
+- Không làm mục ghi nhận (bỏ `aria-pressed` khi chỉnh tay ô màu).
+
 ## 6. Review của Claude
 
 - Ngày, commit đã review: 2026-11-24, `d61d038` (đo trên dev server cổng 5173 của người vận hành, thư mục chính ở nhánh này; `.auth` chép sang 5173, tệp tạm đã xóa).

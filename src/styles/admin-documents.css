@@ -334,19 +334,28 @@
 }
 
 .admin-document-theme__logo {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: .5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: .75rem;
   margin-top: .75rem;
 }
 
+.admin-document-theme__logo > button {
+  justify-self: start;
+}
+
 .admin-document-theme__pairs {
-  display: contents;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr));
+  grid-auto-rows: 1fr;
+  gap: .75rem;
+}
+
+.admin-document-theme__pairs:empty {
+  display: none;
 }
 
 .admin-document-theme__logo .admin-field-hint {
-  flex: 1 1 100%;
   margin: 0;
 }
 
