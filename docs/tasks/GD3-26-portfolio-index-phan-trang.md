@@ -1,6 +1,6 @@
 # GD3-26 — Portfolio: trang Project index tự thêm trang khi nhiều dự án (nhóm N26)
 
-> **Trạng thái:** GIAO CODE (làm **trước** GD3-25) · **Nhánh:** `gd3/26-portfolio-index-phan-trang` từ `main` · **Ngày giao:** 2026-11-28 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 1 sạch) · **Nhánh:** `gd3/26-portfolio-index-phan-trang` từ `main` · **Ngày giao:** 2026-11-28 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi đầu ra PDF Portfolio → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu
@@ -41,17 +41,35 @@
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin`:
-- Công cụ đo (mốc FAIL trước → sau):
-- **Sức chứa mỗi layout và cách đo:**
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/26-portfolio-index-phan-trang (commit feat(GD3-26))
+- File đã đổi (ghi rõ file dùng chung): **dùng chung (Portfolio công khai / PDF và Admin preview):** `src/portfolio/renderPortfolioV2.ts`, `src/portfolio/layouts.ts`. Mới: `src/portfolio/indexPages.test.ts` (+ snapshot hai trang), `tools/portfolio-index-check.mjs`. Không đổi CSS, CV, Website, dữ liệu, migration, dependency.
+- `verify:admin`: đạt, 48 file / 389 test; Admin JS 92,8 / 115,0 kB, CSS 27,0 / 28,0 kB (không đổi).
+- Công cụ đo (mốc FAIL trước → sau): **48 FAIL / 48** (chạy trên code trước khi sửa: chưa có sức chứa; từ 19 dự án Classic và Visual, từ 12 Editorial còn thêm tràn) → **All PASS** (48 tổ hợp + 3 phép đếm trang PDF).
+- **Sức chứa mỗi layout và cách đo:** `index.classic` **10**, `index.visual` **12**, `index.editorial` **8** (`PORTFOLIO_INDEX_CAPACITY` trong `layouts.ts`). Đo bằng `node tools/portfolio-index-check.mjs --probe` trên code cũ (mọi mục dồn một trang A4 ngang thật), mọi mục đều ở trạng thái cao nhất: tên ~105 ký tự, địa điểm và vai trò dài, có video, EN và VI. Đáy mục thấp nhất ở sức chứa / vượt một mục: Classic 174,3 / 198,9 mm (giới hạn 198); Visual 195,9 / 245,2 (198); Editorial 183,3 / 203,8 (192, `--pf-bottom`). Kiểm thêm tên 120 và 150 ký tự ở đúng sức chứa: không tràn. Tên dài nhất của dữ liệu thật: 49. Không đổi cỡ chữ hay thẻ. Visual Grid chỉ còn dư ~2 mm ở trang đầy 12 thẻ.
+- **Dữ liệu thật (19 dự án, chỉ đọc bản nháp):** layout đang chọn `index.visual`: 2 trang index (12 + 7), đủ 19 mục, 0 vấn đề, tổng 26 trang (trước: 25 trang, index tràn). Đổi thử trong bộ nhớ: Classic 2 trang (26), Editorial 3 trang (27), đều 0 vấn đề, EN và VI. Admin › Portfolio preview: "26 pages · Ready · 11 recommendations".
+- **Quyết định trình bày:** Editorial **lặp cột bên ở mọi trang** (chrome của layout này lùi theo rail `--pf-rail-left`; bỏ cột sẽ để mảng trống lệch). Kicker / số lớn giữ tổng số dự án. Tiêu đề VI có đánh số giữ "dự án" liền nhau (khoảng trắng không ngắt) vì ở cột Editorial nó ngắt thành "DANH MỤC DỰ / ÁN (1/3)". Visual Grid: `is-dense` theo số thẻ **của trang**, nên với 19 dự án trang 1 (12 thẻ) thẻ thấp, trang 2 (7 thẻ) thẻ cao như thường: hai trang khác cỡ thẻ (đúng đề bài, nêu để người vận hành xem).
+- **Công cụ khác:** `portfolio-video-link-check` All PASS (chạy trước khi thêm khoảng trắng không ngắt). `portfolio-detail-check`: **5 FAIL `[N9] facts`** ở trang dự án với dữ liệu thật; chạy trên code `main` (stash) ra **đúng 5 dòng đó**, cộng 18 FAIL `no-issue` do index tràn, nhánh này còn 0. 5 FAIL facts là lỗi có sẵn, ngoài phạm vi.
 - **Checklist giao diện từng mục:**
-- Chỗ làm khác đề bài và lý do:
-- Câu hỏi:
+
+  `ui-guidelines` §9: 1 đạt. 2, 3 không áp dụng (không đổi Website). 4 đạt về tràn (0 vấn đề) và số trang PDF khớp (`page.pdf` của Chromium: 24 / 24 / 25, không trang trắng thừa); **chưa mở Print preview Chrome bằng tay**. 5 đo hai theme custom (#f2c94c, #102d3b) với Editorial VI: 0 vấn đề; chỉ xem ảnh theme sáng (hệ thống tự làm tối màu). 6 đạt: preview Admin 26 trang Ready; **không bấm thử zoom** (nút Fit đang bật). 7 đạt: ba layout × EN / VI, tên dài; Admin không báo issue. 8 đạt: kicker / tiêu đề hai trang cùng độ cao (ảnh), header Editorial bắt đầu trên nền trắng. 9 **chưa kiểm** overlay (không đổi ảnh hay CSS). 10 không áp dụng kiểu chữ mới; không đổi CV / Cover Letter.
+
+  `docs/92` §2: 1 như trên. 2 UI-01, UI-08 áp dụng: đo trên trình dựng thật, tiêu đề nhiều dòng. 3 không có toggle mới. 4 tên 105 – 150 ký tự. 5 số đo ở trên. 6 file dùng chung đã liệt kê. 7 lỗi ngắt "DỰ / ÁN" do người code tìm thấy; **tiêu đề một trang** của Editorial VI có thể ngắt tương tự (có từ trước, tôi không đổi để giữ đầu ra một trang) — chưa kiểm.
+  Ảnh đã xem: Classic và Visual trang 1 – 2, Editorial trang 1 và 3 (EN, 19 dự án giả), Editorial VI trang 1 và cột bên.
+- Chỗ làm khác đề bài và lý do: `layouts.ts`: mô tả ba layout ghi số dự án mỗi trang (không có cảnh báo `suitability` > 8 nào để cập nhật). Số dự án chọn nay vượt sức chứa sẽ sang trang ngay cả khi trước đó vừa một trang (ví dụ Classic 11 – 12 tên ngắn), vì sức chứa cố định theo trường hợp cao nhất. Không phải sửa bút chì "Edit markers": trang index không có mốc sửa nào; chỗ duy nhất giả định một trang index là `portfolioPageCount`.
+- Câu hỏi: **Số (k/n) ở trang đầu.** Ví dụ 19 dự án: hiện trang 3 ghi "Project index (1/2)", trang 4 "(2/2)". Đề bài ghi "từ hai trang trở lên tiêu đề ghi (k/n)" (tôi làm theo), còn `ui-guidelines` §8.4 ghi "tiêu đề **trang sau** thêm (2/2)". Phương án A (khuyến nghị): giữ như hiện nay, Claude sửa câu trong §8.4; người đọc biết ngay còn trang sau. Phương án B: trang đầu không số; sửa một dòng nhưng trang đầu không báo còn tiếp. Trả lời: "A" hoặc "B".
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-28, `9056058` (đo trên dev server cổng 5199 từ thư mục chính đang ở nhánh này).
+- **Token:** dự báo ~10 % (7 – 13 %); người vận hành báo **13 % → 18 % = ~5 %**.
+- **Checklist (UI-16; ui-guidelines §9, docs/92 §2), Claude chạy lại:**
+  - §9 mục 1 đạt: `verify:admin` 48 file / **389** test; Admin JS 92,8 / 115,0 kB, CSS 27,0 / 28,0 kB.
+  - Mục 4, 7, 10 đạt: `portfolio-index-check` **All PASS**; `portfolio-video-link-check` All PASS; `portfolio-edit-markers-check` All PASS; `portfolio-detail-check` còn đúng **5 FAIL `[N9] facts`** ở trang dự án (diff chỉ đổi trang index, không chạm trang dự án → lỗi có sẵn; ghi W-42).
+  - **Dữ liệu thật** (Admin preview, 1920 × 940): 26 trang, index ở trang 3 và 4, tiêu đề "Project index (1/2)" / "(2/2)", 12 + 7 mục = 19, số 01 – 19 liên tục, 0 trang tràn, "Ready"; header, footer, số trang `03 / 26`, `04 / 26` đúng. Ảnh hai trang đã xem: không lấn footer.
+  - Mục 2, 3 không áp dụng; mục 5, 6, 8, 9 không đổi (không đụng theme, chrome, overlay).
+- **Phải sửa:** không. **Nên sửa:** không.
+- **Ghi nhận:** (1) trang 1 (12 thẻ) ảnh thấp hơn trang 2 (7 thẻ) do `is-dense` theo số thẻ của trang, đúng đề bài. (2) Chưa mở Print preview Chrome bằng tay (đã đếm trang bằng `page.pdf` của coder).
+- **Cần người vận hành chốt:** (a) **duyệt gộp** (đổi PDF, ADR-018); (b) tiêu đề trang đầu: **A** giữ "(1/2)" (khuyến nghị: người đọc biết còn trang sau) rồi Claude sửa câu ở `ui-guidelines` §8.4, hoặc **B** trang đầu không số.
+- Kết luận: **ĐẠT, CHỜ DUYỆT**.

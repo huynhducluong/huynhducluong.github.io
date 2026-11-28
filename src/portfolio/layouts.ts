@@ -32,10 +32,26 @@ export const profileLayoutOptions: readonly PortfolioLayoutOption<ProfileLayout>
 ];
 
 export const indexLayoutOptions: readonly PortfolioLayoutOption<ProjectIndexLayout>[] = [
-  { id: "index.classic", label: "Classic List", description: "Reliable two-column project list.", preview: "classic" },
-  { id: "index.visual", label: "Visual Grid", description: "Image-led grid for up to eight selected projects.", preview: "visual" },
-  { id: "index.editorial", label: "Editorial Index", description: "Numbered list that handles long titles well.", preview: "editorial" },
+  { id: "index.classic", label: "Classic List", description: "Reliable two-column list, ten projects per page.", preview: "classic" },
+  { id: "index.visual", label: "Visual Grid", description: "Image-led grid, twelve projects per page.", preview: "visual" },
+  { id: "index.editorial", label: "Editorial Index", description: "Numbered list for long titles, eight projects per page.", preview: "editorial" },
 ];
+
+/**
+ * Projects one index page holds (ADR-043), measured on the A4 landscape page with every row at its tallest:
+ * ~100-character name, long location and role, video link (`node tools/portfolio-index-check.mjs --probe`).
+ */
+export const PORTFOLIO_INDEX_CAPACITY: Record<ProjectIndexLayout, number> = {
+  "index.classic": 10,
+  "index.visual": 12,
+  "index.editorial": 8,
+};
+
+/** Splits the selection into index pages, in order. An empty selection still prints one page. */
+export const portfolioIndexPages = <T>(items: readonly T[], layout: ProjectIndexLayout): T[][] => {
+  const size = PORTFOLIO_INDEX_CAPACITY[layout] ?? PORTFOLIO_INDEX_CAPACITY["index.classic"];
+  return Array.from({ length: Math.max(1, Math.ceil(items.length / size)) }, (_, page) => items.slice(page * size, (page + 1) * size));
+};
 
 export const projectLayoutOptions: readonly PortfolioLayoutOption<Exclude<ProjectLayout, "feature" | "standard" | "compact">>[] = [
   { id: "project.classic", label: "Classic", description: "The reliable original image-and-content layout.", preview: "classic" },
@@ -187,8 +203,11 @@ export const portfolioPageCount = (data: PortfolioRuntimeData): number => {
   const toolLayouts = selectedTools.map((tool) => resolveAutomationLayout(data, tool.id));
   const automationPages = (toolLayouts.includes("automation.classic") ? 1 : 0)
     + toolLayouts.filter((layout) => layout !== "automation.classic").length;
-  return 4
-    + data.projects.filter((project) => project.includeInPortfolio).length
+  const projects = data.projects.filter((project) => project.includeInPortfolio);
+  // Cover, profile and closing, then the index pages (as many as the selection needs) and one page per project.
+  return 3
+    + portfolioIndexPages(projects, data.content.layouts.index).length
+    + projects.length
     + automationPages
     + portfolioCredentialPages(data).length;
 };

@@ -14,14 +14,14 @@ import type {
   ProjectLayout,
 } from "../types/portfolio";
 import { pickCredentialPreview } from "../shared/credentialPreviews";
-import { PORTFOLIO_CREDENTIALS_PER_PAGE, credentialsLayoutDocumentProfile, PORTFOLIO_PROFILE_CARD_ITEMS, portfolioCapabilityGroups, portfolioContributionLimit, portfolioCredentialPages, portfolioProjectResponsibilities, type PortfolioCredentialPage, portfolioPageCount, resolveAutomationLayout, resolveProjectLayout } from "./layouts";
+import { PORTFOLIO_CREDENTIALS_PER_PAGE, credentialsLayoutDocumentProfile, PORTFOLIO_PROFILE_CARD_ITEMS, portfolioCapabilityGroups, portfolioIndexPages, portfolioContributionLimit, portfolioCredentialPages, portfolioProjectResponsibilities, type PortfolioCredentialPage, portfolioPageCount, resolveAutomationLayout, resolveProjectLayout } from "./layouts";
 import { resolvePortfolioMedia } from "./mediaSlots";
 import type { PortfolioEditField } from "./editMarkers";
 
 // Every visible string lives here so the Vietnamese PDF never falls back to English chrome.
 const copy = {
   en: {
-    profile: "Professional profile", selectedWork: "Selected work", projectIndex: "Project index", projectsUnit: "projects",
+    profile: "Professional profile", selectedWork: "Selected work", projectIndex: "Project index", projectsUnit: "projects", projectIndexPage: (page: number, total: number) => `Project index (${page}/${total})`,
     noProjects: "No published projects have been selected for the Portfolio PDF.", imagePlaceholder: "Project image placeholder",
     selectedAutomation: "Selected BIM automation", automation: "Automation",
     problem: "The challenge", solution: "The approach", outcome: "Outcome", contribution: "Selected contribution", myContribution: "My contribution",
@@ -38,7 +38,7 @@ const copy = {
     },
   },
   vi: {
-    profile: "Hồ sơ chuyên môn", selectedWork: "Dự án tiêu biểu", projectIndex: "Danh mục dự án", projectsUnit: "dự án",
+    profile: "Hồ sơ chuyên môn", selectedWork: "Dự án tiêu biểu", projectIndex: "Danh mục dự án", projectsUnit: "dự án", projectIndexPage: (page: number, total: number) => `Danh mục dự\u00a0án (${page}/${total})`,
     noProjects: "Chưa có dự án đã xuất bản nào được chọn cho Portfolio PDF.", imagePlaceholder: "Vị trí hình ảnh dự án",
     selectedAutomation: "Tự động hóa BIM tiêu biểu", automation: "Tự động hóa",
     problem: "Thách thức", solution: "Giải pháp", outcome: "Kết quả", contribution: "Đóng góp tiêu biểu", myContribution: "Đóng góp của tôi",
@@ -224,15 +224,30 @@ const indexRow = (project: PortfolioProject, index: number, language: Language):
   return `<li${video ? ' class="has-video"' : ""}><span>${twoDigits(index + 1)}</span><div><strong>${escapeHtml(localized(project.name, language))}</strong><small>${escapeHtml(projectMeta(project, language))}</small></div>${video}</li>`;
 };
 
-const renderIndex = (data: PortfolioRuntimeData, language: Language, projects: PortfolioProject[]): string => {
-  const title = `<p class="portfolio-kicker">${copy[language].selectedWork} / ${twoDigits(projects.length)} ${copy[language].projectsUnit}</p><h2 class="portfolio-title">${copy[language].projectIndex}</h2>`;
-  if (!projects.length) return `<div class="portfolio-page__inner">${title}<p class="portfolio-empty">${copy[language].noProjects}</p></div>`;
-  if (data.content.layouts.index === "index.visual") return `<div class="portfolio-page__inner portfolio-index-page portfolio-index-page--visual">${title}<div class="portfolio-index-visual${projects.length > 8 ? " is-dense" : ""}">${projects.map((project, index) => {
-    const media = resolvePortfolioMedia(project.images, data.content.mediaAssignments.projects[project.id]).primary;
-    return `<article><div>${imageMarkup(media, project.name, language, "wide", "portfolio-index__image")}<span>${twoDigits(index + 1)}</span>${videoLink(project.youtubeUrl, localized(project.name, language), language)}</div><h3>${escapeHtml(localized(project.name, language))}</h3>${gridMeta(project, language)}</article>`;
-  }).join("")}</div></div>`;
-  if (data.content.layouts.index === "index.editorial") return `<div class="portfolio-index-editorial"><aside><p class="portfolio-kicker">${copy[language].selectedWork}</p><h2>${copy[language].projectIndex}</h2><strong>${twoDigits(projects.length)}</strong><span>${copy[language].selectedProjects}</span></aside><ol>${projects.map((project, index) => `${indexRow(project, index, language)}`).join("")}</ol></div>`;
-  return `<div class="portfolio-page__inner portfolio-index-page">${title}<ol class="portfolio-index">${projects.map((project, index) => `${indexRow(project, index, language)}`).join("")}</ol></div>`;
+/**
+ * One HTML string per index page (ADR-043). The count in the kicker / rail is the whole selection and numbers run on
+ * across pages; titles carry "(k/n)" only when there is more than one page.
+ */
+const renderIndex = (data: PortfolioRuntimeData, language: Language, projects: PortfolioProject[]): string[] => {
+  const text = copy[language];
+  const layout = data.content.layouts.index;
+  const pages = portfolioIndexPages(projects, layout);
+  let offset = 0;
+  return pages.map((items, pageIndex) => {
+    const first = offset;
+    offset += items.length;
+    const heading = pages.length > 1 ? text.projectIndexPage(pageIndex + 1, pages.length) : text.projectIndex;
+    const title = `<p class="portfolio-kicker">${text.selectedWork} / ${twoDigits(projects.length)} ${text.projectsUnit}</p><h2 class="portfolio-title">${heading}</h2>`;
+    if (!projects.length) return `<div class="portfolio-page__inner">${title}<p class="portfolio-empty">${text.noProjects}</p></div>`;
+    const rows = (): string => items.map((project, index) => indexRow(project, first + index, language)).join("");
+    if (layout === "index.visual") return `<div class="portfolio-page__inner portfolio-index-page portfolio-index-page--visual">${title}<div class="portfolio-index-visual${items.length > 8 ? " is-dense" : ""}">${items.map((project, index) => {
+      const media = resolvePortfolioMedia(project.images, data.content.mediaAssignments.projects[project.id]).primary;
+      return `<article><div>${imageMarkup(media, project.name, language, "wide", "portfolio-index__image")}<span>${twoDigits(first + index + 1)}</span>${videoLink(project.youtubeUrl, localized(project.name, language), language)}</div><h3>${escapeHtml(localized(project.name, language))}</h3>${gridMeta(project, language)}</article>`;
+    }).join("")}</div></div>`;
+    // The editorial rail repeats on every page: the page chrome is inset by it, so a page without it would sit lopsided.
+    if (layout === "index.editorial") return `<div class="portfolio-index-editorial"><aside><p class="portfolio-kicker">${text.selectedWork}</p><h2>${heading}</h2><strong>${twoDigits(projects.length)}</strong><span>${text.selectedProjects}</span></aside><ol>${rows()}</ol></div>`;
+    return `<div class="portfolio-page__inner portfolio-index-page">${title}<ol class="portfolio-index">${rows()}</ol></div>`;
+  });
 };
 
 const projectHeading = (project: PortfolioProject, language: Language, index: number): string => `<div class="portfolio-project-heading"><p class="portfolio-kicker">${[twoDigits(index + 1), escapeHtml(localized(project.location, language))].filter(Boolean).join(" / ")}</p><h2>${escapeHtml(localized(project.name, language))}</h2>${project.role ? `<strong>${escapeHtml(localized(project.role, language))}</strong>` : ""}${videoLink(project.youtubeUrl, localized(project.name, language), language)}</div>`;
@@ -354,7 +369,7 @@ const renderPortfolioPages = (data: PortfolioRuntimeData, language: Language): s
   const pages: string[] = [
     numbered(renderCover(data, language, selectedProjects), "cover", layouts.cover),
     numbered(renderProfile(data, language, selectedProjects), "profile", layouts.profile, text.profile),
-    numbered(renderIndex(data, language, selectedProjects), "index", layouts.index, text.projectIndex),
+    ...renderIndex(data, language, selectedProjects).map((content) => numbered(content, "index", layouts.index, text.projectIndex)),
   ];
   selectedProjects.forEach((project, index) => {
     const rendered = renderProject(data, project, language, index);
