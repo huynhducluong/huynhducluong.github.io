@@ -144,4 +144,4 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-22](GD3-22-trang-chu-header-dinh-sheet.md) | Trang chủ: header dính ≤ 900 px, bỏ đường kẻ, ô SHEET cả VI (N21 + N22: W-34, W-35, ADR-040) | `ĐẠT` (gộp 2026-11-24) |
 | [GD3-24](GD3-24-admin-meta-hang-cat-gon.md) | Admin Portfolio: dòng meta của hàng cắt "…" có tooltip ở mọi độ rộng (stress UI-14; N23: UI-18) | `GIAO CODE` (Nhỏ; tự gộp được nếu review sạch) |
 | [GD3-25](GD3-25-trang-chu-sheet-hien-tren-dien-thoai.md) | Trang chủ: ô SHEET 01 / 01 luôn hiện ở điện thoại ≤ 650 px (N24: W-36) | `GIAO CODE` (Rất nhỏ; cần người vận hành duyệt gộp) |
-| [GD3-23](GD3-23-admin-mau-tu-logo.md) | Admin: "Lấy màu từ logo" trong Appearance (N20: W-33, ADR-040) | `GIAO CODE` (Vừa; làm sau GD3-22; tự gộp được nếu review sạch) |
+| [GD3-23](GD3-23-admin-mau-tu-logo.md) | Admin: "Lấy màu từ logo" trong Appearance (N20: W-33, ADR-040) | `ĐẠT` (gộp 2026-11-28, tự gộp theo ADR-018) |

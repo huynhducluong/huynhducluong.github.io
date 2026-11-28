@@ -1,6 +1,6 @@
 # GD3-23 — Admin › Appearance: "Lấy màu từ logo" (nhóm N20)
 
-> **Trạng thái:** GIAO CODE (làm **sau** GD3-22, một thư mục làm việc) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (review 3 sạch; gộp 2026-11-28) · **Nhánh:** `gd3/23-admin-mau-tu-logo` từ `main` · **Ngày giao:** 2026-11-24 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** chỉ Admin, không migration, không đổi giao diện công khai hay PDF **hiện có** (chỉ thêm khả năng chọn màu) → Claude tự gộp được nếu review sạch.
 
 ## 1. Mục tiêu
@@ -43,17 +43,97 @@
 
 ## 5. Báo cáo của người code
 
-- Đã xong bước:
-- Người code · đã dùng trước / sau:
-- Nhánh, commit cuối:
-- File đã đổi (ghi rõ file dùng chung):
-- `verify:admin` (CSS / JS gzip trước / sau):
-- `tools/theme-from-logo-check.mjs` (mốc FAIL → sau):
-- **Bảng kiểm kê điều khiển:**
+- Đã xong bước: 1 – 3
+- Người code · đã dùng trước / sau: Claude — cửa sổ code · chưa ghi token
+- Nhánh, commit cuối: gd3/23-admin-mau-tu-logo (commit feat(GD3-23))
+- File đã đổi (ghi rõ file dùng chung): mới: src/shared/logoPalette.ts (+ test), src/admin/themeFromLogo.ts (nạp lười), src/admin/documentThemeFields.test.ts, tools/theme-from-logo-check.mjs. Sửa: **src/admin/documentThemeFields.ts (dùng chung: CV, Portfolio, Cover Letter, Homepage)**, src/styles/admin-documents.css, src/admin/adminStyles.test.ts. Không đổi `buildDocumentThemeTokens`, workspace nào, hay dữ liệu.
+- `verify:admin` (CSS / JS gzip trước / sau): đạt. **CSS 27 638 → 27 647 byte gzip, ngân sách 27 648: còn dư đúng 1 byte** (GD3-21 đã đưa CSS xuống 26,9 kB trước; ~0,3 kB thêm cho khối nút / cặp màu, tôi gọn thêm bằng cách bỏ `gap` / `border-radius` của ô màu). JS khởi đầu **92,8 → 92,8 kB** (phần trích màu và đọc ảnh là chunk nạp lười `themeFromLogo`, không vào ngân sách đầu). Lần thêm CSS Admin sau chắc chắn vượt: cần nâng ngân sách hoặc gỡ CSS chết.
+- `tools/theme-from-logo-check.mjs` (mốc FAIL → sau): mốc **2 FAIL** (chạy thật trên `main`: nút chưa có ở CV và Cover Letter; các phép còn lại bị bỏ qua) → **All PASS** (16 dòng: nút, số cặp, không request mạng, bấm cặp đầu → Custom, hai màu đúng, "Text on primary 6.3 : 1, passes", cho cả CV và Cover Letter). Phép `no-network` chỉ đếm request không phải script / stylesheet / font (chunk nạp lười của Vite là script, không phải logo).
+- **Bảng kiểm kê điều khiển** (1440, 1180, 768, 390 đều đo, kết quả giống nhau: cột form hẹp nên bố cục không đổi theo viewport):
+
+  | Điều khiển | Kích thước | So với có sẵn |
+  |---|---|---|
+  | Nút "Pick colors from logo" (`button--secondary`) | 173 × 40 | cùng cao 40 với nút Save / More (112 × 40) |
+  | Nút cặp màu (hai ô 16 × 16 + mã hex) | 120 – 123 × 40 | cùng kiểu `button--secondary`, cao 40 |
+  | Ô màu `type="color"` có sẵn | không đổi | |
+  | Ô file ẩn | không nhìn thấy (hidden) | không có file input native nhìn thấy (§6.5) |
+
+  Logo thử: chữ "ACME" xanh ngọc trên nền trong suốt + ô vuông cam → 2 cặp (#0e766e / #f59e0b và đảo lại), không cuộn ngang ở cả bốn độ rộng. Tôi thấy ảnh khối theme ở 1440 (nút, hai cặp, dòng gợi ý); ảnh 390 chụp lệch khung (đã xem, không đọc được khối theme) nên **chưa có ảnh 390 dùng được**, chỉ có số đo.
+
+  Thuật toán (ngưỡng ghi trong `logoPalette.ts`): bỏ điểm alpha < 128, bão hòa HSV < 0,2, độ sáng < 0,2; gom 5 bit mỗi kênh rồi hợp màu cách nhau < 64 (khoảng cách RGB); xếp theo diện tích × (0,5 + bão hòa); Accent = màu kế tiếp lệch sắc ≥ 30°, nếu không có thì biến thể sáng (màu tối) hoặc tối (màu sáng) 30 – 35 %; tối đa 3 cặp (Primary lần lượt là ba màu nổi nhất).
 - **Checklist giao diện từng mục (§14 × 16, docs/92 §2):**
-- Chỗ làm khác đề bài và lý do:
+
+  §14: 1 đạt. 2 đạt về dùng chung (một renderer cho mọi nơi có theme) nhưng **chỉ đo CV và Cover Letter**; Portfolio dùng cùng `themeFields` của CV; **Homepage (siteWorkspace) chưa đo**. 3 không kiểm. 4 đã đo ở 1440 / 1180 / 768 / 390 (số). 5 đạt về markup: nút có chữ, cặp màu có `aria-label` "Use #… and #…", dòng gợi ý `aria-live="polite"`; **chưa thử Tab / Enter thật**. 6 – 9, 11, 13 – 16 không áp dụng (9: tên cặp màu cố định). 10 đạt (không đổi card). 12 không áp dụng.
+
+  Kiểm theo tiêu chí nghiệm thu: bấm cặp → Custom, hai màu đổi, tương phản ≥ 4,5 (đã đo). **Chưa kiểm:** preview đổi màu và dirty-state bật (tôi phát `input` và `change` trên hai ô màu như người dùng đổi tay nên các trình nghe có sẵn chạy, nhưng không đo từng cái); **tải lại sau Save draft vẫn giữ màu** (không bấm Save để khỏi ghi dữ liệu thật); logo SVG và logo thật của công ty; trạng thái `disabled` (tài liệu khóa) trong trình duyệt (chỉ có test markup); file không phải ảnh / > 5 MB trong trình duyệt (có mã và toast, chưa thử).
+
+  docs/92 §2: 2 đã áp UI-17 (nút cao 40 như nút Admin khác). 3 mọi trạng thái nút: chưa chọn, có cặp, rỗng ("No prominent color found in this logo."). 4 không dữ liệu dài. 5 có số đo. 6 file dùng chung: `documentThemeFields.ts`. 7 không UI mới.
+- Chỗ làm khác đề bài và lý do: nhãn nút là "Pick colors from logo" (Admin chỉ tiếng Anh; đề bài ghi "Lấy màu từ logo" là tên tính năng). Gắn hành vi bằng **trình nghe `document` dùng chung** trong `documentThemeFields.ts` (một chỗ, không sửa ba workspace); sự kiện `input` / `change` của chính ô file bị chặn ở pha capture để không đánh dấu form bẩn (chỉ bấm cặp mới đánh dấu). Dòng tương phản đo `primary đã chỉnh` / `onPrimary` (chữ trên màu chính), vì đó là cặp thật sự in ra; hệ thống đã có quy tắc làm tối màu chính, nên thường là "passes" và chỉ ghi "Adjusted for contrast" khi màu chính bị đổi. Ô màu giữ mã gốc của logo, không thay bằng màu đã chỉnh.
 - Câu hỏi:
+
+### 5b. Sửa sau review 1 (Nên sửa 1, 2 và ngân sách ADR-041)
+
+- **Nên sửa 1 (gợi ý rác ở viền khử răng cưa):** `LOGO_MIN_ALPHA` 128 → **250** (bỏ điểm nửa trong suốt); gom màu xong, một màu **cùng họ sắc (< 30°) với màu lớn hơn và có diện tích < 50 % của nó** bị coi là viền (`LOGO_EDGE_SHARE`) và bỏ; logo **một họ sắc** trả đúng **2 cặp** (màu chính + biến thể nhạt, màu chính + biến thể đậm, `logoAccentVariant(rgb, opposite)`). Test mới: ảnh có lõi lục, viền pha trắng, viền pha đen và điểm nửa trong suốt → đúng 2 cặp, không có `#8ecfa7` / `#10552c`; và một logo hai sắc xanh thật (đậm + nhạt, diện tích gần nhau) vẫn giữ cả hai. Công cụ đo thêm logo hình tròn khử răng cưa trên nền trắng (`green-circle`) → đúng 2 cặp; logo lục ô vuông cũng đổi từ 1 → 2 cặp theo quy tắc mới.
+- **Nên sửa 2 (trạng thái cặp màu):** mỗi nút cặp có `aria-pressed` (true chỉ ở cặp vừa áp dụng, false ở cặp khác); chữ nhìn thấy ghi **cả hai mã** ("#0f766e + #f59e0b"), tên truy cập là chính chữ đó (bỏ `aria-label` "Use … and …" để tên khớp chữ nhìn thấy); trạng thái pressed có viền `--color-primary` và nền `--admin-color-selected`. Công cụ đo thêm phép `pressed`. Đã xem ảnh: cặp thứ hai bấm → viền xanh, nền nhạt, cặp thứ nhất không. Nếu người dùng chỉnh tay ô màu sau đó, `aria-pressed` vẫn giữ cặp cũ (chưa xử lý).
+- **Ngân sách (ADR-041):** `scripts/check-admin-bundle.mjs` CSS 27 → **28 kB** và dòng chú thích. CSS hiện **27,0 / 28,0 kB** (thêm quy tắc pressed ~ 0,1 kB).
+- Chạy lại: `theme-from-logo-check` **All PASS** (CV và Cover Letter, cả bốn logo + `pressed`), `admin-checkbox-size-check` **All PASS**, `verify:admin` đạt.
+
+### 5c. Sửa sau review 2 (Phải sửa 1: cặp màu thẳng hàng, Sổ #38)
+
+- **Đã sửa (`admin-documents.css`, chỉ CSS):** khối logo là lưới một cột; nút "Pick colors from logo" ở hàng riêng (`justify-self: start`); các cặp màu là lưới `repeat(auto-fit, minmax(min(100%, 12.5rem), 1fr))`, `grid-auto-rows: 1fr`, gap `.75rem` như lưới theme; danh sách rỗng thì ẩn; dòng `aria-live` ở dưới. Test CSS trong `adminStyles.test.ts` đổi theo.
+- **Làm khác gợi ý:** cột tối thiểu **12,5rem** thay vì 11,5rem, vì nút rộng tự nhiên 199 px (> 184 px) nên ở khung 380 – 410 px chữ sẽ bị ép.
+- **`pairs-aligned` (mới trong `theme-from-logo-check`, logo ba màu, CV và Cover Letter):** mốc **6 FAIL** → **All PASS**. 1440: 2 cột 209 – 212 × 40 (cặp thứ ba ở hàng hai, cùng cột trái); 1180: 1 cột 338 – 342 × 40; 768: 1 cột 241 – 245 × 40; không nút nào tràn chữ. Đo thêm ở 390 (CV): 1 cột 270 × 40, không tràn.
+- **Ảnh:** đã xem khối theme ở 1440 (thẳng hàng). Ảnh 390 vẫn chụp lệch sang bản xem trước, **chỉ có số đo**; không xem ảnh 1180 / 768.
+- **`verify:admin`:** đạt; Admin CSS 27,0 / 28,0 kB, JS 92,8 / 115,0 kB.
+- **`admin-checkbox-size-check`:** bản gốc **không chạy hết**: `page.goto` quá 30 s khi chờ `networkidle` ở `?view=portfolio` (hai lần). Chạy bản tạm (chờ `load` + 4 s): 6 PASS, 1 FAIL "không có checkbox" ở Homepage › Content selection (1440×731), màn này đạt (42 ô) ở lần chạy bản gốc; bản tạm dừng ở độ rộng đầu. Vậy **chưa có lượt All PASS** cho công cụ này, cần Claude chạy lại khi review.
+- Không làm mục ghi nhận (bỏ `aria-pressed` khi chỉnh tay ô màu).
 
 ## 6. Review của Claude
 
-(chưa review)
+- Ngày, commit đã review: 2026-11-24, `d61d038` (đo trên dev server cổng 5173 của người vận hành, thư mục chính ở nhánh này; `.auth` chép sang 5173, tệp tạm đã xóa).
+- **Dự báo token đối chiếu:** dự báo 10 % (8 – 14 %); người vận hành báo **80 % → 84 % = ~4 %** (thấp hơn dự báo).
+- **Checklist giao diện (UI-16, UI-17, §14 × 16), Claude chạy lại từng mục, gồm các mục coder chưa làm:**
+  - §14 mục 1 đạt: `verify:admin` 47 file / **355** test; Admin JS 92,8 / 115,0 kB (chunk nạp lười), CSS **27 647 / 27 648 byte** gzip: **dư đúng 1 byte**.
+  - **Bốn nơi dùng chung đều có nút** (coder chỉ đo CV và Cover Letter): CV, Portfolio, Homepage, Cover letters ở Appearance; chọn logo hai màu cho đúng 2 cặp ở cả bốn.
+  - **Bảy logo tổng hợp qua giao diện thật** (CV): hai màu đỏ + xanh → 2 cặp (`#0033a0 + #c8102e`, hoán đổi); chữ đen + vạch cam → 3 cặp, đầu `#ff6a00 + #b34a00`; nền trong suốt hai màu → 2 cặp đúng; nền vàng nhạt → 1 cặp, dòng "Adjusted for contrast"; gradient tím – ngọc → 3 cặp; **logo đen trắng → 0 cặp, "No prominent color found in this logo."**; logo xanh lục một màu → 3 cặp (xem Nên sửa 1).
+  - **Bấm một cặp:** preset → Custom, hai ô màu đổi đúng, bản xem CV đổi màu ngay (ảnh đã xem: sọc tím / vàng), trạng thái "Unsaved" bật, dòng `aria-live` ghi "Text on primary 9.4 : 1, passes." (các bộ có điều chỉnh ghi thêm "Adjusted for contrast", tương phản 5,2 – 5,4 : 1).
+  - **Lỗi (coder chưa thử):** file .txt → toast "Choose an image file…"; ảnh > 5 MB → toast "That logo is larger than 5 MB…"; **SVG** đọc được (2 cặp đúng `#6a1b9a` / `#f9a825`).
+  - **Bàn phím (coder chưa thử):** Tab / Enter trên nút cặp màu áp dụng đúng (`custom`, hiện tương phản); viền focus rõ; nút "Pick colors from logo" 173 × 40, chữ 14 px như nút phụ khác.
+  - **Logo không rời máy (mục 4 của tiêu chí):** trong lúc chọn logo và bấm cặp chỉ có đúng một request `blob:` cục bộ, **không** request mạng nào mang ảnh (đã đo bằng trình nghe `request`); không có chunk nạp lười nào gửi dữ liệu.
+  - **Chưa kiểm được:** lưu rồi tải lại giữ màu (không bấm Save để khỏi ghi dữ liệu thật; đường lưu là `readTheme` đọc hai ô `theme_primary` / `theme_accent` có tên không đổi, nên giữ được theo thiết kế); trạng thái disabled của bản đã phát hành (có test markup).
+- **Phải sửa:** không.
+- **Nên sửa:**
+  1. **Gợi ý rác ở logo gần một màu:** logo xanh lục một màu cho cặp 2 và 3 là `#339c63 + #236d45` và `#94cbad + #688e79`: màu pha ở **viền khử răng cưa** (xám xanh), người dùng chọn nhầm sẽ ra màu bẩn. Sửa: bỏ điểm ảnh có độ trong suốt từng phần hoặc pha lẫn (chỉ giữ điểm có alpha ≥ 250 và nằm trong cụm màu chủ đạo), và **nếu chỉ còn một sắc thì trả tối đa 2 cặp** (màu chính + một biến thể đậm / nhạt), không phải 3; thêm test với ảnh có viền khử răng cưa.
+  2. **Cặp đang dùng không có trạng thái:** sau khi bấm, nút cặp không đánh dấu nào là đang chọn (AGENTS §5.6: toggle phải có `aria-pressed`). Sửa: `aria-pressed` true cho cặp vừa áp dụng, false cho các cặp khác, và nhãn nhìn thấy ghi cả hai mã hex (hoặc hai ô màu có chữ ẩn đủ), vì hiện nhãn chỉ ghi mã Primary.
+- **Đã chốt (2026-11-24, ADR-041, "nâng 28"):** nâng ngân sách CSS Admin **27 → 28 kB gzip**. Việc của lượt sửa: **đổi `scripts/check-admin-bundle.mjs`** (`css: 27 * 1024` → `28 * 1024`) và dòng chú thích; docs đã cập nhật (`admin-operations.md`, `admin-ui-guidelines.md` §14). **Không** dùng phần nâng cho việc khác; vẫn không thêm CSS thừa. Văn bản gốc của mục chờ chốt:
+- **Cần người vận hành chốt (ngân sách CSS Admin):** CSS Admin còn dư **1 byte** (27 647 / 27 648). Khuyến nghị **nâng 27 → 28 kB gzip**: cái giá chỉ thêm ≤ 1 kB tải ban đầu cho Admin (gói JS 92,8 / 115 vẫn dư 22 kB), lợi ích là các đề bài Admin tiếp theo (GD3-24, N10, GD3-14) không phải dừng giữa chừng; phương án thay thế là một đề bài riêng gỡ CSS chết / tách CSS preview Cover Letter, mất nhiều token hơn và vẫn chỉ hoãn được vài lần. Nếu bạn đồng ý, Claude đổi `docs/admin-operations.md` (ADR mới) và coder đổi `scripts/check-admin-bundle.mjs` ở lượt sửa.
+- Kết luận: **CẦN SỬA** (không có lỗi chặn; hai mục Nên sửa phải làm trước khi tự gộp theo ADR-018; chờ quyết định ngân sách).
+- **Dự báo token cho lượt sửa:** ~2 – 3 % (hai chỗ nhỏ trong `logoPalette.ts`, `themeFromLogo.ts` + test; thêm 1 dòng ngân sách nếu bạn đồng ý).
+
+### Chỉ thị sửa (review 1, sau khi người vận hành chốt)
+
+Làm **ba** việc trên cùng nhánh rồi chạy lại `node tools/theme-from-logo-check.mjs`, `node tools/admin-checkbox-size-check.mjs` và `verify:admin` (CSS ≤ 28 kB):
+
+1. **Nên sửa 1:** bỏ điểm ảnh khử răng cưa / pha lẫn khi trích màu; logo một sắc trả tối đa 2 cặp; thêm test ảnh có viền khử răng cưa (logo lục một màu không còn cặp xám xanh).
+2. **Nên sửa 2:** `aria-pressed` cho cặp màu đang dùng; nhãn nhìn thấy ghi cả hai mã hex (hoặc hai ô màu kèm chữ ẩn đủ).
+3. **Ngân sách:** đổi `scripts/check-admin-bundle.mjs` 27 → 28 kB (ADR-041).
+- **Dự báo token cho lượt sửa:** ~2 – 3 % (khoảng 2 – 4 %).
+
+### Review 2 (2026-11-24, `29947cc`)
+
+- **Token:** người vận hành quên ghi (lượt sửa 1); dự báo 2 – 3 %.
+- **Đã đạt (đo trên dev server 5173):** `verify:admin` 47 file / **357** test, Admin CSS **27,0 / 28,0** kB, JS 92,8 / 115,0 kB; hai Nên sửa của review 1 **đúng**: logo lục tròn khử răng cưa → 2 cặp (`#00843d + #59af81`, `#00843d + #005c2b`), không còn màu xám xanh; logo chữ đen + vạch cam → 2 cặp; logo hai màu → 2 cặp hoán đổi; `aria-pressed` `true` chỉ ở cặp vừa bấm (`true,false`), nhãn nhìn thấy ghi cả hai mã.
+- **Phải sửa 1 (Sổ #38 / W-37, người vận hành báo: "sắp xếp không ngay hàng thẳng lối"):** các nút cặp màu **không nằm trên lưới**: ở 1440 cặp 1 nằm **cạnh nút** "Pick colors from logo" (x = 467, y = 398) còn cặp 2 xuống hàng dưới ở x = 286 (y = 446); độ rộng khác nhau (197 / 204 / 199 / 187 px) tùy chữ. Ở 1180 và 768 (cột form 337 và 241 px) chúng xếp dọc, nhưng vẫn rộng khác nhau. Sai UI-17 / `admin-ui-guidelines` §6.3 (mọi hàng điều khiển theo lưới form). Sửa: nút "Pick colors from logo" ở **hàng riêng**; các cặp màu ở hàng bên dưới là **lưới `repeat(auto-fit, minmax(min(100%, 11.5rem), 1fr))`** (hoặc `repeat(3, minmax(0, 1fr))` khi đủ rộng, xuống 1 – 2 cột khi hẹp) có khoảng cách bằng khoảng cách của lưới form (`--admin-*`), nút cặp **rộng 100 % cột và cao bằng nhau**, mép trái / phải thẳng với khung Appearance; không `inline` tự xuống dòng; hàng gợi ý `aria-live` nằm dưới. Thêm phép **`pairs-aligned`** vào `tools/theme-from-logo-check.mjs` ở **1440, 1180, 768**: các nút cặp cùng độ rộng ±1 px trong cùng một hàng, mép trái thẳng theo cột, nằm trong khung thẻ, và nút "Pick colors from logo" không cùng hàng với cặp nào. **Mốc: FAIL** (đã đo: cặp 1 cạnh nút ở 1440). Giữ CSS Admin ≤ 28,0 kB (đang 27,0).
+- **Nên sửa:** không. **Cần người vận hành chốt:** không.
+- **Ghi nhận:** (1) chỉnh tay ô màu sau khi bấm một cặp thì `aria-pressed` vẫn giữ cặp cũ (coder đã ghi); chấp nhận, hoặc bỏ `pressed` khi ô màu đổi bằng tay nếu rẻ. (2) Token lượt sửa 2: dự báo **~2 %** (1 – 3 %).
+- Kết luận: **CẦN SỬA** (một mục: lưới cặp màu).
+
+### Review 3 (2026-11-28, `6a3506c`; đo trên dev server cổng 5199)
+
+- **Checklist giao diện (UI-16, UI-17, §14) cho phần sửa:** mục 1 đạt: `verify:admin` 47 file / **357** test, CSS Admin 27,0 / 28,0 kB, JS 92,8 / 115,0 kB. Mục 2, 4, 12 đạt: `theme-from-logo-check` All PASS, gồm `pairs-aligned` ở CV và Cover Letter tại 1440 (lưới 2 cột, nút 209 – 212 × 40), 1180 và 768 (1 cột, rộng bằng khung), nút "Pick colors from logo" ở hàng riêng, không nút nào tràn chữ. Mục 5 đạt: `aria-pressed` đúng ở cặp vừa bấm. Ảnh 1440 đã xem: cặp màu thẳng cột, mép khớp lưới theme. Mục 10, 16 không đổi.
+- **Checkbox 16 px:** `admin-checkbox-size-check --all-widths` **All PASS, 28 / 28** (coder chưa chạy được: Portfolio nay có 19 dự án / 25 trang nên lần tải thứ hai quá 30 s; Claude chạy với thời gian chờ 120 s và sửa công cụ).
+- **`portfolio-selection-check`:** chỉ FAIL phép `state-style` vì dữ liệu thật hiện **không còn dự án Draft nào** (phép đòi > 0 hàng); không phải hồi quy; Claude sửa công cụ để báo "không có hàng Draft" thay vì FAIL.
+- **390 px (ghi nhận, có sẵn, không do GD3-23):** Admin tài liệu ở 390 px có header dính và khung preview chồng lên cột form nên Playwright không bấm được nút cặp màu (người dùng cuộn tay vẫn bấm được); đây là hành vi layout có từ trước, ngoài ba màn hình mục tiêu.
+- **Token:** dự báo lượt sửa 2 là ~2 % (1 – 3 %); người vận hành báo **4 % → 9 % = ~5 %** (cao hơn dự báo).
+- **Phải sửa:** không. **Nên sửa:** không. **Cần người vận hành chốt:** không.
+- Kết luận: **ĐẠT**; chỉ Admin, không migration, không đổi giao diện công khai → **tự gộp (ADR-018)**.
