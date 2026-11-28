@@ -23,7 +23,7 @@
 //   header-sticky (≤ 900) header **dính trên cùng** khi cuộn: sau khi cuộn 700 px, đỉnh header = 0, nền không trong suốt, vẫn thấy menu (ADR-040, W-34)
 //   nav-line     (≤ 900) menu **không đường kẻ** dưới cả hàng (border-bottom = 0; ADR-040)
 //   anchor-clear (≤ 900) bấm một mục menu: tiêu đề section đích nằm **dưới** header dính, không bị che (ADR-040)
-//   sheet-cell   (điện thoại ≤ 650, một cột) ô "SHEET 01 / 01" của khung bản vẽ **luôn hiện**, mọi chiều cao màn hình, cả EN và VI (Sổ #37, ADR-040; chỉ máy tính hai cột ≥ 651 px mới ẩn khi thấp hơn 821 px)
+//   sheet-cell   ô "SHEET 01 / 01" của khung bản vẽ **hiện ở mọi cỡ màn hình**, kể cả laptop thấp; hero hai cột co ảnh để vẫn vừa màn hình đầu (`first-screen`, `peek`) (ADR-044, Sổ #37, #41)
 //   nav-flat     (≤ 900) menu **phẳng** như hình 2 của Sổ #33: mục không viền, nền trong suốt (chỉ được có một đường kẻ dưới cả hàng); mỗi mục cao ≥ 44 px, rộng ≥ 44 px, chữ ≥ 12 px (ADR-039)
 //   buttons-equal (điện thoại ≤ 650) các nút hero cùng độ rộng, xếp 2 × 2 (ADR-037 c, W-28)
 //   grid-alpha   độ đậm lưới `--grid-alpha` ≤ 8 % khi màn ≤ 650 px, 14 % ở máy tính (ADR-037 b, W-28)
@@ -126,7 +126,7 @@ for (const kind of wanted) {
     if (width <= 900) report(r.navFlat.count >= 4 && r.navFlat.bordered === 0 && r.navFlat.filled === 0 && r.navFlat.small === 0, `${tag}  nav-flat`, `(${r.navFlat.count} mục; ${r.navFlat.bordered} mục còn viền, ${r.navFlat.filled} mục có nền, ${r.navFlat.small} mục nhỏ hơn 44 px; phải phẳng, không viền, không nền, ≥ 44 × 44)`);
     report(width <= 650 ? r.gridAlpha <= 8 : r.gridAlpha === 14, `${tag}  grid-alpha`, `(--grid-alpha = ${r.alphaRaw}; phải ≤ 8 % khi ≤ 650 px, 14 % ở máy tính)`);
     if (r.cardRowsChecked) report(r.cardSpread <= 1, `${tag}  cards-aligned`, `(${r.cardRowsChecked} hàng thẻ; lệch cao nhất ${r.cardSpread} px giữa các thẻ cùng hàng; phải ≤ 1)`);
-    if (width <= 650 && r.sheetShown !== null) report(r.sheetShown, `${tag}  sheet-cell`, `(ô SHEET 01 / 01 ${r.sheetShown ? "hiện" : "bị ẩn"} ở ${width} × ${height}; phải luôn hiện ở ≤ 650 px)`);
+    if (r.sheetShown !== null) report(r.sheetShown, `${tag}  sheet-cell`, `(ô SHEET 01 / 01 ${r.sheetShown ? "hiện" : "bị ẩn"} ở ${width} × ${height}; phải hiện ở mọi cỡ, ADR-044)`);
     report(r.broken === 0, `${tag}  images`, r.broken ? `(${r.broken} ảnh hỏng)` : "");
     if (width <= 900) {
       await page.evaluate(() => window.scrollTo(0, 0));

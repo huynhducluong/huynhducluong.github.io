@@ -9,10 +9,12 @@ Sổ #37 / W-36: ở điện thoại 360 × 800 (và 320 × 568, 360 × 640, 375
 
 **Mục tiêu 2 (ADR-042, Sổ #39, W-38):** header ≤ 900 px hiện nền đặc nên ngay khi chưa cuộn đã là **khối trắng cắt ngang lưới**. Đổi thành kiểu kính mờ.
 
+**Bổ sung 2026-11-28 (ADR-044, Sổ #41): ô SHEET hiện ở mọi cỡ màn hình**, kể cả máy tính thấp (1440 × 731). Thay câu "≥ 651 px giữ nguyên quy tắc chiều cao" ở mục 3 dưới đây: **bỏ hẳn quy tắc ẩn theo chiều cao** (`@media (min-height: 821px)` không còn quyết định hiện ô); ở hero hai cột, `--hero-titleblock` tính cả hàng SHEET (14rem) cho mọi chiều cao để ảnh co lại, hero vẫn trọn màn hình đầu (`first-screen`, `peek` ≥ 24 px ở 1440 × 731, 1920 × 940, 2560 × 1300 và preview). Phép `sheet-cell` nay đòi hiện ở **mọi** cỡ.
+
 ## 2. Căn cứ
 
 - `docs/ui-guidelines.md` §2.1 (đã sửa: "chỉ ở hero hai cột ≥ 651 px mới bỏ ô SHEET khi thấp hơn 821 px; ở ≤ 650 px luôn hiện"), ADR-034, ADR-040; [UI-16, UI-17](../92-ui-rules.md).
-- **Công cụ đo:** `node tools/home-viewport-check.mjs` có phép mới `sheet-cell` (≤ 650 px: ô hiện, mọi chiều cao) và ma trận điện thoại thêm **360 × 800**. **Mốc trước khi làm: 4 FAIL** (320 × 568, 360 × 640, 360 × 800, 375 × 667). Thêm hai phép cho header (ADR-042): `header-top-clear` (chưa cuộn: alpha nền 0, không bóng) và `header-frosted` (đã cuộn: alpha 0,8 – 0,95, có `backdrop-filter: blur`, có bóng), ở mọi cỡ ≤ 900. **Mốc hiện tại tổng 28 FAIL** (`header-top-clear` 12, `header-frosted` 12, `sheet-cell` 4). Mục tiêu: **All PASS**; `header-sticky`, `anchor-clear`, `first-screen`, `peek`, `titleblock-fit`, `photo-fit` và các phép khác không xấu đi.
+- **Công cụ đo:** `node tools/home-viewport-check.mjs` có phép mới `sheet-cell` (≤ 650 px: ô hiện, mọi chiều cao) và ma trận điện thoại thêm **360 × 800**. **Mốc trước khi làm: 4 FAIL** (320 × 568, 360 × 640, 360 × 800, 375 × 667). Thêm hai phép cho header (ADR-042): `header-top-clear` (chưa cuộn: alpha nền 0, không bóng) và `header-frosted` (đã cuộn: alpha 0,8 – 0,95, có `backdrop-filter: blur`, có bóng), ở mọi cỡ ≤ 900. **Mốc hiện tại tổng 31 FAIL** (`header-top-clear` 12, `header-frosted` 12, `sheet-cell` 7: gồm desktop 1440 × 731, preview 1280 × 800 và 900 × 800 theo ADR-044). Mục tiêu: **All PASS**; `header-sticky`, `anchor-clear`, `first-screen`, `peek`, `titleblock-fit`, `photo-fit` và các phép khác không xấu đi.
 - Code: `src/styles/home.css` (`.hero__cell--sheet { display: none }` ~dòng 272; `@media (min-height: 821px)` ~dòng 670 hiện ô và đặt `--hero-titleblock`; `@media (min-width: 651px)` ~dòng 701 dùng `--hero-titleblock` để co ảnh theo `svh`).
 
 ## 3. Phạm vi

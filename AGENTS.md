@@ -176,6 +176,7 @@ Thân commit ghi lý do, ngân sách bundle tăng, migration mới, và kết qu
 | Link riêng (sổ lỗi UI/UX…) | `project-links.local` (chỉ trên máy, không vào Git) |
 | Kinh nghiệm dùng lại cho dự án khác | `docs/95-reusable-playbook.md` |
 | Theo dõi token mỗi lần giao code | `docs/96-token-log.md` |
+| Tiêu chí và kết quả nghiệm thu từng tab Career Hub | `docs/97-review-tab.md` (ADR-046) |
 
 ## 10. Lệnh
 

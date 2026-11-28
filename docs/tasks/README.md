@@ -145,4 +145,5 @@ Bạn là cửa sổ code dự phòng (AGENTS §1.1). Đọc AGENTS.md và đề
 | [GD3-24](GD3-24-admin-meta-hang-cat-gon.md) | Admin Portfolio: dòng meta của hàng cắt "…" có tooltip ở mọi độ rộng (stress UI-14; N23: UI-18) | `GIAO CODE` (Nhỏ; tự gộp được nếu review sạch) |
 | [GD3-26](GD3-26-portfolio-index-phan-trang.md) | Portfolio: Project index tự thêm trang khi nhiều dự án (N26: W-39, ADR-043) | `GIAO CODE` (Vừa; làm trước GD3-25; cần người vận hành duyệt gộp) |
 | [GD3-25](GD3-25-trang-chu-sheet-hien-tren-dien-thoai.md) | Trang chủ: ô SHEET luôn hiện trên điện thoại + header kiểu kính mờ (N24, N25: W-36, W-38) | `GIAO CODE` (Rất nhỏ; cần người vận hành duyệt gộp) |
+| [GD3-27](GD3-27-link-web-trong-cv-portfolio.md) | CV và Portfolio: dòng link web kèm icon (N28: W-41, ADR-045) | `GIAO CODE` (Vừa; làm sau GD3-25; cần người vận hành duyệt gộp) |
 | [GD3-23](GD3-23-admin-mau-tu-logo.md) | Admin: "Lấy màu từ logo" trong Appearance (N20: W-33, ADR-040) | `ĐẠT` (gộp 2026-11-28, tự gộp theo ADR-018) |
