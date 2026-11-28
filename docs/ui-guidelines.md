@@ -204,7 +204,7 @@ Mọi layout Portfolio căn theo token `--pf-*` trên `.portfolio-document` (`po
 
 ### 8.4 Quy tắc nội dung layout
 
-- **Project index tự thêm trang (ADR-043).** Mỗi layout index có sức chứa cố định một trang; dự án vượt sức chứa sang trang index kế tiếp, số thứ tự chạy tiếp, tiêu đề trang sau thêm "(2/2)"; không giảm cỡ thẻ để nhồi; một trang thì trình bày như cũ. Không trang nào được tràn.
+- **Project index tự thêm trang (ADR-043).** Mỗi layout index có sức chứa cố định một trang; dự án vượt sức chứa sang trang index kế tiếp, số thứ tự chạy tiếp, **khi có từ hai trang thì mọi trang index, kể cả trang đầu, ghi "(k/n)"** (ví dụ "(1/2)", "(2/2)"; người vận hành chốt 2026-11-28); không giảm cỡ thẻ để nhồi; một trang thì trình bày như cũ. Không trang nào được tràn.
 - Layout được khai báo trong `src/portfolio/layouts.ts` dưới dạng `{ id: "<section>.<variant>", label, description, preview }`. Layout mới thêm một option tại đó, hoạt động khi không có ảnh (vị trí media tự động dùng phương án dự phòng), và chỉ yêu cầu media qua crop profile `wide` (21:9), `landscape` (4:3) hoặc `portrait` (3:4).
 - **Song ngữ.** Mọi chuỗi hiển thị lấy từ object `copy` trong `renderPortfolioV2.ts` hoặc từ nội dung đã bản địa hóa. Bao gồm caption, label, tên bước, loại Credential và label liên hệ. Test "prints no English chrome in the Vietnamese PDF" liệt kê các chuỗi tiếng Anh đã biết; mở rộng test khi thêm copy.
 - **Không lặp thông tin trên một trang.** Không in cùng một số hai lần (badge index cạnh kicker "01 / …"), cùng một headline hai lần (kicker và tiêu đề đều ghi "Thank you"), hoặc cùng một đoạn văn hai lần (solution trong aside rồi lặp lại làm bước workflow).

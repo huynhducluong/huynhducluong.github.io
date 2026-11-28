@@ -1,6 +1,6 @@
 # GD3-26 — Portfolio: trang Project index tự thêm trang khi nhiều dự án (nhóm N26)
 
-> **Trạng thái:** ĐẠT, CHỜ DUYỆT (review 1 sạch) · **Nhánh:** `gd3/26-portfolio-index-phan-trang` từ `main` · **Ngày giao:** 2026-11-28 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
+> **Trạng thái:** ĐẠT (gộp 2026-11-28, người vận hành duyệt; tiêu đề trang đầu theo phương án A) · **Nhánh:** `gd3/26-portfolio-index-phan-trang` từ `main` · **Ngày giao:** 2026-11-28 · **Cỡ:** Vừa (~5 file) · **Người đang code:** Claude — cửa sổ code (hoặc Codex)
 > **Gộp (ADR-018):** đổi đầu ra PDF Portfolio → **cần người vận hành duyệt** trước khi gộp. Không có migration.
 
 ## 1. Mục tiêu

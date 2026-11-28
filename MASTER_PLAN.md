@@ -1,6 +1,6 @@
 # PORTFOLIO PLATFORM — MASTER PLAN
 
-> **Phiên bản:** 1.45.0 · **Cập nhật:** 2026-11-28 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
+> **Phiên bản:** 1.46.0 · **Cập nhật:** 2026-11-28 · **Chế độ:** `IMPLEMENTATION` — chỉ code theo đề bài `GIAO CODE` ([AGENTS.md](AGENTS.md))
 > **Giai đoạn hiện tại:** **GĐ 3** (dùng thật và sửa) — bắt đầu 2026-11-15. Sổ lỗi UI/UX trên Google Docs đọc lần đầu: 8 dòng → W-02…06, UI-10…12; 4 nhóm, thứ tự chốt N1 → N3 → N2 → N4 (ADR-024). **N1 xong:** [GD3-01](docs/tasks/GD3-01-admin-sua-nhanh.md) ĐẠT, tự gộp `7c387b8`. **N3 (Credentials trong Portfolio)** tách hai đề bài: [GD3-02](docs/tasks/GD3-02-credentials-khung-giay.md) (kiểu B, ADR-025) ĐẠT, gộp `d87934f`; [GD3-03](docs/tasks/GD3-03-credentials-layout-chon-crop.md) (bỏ Print as, ADR-026) ĐẠT, gộp `154b8d8`; **N3 xong**. **N2 xong:** [GD3-04](docs/tasks/GD3-04-card-profile-thu-gon.md) ĐẠT, tự gộp `ec6a1d2` (card thu gọn kiểu A, ADR-027; bộ phát hiện chữ tràn `shots --stress`, UI-14). Còn lại: N4 (lối tắt sửa từ preview) và đề bài quét chữ dài (vấn đề mở #11, #12). GĐ 2 HOÀN THÀNH 2026-11-15 (GD2-01 ĐẠT, `9a6b65d`).
 > **Vai trò của file này:** mục lục + trạng thái + vấn đề mở + thuật ngữ + changelog. Chi tiết nằm trong `docs/` và `decisions/`, **không chép lại ở đây**.
 
@@ -77,6 +77,7 @@ Xem [AGENTS.md §9](AGENTS.md#9-bản-đồ-nguồn-tham-chiếu-mỗi-thông-ti
 
 | Phiên bản | Ngày | Thay đổi |
 |---|---|---|
+| 1.46.0 | 2026-11-28 | GD3-26 ĐẠT, người vận hành duyệt, **gộp** và push: Project index tự thêm trang (Classic 10, Visual 12, Editorial 8 mỗi trang), dữ liệu thật 19 dự án thành 2 trang index, không tràn; tiêu đề mọi trang index ghi (k/n) khi từ hai trang; còn lại GD3-25, GD3-27, GD3-24, W-42 |
 | 1.45.0 | 2026-11-28 | Đọc sổ #41, #42; người vận hành chốt: ô SHEET hiện mọi cỡ ([ADR-044](decisions/ADR-REGISTER.md), gộp GD3-25), link web trong CV / Portfolio ([ADR-045](decisions/ADR-REGISTER.md), [GD3-27](docs/tasks/GD3-27-link-web-trong-cv-portfolio.md)), tiêu chí nghiệm thu từng tab ([ADR-046](decisions/ADR-REGISTER.md), [docs/97](docs/97-review-tab.md), CV làm trước); review GD3-26 tìm thấy lỗi facts có sẵn (W-42) |
 | 1.44.0 | 2026-11-28 | GD3-23 ĐẠT sau review 3, **gộp** (`50f725b`): "Pick colors from logo", ngân sách CSS Admin 28 kB; đọc sổ #39, #40, người vận hành chốt phương án A cho cả hai ([ADR-042](decisions/ADR-REGISTER.md) header kính mờ, [ADR-043](decisions/ADR-REGISTER.md) Project index tự thêm trang); giao [GD3-26](docs/tasks/GD3-26-portfolio-index-phan-trang.md) (trước) và mở rộng [GD3-25](docs/tasks/GD3-25-trang-chu-sheet-hien-tren-dien-thoai.md) (`home-viewport-check` mốc 28 FAIL) |
 | 1.43.0 | 2026-11-24 | Đọc sổ #37, #38 → W-36 (ô SHEET mất ở điện thoại cao < 821 px: lỗi của quy tắc GD3-12, giao [GD3-25](docs/tasks/GD3-25-trang-chu-sheet-hien-tren-dien-thoai.md); `home-viewport-check` thêm `sheet-cell` và cỡ 360 × 800, mốc 4 FAIL), W-37 (cặp màu của GD3-23 không thẳng hàng: gộp vào vòng sửa GD3-23) |
