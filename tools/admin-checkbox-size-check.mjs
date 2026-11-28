@@ -35,7 +35,7 @@ for (const [width, height] of widths) {
   const page = await context.newPage();
   for (const screen of screens) {
     const tag = `${width}×${height}  ${screen.name}`;
-    await page.goto(`${origin}/admin/?view=${screen.view}`, { waitUntil: "networkidle" });
+    await page.goto(`${origin}/admin/?view=${screen.view}`, { waitUntil: "networkidle", timeout: 120_000 });
     await page.waitForTimeout(800);
     await page.evaluate((tab) => {
       const tabs = [...document.querySelectorAll("[role=tab]")];

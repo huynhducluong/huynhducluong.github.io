@@ -18,6 +18,8 @@
 //   photo-fit    ảnh hồ sơ hiện nguyên: tỉ lệ khung ảnh lệch tỉ lệ ảnh ≤ 0,08 (ảnh vuông thì khung vuông; ADR-035)
 //   titleblock-fit khung bản vẽ của hero ôm sát nội dung: không dải trống dưới bảng tên (≤ 2 px) và không khe giữa ảnh và bảng tên (≤ 4 px)
 //   nav-fit      (≤ 900) menu **một hàng**: đủ 4 mục, **không cuộn ngang**, không mục nào ngoài khung (ADR-039, W-32; thay 2 × 2 của ADR-037 a / ADR-038)
+//   header-top-clear (≤ 900) chưa cuộn: header **trong suốt** (nền alpha 0, không bóng), lưới liền tới đỉnh trang (ADR-042)
+//   header-frosted   (≤ 900) đã cuộn 700 px: nền **mờ** (alpha 0,8 – 0,95), có backdrop-filter blur, có bóng nhẹ (ADR-042)
 //   header-sticky (≤ 900) header **dính trên cùng** khi cuộn: sau khi cuộn 700 px, đỉnh header = 0, nền không trong suốt, vẫn thấy menu (ADR-040, W-34)
 //   nav-line     (≤ 900) menu **không đường kẻ** dưới cả hàng (border-bottom = 0; ADR-040)
 //   anchor-clear (≤ 900) bấm một mục menu: tiêu đề section đích nằm **dưới** header dính, không bị che (ADR-040)
@@ -130,7 +132,13 @@ for (const kind of wanted) {
       await page.evaluate(() => window.scrollTo(0, 0));
       const line = await page.evaluate(() => parseFloat(getComputedStyle(document.querySelector(".site-nav__links")).borderBottomWidth));
       report(line === 0, `${tag}  nav-line`, `(border-bottom của menu = ${line} px; phải 0)`);
-      await page.evaluate(() => window.scrollTo(0, 700)); await page.waitForTimeout(300);
+      const look = () => page.evaluate(() => { const s = getComputedStyle(document.querySelector(".site-header")); const c = s.backgroundColor; let alpha = 1; let m = c.match(/\/\s*([\d.]+)(%?)\s*\)/); if (m) alpha = m[2] ? Number(m[1]) / 100 : Number(m[1]); else { m = c.match(/^rgba\([^,]+,[^,]+,[^,]+,\s*([\d.]+)\)/); if (m) alpha = Number(m[1]); else if (c === "transparent") alpha = 0; } return { alpha, blur: (s.backdropFilter || s.webkitBackdropFilter || "none"), shadow: s.boxShadow }; });
+      await page.evaluate(() => window.scrollTo(0, 0)); await page.waitForTimeout(300);
+      const atTop = await look();
+      report(atTop.alpha === 0 && atTop.shadow === "none", `${tag}  header-top-clear`, `(chưa cuộn: alpha nền ${atTop.alpha}, bóng ${atTop.shadow === "none" ? "không" : "có"}; phải alpha 0, không bóng)`);
+      await page.evaluate(() => window.scrollTo(0, 700)); await page.waitForTimeout(500);
+      const moved = await look();
+      report(moved.alpha >= 0.8 && moved.alpha <= 0.95 && /blur\(/.test(moved.blur) && moved.shadow !== "none", `${tag}  header-frosted`, `(đã cuộn: alpha ${moved.alpha}, backdrop-filter ${moved.blur}, bóng ${moved.shadow === "none" ? "không" : "có"}; phải alpha 0,8 – 0,95, có blur, có bóng)`);
       const st = await page.evaluate(() => { const h = document.querySelector(".site-header"); const r = h.getBoundingClientRect(); const s = getComputedStyle(h); const links = [...h.querySelectorAll(".site-nav__links a")].filter((a) => a.getBoundingClientRect().height > 0 && a.getBoundingClientRect().bottom > 0).length; return { top: Math.round(r.top), bottom: Math.round(r.bottom), bg: s.backgroundColor, links }; });
       const opaque = !/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)|transparent/.test(st.bg);
       report(st.top === 0 && opaque && st.links >= 4, `${tag}  header-sticky`, `(sau khi cuộn 700 px: đỉnh header ${st.top} px, nền ${opaque ? "đặc" : "trong suốt"}, ${st.links} mục menu thấy được; phải 0, đặc, 4)`);

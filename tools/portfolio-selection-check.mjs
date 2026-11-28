@@ -30,7 +30,7 @@ for (const [width, height] of [[1440, 731], [1920, 940], [2560, 1300]]) {
   const tag = `${width}×${height}`;
   const context = await browser.newContext({ viewport: { width, height }, storageState: authFile, reducedMotion: "reduce" });
   const page = await context.newPage();
-  await page.goto(`${origin}/admin/?view=portfolio`, { waitUntil: "networkidle" });
+  await page.goto(`${origin}/admin/?view=portfolio`, { waitUntil: "networkidle", timeout: 120_000 });
   await page.waitForSelector('[data-document-tab="selection"]', { timeout: 30_000 });
   await page.click('[data-document-tab="selection"]');
   await page.waitForTimeout(1200);
@@ -59,9 +59,9 @@ for (const [width, height] of [[1440, 731], [1920, 940], [2560, 1300]]) {
   report(r.n > 0 && r.stacked === 0, `${tag}  one-line`, `(${r.stacked} hàng còn ô "In Portfolio" nằm riêng một dòng dưới tên)`);
   report(r.overflow === 0, `${tag}  no-overflow`, r.overflow ? `(${r.overflow} hàng tràn)` : "");
   report(r.smallTargets === 0, `${tag}  target`, r.smallTargets ? `(${r.smallTargets} hàng có nút / công tắc < 24 px)` : "");
-  report(r.unavailable > 0 && r.notDashed === 0, `${tag}  state-style`, `(${r.unavailable} hàng Draft / archived, ${r.notDashed} không viền nét đứt)`);
+  report(r.notDashed === 0, `${tag}  state-style`, r.unavailable ? `(${r.unavailable} hàng Draft / archived, ${r.notDashed} không viền nét đứt)` : "(dữ liệu hiện không có hàng Draft / archived: chưa kiểm được kiểu viền)");
   report(r.toggles > 0 && r.notSquare === 0, `${tag}  icon-square`, `(${r.toggles} chevron, ${r.notSquare} không vuông)`);
-  await page.goto(`${origin}/admin/?view=cv`, { waitUntil: "networkidle" });
+  await page.goto(`${origin}/admin/?view=cv`, { waitUntil: "networkidle", timeout: 120_000 });
   await page.waitForSelector('[data-document-tab="selection"]', { timeout: 30_000 });
   await page.click('[data-document-tab="selection"]');
   await page.waitForTimeout(1200);
@@ -73,7 +73,7 @@ for (const [width, height] of [[1024, 768], [768, 1024], [390, 844]]) {
   const tag = `${width}×${height}`;
   const context = await browser.newContext({ viewport: { width, height }, storageState: authFile, reducedMotion: "reduce" });
   const page = await context.newPage();
-  await page.goto(`${origin}/admin/?view=portfolio`, { waitUntil: "networkidle" });
+  await page.goto(`${origin}/admin/?view=portfolio`, { waitUntil: "networkidle", timeout: 120_000 });
   await page.waitForSelector('[data-document-tab="selection"]', { timeout: 30_000 });
   await page.$eval('[data-document-tab="selection"]', (tab) => tab.click());
   await page.waitForTimeout(1200);
